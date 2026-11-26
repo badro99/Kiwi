@@ -45,6 +45,18 @@
   ],
   "assets/stock/strings.js": [
     {
+      "before": "      btnScan: 'مسح وصل الاستلام أو الفاتورة', btnCount: 'جرد فعلي', btnAdd: 'منتج جديد',",
+      "after": "      btnScan: 'مسح وصل الاستلام أو الفاتورة', btnCount: 'جرد فعلي', btnImport: 'استيراد لائحة أصناف', btnAdd: 'منتج جديد',"
+    },
+    {
+      "before": "      btnCount: 'Inventaire physique',\n",
+      "after": "      btnCount: 'Inventaire physique',\n      btnImport: 'Importer une liste d’articles',\n"
+    },
+    {
+      "before": "      btnCount: 'Physical count',\n",
+      "after": "      btnCount: 'Physical count',\n      btnImport: 'Import a list of items',\n"
+    },
+    {
       "before": "",
       "after": "      moveTitle: \"Mouvement\",       moveCurrent: \"Stock actuel\",\n      moveReason: \"Motif\",       moveReceipt: \"Réception fournisseur\",\n      moveReturn: \"Retour client\",       moveLoss: \"Perte / casse\",\n      moveExpired: \"Périmé\",       moveGift: \"Offert\",\n      moveStaff: \"Consommation équipe\",       moveCount: \"Comptage physique\",\n      moveManual: \"Correction manuelle\",       moveQty: \"Quantité\",\n      moveNote: \"Référence / note\",       movePlaceholder: \"Motif, document ou responsable\",\n      moveExpiry: \"DLC / DDM (optionnel)\",       moveIntro: \"Une entrée augmente le stock. Le registre conserve la trace de l’opération.\",\n      moveCountQty: \"Quantité réellement comptée\",       moveCountHelp: \"Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.\",\n      moveInHelp: \"Cette entrée augmente le stock et reste traçable.\",       moveOutHelp: \"Cette sortie diminue le stock et reste traçable.\",\n\n"
     },

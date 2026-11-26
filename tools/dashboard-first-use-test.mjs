@@ -40,8 +40,8 @@ for (const [provider, consumer] of [['assets/team/merge.js', 'assets/team.js'], 
   const at = name => shell.findIndex(url => url.split('?')[0] === name);
   assert.ok(at(provider) >= 0 && at(provider) < at(consumer), provider + ' precedes its consumer');
 }
-// Eight since the menu scan's PDF reader left its controller (note 13 vision#0, 28 Oct).
-assert.equal(urls.length, 8, 'only optional drawer owners leave the eager shell');
+// Nine since the past-sales entry joined the optional tools (Jon's Burgers, 26 Nov); eight since the menu scan's PDF reader left its controller (28 Oct).
+assert.equal(urls.length, 9, 'only optional drawer owners leave the eager shell');
 assert.equal(new Set(urls).size, urls.length);
 for (const surface of ['menu', 'salle']) { const at = (name) => urls.findIndex((u) => u.split('?')[0] === name); assert.ok(at('assets/ai-image-import.js') >= 0 && at('assets/ai-image-import.js') < at('assets/' + surface + '-scan.js'), 'shared import precedes consumers'); }
 // 123 since note 13 (29 Oct): loyalty-product-links.js and pressing-numbering.js left features.js and pressing-ops.js.

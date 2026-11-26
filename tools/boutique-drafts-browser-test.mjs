@@ -87,6 +87,7 @@ const ONE = 'TEST KIWI Carton compté';
 await click('#bqi-new');
 await type('[data-bqx-name]', ONE);
 await type('[data-bqi-price]', '390');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await type('[data-kbs-total]', '1');
 await click('#bqi-n-save');
 await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
@@ -123,6 +124,7 @@ const TWO = 'TEST KIWI Robe à moitié saisie';
 await click('#bqi-new');
 await type('[data-bqx-name]', TWO);
 await type('[data-bqi-price]', '450');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await type('[data-kbs-total]', '12');
 await close();
 await click('#bqi-new');
@@ -135,6 +137,7 @@ const cleared = await page.evaluate(() => [document.querySelector('[data-bqx-nam
 ok(cleared.every((x) => x === '') && !(await page.$('[data-kbd-note]')), '« Tout effacer » empties the form and removes the note', JSON.stringify(cleared));
 await type('[data-bqx-name]', TWO);
 await type('[data-bqi-price]', '450');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await type('[data-kbs-total]', '2');
 await click('#bqi-n-save');
 await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
@@ -149,6 +152,7 @@ const THREE = 'TEST KIWI Pull couleurs';
 await click('#bqi-new');
 await type('[data-bqx-name]', THREE);
 await type('[data-bqi-price]', '300');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await type('[data-kbs-total]', '1');
 await click('#bqi-n-save');
 await page.waitForSelector('[data-kbsp-quick]', { visible: true, timeout: 8000 });

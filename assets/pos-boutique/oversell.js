@@ -38,10 +38,14 @@ export function gapOf(cat, pid) {
 
 export const RECOUNT = 'recompter';
 
-/* La liste de l'Inventaire : le filtre « À recompter » garde les articles en écart. */
+/* La liste de l'Inventaire : le filtre « À recompter » garde les articles en écart.
+   Rangée par nom en lisant les nombres : ENS0002 avant ENS0010, quel que soit
+   l'ordre de saisie (Santos, 26 nov. 2026, articles renommés en codes). */
+const byName = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
 export function invProducts(cat, filter, q) {
-  if (filter !== RECOUNT) return cat.listProducts({ categoryId: filter, q: q || '' });
-  return cat.listProducts({ q: q || '' }).filter((p) => gapOf(cat, p.id) < 0);
+  const list = filter !== RECOUNT ? cat.listProducts({ categoryId: filter, q: q || '' })
+    : cat.listProducts({ q: q || '' }).filter((p) => gapOf(cat, p.id) < 0);
+  return list.slice().sort((a, b) => byName.compare(String(a.name || ''), String(b.name || '')));
 }
 
 /* La pastille, seulement quand il y a quelque chose à recompter (ou qu'elle est choisie). */

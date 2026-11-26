@@ -391,7 +391,7 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
     ? 'visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-' + split.index + '-emp' : '';
   const splitIds = split && effectiveSessionId && !splitFlowId
     ? Array.from({ length: split.count }, (_, i) => 'visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-' + i + '-emp') : [];
-  const suppliedId = String((b && b.id) || '').slice(0, 64); if (/^chq(?:bounce|back)-/i.test(suppliedId)) return json({ error: 'reserved-id' }, 400); // préfixes du portefeuille de chèques
+  const suppliedId = String((b && b.id) || '').slice(0, 64); if (/^chq(?:bounce|back)-/i.test(suppliedId)) return json({ error: 'reserved-id' }, 400); if (/^hist:/i.test(suppliedId) || channel === 'historique') return json({ error: 'reserved-id' }, 400); // préfixes du portefeuille de chèques ; hist:/historique = /api/past-sales seulement
   const requestedId = splitIds.length ? legacySplit : (suppliedId || legacyBase || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8)));
   const isLegacyVisitId = requestedId === legacyBase || requestedId === legacySplit;
   const custody = await quarantineGuard(env, merchant, suppliedId || requestedId, quarantineSettlement);

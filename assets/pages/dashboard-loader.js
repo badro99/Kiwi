@@ -11,6 +11,7 @@
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=26',
+      'assets/past-sales.js?v=1',
       'assets/ai-image-import.js?v=8',
       'assets/menu-scan-reader.js?v=9',
       'assets/menu-scan.js?v=20',
@@ -143,7 +144,7 @@
     const optional = target.matches?.('[data-pds-action="scan-salle"], #cd-campaign');
     // Eager pages and the date picker keep their synchronous click contract.
     // Only intents owned by the optional workspace graph may be replayed.
-    if (!optional && !target.hasAttribute('data-fa-open') && !target.hasAttribute('data-kv-action') && !/^(?:clients-directory|growth-crm|order-qr|mx-import|bqx-import|rmw-menu-scan|scan-salle)$/.test(action)) return;
+    if (!optional && !target.hasAttribute('data-fa-open') && !target.hasAttribute('data-kv-action') && !/^(?:clients-directory|growth-crm|order-qr|mx-import|bqx-import|rmw-menu-scan|scan-salle|past-sales-open)$/.test(action)) return;
     if (['home', 'accueil'].includes(nav) || ['nav-home', 'nav-accueil'].includes(action)) return;
     firstUse(event, target, () => target.click());
   }, true);

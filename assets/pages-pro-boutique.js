@@ -706,7 +706,7 @@ function _bqxVisibleProducts() {
   // toutes les deux, et restent malgré tout deux articles distincts.
   if (_bqxColorFilter) products = products.filter((p) => (CAT().getProduct(p.id).families || []).includes(_bqxColorFilter));
   if (_bqxLowOnly) products = products.filter((p) => CAT().getProduct(p.id).stock <= 5);
-  return products;
+  const byName = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' }); return products.slice().sort((a, b) => byName.compare(String(a.name || ''), String(b.name || '')));   // ENS0002 avant ENS0010 (Santos, 26 nov.)
 }
 
 function _bqxGridHtml() {
@@ -1092,6 +1092,7 @@ function _renderInventory() {
     </div>`,
   });
   setTimeout(() => {
+    import(new URL('assets/boutique-cost-nudge.js?v=2', document.baseURI).href).then((m) => m.mountCostNudge(document.querySelector('.dash-genpage .bqx-inv') || document.querySelector('.bqx-inv'), CAT(), _bqxPfLang(), _renderInventory)).catch(() => {});   // produits sans coût d'achat
     // Une carte s'ouvre (ou se coche, en mode sélection) au clavier comme au
     // clic : Espace ou Entrée.
     const grid = document.getElementById('bqx-grid');
@@ -1820,7 +1821,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=35', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=40', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -2903,7 +2904,7 @@ const _BQX_PF = {
     kindsBoutique: { taille: ['Vêtement', 'Tailles XXS à XXL'], pointure: ['Chaussure', 'Pointures'], tu: ['Taille unique', 'Sans taille'] },
     kindsOther: { tu: ['Pièce unique', 'Sans taille'], taille: ['Formats', 'S · M · L'], pointure: ['Pointure', 'Pointures'] },
     price: 'Prix de vente', priceErr: 'Indiquez le prix de vente.', priceZero: 'Le prix de vente doit être supérieur à 0.',
-    moneyBad: 'Écrivez un montant, par exemple 149,90.',
+    moneyBad: 'Écrivez un montant, par exemple 149,90.', costErr: 'Indiquez ce que vous avez payé la pièce : sans le coût d’achat, Kiwi ne calcule ni votre marge ni la valeur de votre stock.',
     cost: 'Coût d’achat', optional: 'facultatif',
     gap: 'Prix moins coût : {gap} MAD, soit {pct} % du prix de vente.',
     gapNeg: 'Le coût dépasse le prix de vente de {gap} MAD.',
@@ -2940,7 +2941,7 @@ const _BQX_PF = {
     kindsBoutique: { taille: ['Clothing', 'Sizes XXS to XXL'], pointure: ['Shoes', 'Shoe sizes'], tu: ['One size', 'No size'] },
     kindsOther: { tu: ['Single piece', 'No size'], taille: ['Formats', 'S · M · L'], pointure: ['Shoe size', 'Shoe sizes'] },
     price: 'Selling price', priceErr: 'Enter the selling price.', priceZero: 'The selling price must be above 0.',
-    moneyBad: 'Enter an amount, for example 149.90.',
+    moneyBad: 'Enter an amount, for example 149.90.', costErr: 'Enter what you paid for one piece: without the purchase cost, Kiwi can work out neither your margin nor your stock value.',
     cost: 'Purchase cost', optional: 'optional',
     gap: 'Price minus cost: {gap} MAD, {pct}% of the selling price.',
     gapNeg: 'The cost is {gap} MAD above the selling price.',
@@ -2977,7 +2978,7 @@ const _BQX_PF = {
     kindsBoutique: { taille: ['ملابس', 'المقاسات من XXS إلى XXL'], pointure: ['أحذية', 'مقاسات الأحذية'], tu: ['مقاس واحد', 'بدون مقاس'] },
     kindsOther: { tu: ['قطعة واحدة', 'بدون مقاس'], taille: ['أحجام', 'S · M · L'], pointure: ['مقاس الحذاء', 'مقاسات الأحذية'] },
     price: 'سعر البيع', priceErr: 'أدخل سعر البيع.', priceZero: 'يجب أن يكون سعر البيع أكبر من 0.',
-    moneyBad: 'أدخل مبلغاً، مثلاً 149,90.',
+    moneyBad: 'أدخل مبلغاً، مثلاً 149,90.', costErr: 'أدخل ما دفعته مقابل القطعة: بدون تكلفة الشراء لا يحسب Kiwi هامش ربحك ولا قيمة مخزونك.',
     cost: 'تكلفة الشراء', optional: 'اختياري',
     gap: 'السعر ناقص التكلفة: {gap} درهم، أي {pct}٪ من سعر البيع.',
     gapNeg: 'التكلفة تتجاوز سعر البيع بـ {gap} درهم.',
@@ -3284,7 +3285,7 @@ function _bqxPfBody(p, catSel) {
               <span class="bqx-pf-err" id="bqx-pf-e-price" data-bqx-pf-err="price" hidden></span>
             </label>
             <label class="bqx-pf-f">
-              <span class="bqx-pf-l">${_esc(t.cost)}<span class="bqx-pf-tag">${_esc(t.optional)}</span></span>
+              <span class="bqx-pf-l">${_esc(t.cost)}</span>
               <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" value="${_esc(p ? _bqxMoneyVal(p.cost) : '')}" data-bqx-cost aria-describedby="bqx-pf-e-cost" /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
               <span class="bqx-pf-err" id="bqx-pf-e-cost" data-bqx-pf-err="cost" hidden></span>
             </label>
@@ -3327,8 +3328,9 @@ function _bqxPfRead(b) {
   _bqxPfMark(b, 'name', !name);
   const priceMsg = price.empty ? t.priceErr : price.bad ? t.moneyBad : !(price.n > 0) ? t.priceZero : '';
   _bqxPfMark(b, 'price', !!priceMsg, priceMsg);
-  _bqxPfMark(b, 'cost', !!cost.bad, t.moneyBad);
-  if (!name || priceMsg || cost.bad) return null;
+  const costMsg = cost.bad ? t.moneyBad : !(cost.n > 0) ? t.costErr : '';   // exigé (owner, 26 nov. 2026) ; les anciens sans coût : boutique-cost-nudge.js
+  _bqxPfMark(b, 'cost', !!costMsg, costMsg);
+  if (!name || priceMsg || costMsg || (b.__kbsNameTaken && b.__kbsNameTaken())) return null;
   /* No card checked = the product carries a kind this trade does not list
      (retail-scan writes « unite »). Left as it is, never rewritten to the
      first card: the old select did exactly that on every save. */
@@ -3461,6 +3463,7 @@ function _bqxPfOpen(p) {
   const b = _bqxModal && _bqxModal.el;
   if (!b) return;
   b.classList.add('bqx-pf-modal');
+  _bqxSz().then((m) => { if (b.isConnected && m.wireNameCheck) b.__kbsNameTaken = m.wireNameCheck(b.querySelector('[data-bqx-name]'), CAT(), _bqxPfLang(), p ? p.id : undefined); }).catch(() => {});   // un nom déjà dans l'inventaire
   _bqxPfWire(b, p); _bqxPfDraft = null; const _dTok = (_bqxPfOpen.n = (_bqxPfOpen.n || 0) + 1); if (!p) import(new URL('assets/boutique-drafts.js?v=2', document.baseURI).href).then((m) => { if (_dTok === _bqxPfOpen.n && b.isConnected) _bqxPfDraft = m.rememberForm(b, 'new-product:dash:' + (_bqxVenue() || 'local'), _bqxPfLang()); }).catch(() => {});   // fermée par erreur, la saisie revient (chaque boutique la sienne)
   if (!p) setTimeout(() => { const i = b.querySelector('[data-bqx-name]'); if (i) i.focus(); }, 60);
 }

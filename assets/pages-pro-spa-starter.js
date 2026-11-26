@@ -1239,7 +1239,7 @@
             [T({ fr: 'Remboursements', en: 'Refunded', ar: 'المبالغ المستردة' }), -returned, 'is-refund'],
             [T({ fr: 'Net encaissé', en: 'Net collected', ar: 'صافي المقبوضات' }), total, ''], ...(receivable > 0 ? [[T({ fr: 'Livraisons · à recevoir', en: 'Deliveries · to collect', ar: 'التوصيلات · قيد التحصيل' }), receivable, 'is-due']] : []),
           ].map(([label, value, cls]) => `<div class="${cls}"><span>${escS(label)}</span><strong>${fmt(value)} <small>MAD</small></strong></div>`).join('')}</div>
-          <div class="rtx-day-host" data-rtx-day-selector></div>
+          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;"><div class="rtx-day-host" data-rtx-day-selector></div>${window.KiwiEnv?.isReal?.() ? `<button class="rtx-method" type="button" data-action="past-sales-open">${escS(T({ fr: 'Ventes antérieures', en: 'Past sales', ar: 'المبيعات السابقة' }))}</button>` : ''}</div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Activité', en: 'Activity', ar: 'النشاط' }))}">${kindButtons}</div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
           ${cancelAuditLoading ? `<p class="rtx-notice" role="status">${escS(T({ fr: 'Chargement du journal…', en: 'Loading activity…', ar: 'جارٍ تحميل السجل…' }))}</p>` : ''}

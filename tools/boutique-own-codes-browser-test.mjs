@@ -74,6 +74,7 @@ async function create(name, total, own, kind) {
   await click('#bqi-new');
   await type('[data-bqx-name]', name);
   await type('[data-bqi-price]', '390');
+  await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
   if (kind) await page.evaluate((k) => { const r = document.querySelector(`input[name="bqx-pf-kind"][value="${k}"]`); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }, kind);
   await type('[data-kbs-total]', String(total));
   if (own) await page.evaluate(() => { const r = document.querySelector('[data-kbs-bc][value="own"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); });

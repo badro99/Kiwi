@@ -1054,22 +1054,62 @@ const F = {
     secItem: 'Article', secPrice: 'Prix', secStock: 'Stock', name: 'Nom du produit', ph: 'Ex. Hoodie noir', nameErr: 'Donnez un nom au produit.',
     cat: 'Catégorie', catNone: 'Sans catégorie', catHint: 'Elle devient le rayon de la caisse.', kind: 'Déclinaison',
     kinds: { taille: ['Vêtement', 'Tailles XXS à XXL'], pointure: ['Chaussure', 'Pointures'], tu: ['Taille unique', 'Sans taille'] },
-    price: 'Prix de vente', priceErr: 'Indiquez un prix de vente supérieur à 0.', cost: 'Coût d’achat', optional: 'facultatif',
+    price: 'Prix de vente', priceErr: 'Indiquez un prix de vente supérieur à 0.', cost: 'Coût d’achat', optional: 'facultatif', costErr: 'Indiquez ce que vous avez payé la pièce : sans le coût d’achat, Kiwi ne calcule ni votre marge ni la valeur de votre stock.',
     cancel: 'Annuler', create: 'Créer le produit' },
   en: { title: 'New product', desc: 'Create the product with the quantity received, then split it by size.',
     secItem: 'Item', secPrice: 'Price', secStock: 'Stock', name: 'Product name', ph: 'E.g. Black hoodie', nameErr: 'Give the product a name.',
     cat: 'Category', catNone: 'No category', catHint: 'It becomes the till’s shelf.', kind: 'Variants by',
     kinds: { taille: ['Clothing', 'Sizes XXS to XXL'], pointure: ['Shoes', 'Shoe sizes'], tu: ['One size', 'No size'] },
-    price: 'Selling price', priceErr: 'Enter a selling price above 0.', cost: 'Purchase cost', optional: 'optional',
+    price: 'Selling price', priceErr: 'Enter a selling price above 0.', cost: 'Purchase cost', optional: 'optional', costErr: 'Enter what you paid for one piece: without the purchase cost, Kiwi can work out neither your margin nor your stock value.',
     cancel: 'Cancel', create: 'Create product' },
   ar: { title: 'منتج جديد', desc: 'أنشئ المنتج بالكمية المستلمة، ثم وزّعها حسب المقاس.',
     secItem: 'السلعة', secPrice: 'السعر', secStock: 'المخزون', name: 'اسم المنتج', ph: 'مثال: هودي أسود', nameErr: 'أدخل اسماً للمنتج.',
     cat: 'الفئة', catNone: 'بدون فئة', catHint: 'تصبح رفّاً في الصندوق.', kind: 'التنويع حسب',
     kinds: { taille: ['ملابس', 'المقاسات من XXS إلى XXL'], pointure: ['أحذية', 'مقاسات الأحذية'], tu: ['مقاس واحد', 'بدون مقاس'] },
-    price: 'سعر البيع', priceErr: 'أدخل سعر بيع أكبر من 0.', cost: 'تكلفة الشراء', optional: 'اختياري',
+    price: 'سعر البيع', priceErr: 'أدخل سعر بيع أكبر من 0.', cost: 'تكلفة الشراء', optional: 'اختياري', costErr: 'أدخل ما دفعته مقابل القطعة: بدون تكلفة الشراء لا يحسب Kiwi هامش ربحك ولا قيمة مخزونك.',
     cancel: 'إلغاء', create: 'إنشاء المنتج' },
 };
 export const formWords = (lang) => F[lang] || F.fr;
+
+/* Deux articles du même nom (Santos, 26 nov. 2026 : en renommant les articles
+   en codes, CHE0001 a été créé une seconde fois sans que rien ne le dise). Le
+   nom se compare sans casse, sans accents ni espaces doublés ; `exceptId` est
+   l'article qu'on corrige. Les trois formulaires de la caisse et celui du
+   tableau de bord le disent sous le champ, et refusent d'enregistrer. */
+const normName = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+export function nameTaken(cat, name, exceptId) {
+  const n = normName(name);
+  if (!n || !cat || typeof cat.listProducts !== 'function') return null;
+  return cat.listProducts().find((p) => p && p.id !== exceptId && normName(p.name) === n) || null;
+}
+const TAKEN = {
+  fr: (n) => `« ${n} » existe déjà dans l’inventaire. Donnez un autre nom.`,
+  en: (n) => `“${n}” is already in the inventory. Choose another name.`,
+  ar: (n) => `«${n}» موجود من قبل في المخزون. اختر اسماً آخر.`,
+};
+/* Branche la vérification sur un champ « Nom » : le message apparaît dès la
+   frappe. Rend check(), à appeler au moment d'enregistrer : l'article qui
+   porte déjà ce nom, ou null. */
+export function wireNameCheck(input, cat, lang, exceptId) {
+  if (!input || !input.parentNode) return () => null;
+  const t = TAKEN[lang] || TAKEN.fr;   // FR / EN / AR
+  const takenEl = document.createElement('span');
+  takenEl.setAttribute('data-kbs-name-taken', '');
+  takenEl.setAttribute('role', 'alert');
+  takenEl.style.cssText = 'display:none;font-size:11.5px;font-weight:600;line-height:1.35;margin-top:4px;color:var(--danger, #cb5238)';
+  input.parentNode.appendChild(takenEl);
+  const check = () => {
+    const p = nameTaken(typeof cat === 'function' ? cat() : cat, input.value, exceptId);
+    takenEl.style.display = p ? 'block' : 'none';
+    takenEl.textContent = p ? t(p.name) : '';
+    if (p) input.setAttribute('aria-invalid', 'true');
+    else if (input.getAttribute('aria-invalid') === 'true' && input.value.trim()) input.setAttribute('aria-invalid', 'false');
+    return p;
+  };
+  input.addEventListener('input', check);
+  if (input.value.trim()) check();
+  return check;
+}
 
 /* Le bloc « Stock › Quantité totale », identique sur les deux formulaires. */
 export function totalFieldHtml(lang, kind) {
