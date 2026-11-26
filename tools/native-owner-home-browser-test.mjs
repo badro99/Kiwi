@@ -91,6 +91,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function nativeStub(lang, role) {
   localStorage.setItem('kiwiNativeLocale', lang);
   localStorage.setItem('kiwiAppRole', role);
+  /* The app opens staff pages in Design 2027 by default since 2026-11-26; this suite
+     measures the original design's phone till, which a store switched off keeps. */
+  localStorage.setItem('kiwiAppStoreSkin2027', '0');
   const noop = () => Promise.resolve({});
   const plug = new Proxy({}, { get: (t, k) => (k === 'addListener' ? () => ({ remove() {} }) : noop) });
   window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios', Plugins: new Proxy({}, { get: () => plug }) };

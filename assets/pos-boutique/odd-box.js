@@ -18,6 +18,9 @@ const PREFIX = 'odd-';
 export const isOddPid = (pid) => String(pid || '').startsWith(PREFIX);
 
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
+/* Le montant tapé, en chiffres de caisse (espace fine des milliers). */
+const WHOLE = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const CENTS = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /* L'article virtuel, tiré de la description que la ligne garde. */
 function oddProduct(pid, d) {
@@ -60,7 +63,7 @@ function open(d, tr) {
       <div class="odd-head"><span class="odd-ic"><i data-icon="sell"></i></span>
         <div><h3 class="modal-title">${esc(tr('Article sans étiquette'))}</h3>
         <p class="odd-sub">${esc(tr('Tapez le prix convenu. La pièce passe sur le ticket, le stock ne bouge pas.'))}</p></div></div>
-      <div class="odd-amount" aria-live="polite"><b id="odd-val">0</b><span>MAD</span></div>
+      <div class="odd-amount" aria-live="polite"><b id="odd-val">0</b><span>${esc(tr('MAD'))}</span></div>
       <div class="odd-pad" role="group" aria-label="${esc(tr('Prix'))}">
         ${['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'].map((k) => `<button type="button" data-odd-key="${k}"${k === 'del' ? ` aria-label="${esc(tr('Effacer'))}"` : ''}>${k === 'del' ? '<i data-icon="backspace"></i>' : k}</button>`).join('')}
       </div>
@@ -70,7 +73,7 @@ function open(d, tr) {
     </div>`;
   const val = $('#odd-val', el), add = $('#odd-add', el);
   const paint = () => {
-    val.textContent = (cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
+    val.textContent = (cents % 100 ? CENTS : WHOLE).format(cents / 100);
     add.disabled = !(cents > 0);
     add.textContent = cents > 0 ? `${tr('Ajouter au ticket')} · ${fmtMAD(cents / 100)}` : tr('Tapez un prix');
   };
