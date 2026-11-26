@@ -130,7 +130,7 @@
         total: lines.reduce((s, l) => s + l.price * l.qty, 0),
       };
       if (firing) order.course = 'suite';
-      if (following.length) order.following = kitchenItemsFromLines(following);
+      if (following.length) order.following = kitchenItemsFromLines(following); if (typeof counterStampOrder === 'function') counterStampOrder(order); /* commentaire de la table */
       /* La suite est partie : l'annonce « à suivre » des bons précédents de
          cette table n'a plus rien à annoncer. */
       if (firing) kdsOrders.forEach((o) => { if (o && o.following && String(o.table) === String(tableId)) delete o.following; });
@@ -705,7 +705,7 @@
       const lines = sid === 'all' ? allItems : allItems.filter(i => i.stations.includes(sid));
       if (!lines.length) return o.status;
       if (sid !== 'all' && lines.every(i => i.stationReady === true)) return 'ready';
-      if (lines.every(i => i.stationAccepted === true)) return 'cooking';
+      if (lines.every(i => i.stationAccepted === true) || (o.status !== 'held' && typeof counterFlow === 'function' && counterFlow().direct === true)) return 'cooking'; /* ou « La cuisine commence tout de suite » (Paramètres › Commande au comptoir) */
       return o.status === 'cooking' && sid === 'all' ? 'cooking' : 'new';
     }
     function kdsGroup(status) {
@@ -764,7 +764,7 @@
           ${kdsTypeChip(o)}
           <span class="kit-status">${isReady ? kkt(o.pickedUp ? 'order.served' : 'order.ready') : kkt(isNew ? 'order.new' : 'order.preparing')}</span>
         </div>
-        <ul class="kit-items">${items}</ul>
+        ${o.service ? `<div class="kit-following">${o.service === 'surplace' ? 'Sur place' : 'À emporter'}</div>` : ''}<ul class="kit-items">${items}</ul>${o.comment ? `<div class="kit-item kit-comment"><span class="kit-inote">${KDS_SVG.note}<span>${kdsEsc(o.comment)}</span></span></div>` : ''}
         ${Array.isArray(o.following) && o.following.length && !isReady ? `<div class="kit-following">À suivre · ${o.following.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ')}</div>` : ''}
         ${act}`;
     }
@@ -949,8 +949,8 @@
         source = { kind: 'table', label: kkt('kds.source.table', { table: String(o.table == null ? '' : o.table) }) };
         if (o.course === 'suite') chips.push(kkt('kds.suite'));
         if (o.server) chips.push(String(o.server));
-      }
-      const tk = { id: String(o.num), number: ticketNo(o), minutes: Math.floor(kdsElapsed(o) / 60), source, chips, items };
+      } if (o.service) chips.unshift(o.service === 'surplace' ? 'Sur place' : 'À emporter'); /* demandé à l'encaissement (counter-flow.js) */
+      const tk = { id: String(o.num), number: ticketNo(o), minutes: Math.floor(kdsElapsed(o) / 60), source, chips, items }; if (o.comment) tk.note = String(o.comment); /* allergies, demandes */
       if (lane === 'pass') { tk.doneAt = o.readyAt || ''; tk.serve = false; tk.recall = !o.pickedUp; }
       else if (Array.isArray(o.following) && o.following.length) {
         tk.following = kkt('kds.following', { items: o.following.map(i => `${i.q}× ${i.n}`).join(', ') });
@@ -1328,7 +1328,7 @@
             station: sid,
             table: (typeof dlvTicketHead === 'function' && dlvTicketHead(order)) || tableLabel,
             order: order.opNum != null ? '#' + order.opNum : order.num != null ? '#' + order.num : '', time: time,
-            items: byStation.get(sid),
+            items: byStation.get(sid), ...(typeof counterTicketFields === 'function' ? counterTicketFields(order) : {}),
             following: (!(options && options.voided) && Array.isArray(order.following) && order.following.length)
               ? kitchenPaperItems(order.following, sid, fallback).map(i => ({ qty: i.qty, name: i.name }))
               : undefined,
@@ -1374,7 +1374,7 @@
         kitchenDispatchedAt: Date.now(),
         paid: false, pickedUp: false, pickedUpAt: null, total, delivery: typeof dlvTag === 'function' ? dlvTag() : undefined,
       };
-      kdsOrders.push(order);
+      if (typeof counterStampOrder === 'function') counterStampOrder(order); kdsOrders.push(order); /* commentaire, sur place / à emporter */
       /* The client on the note follows it onto the board (sale-client.js). */
       try { if (window.KiwiCaisseSaleClient && window.KiwiCaisseSaleClient.carry) window.KiwiCaisseSaleClient.carry(order); } catch (_) {}
       /* Print only after the permanent queue number has had its first chance
@@ -2622,7 +2622,7 @@
           pickedUpAt: o.status === 'served' ? vrapHandoverTime(vrapHandoverTimestamp(o.served_ts)) : null,
           total: o.total || 0,
         };
-        kdsOrders.push(t);
+        if (typeof counterFromQueue === 'function') counterFromQueue(t, o.lines); kdsOrders.push(t); /* commentaire et service d'un autre écran */
         opTickets.set(o.id, t);
         /* Un seul poste, choisi comme hub d'impression, reçoit les bons saisis
            sur le téléphone serveur, une autre caisse ou OrderPro. Les bons en

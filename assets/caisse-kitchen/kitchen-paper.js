@@ -136,7 +136,7 @@
             station: sid,
             table: (typeof dlvTicketHead === 'function' && dlvTicketHead(order)) || tableLabel,
             order: order.opNum != null ? '#' + order.opNum : order.num != null ? '#' + order.num : '', time: time,
-            items: byStation.get(sid),
+            items: byStation.get(sid), ...(typeof counterTicketFields === 'function' ? counterTicketFields(order) : {}),
             following: (!(options && options.voided) && Array.isArray(order.following) && order.following.length)
               ? kitchenPaperItems(order.following, sid, fallback).map(i => ({ qty: i.qty, name: i.name }))
               : undefined,
@@ -182,7 +182,7 @@
         kitchenDispatchedAt: Date.now(),
         paid: false, pickedUp: false, pickedUpAt: null, total, delivery: typeof dlvTag === 'function' ? dlvTag() : undefined,
       };
-      kdsOrders.push(order);
+      if (typeof counterStampOrder === 'function') counterStampOrder(order); kdsOrders.push(order); /* commentaire, sur place / à emporter */
       /* The client on the note follows it onto the board (sale-client.js). */
       try { if (window.KiwiCaisseSaleClient && window.KiwiCaisseSaleClient.carry) window.KiwiCaisseSaleClient.carry(order); } catch (_) {}
       /* Print only after the permanent queue number has had its first chance

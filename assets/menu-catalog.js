@@ -454,7 +454,7 @@
   }
 
   /* ───────────────── example template (a small café/resto starter) ───────────────── */
-  const { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot } = window.KiwiMenuCatalogParts.state({ rules, tr, T, STATION_COLORS, render: (...args) => render(...args), registerHandlers: () => registerHandlers(), createFormulas: window.KiwiMenuCatalogParts.formulas });
+  const { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, moveOptGroup, orderOptChoices, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot } = window.KiwiMenuCatalogParts.state({ rules, tr, T, STATION_COLORS, render: (...args) => render(...args), registerHandlers: () => registerHandlers(), createFormulas: window.KiwiMenuCatalogParts.formulas });
   /* menu-formulas: saveFormulaTemplate owned by formulas. */
   /* menu-formulas: deleteFormulaTemplate owned by formulas. */  /* menu-state: edits owned by state. */
   function injectCss() { return window.KiwiMenuCatalogParts.media({  }).injectCss(); }
@@ -793,7 +793,7 @@
     optionGroups: (vid) => (store.get(vid).opts || []),
     optionEmojis: () => OPT_EMOJIS.slice(),
     addOptGroup, updateOptGroup, deleteOptGroup,
-    addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts,
+    addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, moveOptGroup, orderOptChoices,
     addStation, renameStation, deleteStation, moveStation, cycleStationColor,
     openItem: (id) => {
       injectCss();

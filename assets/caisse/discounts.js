@@ -29,6 +29,19 @@
 
     
     function renderRemiseChips() {
+      /* Remises nommées du propriétaire (« Étudiant · 10 % ») : la caisse ne
+         propose qu'elles, ni montant ni motif à choisir, le nom est le motif. */
+      const presets = window.KiwiDiscountPolicy?.presets?.() || [];
+      const named = presets.length > 0;
+      const typeRow = $('#rm-type'), reasons = $('#rm-reasons');
+      if (typeRow) { typeRow.hidden = named; typeRow.style.display = named ? 'none' : ''; }
+      const reasonBlock = reasons && reasons.closest('.rm-block');
+      if (reasonBlock) { reasonBlock.hidden = named; reasonBlock.style.display = named ? 'none' : ''; }
+      if (named) {
+        if (remiseState.kind !== 'pct') { remiseState.kind = 'pct'; remiseState.value = 0; }
+        $('#rm-pct-chips').innerHTML = presets.map(p => `<button class="rm-pct-chip" data-rm-pct="${p.pct}" data-rm-name="${kdsEsc(p.name)}">${kdsEsc(p.name)} · ${p.pct} %</button>`).join('');
+        return;
+      }
       const values = window.KiwiDiscountPolicy?.percentages() || [5, 10, 15, 20];
       $('#rm-pct-chips').innerHTML = values.map(n => `<button class="rm-pct-chip" data-rm-pct="${n}">${n} %</button>`).join('');
     }
@@ -110,7 +123,11 @@
       const targetTableId = remiseState.tableId;
       const targetKind = remiseState.kind;
       const targetValue = remiseState.value;
-      const targetReason = remiseState.reason;
+      const namedChip = $('#rm-pct-chips .rm-pct-chip.is-active[data-rm-name]');
+      const targetReason = namedChip && targetKind === 'pct' ? namedChip.dataset.rmName : remiseState.reason;
+      if ((window.KiwiDiscountPolicy?.presets?.() || []).length && targetKind !== 'pct') {
+        toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Choisis une remise de la liste')); return;
+      }
       if (targetKind === 'pct' && window.KiwiDiscountPolicy?.configured() && !window.KiwiDiscountPolicy.allowed(targetValue)) {
         toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Pourcentage non autorisé · rechargez la remise')); return;
       }

@@ -123,7 +123,7 @@ const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
   const m = url.match(/^\/assets\/([^?]+)\?v=([^&]+)$/);
   const dynamic = m && entries.some((e) => (`${e.base}.js` === m[1] || `${e.base}.css` === m[1]) && e.rev === m[2]);
-  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || moduleUrls.has(url) || onDemand.includes(`'assets/${url.slice(8)}'`) || onDemand.includes(`'${url}'`) || onDemand.includes(`"assets/${url.slice(8)}"`));
+  ok(`${url} carries the same ?v= stamp in its application shell`, docs.includes(`"assets/${url.slice(8)}"`) || dynamic || moduleUrls.has(url) || onDemand.includes(`'assets/${url.slice(8)}'`) || onDemand.includes(`'${url}'`) || onDemand.includes(`"assets/${url.slice(8)}"`) || read('assets/interactive/handlers.js').includes(`'../${url.slice(8)}'`));
 });
 
 if (failed.length) {

@@ -136,6 +136,7 @@ function dlvMethod(method) { return dlvIsPlatform() ? 'platform' : method; }
 /* La vente : son canal est l'option (« glovo », « livraison »), son libellé dit
    la plateforme et son numéro, comme la tablette du livreur. */
 function dlvSaleTag(entry, order) {
+  if (typeof counterSaleTag === 'function') counterSaleTag(entry, order);   /* sur place au comptoir (counter-flow.js) */
   const d = (order && order.delivery) || dlvTag();
   if (!entry || !d || !/^[a-z]{2,24}$/.test(String(d.id || ''))) return;
   entry.channel = d.id;
@@ -416,7 +417,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=10';
+  s.src = 'assets/delivery.js?v=11';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

@@ -1950,7 +1950,7 @@ section('Whole-project regressions');
     'entitlement-held-gesture-test.mjs',
     'entitlement-panel-language-test.mjs',
     'discount-policy-test.mjs', 'return-window-till-test.mjs', 'r20-retail-till-test.mjs', 'returns-keyset-pagination-test.mjs', 'money-format-lang-test.mjs', 'retail-balances-status-test.mjs', 'ret-window-test.mjs', 'return-day-inflight-test.mjs', 'return-window-server-test.mjs', 'policy-editors-test.mjs', 'pressing-b2b-rate-test.mjs', 'spa-cure-grandfather-test.mjs',
-    'discount-policy-api-test.mjs',
+    'discount-policy-api-test.mjs', 'counter-policy-store-test.mjs',
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',
     'sale-server-truth-test.mjs',
@@ -2248,7 +2248,7 @@ section('Whole-project regressions');
     'menu-promos-test.mjs', 'delivery-platforms-test.mjs',
     'menu-promos-server-test.mjs',
     'menu-promos-browser-test.mjs',
-    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs', 'vision-size-run-test.mjs', 'agent-size-run-test.mjs', 'agent-size-run-browser-test.mjs', 'agent-doc-error-browser-test.mjs', 'ai-retired-model-test.mjs', 'inventory-scan-browser-test.mjs', 'calm-rerender-browser-test.mjs', 'serveur-toast-tap-browser-test.mjs', 'serveur-tap-under-poll-browser-test.mjs', 'serveur-stale-visit-payment-test.mjs', 'serveur-sent-line-edit-test.mjs', 'serveur-install-button-browser-test.mjs', 'serveur-hung-request-browser-test.mjs', 'serveur-notice-language-browser-test.mjs', 'serveur-move-pending-browser-test.mjs', 'serveur-reopened-payment-browser-test.mjs', 'serveur-merge-pending-browser-test.mjs', 'serveur-accepted-edit-retry-browser-test.mjs',
+    'menu-promos-properties-test.mjs', 'formula-extra-drink-browser-test.mjs', 'jon-requests-browser-test.mjs', 'waiter-orders-off-inbox-test.mjs', 'empty-visit-release-test.mjs', 'empty-visit-till-browser-test.mjs', 'outbox-stale-lock-test.mjs', 'till-verify-hiccup-test.mjs', 'stuck-guard-test.mjs', 'vision-size-run-test.mjs', 'agent-size-run-test.mjs', 'agent-size-run-browser-test.mjs', 'agent-doc-error-browser-test.mjs', 'ai-retired-model-test.mjs', 'inventory-scan-browser-test.mjs', 'calm-rerender-browser-test.mjs', 'serveur-toast-tap-browser-test.mjs', 'serveur-tap-under-poll-browser-test.mjs', 'serveur-stale-visit-payment-test.mjs', 'serveur-sent-line-edit-test.mjs', 'serveur-install-button-browser-test.mjs', 'serveur-hung-request-browser-test.mjs', 'serveur-notice-language-browser-test.mjs', 'serveur-move-pending-browser-test.mjs', 'serveur-reopened-payment-browser-test.mjs', 'serveur-merge-pending-browser-test.mjs', 'serveur-accepted-edit-retry-browser-test.mjs',
     'caisse-pay-subtitle-test.mjs',
     /* Le fil d'Ariane du tableau de bord : une seule peinture (Kiwi.breadcrumb),
        « Home » / « الرئيسية » sur chaque page, et un changement de langue page

@@ -1276,7 +1276,7 @@
          être encaissée, mais elle reste `held` tant que personne ne l'a envoyée.
          Les deux gestes doivent donc rester visibles et indépendants. */
       const editingOrder = editing ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
-      $('#rp-send-kitchen').hidden = editing && !(editingOrder && editingOrder.status === 'held');
+      $('#rp-send-kitchen').hidden = (editing && !(editingOrder && editingOrder.status === 'held')) || (typeof counterHidesSend === 'function' && counterHidesSend(editing, editingOrder)); /* « Encaisser envoie en cuisine » (Paramètres) */
       if (discAmt > 0 && window.lucide) lucide.createIcons();
     }
 

@@ -6,14 +6,14 @@
   if (document.currentScript?.dataset.startup === 'menu') {
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
-      'assets/menu-catalog/state.js?v=21',
+      'assets/menu-catalog/state.js?v=22',
       'assets/menu-catalog/modifiers.js?v=5',
       'assets/menu-catalog/item-list.js?v=5',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
       'assets/menu-catalog/media.js?v=3',
       'assets/menu-catalog/availability.js?v=3',
-      'assets/menu-catalog.js?v=44',
+      'assets/menu-catalog.js?v=45',
     ];
     document.write(menuScripts.map(url => '<script src="' + url + '" defer fetchpriority="low"><\/script>').join('\n'));
     return;
@@ -39,7 +39,7 @@
     'assets/restaurant-menu/strings.js?v=32',
     'assets/restaurant-menu/recipes.js?v=13',
     'assets/restaurant-menu/styles.js?v=13',
-    'assets/restaurant-menu-workspace.js?v=145',
+    'assets/restaurant-menu-workspace.js?v=146',
     'assets/sold-insights.js?v=25',
     'assets/boutique-promos-dashboard.js?v=39',
     'assets/day-report.js?v=62',
@@ -66,7 +66,7 @@
     'assets/briefing.js?v=54',
     'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=22',
-    'assets/delivery.js?v=10',
+    'assets/delivery.js?v=11',
     'assets/conformite.js?v=8',
     'assets/production-action-guard.js?v=9',
     'assets/staff-roles.js?v=4',

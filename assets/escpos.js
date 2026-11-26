@@ -332,12 +332,24 @@
      * par le même « > », au même alignement : un bon homogène se lit d'un coup
      * d'œil (Browse, 19 nov. 2026 : gras et maigre, trois tailles sur un bon). */
     var b = new Builder(paper).init().bold(true);
-    var detail = function (text) { wrap('> ' + text, paper, 1, '  ').forEach(function (l) { b.line(l); }); };
+    /* Options, ingrédients et notes sous un plat : en double hauteur, la largeur
+     * d'une ligne normale (Jon's Burgers, 26 nov. 2026 : « les options en plus
+     * grand, que la cuisine les lise »). Le plat reste en double taille. */
+    var detail = function (text) { b.size(1, 2); wrap('> ' + text, paper, 1, '  ').forEach(function (l) { b.line(l); }); b.size(1, 1); };
     b.align('center').size(2, 2).line(fit(o.title || 'CUISINE', paper, 2));
     if (o.table || o.order) b.line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper, 2));
+    /* Sur place / à emporter, demandé à l'encaissement : lu de loin. */
+    if (o.service) b.line(fit(o.service, paper, 2));
     b.size(1, 1);
     if (o.time) b.line(fit(o.time, paper));
     b.align('left').line(rule(paper));
+    /* Le commentaire de la commande (allergies, demandes) : avant les plats,
+     * en double hauteur, encadré, pour qu'aucun cuisinier ne le rate. */
+    if (o.comment) {
+      b.size(1, 2);
+      wrap('!! ' + o.comment, paper, 1, '   ').forEach(function (l) { b.line(l); });
+      b.size(1, 1).line(rule(paper));
+    }
     (o.items || []).forEach(function (it) {
       b.size(2, 2);
       wrap((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2, '   ').forEach(function (l) { b.line(l); });

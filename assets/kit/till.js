@@ -248,6 +248,14 @@
         body = b.plain ? '<ul class="ls">' + lines.map(row).join('') + '</ul>' : (unsent.length ? '<p class="k-foot gh ns">' + th('bill.not_sent', { n: unsent.length }) + '</p><ul class="ls">' + unsent.map(row).join('') + '</ul>' : '') +
           (sent.length ? '<p class="k-foot k-ink2 gh">' + th('bill.sent_at', { time: (sent[0] && sent[0].sentAt) || '' }) + '</p><ul class="ls">' + sent.map(row).join('') + '</ul>' : '');
       }
+      /* The host's order comment for the kitchen (allergies, special requests),
+         Jon's Burgers 26 Nov 2026: .comment {label, text, add, edit}, words
+         from the host. It prints on the kitchen ticket and shows on the KDS. */
+      var cmt = b.comment;
+      if (cmt && lines.length && !b.plain && st !== 'loading') {
+        body += '<div class="cm">' + (cmt.text ? '<p class="k-foot k-ink2 cml">' + esc(cmt.label || '') + '</p><p class="k-body cmt">' + esc(cmt.text) + '</p>' : '') +
+          C.button.render({ label: cmt.text ? (cmt.edit || '') : (cmt.add || ''), size: 'S', id: 'cm', attrs: ' data-w="comment"', disabled: paying }) + '</div>';
+      }
       var part = function (p) { return p && cents(p.amount) ? '<div class="pt k-body" data-k-part><span class="k-ink2">' + esc(p.label) + '</span><span class="k-num">' + numHtml(K.fmt() ? K.fmt().signedMoney(p.amount, 2) : p.amount) + '</span></div>' : ''; };
       var sendFirst = unsent.length && !b.sendOnPay && !b.plain;
       var primary = sendFirst
@@ -276,6 +284,7 @@
       '.bd{flex:1;overflow-y:auto;padding-inline:24px}' +
       '.gh{margin:16px 0 4px;font-weight:var(--k-fw-footnote-strong)}.gh.ns{color:var(--k-accent-ink)}' +
       '.ls{list-style:none;margin:0;padding:0}' +
+      '.cm{margin:12px 0 16px;display:flex;flex-direction:column;align-items:flex-start;gap:4px}.cml,.cmt{margin:0}.cmt{font-weight:var(--k-fw-callout-strong);white-space:pre-wrap;overflow-wrap:anywhere}' +
       '.ln{min-height:56px;padding-block:8px;display:flex;flex-direction:column;justify-content:center;box-shadow:inset 0 -1px 0 var(--k-line);border-radius:var(--k-r-1)}' +
       '.ln.on{background-color:var(--k-select)}' +
       '.ln:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}' +
@@ -862,7 +871,11 @@
         self.__mode = d.value && d.value.value || d.id; self.__text = ''; self.render();
       });
       C.chip.bind(R, function (v, g, mode, el) {
-        if (el.closest('[data-reasons]')) self.__reason = v; else self.__text = v;
+        if (el.closest('[data-presets]')) {
+          /* A named discount: its rate, and its name as the reason. */
+          var pr = self.presetList()[Number(v)];
+          if (pr) { self.__mode = 'percent'; self.__text = String(pr.pct); self.__reason = 'preset'; self.__preset = Number(v); }
+        } else if (el.closest('[data-reasons]')) self.__reason = v; else self.__text = v;
         self.render();
       });
       C.keypad.bind(R, function (id, key) {
@@ -875,7 +888,8 @@
         if (el.getAttribute('data-w') === 'remove') { self.emit('remove', null, { gestureId: g }); return; }
         if (el.getAttribute('data-w') !== 'apply') return;
         /* The Apply tap fires nothing; the approval's answer does (§10.31). */
-        self.emit('apply', null, { mode: self.__mode, value: C.keypad.value(self.__text), reason: self.__reason, amount: self.amount(), gestureId: g });
+        var named = self.__reason === 'preset' ? self.presetList()[self.__preset] : null;
+        self.emit('apply', null, { mode: self.__mode, value: C.keypad.value(self.__text), reason: self.__reason, presetName: named ? named.name : '', amount: self.amount(), gestureId: g });
       }, '[data-w]');
     },
     /* Opening on a note: the discount already on it, as the shipped window
@@ -886,8 +900,13 @@
       this.__text = cur && cur.value ? String(cur.value) : '';
       this.__reason = (cur && cur.reason) || null;
       this.__has = !!cur;
+      this.__preset = -1;
       if (!quiet) this.render();
     },
+    /* The owner's named discounts (.policy.presets [{name, pct}]): when there
+       are any, the sheet offers exactly these, nothing typed (Jon's Burgers,
+       26 Nov 2026). */
+    presetList: function () { var p = this.policy || {}; return Array.isArray(p.presets) ? p.presets : []; },
     pols: function () { var p = this.policy || {}; return (p.percentages && p.percentages.length) ? p.percentages : [5, 10, 15, 20]; },
     amount: function () {
       var total = cents((this.bill || {}).total), v = C.keypad.value(this.__text);
@@ -898,6 +917,19 @@
       var err = '';
       if (amt > (b.total || 0)) err = t('discount.too_large');
       else if (this.__mode === 'percent' && p.configured && v && this.pols().indexOf(v) < 0) err = t('discount.not_allowed');
+      var presets = this.presetList();
+      if (presets.length) {
+        var on = this.__reason === 'preset' ? String(this.__preset) : '';
+        var pick = presets[this.__preset];
+        var okNamed = !!(this.__reason === 'preset' && pick && amt <= (b.total || 0));
+        this.shadowRoot.innerHTML = '<div class="dc"><div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"' }) + '<h2 class="k-heading ti">' + th('discount.title') + '</h2></div>' +
+          '<div data-presets>' + C.chip.group({ options: presets.map(function (x, i) { return { value: String(i), label: x.name + ' · ' + pctText(x.pct) }; }), value: on, label: t('discount.title') }) + '</div>' +
+          (okNamed ? '<p class="k-callout pv">' + th('discount.preview', { pct: pctText(pick.pct), amount: money(amt), total: money(fromCents(cents(b.total) - cents(amt))) }) + '</p>' : '') +
+          '<p class="k-foot k-ink2">' + th('discount.manager') + '</p>' +
+          C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ap', attrs: ' data-w="apply"', label: t('discount.apply', { amount: money(amt) }), disabled: !okNamed }) +
+          (this.__has ? C.button.render({ variant: 'secondary', size: 'L', full: true, id: 'rm', attrs: ' data-w="remove"', label: t('discount.remove') }) : '') + '</div>';
+        return;
+      }
       var ready = v > 0 && this.__reason && !err;
       var pctChips = this.__mode === 'percent' ? C.chip.group({ options: this.pols().map(function (x) { return { value: String(x), label: pctText(x) }; }), value: this.__text, label: t('discount.percent') }) : '';
       var newTotal = fromCents(cents(b.total) - cents(amt));
