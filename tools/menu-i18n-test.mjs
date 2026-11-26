@@ -171,7 +171,7 @@ assert((caisse.match(/rp-item-name">\$\{lineName\(l\)\}/g) || []).length === 4, 
 assert(/KiwiCaisseLang\.subscribe\(function \(\) \{ try \{ renderCatPills\(\); renderMenu\(\); renderCart\(\); \}/.test(caisse), 'caisse : re-rendu au changement de langue');
 const serveur = serveurTestSource(read('kiwi-serveur.html'));
 assert(/i18n: it\.i18n \|\| null,/.test(serveur) && /window\.KiwiMenuI18n\.index\(\{ cats, items: allItems/.test(serveur), 'serveur : i18n projeté et index posé');
-assert(/window\.KiwiMenuI18n\.name\(it, employeeLanguage\)/.test(serveur) && /const svLineName = /.test(serveur) && (serveur.match(/svLineName\(l\)/g) || []).length >= 4, 'serveur : grille et lignes de commande dans la langue de l’employé');
+assert(/window\.KiwiMenuI18n\.(?:name|dish)\(it, employeeLanguage\)/.test(serveur) && /const svLineName = /.test(serveur) && (serveur.match(/svLineName\(l\)/g) || []).length >= 4, 'serveur : grille et lignes de commande dans la langue de l’employé');
 const cuisine = read('kiwi-cuisine.html');
 assert(/<script src="assets\/menu-i18n\.js\?v=\d+" defer><\/script>/.test(cuisine) && /window\.KiwiMenuI18n\.index\(j\.menu\)/.test(cuisine), 'cuisine : charge menu-i18n.js et indexe la carte');
 assert(/esc\(l\.name\) \+ kdsTr\(l\.name\)/.test(cuisine) && /\.tk-tr \{/.test(cuisine), 'cuisine : canonique du chef d’abord, traduction dessous');

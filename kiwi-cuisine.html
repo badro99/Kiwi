@@ -902,7 +902,7 @@
      un écran de cuisine qui plante au passe ne laissait aucune trace. -->
 <script src="assets/kiwi-env.js?v=11"></script>
 <script src="assets/err-reporter.js?v=2"></script>
-<script src="assets/menu-i18n.js?v=8" defer></script>
+<script src="assets/menu-i18n.js?v=9" defer></script>
 <script src="assets/kitchen-relay.js?v=25" defer></script>
 <!-- L'appairage, partagé avec la caisse. Une tablette du passe change de
      commerçant sans que personne ne se connecte — exactement comme une caisse —
@@ -1592,6 +1592,13 @@
           if (!present[id]) { delete S.orders[id]; delete S.cooking[id]; }
         });
       }
+      /* Un bon annulé (table annulée par le serveur, bon refusé au comptoir) ne
+         revient jamais dans `orders` d'un relevé suivant : il n'est que dans
+         `cancelledTickets`. Sans cette lecture il restait au passe jusqu'au
+         rechargement (audit du 26 nov.). */
+      (j.cancelledTickets || []).forEach(function (o) {
+        if (o && o.id) { delete S.orders[o.id]; delete S.cooking[o.id]; }
+      });
       var fresh = 0;
       /* Le serveur ne renvoie plus les bons du service précédent. Une tablette
          restée ouverte les a toutefois déjà en mémoire : retire-les même
@@ -1914,7 +1921,7 @@
     function kdsTr(name) {
       /* `typeof window` : tools/formula-protocol-test.mjs évalue card() hors navigateur. */
       var M = (typeof window !== 'undefined') ? window.KiwiMenuI18n : null; if (!M) return '';
-      var src = String(name || '').trim(), tr = M.t(src, lang());
+      var src = String(name || '').trim(), tr = M.dish ? M.dish(src, lang()) : M.t(src, lang());   // nom de plat : traduction écrite à la main seulement
       return (tr && tr !== src) ? '<span class="tk-tr">' + esc(tr) + '</span>' : '';
     }
     var items = (o.lines || []).map(function (l) {

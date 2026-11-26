@@ -536,16 +536,16 @@
     "sha": "37e7d396bdf155a8"
   },
   "assets/dateRange.js": {
-    "v": "158",
-    "sha": "0fa966cc35ecb7ed"
+    "v": "159",
+    "sha": "ad4acbf0e82dbecc"
   },
   "assets/daterange/activity.js": {
     "v": "8",
     "sha": "a790a0292516c5c7"
   },
   "assets/daterange/cards.js": {
-    "v": "9",
-    "sha": "77b9d01fa7e5efec"
+    "v": "10",
+    "sha": "fc1d23eca27fdc5f"
   },
   "assets/daterange/date-picker.js": {
     "v": "5",
@@ -568,8 +568,8 @@
     "sha": "fed02e7171af24bd"
   },
   "assets/daterange/renderers.js": {
-    "v": "53",
-    "sha": "25a252bb568ecd52"
+    "v": "54",
+    "sha": "8e27aa865d074e00"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -1388,8 +1388,8 @@
     "sha": "968b355f8fe6178c"
   },
   "assets/menu-i18n.js": {
-    "v": "8",
-    "sha": "4226612808ca5527"
+    "v": "9",
+    "sha": "28c25b143134a4cc"
   },
   "assets/menu-nutrition.js": {
     "v": "4",
@@ -1684,8 +1684,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "350",
-    "sha": "0a8c808dec20db8f"
+    "v": "351",
+    "sha": "9dc3f52ff02abcd7"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2468,8 +2468,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "37",
-    "sha": "e9fad241610dad0f"
+    "v": "39",
+    "sha": "311897a796b8b7e2"
   },
   "assets/serveur-lang.js": {
     "v": "19",
@@ -2488,8 +2488,8 @@
     "sha": "5911048d786d702a"
   },
   "assets/serveur/service.js": {
-    "v": "57",
-    "sha": "9ec1140f8c543f3c"
+    "v": "58",
+    "sha": "6991335b64caf2b0"
   },
   "assets/service-requests.js": {
     "v": "5",

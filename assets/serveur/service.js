@@ -2175,7 +2175,7 @@
       }
       const rawItems = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
       const items = rawItems.map(it => Object.assign({}, it, {
-        name: window.KiwiMenuI18n ? window.KiwiMenuI18n.name(it, employeeLanguage) : it.name,
+        name: window.KiwiMenuI18n && window.KiwiMenuI18n.dish ? window.KiwiMenuI18n.dish(it, employeeLanguage) : it.name,
         subLabel: it.subLabel && window.KiwiMenuI18n ? window.KiwiMenuI18n.t(it.subLabel, employeeLanguage) : it.subLabel,
       }));
       const localizedCats = {};
@@ -2332,7 +2332,7 @@
       }).join('');
       const extra = optsExtra(optsFromSel(optDraft.itemId, optDraft.sel));
       const total = item.price + extra;
-      const itemLabel = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(item.name, employeeLanguage) : item.name;
+      const itemLabel = window.KiwiMenuI18n && window.KiwiMenuI18n.dish ? window.KiwiMenuI18n.dish(item, employeeLanguage) : item.name;
       $('#opt-modal-body').innerHTML = `
         <h3 class="modal-title">${esc(itemLabel)}</h3>
         <p class="modal-subtle">${item.price} MAD${extra ? ` · +${extra} MAD d'options` : ''} · personnalisez avant d'ajouter à la commande</p>

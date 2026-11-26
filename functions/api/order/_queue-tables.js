@@ -175,7 +175,8 @@ export async function transferTable(ctx) {
           `INSERT INTO table_transfers
              (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
            SELECT ?, ?, ?, ?, ?, ?, ?,
-             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'),
+             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'
+                AND (session_id = ? OR NOT EXISTS (SELECT 1 FROM table_sessions ts WHERE ts.id = orders.session_id AND ts.merchant = orders.merchant AND ts.status <> 'open'))),
              0, ?
            WHERE EXISTS (SELECT 1 FROM table_sessions
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
@@ -183,7 +184,7 @@ export async function transferTable(ctx) {
                                WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')
              AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
           transferId, merchant, fromTable, toTable, sessionId, server || null, covers,
-          merchant, fromTable, now, sessionId, merchant, fromTable, expectedRevision,
+          merchant, fromTable, sessionId, now, sessionId, merchant, fromTable, expectedRevision,
           merchant, toTable, transferId),
         statement(env,
           `UPDATE table_sessions SET table_no = ?, seen_ts = ?
@@ -194,13 +195,17 @@ export async function transferTable(ctx) {
           toTable, nextRevision, sessionId, merchant, fromTable, expectedRevision,
           transferId, merchant, merchant, toTable),
         statement(env,
+          /* Une visite FERMÉE garde ses plats : une table fermée de force sans paiement
+             les laissait à la visite suivante (audit du 26 nov.). Les lignes sans
+             visite et celles d'une visite doublon encore ouverte suivent toujours. */
           `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
              WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'
+               AND (session_id = ? OR NOT EXISTS (SELECT 1 FROM table_sessions ts WHERE ts.id = orders.session_id AND ts.merchant = orders.merchant AND ts.status <> 'open'))
                AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
                AND EXISTS (SELECT 1 FROM table_sessions
                              WHERE id = ? AND merchant = ? AND table_no = ?
                                AND status = 'open' AND seen_ts = ?)`,
-          toTable, sessionId, now, merchant, fromTable, transferId, merchant,
+          toTable, sessionId, now, merchant, fromTable, sessionId, transferId, merchant,
           sessionId, merchant, toTable, nextRevision),
       ]);
       const claimChanged = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
@@ -315,7 +320,8 @@ export async function mergeTables(ctx) {
           `INSERT INTO table_transfers
              (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
            SELECT ?, ?, ?, ?, ?, ?, 0,
-             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'),
+             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'
+                AND (session_id = ? OR NOT EXISTS (SELECT 1 FROM table_sessions ts WHERE ts.id = orders.session_id AND ts.merchant = orders.merchant AND ts.status <> 'open'))),
              1, ?
            WHERE EXISTS (SELECT 1 FROM table_sessions
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
@@ -325,7 +331,7 @@ export async function mergeTables(ctx) {
                            WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')))
              AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
           mergeId, merchant, sourceTable, targetTable, targetSessionId, server || null,
-          merchant, sourceTable, now, sourceSessionId, merchant, sourceTable, expectedRevision,
+          merchant, sourceTable, sourceSessionId, now, sourceSessionId, merchant, sourceTable, expectedRevision,
           targetSessionId, merchant, targetTable, targetSession ? 0 : 1,
           merchant, targetTable, mergeId),
         statement(env,
@@ -342,10 +348,11 @@ export async function mergeTables(ctx) {
         statement(env,
           `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
              WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'
+               AND (session_id = ? OR NOT EXISTS (SELECT 1 FROM table_sessions ts WHERE ts.id = orders.session_id AND ts.merchant = orders.merchant AND ts.status <> 'open'))
                AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
                AND EXISTS (SELECT 1 FROM table_sessions
                              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')`,
-          targetTable, targetSessionId, now, merchant, sourceTable,
+          targetTable, targetSessionId, now, merchant, sourceTable, sourceSessionId,
           mergeId, merchant, targetSessionId, merchant, targetTable),
         // Les acomptes suivent la visite fusionnée, sans changer leur argent.
         ...(hasPayments ? [statement(env,

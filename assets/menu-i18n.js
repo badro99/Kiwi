@@ -411,6 +411,19 @@
     if (fresh(e, target)) return e.i18n[target].name;
     return translate(String(e.name || ''), target, e.id);
   }
+  /* Le nom d'un PLAT est un nom propre : seule une traduction écrite à la main
+     par le patron (m) le remplace, comme sur OrderPro (« Le healthy » ne devient
+     pas « The healthy one » sur le téléphone du serveur, audit du 26 nov.).
+     Accepte l'article ou son libellé ; catégories et options gardent t(). */
+  function dish(e, lang, id) {
+    const target = asLang(lang) || activeLang();
+    if (e && typeof e === 'object') { const x = entry(e, target); return x && x.m ? String(x.name) : String(e.name || ''); }
+    if (!e || typeof e !== 'string') return e;
+    const clean = e.trim();
+    const found = resolveEntity(clean, target, id);
+    const x = found ? entry(found, target) : null;
+    return x && x.m ? String(x.name) : clean;
+  }
   function desc(e, lang) {
     if (!e) return '';
     const target = asLang(lang) || activeLang();
@@ -561,7 +574,7 @@
     langs, asLang, rtl: isRtl, autoPick,
     lang: activeLang,
     hash, fresh, status, hasArabic,
-    t: translate, name, desc,
+    t: translate, name, dish, desc,
     item: localizeItem, category: localizeCategory, optGroup: localizeOptGroup, dataset: localizeDataset,
     index, needs, apply, setManual, clear, summary,
     DICT: DICTIONARY,

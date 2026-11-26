@@ -655,9 +655,9 @@ function realLowStock() {
     return null;
   }
 
-/* « Livraison reçue » porte le panier du ticket livré : le compter serait vendre deux fois (audit du 26 nov.). */
-const isCollectionSale = (e) => /^Livraison re[çc]ue/i.test(String((e && e.label) || '')) && !/^(delivery|livraison)$/i.test(String((e && e.method) || ''));
 function realTopProducts(range) {
+    /* « Livraison reçue » porte le panier du ticket livré : le compter serait vendre deux fois (audit du 26 nov.). */
+    const isCollectionSale = (e) => /^Livraison re[çc]ue/i.test(String((e && e.label) || '')) && !/^(delivery|livraison)$/i.test(String((e && e.method) || ''));
     const [from, to] = rangeBounds(range == null ? __state.currentRange : range);
     /* Une ligne boutique porte la taille dans son nom (« Hoodie Blue M ») et une
        variante `prod_7:M:bleu`. On nomme le produit, pas la première taille
@@ -687,6 +687,8 @@ function realTopProducts(range) {
   }
 
 function realPairs(range) {
+    /* « Livraison reçue » porte le panier du ticket livré : le compter serait vendre deux fois (audit du 26 nov.). */
+    const isCollectionSale = (e) => /^Livraison re[çc]ue/i.test(String((e && e.label) || '')) && !/^(delivery|livraison)$/i.test(String((e && e.method) || ''));
     const [from, to] = rangeBounds(range == null ? __state.currentRange : range);
     /* Une ligne boutique porte la taille dans son nom (« Hoodie Blue M ») et une
        variante `prod_7:M:bleu`. On nomme le produit, pas la première taille

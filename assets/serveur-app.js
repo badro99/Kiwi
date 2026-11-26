@@ -79,7 +79,7 @@
     })();
     /* Une ligne de commande garde le libellé du patron (c'est ce que la cuisine
        lit) ; à l'écran du serveur on montre sa traduction. */
-    const svLineName = (l) => (window.KiwiMenuI18n && l) ? window.KiwiMenuI18n.t(String(l.name || ''), employeeLanguage) : ((l && l.name) || '');
+    const svLineName = (l) => (window.KiwiMenuI18n && window.KiwiMenuI18n.dish && l) ? window.KiwiMenuI18n.dish(String(l.name || ''), employeeLanguage, l.itemId || l.id) : ((l && l.name) || '');
     const employeeI18nOriginal = new WeakMap();
     const employeeI18nLast = new WeakMap();
     const employeeI18nAttrs = new WeakMap();
@@ -2343,7 +2343,7 @@
               merchant: svSlug(),
               editLine: {
                 table: activeTableId,
-                lineId: line.uid || line.id,
+                lineId: line.canonicalUid || line.uid || line.id, ...(line.orderId ? { orderId: line.orderId } : {}),
                 note: inp.value,
                 actor: activeRole.fullName || activeRole.name || 'Serveur'
               }

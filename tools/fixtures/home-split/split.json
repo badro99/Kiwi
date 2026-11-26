@@ -1,6 +1,6 @@
 {
   "file": "assets/daterange/renderers.js",
-  "sha256": "3ca9fe2148462d135119bb7fe931597e3009dbe80c68b0400c2bb617a99d70bf",
+  "sha256": "7f705e31b64dabc7f9773328d170fef52dba8b964a3b88e4588b67a0aad2e1fe",
   "parts": [
     {
       "name": "hero",
@@ -99,7 +99,7 @@
         },
         {
           "name": "heroDataByVenue",
-          "start": 235029,
+          "start": 236006,
           "length": 2609,
           "offset": 22191
         }
@@ -220,19 +220,19 @@
         },
         {
           "name": "dutyBand",
-          "start": 207941,
+          "start": 208918,
           "length": 2830,
           "offset": 41492
         },
         {
           "name": "retailBand",
-          "start": 210771,
+          "start": 211748,
           "length": 2025,
           "offset": 44322
         },
         {
           "name": "kpiByVenue",
-          "start": 237638,
+          "start": 238615,
           "length": 10257,
           "offset": 46347
         }
@@ -331,7 +331,7 @@
         },
         {
           "name": "revChartByVenue",
-          "start": 247895,
+          "start": 248872,
           "length": 9857,
           "offset": 45122
         }
@@ -407,7 +407,7 @@
         {
           "name": "buildCustomFeed",
           "start": 195661,
-          "length": 5648,
+          "length": 6015,
           "offset": 17944
         }
       ],
@@ -503,31 +503,31 @@
         },
         {
           "name": "fmtHumanRange",
-          "start": 213629,
+          "start": 214606,
           "length": 708,
           "offset": 2787
         },
         {
           "name": "closeCustomPicker",
-          "start": 214337,
+          "start": 215314,
           "length": 1011,
           "offset": 3495
         },
         {
           "name": "openCustomPicker",
-          "start": 215348,
+          "start": 216325,
           "length": 14403,
           "offset": 4506
         },
         {
           "name": "mountDaySelector",
-          "start": 229751,
+          "start": 230728,
           "length": 2406,
           "offset": 18909
         },
         {
           "name": "registerHandler",
-          "start": 232157,
+          "start": 233134,
           "length": 1551,
           "offset": 21315
         }
@@ -763,25 +763,25 @@
         },
         {
           "name": "realLowStock",
-          "start": 201309,
+          "start": 201676,
           "length": 1849,
           "offset": 38666
         },
         {
           "name": "realTopProducts",
-          "start": 203158,
-          "length": 1746,
+          "start": 203525,
+          "length": 2050,
           "offset": 40515
         },
         {
           "name": "realPairs",
-          "start": 204904,
-          "length": 2391,
+          "start": 205575,
+          "length": 2697,
           "offset": 42261
         },
         {
           "name": "growBars",
-          "start": 207295,
+          "start": 208272,
           "length": 646,
           "offset": 44652
         }
@@ -1109,13 +1109,13 @@
         },
         {
           "name": "hookI18n",
-          "start": 212796,
+          "start": 213773,
           "length": 833,
           "offset": 4352
         },
         {
           "name": "tickLiveRevenue",
-          "start": 233708,
+          "start": 234685,
           "length": 1321,
           "offset": 5185
         }

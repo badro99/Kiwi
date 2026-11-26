@@ -10,7 +10,7 @@
     'assets/daterange/revenue.js?v=5',
     'assets/daterange/activity.js?v=8',
     'assets/daterange/date-picker.js?v=5',
-    'assets/daterange/cards.js?v=9',
+    'assets/daterange/cards.js?v=10',
     'assets/daterange/ledger.js?v=10',
     'assets/daterange/presentation.js?v=6',
   ];

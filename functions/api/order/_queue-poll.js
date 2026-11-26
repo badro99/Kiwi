@@ -26,7 +26,7 @@ export async function pollQueue({ env, url, merchant, role, service }) {
    * Date.now() in the same request burst. Include that small future margin,
    * while the completed client cursor still trails the ORIGINAL poll time. */
   const pageEnd = pageCursor ? pageCursor.end : now + CURSOR_LAG_MS;
-  const zone = await merchantZone(env, merchant), today = startOfDay(now, zone);
+  const zone = await merchantZone(env, merchant);
   const kitchenCutoff = now - KITCHEN_TTL_MS;
 
   /* ── LE SONDAGE DU SERVEUR EST UN BATTEMENT DE CŒUR ────────────────────────
@@ -151,7 +151,9 @@ export async function pollQueue({ env, url, merchant, role, service }) {
           .bind(merchant, since, pageEnd,
             ...(pageCursor ? [pageCursor.ts, pageCursor.ts, pageCursor.id] : []),
             now - ARCHIVED_TOMBSTONE_MS, kitchenCutoff,
-            ...(recover ? [now - OPEN_VISIT_RECOVERY_MS] : []), today, MAX_ROWS + 1).all();
+            /* « Servi » suit la même fenêtre cuisine que le reste, pas minuit : un bon
+               envoyé à 23:50 et servi à 00:10 restait « prêt » ailleurs (audit du 26 nov.). */
+            ...(recover ? [now - OPEN_VISIT_RECOVERY_MS] : []), kitchenCutoff, MAX_ROWS + 1).all();
         degraded = COL_SET_MISSING[i];
         break;
       } catch (_) { rows = null; }

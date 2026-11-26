@@ -95,4 +95,12 @@ ok('…et il le fait AVANT de reconstruire sessions et expirés',
   inbox.indexOf('if (j.ordersAvailable === false) return -1;')
   < inbox.indexOf('state.sessions = j.sessions || [];'));
 
+/* Audit du 26 nov. · un bon annulé n'est que dans `cancelledTickets` d'un relevé
+   incrémental : le passe doit le retirer, pas attendre un rechargement. */
+{
+  const { S } = pass({ ok: true, orders: [], now: 99, ordersAvailable: true, cancelledTickets: [{ id: 'ord-1', status: 'rejected', lines: [] }] });
+  await wait();
+  ok('un bon annulé quitte le passe au relevé suivant', !S.orders['ord-1'] && !S.cooking['ord-1']);
+}
+
 console.log(`\nkitchen-blind-outage-test: ${passed} controls passed\n`);
