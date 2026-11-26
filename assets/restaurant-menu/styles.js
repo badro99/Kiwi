@@ -214,6 +214,9 @@ textarea.rmw-rx-in{height:auto;min-height:92px;padding:10px 11px;line-height:1.5
 .kiwi-backdrop.rmw-recipe-modal select.rmw-rx-unit{background-image:linear-gradient(45deg,transparent 50%,var(--n-500) 50%),linear-gradient(135deg,var(--n-500) 50%,transparent 50%)!important;background-position:calc(100% - 15px) 50%,calc(100% - 11px) 50%!important;background-size:4px 4px!important;background-repeat:no-repeat!important;padding-inline-end:28px!important}
 [dir="rtl"] .kiwi-backdrop.rmw-recipe-modal select.rmw-rx-unit{background-position:15px 50%,11px 50%!important}
 .rmw-rx-unit:focus{outline:0;border-color:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 16%,transparent)}
+.rmw-rx-row .rmw-rx-unit[aria-invalid="true"],.rmw-rx-row .rmw-rx-unit[aria-invalid="true"]:focus{border-color:var(--danger,#b94b38)}
+.rmw-rx-row .rmw-rx-unit[aria-invalid="true"]:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--danger,#b94b38) 16%,transparent)}
+.rmw-rx-row:has(.rmw-rx-unit[aria-invalid="true"]) .rmw-rx-name small{color:var(--danger,#b94b38)}
 .rmw-rx-cost{height:38px;display:flex;align-items:center;justify-content:flex-end;font:600 13px var(--sans);font-variant-numeric:tabular-nums;color:var(--ink)}
 .rmw-rx-price .rmw-rx-in{width:100%;text-align:right;font-variant-numeric:tabular-nums}.rmw-rx-price small{display:none}
 .rmw-rx-del{width:32px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:var(--n-500);cursor:pointer}

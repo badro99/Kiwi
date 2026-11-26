@@ -32,7 +32,7 @@
        Off, nothing below loads. On, a browser below the guest
        minimum goes to the basic page (functions/order/basic.js); any other gets
        the kit's tokens and assets/kit/ordering.css, and stays light, as shipped. -->
-  <script src="assets/kit/haptics.js?v=13"></script>
+  <script src="assets/kit/haptics.js?v=16"></script>
   <script>
     (function (d, q) {
       var on = false;
@@ -443,7 +443,7 @@
             <div class="custom-price-label" data-i18n="custom_price">Prix</div>
             <div class="custom-price-value" id="custom-price-value">0 MAD</div>
           </div>
-          <button class="custom-add-btn" type="button" id="custom-add-btn">
+          <button class="custom-add-btn" type="button" id="custom-add-btn" data-tap-once>
             <i data-icon="add"></i>
             <span data-i18n="btn_add">Ajouter</span>
           </button>

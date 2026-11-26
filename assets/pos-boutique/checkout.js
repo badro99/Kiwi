@@ -1,7 +1,7 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=299';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=300';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1'; import { mountExchCut, cutFields } from './exch-cut.js?v=7'; import { mzSaleDiscount } from '../pos-maison/sale-discount.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=299';
-import { _bqKey, syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=406';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=300';
+import { _bqKey, syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=407';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -14,7 +14,7 @@ import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt
 import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6';
 const M = globalThis.KiwiMoney;
 let CX = null, CQ = null;   /* chargés à part (ils importent la caisse, pas l'inverse) : l'échange groupé (essai Amira Boutique) et le chèque reçu, qui rejoint le portefeuille (cheque-sheet.js ; absent, il s'encaisse comme avant) */
-import('./exch-combined.js?v=61').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=62').then((m) => { CX = m; }).catch(() => {});
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
@@ -1107,7 +1107,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
             <button class="cash-preset" data-add="200">+200</button>
           </div>
           <div class="cash-rendu"><span class="lbl">${tr("checkout.rendu", "Rendu")}</span><span class="val mono" id="bq-cash-rendu">0 MAD</span></div>
-          <button class="cash-confirm" id="bq-cash-ok">${tr("checkout.confirm.cash", "Confirmer")}</button>
+          <button class="cash-confirm" id="bq-cash-ok" data-tap-once>${tr("checkout.confirm.cash", "Confirmer")}</button>
         </div>`;
       icons(); closeBtns();
       const refresh = () => {
@@ -1137,7 +1137,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
           <div class="reader-method">${tr("checkout.terminal.de.la.banque.montant.a.saisir.dessus", "Terminal de la banque, montant à saisir dessus")}</div>
         </div>
         <div class="bq-card-confirm" id="bq-card-confirm">
-          <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> ${tr("checkout.encaissement.confirme.sur.le.lecteur", "Encaissement confirmé sur le lecteur")}</button>
+          <button class="cash-confirm" id="bq-card-ok" data-tap-once><i data-lucide="check"></i> ${tr("checkout.encaissement.confirme.sur.le.lecteur", "Encaissement confirmé sur le lecteur")}</button>
           <button class="bq-btn ghost" id="bq-card-cancel">${tr("checkout.paiement.refuse.annuler", "Paiement refusé · annuler")}</button>
         </div>`;
       icons(); closeBtns();
@@ -1169,7 +1169,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
         <p class="modal-subtle">${cheque ? tr("checkout.le.cheque.a.t.il.ete.remis.au.comptoir", "Le chèque a-t-il été remis au comptoir ?") : tr("checkout.les.fonds.sont.ils.visibles.sur.le.compte.bancaire", "Les fonds sont-ils visibles sur le compte bancaire ?")} ${tr("checkout.aucun.montant.ne.sera.attendu.dans.le.tiroir", "Aucun montant ne sera attendu dans le tiroir.")}</p>${cheque && CQ ? CQ.chequeFields() : ''}
         <div class="bq-sheet-foot">
           <button class="bq-btn secondary" id="bq-external-back">${tr("checkout.retour", "Retour")}</button>
-          <button class="cash-confirm" id="bq-external-ok">${cheque ? tr("checkout.cheque.recu", "Chèque reçu") : tr("checkout.versement.recu", "Versement reçu")} ${tr("checkout.confirmer", "· confirmer")}</button>
+          <button class="cash-confirm" id="bq-external-ok" data-tap-once>${cheque ? tr("checkout.cheque.recu", "Chèque reçu") : tr("checkout.versement.recu", "Versement reçu")} ${tr("checkout.confirmer", "· confirmer")}</button>
         </div>`;
       closeBtns(); if (cheque && CQ) CQ.chequeFocus(el);
       $('#bq-external-back', el).onclick = stepMethods;
