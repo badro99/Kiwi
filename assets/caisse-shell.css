@@ -1205,12 +1205,12 @@
       letter-spacing: -0.005em;
     }
     .menu-item-foot {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; /* carte étroite : le compteur passe sous le prix au lieu de sortir de la carte */
       margin-top: 12px;
-      gap: 10px;
+      gap: 6px 10px;
     }
     .menu-item-price {
-      font-size: 17px; font-weight: 700;
+      font-size: 17px; font-weight: 700; flex: 1 1 0;
       color: var(--forest);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
@@ -1233,7 +1233,7 @@
 
     /* Stepper (item is in cart): − qty + */
     .menu-item-stepper {
-      display: inline-flex; align-items: center;
+      display: inline-flex; align-items: center; margin-inline-start: auto;
       background: var(--surface);
       border-radius: 999px;
       padding: 3px;
@@ -5334,7 +5334,7 @@
   .cplan-scale { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   /* Sol et mobilier arrivent déjà en noir du renderer unifié · aucun filtre. */
   .pds-floor { position: absolute; inset: 0; background-repeat: repeat; pointer-events: none; }
-  .pds-el { position: absolute; transform-origin: 50% 50%; }
+  .pds-el { position: absolute; transform-origin: 50% 50%; pointer-events: none; } /* décor : jamais sous le doigt, la table posée dessous répond */
   .pds-el-fill { position: absolute; inset: 0; background-repeat: repeat; overflow: hidden; }
   .pds-el-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
   .pds-el-label {
@@ -5348,7 +5348,7 @@
     position: absolute; z-index: 3; cursor: pointer;
     transform-origin: 50% 50%; -webkit-tap-highlight-color: transparent;
   }
-  .cplan-tbl > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+  .cplan-tbl > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; pointer-events: none; } /* le dessin déborde (halo d'appel, chaises) : seul le nœud de la table prend le toucher, pas son halo posé sur la voisine */
   .cplan-face {
     position: absolute; inset: var(--pad, 0px);
     display: flex; flex-direction: column; align-items: center; justify-content: center;

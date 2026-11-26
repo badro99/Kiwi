@@ -3267,6 +3267,20 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
     $('#sk-recept-btn').addEventListener('click', openRecept);
     updateStockBadge();
     $('#rp-send-kitchen').addEventListener('click', sendToKitchen);
+    /* Le pied de note bouge sous le doigt : « Envoyer en cuisine » disparaît en
+       envoyant et « Encaisser » remonte à sa place. Un toucher au même endroit,
+       moins d'une demi-seconde après, sur un AUTRE bouton, est la fin d'un
+       double toucher, pas une décision : il est ignoré, et la rafale avec lui.
+       Sur window, avant les écouteurs en capture du document (delivery.js).
+       Clavier et .click() (detail 0) passent. */
+    let rpLastTap = null;
+    window.addEventListener('click', (e) => {
+      const btn = e.detail && e.target.closest && e.target.closest('.rp-pay button'), was = rpLastTap;
+      if (!btn) return;
+      const shifted = was && was.btn !== btn && e.timeStamp - was.t < 500 && Math.hypot(e.clientX - was.x, e.clientY - was.y) < 40;
+      rpLastTap = { btn: shifted ? was.btn : btn, t: e.timeStamp, x: e.clientX, y: e.clientY };
+      if (shifted) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
     kdsSeed();
     updateKdsCount();
     /* À partir d'ici l'écran cuisine est monté : une carte qui arrive du bureau
