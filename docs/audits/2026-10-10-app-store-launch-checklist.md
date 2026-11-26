@@ -258,6 +258,10 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
     find what re-sent a past day (the outbox or the `kiwi:z-manifest` copy)
     before closing A4.
 
+- **Build 62 uploaded to TestFlight, version 1.0.3** (`28dd46ab`, 26 Nov 2026, main after the Browse
+  split-bill fix 97717abc9; Cloudflare Pages had deployed 97717abc9). 1.0.2 is approved, so its
+  train is closed: build 59 was refused (61 already used by another upload) and 1.0.2 refused new
+  builds. Not submitted for review. No check.js gate ran (owner rule), touched suites passed.
 - **Build 58 uploaded and submitted** (`ec1256e6`, the commit Cloudflare Pages had
   deployed, 25 November): version 1.0.2, "Upload succeeded" at 14:26 UTC,
   processed into Kiwi Team, then attached to 1.0.2 and sent to App Review at
