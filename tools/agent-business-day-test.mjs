@@ -24,6 +24,14 @@ for (const [id, time, cents] of [
   ['boundary', '2026-10-21T05:00:00+00:00', 7800],
 ]) sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,ts) VALUES (?,?,?,?,?,?)')
   .run(id, merchant, cents / 100, cents, 'cash', Date.parse(time));
+/* 23 Oct: the agent's summary must match the dashboard's ledger (audit 26 Nov): a refund is not a sale,
+   a split ticket lands on each tender, an unrounded legacy amount is rounded once. */
+const noon = Date.parse('2026-10-23T12:00:00+00:00');
+sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,ts) VALUES (?,?,?,?,?,?)').run('d23-cash', merchant, 100, 10000, 'cash', noon);
+sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,ts) VALUES (?,?,?,?,?,?)').run('d23-card', merchant, 219.99, null, 'card', noon + 1);
+sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,payment_parts,ts) VALUES (?,?,?,?,?,?,?)').run('d23-split', merchant, 300, 30000, 'split',
+  JSON.stringify([{ method: 'cash', amountCents: 10000 }, { method: 'card', amountCents: 20000 }]), noon + 2);
+sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,ts) VALUES (?,?,?,?,?,?)').run('d23-refund', merchant, -50, -5000, 'cash', noon + 3);
 const env = { AUTH_SECRET: 'fixture-only', DB: { prepare(query) {
   let args = [];
   return {
@@ -68,5 +76,12 @@ try {
   sql.prepare('UPDATE merchant_config SET timezone = ?, business_cutoff = ? WHERE merchant = ?')
     .run('invalid/zone', 99, merchant);
   assert.deepEqual((await query('payment_events')).data.payments.map(row => row.id), ['early']);
+  result = await query('sales_summary', '2026-10-23', '2026-10-23');
+  assert.deepEqual(result.data.rows, [
+    { day: '2026-10-23', method: 'card', count: 1, amount_cents: 41999 },
+    { day: '2026-10-23', method: 'cash', count: 1, amount_cents: 20000 },
+  ], 'tenders by method: the split ticket on cash and card, the refund out, 219.99 rounded once');
+  assert.deepEqual(result.data.days, [{ day: '2026-10-23', tickets: 3, amount_cents: 61999, refund_count: 1, refund_cents: 5000 }],
+    'tickets and refunds per business day, as the dashboard counts them');
   console.log('agent-business-day-test: green (Casablanca overnight sales, exclusive cutoff, merchant settings, validation)');
 } finally { sql.close(); }

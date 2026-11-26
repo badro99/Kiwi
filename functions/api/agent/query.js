@@ -1,6 +1,7 @@
 import { authorize, body, response, text } from './_core.js';
 import { businessBoundary, addBusinessDays, merchantZone, merchantCutoff } from '../_business-day.js';
 import { loadParts } from '../_catalog-parts.js';
+import { summarize } from '../sales-summary.js';
 
 const REQUIRED = {
   merchant_overview: 'overview:read',
@@ -59,18 +60,28 @@ export async function onRequestPost({ request, env }) {
     } else if (tool === 'sales_summary') {
       const r = range(data, cutoff, zone);
       if (!r) return response({ error: 'invalid-range' }, 400);
-      // SQLite's UTC strftime cannot label a store's civil business days, so
-      // the day index comes from the store's own boundaries (05:00, its zone,
-      // 23 or 25 hours on a DST change): one grouped query, one round trip.
-      const days = [];
-      for (let day = r.from; day <= r.to; day = addBusinessDays(day, 1)) days.push(day);
-      const ends = days.map(day => businessBoundary(addBusinessDays(day, 1), cutoff, zone));
-      const rows = await env.DB.prepare(`SELECT CASE ${ends.map((_, i) => `WHEN ts < ? THEN ${i}`).join(' ')} END AS i,
-        method, COUNT(*) AS count, SUM(COALESCE(amount_cents, amount * 100)) AS amount_cents
-        FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL
-        GROUP BY i, method ORDER BY i, method`).bind(...ends, merchant, r.start, r.end).all();
-      const summary = (rows.results || []).map(({ i, ...row }) => ({ day: days[i], ...row }));
-      result = { from: r.from, to: r.to, currency: 'MAD', rows: summary };
+      /* La règle du tableau de bord (sales-summary.js summarize), pas un second
+         calcul : un remboursement n'est pas une vente, un ticket divisé tombe sur
+         chacun de ses moyens, le chiffre « à la vente » suit le réglage du
+         commerce, et les jours sont ses jours ouvrés (audit du 26 nov.). */
+      const rowsIn = (await env.DB.prepare(`SELECT id, ts, amount, amount_cents, method, payment_parts, tip_cents, channel, label
+        FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL ORDER BY ts, id`).bind(merchant, r.start, r.end).all()).results || [];
+      let atSale = false;
+      try { atSale = JSON.parse((await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(merchant).first())?.features || '{}').revenueAtSale === true; } catch (_) {}
+      const { days: buckets, splits } = summarize(rowsIn, r.start, r.end, cutoff, zone, atSale);
+      const tender = new Map(buckets.map(b => [b.day, Object.fromEntries(Object.entries(b.methods)
+        .filter(([m]) => m in b.whole).map(([m, v]) => [m, { count: v.count, cents: b.whole[m] }]))]));
+      for (const sp of splits) {
+        const day = buckets.find(b => sp.ts >= b.from && sp.ts < b.to)?.day, t = day && tender.get(day);
+        if (!t) continue;
+        let left = sp.cents;
+        for (const part of sp.parts) { const m = t[part.method] || (t[part.method] = { count: 0, cents: 0 }); const c = Math.min(part.amountCents, Math.max(0, left)); m.cents += c; left -= c; }
+        if (left > 0) { const m = t[sp.method] || (t[sp.method] = { count: 0, cents: 0 }); m.cents += left; }
+      }
+      const summary = buckets.flatMap(b => Object.entries(tender.get(b.day)).sort(([a], [c]) => (a < c ? -1 : a > c ? 1 : 0))
+        .map(([method, v]) => ({ day: b.day, method, count: v.count, amount_cents: v.cents })));
+      const days = buckets.filter(b => b.count || b.refundCount).map(b => ({ day: b.day, tickets: b.count, amount_cents: b.cents, refund_count: b.refundCount, refund_cents: b.refundCents }));
+      result = { from: r.from, to: r.to, currency: 'MAD', rows: summary, days };
     } else if (tool === 'catalog_search') {
       const q = text(data.query, 80).toLocaleLowerCase(), max = limit(data);
       if (q.length < 2) return response({ error: 'query-too-short' }, 400);

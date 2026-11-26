@@ -21,7 +21,7 @@ export const TOOLS = [
   tool('merchant_overview', 'overview:read', 'Store profile',
     'The connected store: name, trade, plan and status. No staff codes or raw configuration.'),
   tool('sales_summary', 'sales:read', 'Daily sales by payment method',
-    'Non-voided sales per UTC day and payment method (count and amount in centimes, MAD), up to 31 days per call. Best source for revenue charts.',
+    'Sales per business day of the store (its cutoff and time zone), the same rules as the dashboard: rows give the amount per payment method (a split ticket counted on each of its methods, centimes, MAD), days give tickets, revenue and refunds (a refund is never a sale). Up to 31 days per call. Best source for revenue charts.',
     range, ['from', 'to']),
   tool('payment_events', 'payments:read', 'Individual payments',
     'Individual sale postings, newest first, including voided ones with their reason. Amounts in centimes (MAD). Paged, 25 per call.',
