@@ -84,15 +84,17 @@ Construire et publier :
 git pull
 app/android/gradlew -p bridge/android assembleRelease
 cp bridge/android/app/build/outputs/apk/release/app-release.apk downloads/kiwi-print-bridge.apk
-git add downloads/kiwi-print-bridge.apk
-git commit -m "printer · publier le pont Android v1.0.7"
+shasum -a 256 downloads/kiwi-print-bridge.apk; stat -f %z downloads/kiwi-print-bridge.apk
+# reporter empreinte et taille dans functions/api/print/_watch.js (voir plus bas)
+git add downloads/kiwi-print-bridge.apk functions/api/print/_watch.js
+git commit -m "printer · publier le pont Android v1.0.x"
 git push https://github.com/zaka33333-hash/Kiwi.git main
 git push https://github.com/badro99/Kiwi.git main
 ```
 
 Sur la tablette : télécharger l'APK depuis kiwi-os.com, **installer par-dessus**
 (sauf ce passage unique de 1.0.0 à 1.0.4), accepter « Ignorer les optimisations de batterie »,
-vérifier que l'application affiche **1.0.7**. Depuis la 1.0.5, une tablette au repos
+vérifier que l'application affiche **1.0.8**. Depuis la 1.0.5, une tablette au repos
 n'interroge plus kiwi-os.com qu'une fois toutes les 5 s, comme le pont de bureau. Depuis
 la 1.0.6, une imprimante qui n'avale plus ses données ne bloque plus le pont : chaque
 écriture a 8 s, une imprimante injoignable est rendue au serveur qui retente le ticket,
@@ -105,6 +107,38 @@ l'imprimante ; 150 s, elle se relance seule. Elle affiche aussi une notification
 la toucher télécharge l'APK, à installer par-dessus. Après une nouvelle version, relever
 `ANDROID_BRIDGE_LATEST` dans `functions/api/print/_watch.js` (print-watch-test vérifie
 qu'il suit `versionName`).
+
+### Depuis la 1.0.8 : la mise à jour se fait seule
+
+À partir de la 1.0.8, plus personne n'a à toucher la tablette pour les versions
+suivantes. Le serveur joint à son offre l'empreinte sha256 et la taille de l'APK
+publié (`ANDROID_BRIDGE_SHA256`, `ANDROID_BRIDGE_SIZE`). Le pont :
+
+1. télécharge l'APK en arrière-plan (adresse neuve à chaque fois, aucun cache ne
+   resert l'ancien) et le jette si taille ou empreinte diffèrent d'un seul octet ;
+2. attend le calme : **aucun ticket depuis 10 minutes**, et aucun dans le poll en cours ;
+3. l'installe par PackageInstaller. Sur Android 12 et plus, avec « Installer des applis
+   inconnues » autorisé pour Kiwi Print Bridge, rien ne s'affiche : Android remplace
+   l'app, le service repart seul (MY_PACKAGE_REPLACED), l'association est gardée.
+   Les tickets envoyés pendant les quelques secondes de l'installation attendent en
+   file et sortent au premier poll de la nouvelle version ;
+4. si Android demande quand même une confirmation (Android 8 à 11, autorisation
+   refusée, constructeur restrictif), une notification « Kiwi Print Bridge 1.0.x prêt ·
+   Touchez pour installer » ; après trois essais à une heure d'écart, la notification
+   de 1.0.7 (télécharger et installer à la main).
+
+L'autorisation « Installer des applis inconnues » est demandée une fois, à
+l'ouverture de l'app. Si elle a été refusée : Paramètres › Applications ›
+Kiwi Print Bridge › Installer des applis inconnues › Autoriser.
+
+**Publier une version** : construire, copier l'APK dans `downloads/`, puis reporter
+dans `_watch.js` la nouvelle version, l'empreinte (`shasum -a 256`) et la taille en
+octets. `print-watch-test` refuse un commit où l'empreinte, la taille ou la version
+inscrite dans l'APK ne suivent pas le fichier publié : une empreinte fausse ferait
+refuser chaque téléchargement par toutes les tablettes.
+
+⚠️ Une tablette en 1.0.7 ou plus ancienne ne sait pas s'installer seule : il faut
+installer la 1.0.8 une dernière fois à la main (la 1.0.7 l'annonce par sa notification).
 
 ## Être prévenu avant le commerçant
 

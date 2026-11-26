@@ -62,6 +62,7 @@ public final class MainActivity extends AppCompatActivity {
         }));
         requestNotifications();
         requestIgnoreBatteryOptimizations();
+        requestInstallPermissionOnce();
         if (!BridgeStore.token(this).isEmpty()) { status.setText("Associé à " + BridgeStore.merchant(this)); startBridge(); }
     }
 
@@ -81,6 +82,18 @@ public final class MainActivity extends AppCompatActivity {
                 }
             } catch (Exception ignored) {}
         }
+    }
+    /* 1.0.8 · « Installer des applis inconnues » pour ce pont, demandé une
+       fois : c'est ce qui laisse Android installer les mises à jour sans
+       qu'on touche la tablette. Refusé, le pont notifie à chaque version. */
+    private void requestInstallPermissionOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls()) return;
+        if (BridgeStore.prefs(this).getBoolean("askedInstall", false)) return;
+        BridgeStore.prefs(this).edit().putBoolean("askedInstall", true).apply();
+        try {
+            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+            status.setText("Autorisez l’installation : le pont se mettra à jour seul, le soir.");
+        } catch (Exception ignored) {}
     }
     @Override protected void onStart() {
         super.onStart();

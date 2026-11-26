@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class RelayClient {
-    static final String VERSION = "1.0.7";
+    static final String VERSION = "1.0.8";
     private static final long PRINTER_KEEPALIVE_MS = 10000;
     // Une journée couvrait la fermeture de nuit mais pas le jour de fermeture
     // hebdomadaire ni un week-end prolongé : au retour, le premier ticket

@@ -251,13 +251,13 @@
       var old = 0, unknown = 0, offB = 0;
       s.rows.forEach(function (b) {
         /* L'app Android a sa propre numérotation (1.0.x) : la comparer à 1.4.0
-           la comptait toujours « ancienne ». Sa dernière version : 1.0.7. */
-        var below = semverBelow(b.version, b.platform === 'android' ? [1, 0, 7] : [1, 4, 0]);
+           la comptait toujours « ancienne ». Sa dernière version : 1.0.8 (la première qui s'installe seule). */
+        var below = semverBelow(b.version, b.platform === 'android' ? [1, 0, 8] : [1, 4, 0]);
         if (below === null) unknown++; else if (below) old++;
         if (now - (b.last_seen_ts || 0) > DAY) offB++;
       });
       out.push(st('Relais d’impression', old || offB ? 'watch' : 'ok', count(s),
-        old + ' à mettre à jour (Android 1.0.7, bureau 1.4.0) · ' + offB + ' muet(s) > 24 h' + (unknown ? ' · ' + unknown + ' version inconnue' : '')));
+        old + ' à mettre à jour (Android 1.0.8, bureau 1.4.0) · ' + offB + ' muet(s) > 24 h' + (unknown ? ' · ' + unknown + ' version inconnue' : '')));
     } else { out.push(na('Relais d’impression', 'print_bridges')); }
 
     if ((s = src('print'))) {

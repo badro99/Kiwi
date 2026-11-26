@@ -14,6 +14,7 @@
  *   · abortPrinter() from another thread         → unblocks a stuck write at once
  *   · the watchdog                               → abort at 75 s, restart at 150 s
  *   · the update offer and the poll pacing       → bounded and from kiwi-os.com only
+ *   · UpdatePolicy (1.0.8 self-update)           → fingerprint, size, quiet window, retries
  *
  * Needs a JDK (javac + java). Found from JAVA_HOME, PATH or Homebrew's openjdk.
  * Without one it prints « ○ skip: jdk unavailable » and check.js fails the run.
@@ -62,6 +63,7 @@ public class JSONObject {
   public String optString(String k) { Object v = m.get(k); return v == null ? "" : v.toString(); }
   public String optString(String k, String d) { Object v = m.get(k); return v == null ? d : v.toString(); }
   public String getString(String k) { return optString(k); }
+  public long optLong(String k, long d) { Object v = m.get(k); return v instanceof Number ? ((Number) v).longValue() : d; }
   public int optInt(String k) { return optInt(k, 0); }
   public int optInt(String k, int d) { Object v = m.get(k); return v instanceof Number ? ((Number) v).intValue() : d; }
   public boolean optBoolean(String k) { return Boolean.TRUE.equals(m.get(k)); }
@@ -72,7 +74,7 @@ public class JSONObject {
   put('android/util/Base64.java', 'package android.util;\npublic class Base64 { public static final int DEFAULT = 0; public static byte[] decode(String s, int f) { return java.util.Base64.getDecoder().decode(s); } }\n');
   put('com/kiwios/printbridge/BridgeStore.java', 'package com.kiwios.printbridge;\nfinal class BridgeStore { static final String RELAY = "http://127.0.0.1:1"; }\n');
   fs.copyFileSync(path.join(SRC, 'RelayClient.java'), path.join(work, 'src/com/kiwios/printbridge/RelayClient.java'));
-  fs.copyFileSync(path.join(SRC, 'LoopWatchdog.java'), path.join(work, 'src/com/kiwios/printbridge/LoopWatchdog.java'));
+  for (const f of ['LoopWatchdog.java', 'UpdatePolicy.java']) fs.copyFileSync(path.join(SRC, f), path.join(work, 'src/com/kiwios/printbridge', f));
   put('com/kiwios/printbridge/Harness.java', `package com.kiwios.printbridge;
 import org.json.JSONObject;
 import java.io.*; import java.net.*; import java.util.*;
@@ -148,6 +150,35 @@ public class Harness {
     ok(RelayClient.nextPollMs(new JSONObject().put("poll", 5000)) == 5000 && RelayClient.nextPollMs(new JSONObject().put("poll", 60000)) == 5000
       && RelayClient.nextPollMs(new JSONObject().put("poll", 50)) == 200 && RelayClient.nextPollMs(new JSONObject()) == 1000, "poll pacing stays between 200 ms and 5 s");
 
+    // 1.0.8 · la mise à jour sans personne : quelle offre, quel fichier, quand.
+    byte[] apk = new byte[300_000]; new Random(7).nextBytes(apk);
+    String sha = UpdatePolicy.hex(java.security.MessageDigest.getInstance("SHA-256").digest(apk));
+    java.util.function.Function<JSONObject, JSONObject> wrap = (u) -> new JSONObject().put("update", u);
+    JSONObject fine = new JSONObject().put("version", next).put("url", "https://kiwi-os.com/downloads/kiwi-print-bridge.apk").put("sha256", sha.toUpperCase()).put("size", (long) apk.length);
+    UpdatePolicy.Offer o = UpdatePolicy.offer(wrap.apply(fine), latest);
+    ok(o != null && o.sha256.equals(sha) && o.size == apk.length && o.version.equals(next), "update: a newer APK with fingerprint and size is retained");
+    ok(UpdatePolicy.offer(wrap.apply(new JSONObject().put("version", next).put("url", "https://kiwi-os.com/x.apk").put("size", 5L)), latest) == null, "update: no fingerprint, no self-install (the 1.0.7 notification instead)");
+    ok(UpdatePolicy.offer(wrap.apply(new JSONObject().put("version", next).put("url", "https://evil.example/x.apk").put("sha256", sha).put("size", 5L)), latest) == null, "update: never from anywhere but kiwi-os.com");
+    ok(UpdatePolicy.offer(wrap.apply(new JSONObject().put("version", latest).put("url", "https://kiwi-os.com/x.apk").put("sha256", sha).put("size", 5L)), latest) == null, "update: the running version is never reinstalled");
+    ok(UpdatePolicy.offer(wrap.apply(new JSONObject().put("version", next).put("url", "https://kiwi-os.com/x.apk").put("sha256", sha).put("size", 0L)), latest) == null
+      && UpdatePolicy.offer(wrap.apply(new JSONObject().put("version", next).put("url", "https://kiwi-os.com/x.apk").put("sha256", sha).put("size", 30_000_000L)), latest) == null
+      && UpdatePolicy.offer(wrap.apply(new JSONObject().put("version", next).put("url", "https://kiwi-os.com/x.apk").put("sha256", "abc").put("size", 5L)), latest) == null, "update: a missing size, a 30 MB file or a malformed fingerprint is refused");
+    File f = File.createTempFile("bridge", ".apk"); f.deleteOnExit();
+    try (FileOutputStream out = new FileOutputStream(f)) { out.write(apk); }
+    ok(UpdatePolicy.verified(f, o), "update: the exact APK passes the check");
+    byte[] bad = apk.clone(); bad[123_456] ^= 1;
+    try (FileOutputStream out = new FileOutputStream(f)) { out.write(bad); }
+    ok(!UpdatePolicy.verified(f, o), "update: one flipped byte is refused");
+    try (FileOutputStream out = new FileOutputStream(f)) { out.write(apk, 0, apk.length - 1); }
+    ok(!UpdatePolicy.verified(f, o) && !UpdatePolicy.verified(new File(f.getPath() + ".none"), o), "update: a truncated or missing file is refused");
+    long min = 60_000L;
+    ok(!UpdatePolicy.quiet(9 * min, 0, 0) && UpdatePolicy.quiet(10 * min, 0, 0), "update: installs only after 10 minutes without a ticket");
+    ok(!UpdatePolicy.quiet(60 * min, 0, 1), "update: never while a poll brought tickets");
+    ok(UpdatePolicy.mayAttempt(0, 0, 0) && !UpdatePolicy.mayAttempt(59 * min, 0, 1) && UpdatePolicy.mayAttempt(60 * min, 0, 1) && !UpdatePolicy.mayAttempt(999 * min, 0, 3), "update: three tries at most, an hour apart");
+    ok(UpdatePolicy.mayDownload(0, 0) && !UpdatePolicy.mayDownload(14 * min, 1) && UpdatePolicy.mayDownload(16 * min, 1), "update: a failed download is retried after 15 minutes, not every poll");
+    String u1 = UpdatePolicy.downloadUrl(o, 1), u2 = UpdatePolicy.downloadUrl(o, 2);
+    ok(u1.startsWith(o.url + "?v=" + next) && !u1.equals(u2), "update: every download uses a fresh address so no cache serves the old APK");
+
     System.out.println(fail == 0 ? "OK " + pass : "FAIL " + fail + " / " + (pass + fail));
     System.exit(fail == 0 ? 0 : 1);
   }
@@ -164,7 +195,7 @@ public class Harness {
     console.error('✗ android-bridge-jvm: ' + (run.stdout.match(/^FAIL .*$/m) || [run.stderr || 'harness did not finish'])[0]);
     process.exit(1);
   }
-  console.log('✓ android-bridge-jvm · ' + run.stdout.match(/^OK (\d+)/m)[1] + ' checks on the real RelayClient and LoopWatchdog (healthy, stuck, refused, abort from the watchdog, update offer, poll pacing)');
+  console.log('✓ android-bridge-jvm · ' + run.stdout.match(/^OK (\d+)/m)[1] + ' checks on the real RelayClient and LoopWatchdog (healthy, stuck, refused, abort from the watchdog, update offer and self-update policy, poll pacing)');
 } finally {
   fs.rmSync(work, { recursive: true, force: true });
 }

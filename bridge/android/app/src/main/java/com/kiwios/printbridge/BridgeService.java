@@ -8,7 +8,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
@@ -26,11 +25,10 @@ public final class BridgeService extends Service {
     static final String EXTRA_STATUS = "status";
     private static final String CHANNEL = "kiwi_print_bridge";
     private static final int NOTIFICATION_ID = 1707;
-    private static final String UPDATE_CHANNEL = "kiwi_print_bridge_update";
-    private static final int UPDATE_NOTIFICATION_ID = 1708;
     private final LoopWatchdog watchdog = new LoopWatchdog(System.currentTimeMillis());
     private ScheduledExecutorService guard;
-    private volatile String offeredUpdate = "";
+    private Updater updater;
+    private volatile long lastJobAt = System.currentTimeMillis();
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running;
     private int unauthorized;
@@ -46,6 +44,7 @@ public final class BridgeService extends Service {
         int warmPort = BridgeStore.warmPort(this);
         long warmAt = BridgeStore.warmAt(this);
         RelayClient.resumePrinterWarm(warmIp, warmPort, warmAt);
+        updater = new Updater(this);
         guard = Executors.newSingleThreadScheduledExecutor();
         guard.scheduleWithFixedDelay(this::checkLoop, 15, 15, TimeUnit.SECONDS);
     }
@@ -80,27 +79,17 @@ public final class BridgeService extends Service {
         android.os.Process.killProcess(android.os.Process.myPid());
     }
 
-    /* Le serveur propose la nouvelle version : une notification qu'on touche pour
-       télécharger l'APK, une fois par version. */
-    private void offerUpdate(JSONObject response) {
-        String url = RelayClient.updateUrl(response);
-        if (url == null) return;
-        String version = RelayClient.updateVersion(response);
-        if (version.equals(offeredUpdate)) return;
-        offeredUpdate = version;
+    /* Le serveur propose la nouvelle version. Avec empreinte et taille (serveur
+       à jour), Updater télécharge, vérifie et installe au calme, sans personne.
+       Sans elles, la notification de 1.0.7 : toucher pour télécharger. */
+    private void offerUpdate(JSONObject response, int jobs) {
         try {
-            NotificationManager nm = getSystemService(NotificationManager.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                NotificationChannel c = new NotificationChannel(UPDATE_CHANNEL, "Mises à jour", NotificationManager.IMPORTANCE_DEFAULT);
-                nm.createNotificationChannel(c);
-            }
-            PendingIntent open = PendingIntent.getActivity(this, 2, new Intent(Intent.ACTION_VIEW, Uri.parse(url)),
-                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-            nm.notify(UPDATE_NOTIFICATION_ID, new Notification.Builder(this, UPDATE_CHANNEL)
-                    .setSmallIcon(com.kiwios.printbridge.R.drawable.ic_kiwi)
-                    .setContentTitle("Kiwi Print Bridge " + version + " disponible")
-                    .setContentText("Touchez pour télécharger, puis installez par-dessus. L’association est gardée.")
-                    .setContentIntent(open).setAutoCancel(true).build());
+            long now = System.currentTimeMillis();
+            if (jobs > 0) lastJobAt = now;
+            UpdatePolicy.Offer offer = UpdatePolicy.offer(response, RelayClient.VERSION);
+            if (offer != null) { updater.consider(offer, UpdatePolicy.quiet(now, lastJobAt, jobs)); return; }
+            String url = RelayClient.updateUrl(response);
+            if (url != null) updater.fallback(RelayClient.updateVersion(response), url);
         } catch (Throwable ignored) {}
     }
 
@@ -143,9 +132,9 @@ public final class BridgeService extends Service {
                 }
                 unauthorized = 0;
                 if (status != 200 || !response.optBoolean("ok")) throw new Exception(response.optString("error", "HTTP " + status));
-                offerUpdate(response);
                 JSONArray jobs = RelayClient.jobs(response);
                 int count = jobs == null ? 0 : jobs.length();
+                offerUpdate(response, count);
                 publish("En ligne · " + BridgeStore.merchant(this) + (count > 0 ? " · impression…" : ""));
                 // Une imprimante qui vient d'échouer n'est pas réessayée pour les
                 // tickets suivants du même lot : ils repartent tout de suite au
@@ -218,6 +207,7 @@ public final class BridgeService extends Service {
         running = false;
         worker.shutdownNow();
         if (guard != null) guard.shutdownNow();
+        if (updater != null) updater.shutdown();
         releaseLocks();
         super.onDestroy();
     }

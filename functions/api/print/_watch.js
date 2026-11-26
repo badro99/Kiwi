@@ -148,8 +148,14 @@ export function bridgeVersionFrom(request) {
 /* La dernière version de l'app Android, celle de /downloads/kiwi-print-bridge.apk.
    À relever avec versionName dans bridge/android/app/build.gradle (le test
    android-print-bridge-test tient les deux ensemble). */
-export const ANDROID_BRIDGE_LATEST = '1.0.7';
+export const ANDROID_BRIDGE_LATEST = '1.0.8';
 export const ANDROID_BRIDGE_URL = 'https://kiwi-os.com/downloads/kiwi-print-bridge.apk';
+/* Empreinte et taille de downloads/kiwi-print-bridge.apk (print-watch-test les
+   recalcule sur le fichier). À partir de 1.0.8 le pont télécharge l'APK, refuse
+   tout fichier qui n'a pas exactement cette empreinte, puis s'installe seul au
+   calme. Une offre sans empreinte retombe sur la notification de 1.0.7. */
+export const ANDROID_BRIDGE_SHA256 = 'f19aafaf156e4ce858d31b2e43c939f8c4fbb3dd537b6a47a567ceaab0927d20';
+export const ANDROID_BRIDGE_SIZE = 609059;
 
 export function olderThan(version, latest) {
   const a = String(version || '').split('.').map(Number), b = String(latest).split('.').map(Number);
@@ -160,7 +166,7 @@ export function olderThan(version, latest) {
 
 export function updateOffer(seen) {
   if (!seen || seen.platform !== 'android' || !olderThan(seen.version, ANDROID_BRIDGE_LATEST)) return null;
-  return { version: ANDROID_BRIDGE_LATEST, url: ANDROID_BRIDGE_URL };
+  return { version: ANDROID_BRIDGE_LATEST, url: ANDROID_BRIDGE_URL, sha256: ANDROID_BRIDGE_SHA256, size: ANDROID_BRIDGE_SIZE };
 }
 
 /* Mesures que le pont envoie avec son accusé (ouverture et écriture, en ms) :

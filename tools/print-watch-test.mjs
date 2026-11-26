@@ -15,6 +15,8 @@
  * l'accusé, et le ré-appairage qui retire l'ancien pont de la même tablette.
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -93,6 +95,7 @@ function job(id, ageMs, status = 'queued', extra = {}) {
   ok(r.status === 200 && r.j.ok, 'idle poll answers');
   ok(tasks().length === 0 && mails.length === 0, 'a quiet poll raises nothing');
   ok(r.j.update && r.j.update.version === watch.ANDROID_BRIDGE_LATEST && /kiwi-print-bridge\.apk$/.test(r.j.update.url), 'an Android 1.0.5 bridge is offered the update');
+  ok(r.j.update && r.j.update.sha256 === watch.ANDROID_BRIDGE_SHA256 && r.j.update.size === watch.ANDROID_BRIDGE_SIZE, 'the offer carries the APK fingerprint and size the bridge checks before installing itself');
   const v = await poll('kiwi-print-bridge-android/' + watch.ANDROID_BRIDGE_LATEST);
   ok(!('update' in v.j), 'the latest Android bridge is not offered an update');
   ok(db.prepare("SELECT version FROM print_bridges WHERE id = 'pb_aa598efac1b89d01'").get().version === watch.ANDROID_BRIDGE_LATEST, 'the stored version follows the User-Agent, not the pairing');
@@ -224,6 +227,21 @@ function job(id, ageMs, status = 'queued', extra = {}) {
   ok(/later\(context, raisePrintIncident/.test(jobs) && !/await raisePrintIncident/.test(jobs), 'an alert never delays the relay answer');
   const gradle = read('bridge/android/app/build.gradle');
   ok(gradle.includes(`versionName '${watch.ANDROID_BRIDGE_LATEST}'`), 'ANDROID_BRIDGE_LATEST matches the APK versionName');
+  // Le pont 1.0.8+ s'installe seul : une empreinte qui ne suit pas l'APK publié
+  // ferait refuser chaque téléchargement ; un APK resté à l'ancienne version
+  // ferait tourner la mise à jour en rond.
+  const apk = fs.readFileSync(path.join(root, 'downloads/kiwi-print-bridge.apk'));
+  ok(apk.length === watch.ANDROID_BRIDGE_SIZE && crypto.createHash('sha256').update(apk).digest('hex') === watch.ANDROID_BRIDGE_SHA256,
+    'ANDROID_BRIDGE_SHA256 and ANDROID_BRIDGE_SIZE are those of downloads/kiwi-print-bridge.apk');
+  let manifest = null;
+  for (let i = apk.indexOf(Buffer.from([0x50, 0x4b, 3, 4])); i >= 0 && i < apk.length; i = apk.indexOf(Buffer.from([0x50, 0x4b, 3, 4]), i + 4)) {
+    const nameLen = apk.readUInt16LE(i + 26), extra = apk.readUInt16LE(i + 28);
+    if (apk.toString('latin1', i + 30, i + 30 + nameLen) !== 'AndroidManifest.xml') continue;
+    const body = apk.subarray(i + 30 + nameLen + extra, i + 30 + nameLen + extra + apk.readUInt32LE(i + 18));
+    manifest = apk.readUInt16LE(i + 8) === 8 ? zlib.inflateRawSync(body) : body;
+    break;
+  }
+  ok(manifest && ['utf16le', 'utf8'].some((enc) => manifest.includes(Buffer.from(watch.ANDROID_BRIDGE_LATEST, enc))), 'the published APK is the version the server offers');
 }
 
 Date.now = realNow;
