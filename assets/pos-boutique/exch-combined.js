@@ -16,9 +16,9 @@
  * l'avoir est émis AVANT que le stock bouge, la valeur reprise est ce que la
  * cliente a payé (paid-share), et chaque pièce rendue revient au stock par son
  * propre mouvement. */
-import { $, $$, esc, fmtMAD, icons, artOf, colorDot, colorLabel, renderExchNote, renderGrid, rayonOf } from './sales.js?v=304';
-import { state, root, P, toast, findSale, saleClient, openVeil, closeVeil, issueAvoir, stableCreditIssueId, creditErrorDetail, recordReturn, refreshOps, persistStock, stockAdd, persistDay, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, merchantSlug, lineUnit, SALES, switchView } from '../pos-boutique.js?v=410';
-import { openPay, openVoucher, paidAmount, markLineReturned } from './checkout.js?v=304';
+import { $, $$, esc, fmtMAD, icons, artOf, colorDot, colorLabel, renderExchNote, renderGrid, rayonOf } from './sales.js?v=305';
+import { state, root, P, toast, findSale, saleClient, openVeil, closeVeil, issueAvoir, stableCreditIssueId, creditErrorDetail, recordReturn, refreshOps, persistStock, stockAdd, persistDay, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, merchantSlug, lineUnit, SALES, switchView } from '../pos-boutique.js?v=411';
+import { openPay, openVoucher, paidAmount, markLineReturned } from './checkout.js?v=305';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { tillDate } from './till-clock.js?v=2';
 const M = globalThis.KiwiMoney;

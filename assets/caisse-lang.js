@@ -1725,7 +1725,7 @@
       "Choisissez une variante (ajoutez-en une d'abord)": ['Choose a variant (add one first)', 'اختر متغيرًا (أضف واحدًا أولًا)'],
       'Reprise terminée': ['Import finished', 'انتهى الاستيراد'],
       "Scan incomplet, rien n'a été enregistré": ['Incomplete scan, nothing was saved', 'مسح غير مكتمل، لم يُحفظ شيء'],
-      'Le nom du produit est requis': ['Product name is required', 'اسم المنتج مطلوب'], 'Écrivez le nom du produit.': ['Type the product name.', 'اكتب اسم المنتج.'], 'Remise sur le ticket': ['Receipt discount', 'خصم على التذكرة'],
+      'Sans étiquette': ['No tag', 'بدون ملصق'], 'Vendre une pièce sans étiquette à un prix choisi': ['Sell an item with no tag at a price you choose', 'بيع قطعة بلا ملصق بالسعر الذي تختاره'], 'Article sans étiquette': ['Item with no tag', 'قطعة بلا ملصق'], 'Tapez le prix convenu. La pièce passe sur le ticket, le stock ne bouge pas.': ['Type the agreed price. The item goes on the ticket and stock stays as it is.', 'اكتب السعر المتفق عليه. تُضاف القطعة إلى التذكرة ولا يتغيّر المخزون.'], 'Nom (facultatif), ex. pull noir': ['Name (optional), e.g. black sweater', 'الاسم (اختياري)، مثلاً: كنزة سوداء'], 'Rayon': ['Section', 'القسم'], 'Tapez un prix': ['Type a price', 'اكتب السعر'], 'sans étiquette': ['no tag', 'بلا ملصق'], 'Ajouté au ticket': ['Added to the ticket', 'أُضيفت إلى التذكرة'], 'Le nom du produit est requis': ['Product name is required', 'اسم المنتج مطلوب'], 'Écrivez le nom du produit.': ['Type the product name.', 'اكتب اسم المنتج.'], 'Remise sur le ticket': ['Receipt discount', 'خصم على التذكرة'],
       'Déclinaison impossible': ['Cannot create variant', 'تعذّر إنشاء المتغير'],
       'Code refusé': ['Code refused', 'تم رفض الرمز'],
       'Fiche corrigée': ['Profile corrected', 'تم تصحيح الملف'],

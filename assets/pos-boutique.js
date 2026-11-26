@@ -1,8 +1,8 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=304';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=221';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=304';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=304';
-import { ticketOwner } from './pos-boutique/ticket-owner.js?v=9';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=305';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=222';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=305';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=305';
+import { ticketOwner } from './pos-boutique/ticket-owner.js?v=9'; import { isOddPid, oddInject, mountOddBox } from './pos-boutique/odd-box.js?v=2';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
 import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
@@ -65,6 +65,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     if (!window.KiwiBoutiqueCatalog) { RAYONS = []; P = {}; BY_EAN = {}; return; }
     const c = window.KiwiBoutiqueCatalog.compat();
     RAYONS = c.RAYONS; P = c.P; BY_EAN = c.BY_EAN; { const pl = (typeof tpl === 'function' ? tpl() : null); if (pl) pl.apply(P); }   // le tarif du ticket (P est une copie)
+    try { oddInject(P, state.ticket); } catch (_) {}   // pièces « sans étiquette » du ticket ouvert (pos-boutique/odd-box.js)
   }
   rebuildCatalog();
 
@@ -84,6 +85,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     return String(exact && cat && cat.colorFamily ? cat.colorFamily(exact) : color);
   }
   function variantStock(pid, size, color) {
+    if (isOddPid(pid)) return 1e6;   // sans étiquette : aucun stock à vérifier
     const cat = window.KiwiBoutiqueCatalog;
     const id = canonicalPid(pid);
     if (cat && cat.variantStock) return cat.variantStock(id, size, color);
@@ -134,7 +136,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
      couleur. Un retour sans couleur appariable remonte maintenant comme stock à
      rapprocher au lieu de créditer silencieusement une autre couleur. */
   function persistStock(pid, size, color, delta, ref, why, oversell) {   // oversell : une vente encaissée sort même sous zéro (pos-boutique/oversell.js)
-    if (!delta || !pvReal()) return true;
+    if (!delta || !pvReal() || isOddPid(pid)) return true;   // sans étiquette : la variante partie est inconnue, le stock ne bouge pas
     try {
       // Retail stock and its durable movement line are one operation. Without
       // this bridge the catalogue changed but the owner's movement book stayed
@@ -497,7 +499,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       itemId: line.pid || '', variantId: [line.pid || '', line.size || '', line.color || ''].join(':'),
       name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
       qty: Math.max(1, Number(line.qty) || 1), total: lineTotals[i],
-      cat: rayonOf(line.pid) || '', unit: 'piece', kind: 'product', supplierId: (P[line.pid] && P[line.pid].supplierId) || '',
+      cat: rayonOf(line.pid) || (line.odd && line.odd.rayon) || '', unit: 'piece', kind: 'product', supplierId: (P[line.pid] && P[line.pid].supplierId) || '',
     })));
     const payload = {
       id: sale.serverId || sale.syncId || sale.id,
@@ -1504,6 +1506,8 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       if (v) commitEan(v);
     });
     wireSellSearch($('.bq-sell-scan', root), sellEan);   // peau 2027 : la liste qui répond au 1er chiffre
+    mountOddBox($('.bq-sell-scan', root), { root, $, esc, fmtMAD, icons, toast, openVeil, closeVeil, rayons: () => RAYONS,
+      add: (line, product) => { P[product.id] = product; ticketOwner.addLine(state.ticket, line); renderTicket(); renderBadges(); icons(); } });
     /* Même barre, sans douchette : la caméra dépose l'article sur le ticket. */
     const sellCam = $('#bq-sell-cam', root);
     if (sellCam) sellCam.onclick = () => openCamScan(commitEan);
@@ -1844,7 +1848,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
         return {
           pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, agreed: +ln.agreed > 0 ? +ln.agreed : null,
           promo: linePromo(ln), unit: lineUnit(ln), name: p.name || 'Article',
-          price: shelf(p.price), barcode: p.barcode || '', rayon: rayonOf(ln.pid) || '',
+          price: shelf(p.price), barcode: p.barcode || '', rayon: rayonOf(ln.pid) || '', ...(ln.odd ? { odd: ln.odd } : {}),
         };
       }),
     };
@@ -1919,7 +1923,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
              trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —
              sinon la caissière voit un caftan à 700 sur un ticket, 1 000 en rayon,
              et n'a aucun moyen de trancher. */
-          lines: frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, agreed: ln.agreed, promo: ln.promo, unit: ln.unit, name: ln.name, returned: false, note: '' })),
+          lines: frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, agreed: ln.agreed, promo: ln.promo, unit: ln.unit, name: ln.name, ...(ln.odd ? { odd: ln.odd } : {}), returned: false, note: '' })),
           reward: rewardUsed ? frozen.reward.label : null,
           total: receivedNow,
           balanceTotal: isAcompte ? total : null,
@@ -2256,10 +2260,10 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     zSalesFor(salesToday(), only).forEach((s) => {
       const at = (s.at instanceof Date ? s.at : new Date(s.at)).getTime(), away = zAway(s, only);
       const lines = (away ? [] : s.lines || []).filter((ln) => (+ln.qty || 0) > 0).map((ln) => ({
-        name: ((P[ln.pid] && P[ln.pid].name) || 'Article') + (ln.size ? ' ' + ln.size : ''),
+        name: ((P[ln.pid] && P[ln.pid].name) || ln.name || 'Article') + (ln.size ? ' ' + ln.size : ''),
         qty: +ln.qty, /* brut, comme les lignes du serveur : les pièces rendues sortent à part (itemsReturned) */
         total: Math.round((+ln.unit || 0) * (+ln.qty) * 100) / 100,
-        cat: rayonOf(ln.pid) || '',
+        cat: rayonOf(ln.pid) || (ln.odd && ln.odd.rayon) || '',
       }));
       const taken = zSplitParts(s, bqMoneyParts(s), only);
       if (s.syncId && (taken.length || lines.length)) { /* un ticket réglé sans argent (avoir) reste un ticket, comme au serveur */
