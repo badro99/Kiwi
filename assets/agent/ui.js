@@ -1019,13 +1019,13 @@ function open(prefill) {
         }
         logAi({ route: hasDraft ? 'cloud+deterministic' : 'cloud', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted), tools: run.tools });
         /* Ce que le modèle a PROPOSÉ attend un doigt : un bouton par action,
-         * avec le résumé exact, qui appelle le même confirm que le reste. */
+         * avec l'action exacte (pas la phrase du modèle), qui appelle le même confirm. */
         if (bubble && __state.LLM.proposals.length) {
           const ac = __state.ACTION_COPY[__state.L] || __state.ACTION_COPY.fr;
           __state.LLM.proposals.forEach((pr) => {
             const row = document.createElement('div');
             row.className = 'fa-follow';
-            row.innerHTML = '<button type="button" class="fa-llm-btn" data-fa-confirm="' + __state.escAttr(pr.token) + '">' + ac.confirm + ' · ' + __state.escHtml(pr.summary || pr.action) + '</button>'
+            row.innerHTML = '<button type="button" class="fa-llm-btn" data-fa-confirm="' + __state.escAttr(pr.token) + '">' + ac.confirm + ' · ' + __state.escHtml(pr.label || pr.action) + '</button>'
               + '<button type="button" class="fa-llm-btn" data-fa-confirm-no="' + __state.escAttr(pr.token) + '">' + ac.cancel + '</button>';
             bubble.appendChild(row);
           });
@@ -2865,7 +2865,9 @@ function runTool(name, args) {
           if (res && typeof res.then === 'function') return res.then(shape, () => ({ executed: false, action: act, summary, reason: 'failed' }));
           return shape(res);
         }
-        __state.LLM.proposals.push({ token: req.token, action: act, summary, args: req.summary });
+        /* Le bouton dit l'action validée, pas la phrase du modèle (« Réimprimer » sur un stock-adjust −500, audit du 26 nov.). */
+        const label = act + Object.entries(req.summary || {}).filter(([k]) => k !== 'said' && k !== 'commandId').map(([k, v]) => ' · ' + k + ' ' + (v && typeof v === 'object' ? JSON.stringify(v) : v)).join('');
+        __state.LLM.proposals.push({ token: req.token, action: act, summary, args: req.summary, label });
         return { proposed: true, action: act, summary, awaiting_confirmation: true, note: 'Le commerçant doit confirmer par le bouton affiché sous la réponse.' };
       }
     } catch (e) { return { error: 'lecture impossible' }; }

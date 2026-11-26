@@ -230,7 +230,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=3';
+  const partUrl = 'assets/agent/ui.js?v=4';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
