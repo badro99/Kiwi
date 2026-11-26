@@ -9,6 +9,7 @@
     "booking-split-test.mjs": "Token-identical formatting and byte-exact live split reconstruction; structural identity only",
     "boutique-2027-test.mjs": "the boutique keeps its own views under the 2027 skin; one flag check, in the business file",
     "bridge-win7-test.mjs": "printer bridge build targets Windows 7",
+    "printer-subnet-test.mjs": "native printer plugins (Swift and Java, which node cannot run) accept a printer address ending in .0 on a wider subnet",
     "bundle-manifest-test.mjs": "bundle dependency and manifest shape",
     "caisse-accounting-split-test.mjs": "byte-exact concatenation of the till accounting parts and the functions each part owns",
     "caisse-floor-split-test.mjs": "byte-exact concatenation of the till floor parts and the functions each part owns",
