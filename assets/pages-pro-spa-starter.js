@@ -1398,11 +1398,12 @@
       cancelAuditVoidSig = sig;
       loadCancelAudit(true);
       const refs = (e && e.detail && e.detail.refs) || [];
-      refs.forEach((ref) => {
+      const evs = (e && e.detail && e.detail.voidEvents) || [];
+      (evs.length ? evs : refs.map((ref) => ({ ref, id: '' }))).forEach(({ ref, id }) => {
         let reversed = 0;
         try {
-          if (ref && window.KiwiInventoryConsumption && window.KiwiInventoryConsumption.reverse) {
-            reversed = window.KiwiInventoryConsumption.reverse(ref, 'Annulation tableau de bord');
+          if ((ref || id) && window.KiwiInventoryConsumption && window.KiwiInventoryConsumption.reverse) {
+            reversed = window.KiwiInventoryConsumption.reverse(ref, 'Annulation tableau de bord', id);
           }
         } catch (_) {}
         if (!reversed && !isSync) {

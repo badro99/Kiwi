@@ -125,7 +125,7 @@ ok('le moteur et le registre se chargent sur le bon commerçant', !!C && I.merch
    `time` est un objet Date, la référence vient de KiwiReceipt, et chaque ligne
    porte itemId / name / qty / total / cat. */
 const ticket = (ref, lines) => ({
-  id: 'visit-7-emp', time: new Date(1770000000000), label: 'Table 7', amount: 214,
+  id: 'visit-7-' + ref + '-emp', time: new Date(1770000000000), label: 'Table 7', amount: 214,
   method: 'card', ref, tip: 0, cashier: 'Amira', lines,
 });
 
@@ -161,7 +161,7 @@ ok('le coût matière du ticket se recalcule depuis le journal',
   String(valued.reduce((s, r) => s + Math.abs(r.qty) * r.unitCost, 0)));
 
 /* Un rechargement de la caisse rejoue le journal : les identifiants de
-   mouvement dérivent de la référence du ticket, donc rien ne bouge. */
+   mouvement dérivent de l'identifiant de la vente, donc rien ne bouge. */
 C.record(ticket('KW-0001', [
   { itemId: 'it_3', name: 'Tajine poulet citron', qty: 2, total: 190, cat: 'Plats' },
   { itemId: 'it_6', name: 'Thé à la menthe', qty: 2, total: 24, cat: 'Boissons' },
@@ -184,7 +184,7 @@ ok('une addition réglée au téléphone sort la même matière, par le nom du p
 ok('service et pourboire ne sortent jamais de marchandise', I.balance('usr-am0d') === 39.96);
 
 /* La même vente peut arriver deux fois : une fois par le comptoir (avec
-   itemId), une fois par le miroir (sans). Même référence, donc une seule
+   itemId), une fois par le miroir (sans). Même vente, donc une seule
    sortie — sinon un service entier partirait en double. */
 C.record(ticket('KW-0002', [{ itemId: 'it_3', name: 'Tajine poulet citron', qty: 1, total: 95, cat: 'Plats' }]));
 ok('un ticket qui entre par les deux portes ne sort la matière qu\'une fois',

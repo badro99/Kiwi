@@ -406,6 +406,10 @@
     }
     var d = doc(); var written = 0, skipped = 0;
     var ref = String(sale.ref || sale.id || ('sale-' + n(sale.ts || sale.time))).slice(0, 100);
+    /* La clé d'un mouvement est la vente (entry.id, « -split-N » compris), jamais le
+       numéro imprimé : le #74 revient chaque lundi et chaque part d'une division le
+       partage, et un identifiant répété était ignoré (audit du 26 nov.). */
+    var saleKey = String(sale.id || ref).slice(0, 100);
     var locationId = String(sale.locationId || I.locationId?.() || 'principal').slice(0, 80);
     var batched = !!batch;
     var compactionVersion = batch ? batch.compactionVersion : 0;
@@ -467,13 +471,13 @@
         var raws = pieces.map(function (piece, k) {
           var tag = k ? part + ':' + k : part;
           return {
-            id: movementId(ref, idx, x.itemId, tag), itemId: x.itemId,
+            id: movementId(saleKey, idx, x.itemId, tag), itemId: x.itemId,
             variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -piece.qty,
             reason: 'sale', refType: 'sale', refId: ref,
             unitCost: piece.unitCost,
             occurredTs: n(sale.ts || sale.time) || Date.now(),
             note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
-            meta: { unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: tag, lineQty: n(line.qty || line.quantity || 1) },
+            meta: { saleId: saleKey, unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: tag, lineQty: n(line.qty || line.quantity || 1) },
           };
         });
         // Une vente rejouée trouve sa première tranche déjà écrite : rien d'autre ne sort.
@@ -507,10 +511,17 @@
     return { written: written, skipped: skipped };
   }
 
-  function reverse(ref, note) {
-    var I = window.KiwiInventory; if (!I || !ref) return 0;
+  /* Avec l'identifiant de la vente : ses seules sorties, plus les lignes écrites
+     avant la clé par vente qui ne connaissent que le numéro. */
+  function reverse(ref, note, saleId) {
+    var I = window.KiwiInventory; if (!I || (!ref && !saleId)) return 0;
     var history = I.history() || [];
-    var rows = history.filter(function (r) { return r.reason === 'sale' && r.refId === String(ref); });
+    var sid = saleId ? String(saleId) : '';
+    var rows = history.filter(function (r) {
+      if (r.reason !== 'sale') return false;
+      var own = r.meta && r.meta.saleId ? String(r.meta.saleId) : '';
+      return sid && own ? own === sid : !!ref && r.refId === String(ref);
+    });
     var nrows = 0;
     rows.forEach(function (r) {
       var id = 'inv-void-' + hash([I.merchant?.() || '', r.id].join('|'));

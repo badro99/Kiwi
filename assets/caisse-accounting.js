@@ -311,7 +311,7 @@
               if (serverId) activeCloudSaleIds.delete(serverId);
             }
             if (e.kind !== 'refund') {
-              try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres'); } catch (_) {}
+              try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres', e.id); } catch (_) {}
             }
             touched++;
           }

@@ -739,7 +739,7 @@
        ne repasse par là. Le contre-mouvement porte un identifiant dérivé du
        mouvement d'origine : rejouer l'annulation ne le rend pas deux fois. */
     dropped.forEach(function (s) {
-      try { window.KiwiInventoryConsumption?.reverse?.(s.ref, 'Vente sortie des livres'); } catch (_) {}
+      try { window.KiwiInventoryConsumption?.reverse?.(s.ref, 'Vente sortie des livres', s.id); } catch (_) {}
     });
     /* Les modules métier reconstruisent leurs compteurs depuis today()/totals()
        au montage. Un signal leur dit de recompter sans qu'on ait à connaître

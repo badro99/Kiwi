@@ -241,7 +241,9 @@
          till counter was the source of the #74 / #14 disagreement. */
       await awaitCanonicalTicketNumber(tenderOrder);
       const tenderBase = currentTotal();
-      const tenderTip = payTipAmount();
+      /* Une commande plateforme ne passe par aucun écran de paiement : un pourboire
+         choisi puis abandonné sur la carte ne doit pas s'y poser (audit du 26 nov.). */
+      const tenderTip = method === 'platform' ? 0 : payTipAmount();
       const saleLabel = mode === 'vrap'
         ? (tenderOrder ? 'À emporter #' + ticketNo(tenderOrder)
           : (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter'))

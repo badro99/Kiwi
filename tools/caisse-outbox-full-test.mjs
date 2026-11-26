@@ -387,3 +387,16 @@ test('till#2 reload after tender confirmation before server acknowledgement pres
   await f.reload(); await f.tick();
   assert.equal(f.count(), 1, 'another full boot cannot duplicate the sale');
 });
+
+test('a platform order never carries a tip picked then abandoned on the card screen', async t => {
+  const f = await fixture(t);
+  f.ctx.mode = 'vrap';
+  f.ctx.amount = 80;
+  f.ctx.payTipAmount = () => 8;   // 10 % chosen on the card modal, then the modal was closed
+  assert.equal(await f.ctx.finalizeTender('platform'), 'complete');
+  await drain();
+  assert.equal(f.ctx.journal[0].tip || 0, 0, 'the till journal records no tip on the platform sale');
+  const row = f.db.prepare('SELECT amount_cents, tip_cents FROM sales').get();
+  assert.equal(row.amount_cents, 8000);
+  assert.equal(row.tip_cents || 0, 0, 'the server row carries no tip either');
+});

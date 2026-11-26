@@ -220,8 +220,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "43",
-    "sha": "bb2ea39e52800c69"
+    "v": "44",
+    "sha": "c33501f7f441c855"
   },
   "assets/caisse-app.js": {
     "v": "55",
@@ -368,8 +368,8 @@
     "sha": "fc17e1de643f9b22"
   },
   "assets/caisse/payment.js": {
-    "v": "11",
-    "sha": "c27986a3a057f2a1"
+    "v": "12",
+    "sha": "15f1383db7c7a7a2"
   },
   "assets/caisse/receipts.js": {
     "v": "7",
@@ -956,8 +956,8 @@
     "sha": "35f296c19ca0ff54"
   },
   "assets/inventory-consumption.js": {
-    "v": "18",
-    "sha": "fe4026ec50814736"
+    "v": "19",
+    "sha": "55f744373c6e5f1d"
   },
   "assets/inventory-ledger.js": {
     "v": "19",
@@ -1576,8 +1576,8 @@
     "sha": "019b0b381221ac8c"
   },
   "assets/pages-pro-spa-starter.js": {
-    "v": "9",
-    "sha": "59f404d62ea9664d"
+    "v": "10",
+    "sha": "480a598f1ee4bf7b"
   },
   "assets/pages-pro.css": {
     "v": "6",
@@ -1684,8 +1684,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "349",
-    "sha": "6b04b74a21439500"
+    "v": "350",
+    "sha": "0a8c808dec20db8f"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2172,8 +2172,8 @@
     "sha": "77849380a66816c2"
   },
   "assets/pos-sale.js": {
-    "v": "38",
-    "sha": "a4592c6729f85293"
+    "v": "39",
+    "sha": "c4900c7fc1dca374"
   },
   "assets/pos-spa-cure-expiry.js": {
     "v": "3",

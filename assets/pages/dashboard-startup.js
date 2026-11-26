@@ -26,7 +26,7 @@
     'assets/owner-approvals.js?v=6',
     'assets/boutique-stock-correct.js?v=4',
     'assets/boutique-categories-view.js?v=3',
-    'assets/pages-pro-spa-starter.js?v=9',
+    'assets/pages-pro-spa-starter.js?v=10',
     'assets/restaurant-units.js?v=2',
     'assets/stock-identity.js?v=3',
     'assets/menu-nutrition.js?v=4',
