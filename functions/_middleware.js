@@ -211,23 +211,26 @@ async function accountActive(env, aid, sessionVersion = 0, sess = null) {
 }
 
 /* The guest app in the 2027 skin, per store (design 2027 §21.1, stage 3c).
- * An operator switches it on in kiwi-admin (features.skin2027, off unless
- * explicitly true, like orderpro). The page has to know before its first
+ * Since 2026-11-26 it is the default: only a store set to skin2027: false in
+ * kiwi-admin keeps the old page. The page has to know before its first
  * paint, so the server marks <html data-store-skin="2027"> as it serves
- * OrderPro for that store, and the page's head check does the rest (the kit's
- * sheets, or the basic page for a browser below the guest minimum). Any other
- * store, the demo, a HEAD request or a database error gets the page untouched.
+ * OrderPro, and the page's head check does the rest (the kit's sheets, or the
+ * basic page for a browser below the guest minimum). A HEAD request, or a
+ * store switched off, gets the page untouched.
  * The conditional headers go: a copy cached before the switch must not come
  * back as a 304 without the mark. */
+const skin2027Of = (features) => { try { return (JSON.parse(features || '{}') || {}).skin2027 !== false; } catch (_) { return true; } };
 async function guestApp(request, env, next) {
   const url = new URL(request.url);
   const slug = (url.searchParams.get('s') || url.searchParams.get('store') || '').trim().slice(0, 64);
-  let on = false;
-  if (request.method === 'GET' && slug && slug !== 'demo' && env.DB) {
+  /* Owner, 2026-11-26: every client moved to 2027, so it is the default. A
+     store stays on the old design only when kiwi-admin says skin2027: false. */
+  let on = request.method === 'GET';
+  if (on && slug && slug !== 'demo' && env.DB) {
     try {
       const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(slug).first();
-      on = !!(row && row.features) && (JSON.parse(row.features) || {}).skin2027 === true;
-    } catch (_) { on = false; }
+      on = skin2027Of(row && row.features);
+    } catch (_) { on = true; }
   }
   if (!on) return next(request);
   const ask = new Headers(request.headers);
@@ -839,8 +842,10 @@ function secureResponse(response) {
  * browser. Which store: the paired device's store (kiwi_till_store) for the
  * caisse and the kitchen screen, the signed-in employee's store for the team
  * app, otherwise any store of the signed-in owner's account (an unpaired till
- * opened by the owner). It is only a look: no access decision reads it, and
- * anything unreadable (no cookie, a database error) leaves the page as shipped.
+ * opened by the owner). It is only a look: no access decision reads it.
+ * Since 2026-11-26 (owner: every client moved to 2027) the 2027 design is the
+ * default: only a store set to skin2027: false keeps the old one, and anything
+ * unreadable (no cookie, an unknown store, a database error) gets 2027.
  *
  * The dashboard is deliberately NOT in this map (owner, 2026-10-27): the 2027
  * work is a till redesign, the dashboard keeps the screens it shipped with. Its
@@ -852,7 +857,8 @@ const STAFF_SKIN_PAGES = new Map([
   ['/kiwi-serveur', 'employee'], ['/kiwi-serveur.html', 'employee'],
 ]);
 export async function staffSkinOn(request, env, kind) {
-  if (!env || !env.DB || !kind) return false;
+  if (!kind) return false;
+  if (!env || !env.DB) return true;
   const slugs = [];
   let aid = '';
   try {
@@ -869,14 +875,14 @@ export async function staffSkinOn(request, env, kind) {
       const sess = token ? await readSession(token, env.AUTH_SECRET) : null;
       if (sess && sess.aid) aid = String(sess.aid);
     }
-    if (!slugs.length && !aid) return false;
+    if (!slugs.length && !aid) return true;
     const q = slugs.length
       ? env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(slugs[0])
       : env.DB.prepare('SELECT features FROM merchant_config WHERE account_id = ? LIMIT 50').bind(aid);
     const { results } = await q.all();
-    return (results || []).some((r) => { try { return (JSON.parse(r.features) || {}).skin2027 === true; } catch (_) { return false; } });
+    return !(results || []).length || results.some((r) => skin2027Of(r.features));
   } catch (_) {
-    return false;
+    return true;
   }
 }
 async function withStaffSkin(context, response) {

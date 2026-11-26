@@ -42,6 +42,7 @@ export function mountOddBox(bar, d) {
   btn.innerHTML = '<i data-icon="sell"></i><span></span>';
   btn.querySelector('span').textContent = tr('Sans étiquette');
   btn.title = tr('Vendre une pièce sans étiquette à un prix choisi');
+  btn.setAttribute('aria-label', tr('Sans étiquette'));   // le libellé se cache sur un téléphone étroit
   bar.appendChild(btn);
   injectCss();
   btn.addEventListener('click', () => open(d, tr));
@@ -146,6 +147,7 @@ function injectCss() {
   .odd-chip{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--n-200,rgba(10,15,13,.12));background:transparent;color:var(--ink,#0A0F0D);font:500 13px/1 var(--sans,inherit);cursor:pointer}
   .odd-chip.on{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}
   .odd-add{height:50px;font-size:15px}
-  .odd-add[disabled]{opacity:.5}`;
+  .odd-add[disabled]{opacity:.5}
+  @media (max-width:430px){.bq-sell-odd{padding:0 10px}.bq-sell-odd span{display:none}}`;
   document.head.appendChild(s);
 }

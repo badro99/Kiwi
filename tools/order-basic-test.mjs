@@ -123,7 +123,7 @@ ok(b.attrs['data-skin-2027'] === 'ordering' && /assets\/kit\/ordering\.css\?v=\d
 b = boot({ search: '?s=x&t=2', mark: '2027', supports: false });
 ok(b.went.join() === '/order/basic?s=x&t=2', 'that store, below the guest minimum: the basic page');
 
-console.log('■ the server marks the page for a store switched on (features.skin2027)');
+console.log('■ the server marks the page in the 2027 design by default (owner 2026-11-26), unless a store has skin2027: false');
 sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)').run('skin-cafe', JSON.stringify({ orderpro: true, skin2027: true }), 'Skin', Date.now());
 sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)').run('plain-cafe', JSON.stringify({ orderpro: true, skin2027: false }), 'Plain', Date.now());
 const PAGE = '<!doctype html>\n<html lang="fr">\n<head></head><body>OrderPro</body></html>';
@@ -145,14 +145,19 @@ ok(s1.asked[0] && new URL(s1.asked[0].url).pathname === '/OrderPro' && new URL(s
 ok(s1.asked[0] && !s1.asked[0].headers.get('If-None-Match') && !s1.res.headers.get('ETag'), 'a copy cached before the switch cannot come back as a 304 without the mark');
 s1 = await serve('https://kiwi-os.com/OrderPro?s=skin-cafe');
 ok(s1.html.includes('data-store-skin="2027"'), '/OrderPro for that store: marked too');
+{
+  const r2 = await serve('https://kiwi-os.com/order?s=plain-cafe&t=4', { headers: { 'If-None-Match': '"page-1"' } });
+  ok(r2.html === PAGE && r2.asked[0] && r2.asked[0].headers.get('If-None-Match') === '"page-1"', 'a store with skin2027 false: the page untouched, its cache too');
+}
+sql.prepare('INSERT INTO merchant_config (merchant, features, name, updated_ts) VALUES (?, ?, ?, ?)').run('new-cafe', JSON.stringify({ orderpro: true }), 'New', Date.now());
 for (const [url, why] of [
-  ['https://kiwi-os.com/order?s=plain-cafe&t=4', 'a store with skin2027 false'],
+  ['https://kiwi-os.com/order?s=new-cafe&t=4', 'a store that never touched the switch'],
   ['https://kiwi-os.com/order?s=nobody', 'a store with no row'],
   ['https://kiwi-os.com/order?s=demo', 'the demo'],
   ['https://kiwi-os.com/order', 'no store'],
 ]) {
   const r2 = await serve(url, { headers: { 'If-None-Match': '"page-1"' } });
-  ok(r2.html === PAGE && r2.asked[0] && r2.asked[0].headers.get('If-None-Match') === '"page-1"', why + ': the page untouched, its cache too');
+  ok(r2.html.includes('<html data-store-skin="2027" lang="fr">'), why + ': the 2027 design by default');
 }
 const headReq = await serve('https://kiwi-os.com/order?s=skin-cafe', { method: 'HEAD' });
 ok(headReq.res.status === 200 && headReq.res.headers.get('ETag') === '"page-1"', 'a HEAD request is passed through');
@@ -161,9 +166,9 @@ const broken = await middleware.onRequest({
   env: { DB: { prepare() { throw new Error('d1 down'); } }, AUTH_SECRET: 'order-basic-secret' },
   next: async () => new Response(PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } }),
 });
-ok((await broken.text()) === PAGE, 'the database down: the shipped page, never an error');
+ok((await broken.text()).includes('data-store-skin="2027"'), 'the database down: the default 2027 page, never an error');
 const admin = read('kiwi-admin.html');
-ok(/\{ key:'skin2027', label:'Commande client · design 2027', off:true,/.test(admin), 'kiwi-admin: the operator switch, off unless set (an option, like Coût simple)');
+ok(/\{ key:'skin2027', label:'Commande client · design 2027',\s*hint:'Allumé par défaut/.test(admin), 'kiwi-admin: the operator switch, on unless set off (owner 2026-11-26)');
 
 console.log(fail ? `order-basic-test: ${fail} failed, ${pass} passed` : `✓ order-basic-test · ${pass} checks`);
 process.exit(fail ? 1 : 0);

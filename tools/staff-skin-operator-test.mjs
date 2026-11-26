@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { staffSkinOn } from '../functions/_middleware.js';
 
-const FEATURES = { 'santos-store': {}, 'amira-cafe': { skin2027: true } };
+const FEATURES = { 'santos-store': { skin2027: false }, 'amira-cafe': { skin2027: true } };
 const env = { DB: { prepare(sql) {
   return { bind(slug) { return { async all() {
     assert.match(sql, /WHERE merchant = \?/);

@@ -9,10 +9,11 @@
  *   · the team app, for the signed-in employee's store.
  * The dashboard is deliberately excluded (owner, 2026-10-27): the 2027 work is
  * a till redesign, so a store's switch must never move the dashboard off the
- * screens it shipped with. Held here: the right store decides, a store without
- * the switch stays as shipped, the dashboard stays as shipped for everyone, a
+ * screens it shipped with. Since 2026-11-26 (owner: every client moved to
+ * 2027) the 2027 design is the default. Held here: the right store decides, a
+ * store switched off (skin2027: false) keeps the old design, the dashboard stays as shipped for everyone, a
  * copy cached before the switch does not come back as a bare 304, a database
- * error leaves the page alone, and only these three pages move.
+ * error gives the default, and only these three pages move.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,9 +34,10 @@ sql.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 const now = Date.now();
 const store = (m, features, account) => sql.prepare("INSERT INTO merchant_config (merchant, features, status, updated_ts, account_id) VALUES (?, ?, 'active', ?, ?)").run(m, JSON.stringify(features), now, account);
 store('kit-cafe', { skin2027: true }, 'acc-kit');
-store('kit-boutique', {}, 'acc-kit');
+store('kit-boutique', { skin2027: false }, 'acc-kit');
+store('new-shop', {}, 'acc-new');
 store('plain-shop', { skin2027: false }, 'acc-plain');
-for (const [id, mail] of [['acc-kit', 'kit@shop.invalid'], ['acc-plain', 'plain@shop.invalid']]) {
+for (const [id, mail] of [['acc-kit', 'kit@shop.invalid'], ['acc-plain', 'plain@shop.invalid'], ['acc-new', 'new@shop.invalid']]) {
   sql.prepare("INSERT INTO accounts (id, email, business, salt, hash, created_ts, status) VALUES (?, ?, 'Shop', 'x', 'y', ?, 'active')").run(id, mail, now);
 }
 const makeD1 = ({ broken = false } = {}) => ({ prepare(q) { let a = []; return {
@@ -76,7 +78,8 @@ check((await load('/kiwi-caisse', { cookie: cookies(await till('kit-cafe')) })).
 /* The kitchen page still opens on the owner's session; its paired store decides. */
 check((await load('/kiwi-cuisine', { cookie: cookies([...(await till('kit-cafe')), await owner('acc-plain')]) })).marked,
   'and the kitchen screen paired to it, whoever is signed in');
-check(!(await load('/kiwi-caisse', { cookie: cookies(await till('plain-shop')) })).marked, 'a till of a store without it keeps the shipped caisse');
+check(!(await load('/kiwi-caisse', { cookie: cookies(await till('plain-shop')) })).marked, 'a till of a store switched off (skin2027: false) keeps the old caisse');
+check((await load('/kiwi-caisse', { cookie: cookies(await till('new-shop')) })).marked, 'a till of a store that never touched the switch gets 2027 (the default since 2026-11-26)');
 check(!(await load('/kiwi-caisse', { cookie: cookies([...(await till('kit-boutique')), await owner('acc-kit')]) })).marked,
   'the device\'s own store decides, not another store of the same owner');
 check((await load('/kiwi-caisse', { cookie: cookies([await owner('acc-kit')]) })).marked, 'an unpaired caisse opened by the owner follows the account');
@@ -84,7 +87,7 @@ check((await load('/kiwi-caisse', { cookie: cookies([await owner('acc-kit')]) })
 console.log('The team app follows the employee\'s store');
 check((await load('/kiwi-serveur', { cookie: cookies([await employee('kit-cafe')]) })).marked, 'an employee of a switched-on store gets the 2027 team app');
 check(!(await load('/kiwi-serveur', { cookie: cookies([await employee('plain-shop')]) })).marked, 'an employee of another store does not');
-check(!(await load('/kiwi-serveur')).marked, 'nobody signed in: the shipped page');
+check((await load('/kiwi-serveur')).marked, 'nobody signed in: the 2027 page, the default');
 
 console.log('Edges');
 const cached = await load('/kiwi-caisse', { cookie: cookies(await till('kit-cafe')), status: 304 });
@@ -93,7 +96,7 @@ check(cached.res.status === 200 && cached.marked && !cached.res.headers.get('ETa
 check(cached.res.headers.get('Cache-Control') === 'no-cache', 'and a marked page is never served from a stale cache');
 check((await load('/kiwi-caisse', { cookie: cookies(await till('plain-shop')), status: 304 })).res.status === 304, 'an unmarked page keeps its 304');
 const down = await load('/kiwi-serveur', { cookie: cookies([await employee('kit-cafe')]), e: { ...env, DB: makeD1({ broken: true }) } });
-check(down.res.status === 200 && !down.marked, 'a database error leaves the page as shipped');
+check(down.res.status === 200 && down.marked, 'a database error gives the default 2027 page');
 check(!(await load('/kiwi-serveur', { cookie: cookies([await employee('kit-cafe')]), type: 'application/json' })).marked, 'only an HTML page is touched');
 check(!(await load('/reset.html', { cookie: cookies([await owner('acc-kit')]) })).marked, 'and only the three staff pages');
 
