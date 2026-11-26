@@ -211,7 +211,7 @@
           serviceReopenedBills.set(id, bill);
         }
       });
-      (data.orders || []).concat((data.expired || []).map((o) => ({ ...o, status: 'rejected' }))).forEach((order) => {   // refusée à la caisse : seulement dans « expired »
+      (data.orders || []).concat((data.expired || []).map((o) => ({ ...o, status: 'rejected' }))).forEach((order) => {   /* refusée à la caisse : seulement dans « expired » */
         if (!order || !order.id) return;
         const before = serviceOrderStatus.get(order.id) || '';
         serviceOrderStatus.set(order.id, order.status);

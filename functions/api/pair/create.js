@@ -20,7 +20,7 @@
 // Runs behind the passcode gate (functions/_middleware.js). No DB / no secret ⇒
 // 503 so a static host (GitHub Pages, local) is unaffected.
 
-import { json, activeAccountSession, slugMerchant, accountSlug, slugClaimedByOther, isOperator } from '../../auth/_lib.js';
+import { json, activeAccountSession, slugMerchant, accountSlug, slugClaimedByOther, storeOwner, isOperator } from '../../auth/_lib.js';
 
 const TTL = 15 * 60 * 1000; // a code is live for 15 minutes
 
@@ -65,7 +65,8 @@ export async function onRequestPost(context) {
     const acc = await env.DB.prepare('SELECT business, email FROM accounts WHERE id = ?')
       .bind(sess.aid).first();
     if (!acc) return json({ error: 'unauthorized' }, 401);
-    merchant = await accountSlug(env, acc.business || acc.email, sess.aid);
+    merchant = await accountSlug(env, acc.business, sess.aid);
+    if (!merchant) return json({ error: 'business-required' }, 403);   // jamais l'e-mail comme nom de magasin
     accountId = sess.aid;
     /* QUEL magasin ? Le panneau l'envoie maintenant en clair (`merchant`) parce
      * que le déduire du nom affiché ne marche que tant que personne n'a corrigé
@@ -92,6 +93,10 @@ export async function onRequestPost(context) {
      * comptes au même nom (ou, avant, deux enseignes en arabe, toutes deux
      * « client ») appairaient une caisse dans la boutique de l'autre. */
     if (await slugClaimedByOther(env, merchant, sess.aid)) return json({ error: 'store-not-yours' }, 403);
+    /* Une ligne du registre sans propriétaire (magasin préparé par un opérateur,
+     * ou d'avant le registre) n'est à personne : une caisse ne s'y appaire pas
+     * par une simple session de compte. */
+    if ((await storeOwner(env, merchant)) === '') return json({ error: 'store-not-yours' }, 403);
     if (!name) name = String(acc.business || '').trim().slice(0, 120) || null;
   } else if (await isOperator(request, env)) {
     if (!name) return json({ error: 'name-required' }, 400);

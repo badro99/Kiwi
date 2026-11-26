@@ -730,19 +730,19 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
    * touchés (la paire sert à comparer les dates et lire les pierres tombales).
    * Sans changement de schéma : le balayage reste dans SQLite, mais plus rien
    * ne remonte ni n'est analysé pour les autres magasins.
-   * Repli sur le balayage complet quand le texte stocké pourrait différer de
-   * l'adresse normalisée (échappements JSON, minuscules non ASCII). */
+   * Une adresse non ASCII (« é@x.ma ») n'a plus de balayage complet : SQLite ne
+   * met en minuscules que l'ASCII, donc on filtre sur son plus long morceau
+   * ASCII (« @x.ma »), présent tel quel dans le texte stocké. Le balayage complet
+   * coûtait cinq fois plus de CPU par requête anonyme (audit du 26 nov.). */
   const narrowable = /^[a-z0-9._%+@-]+$/.test(email);
+  const needle = narrowable ? email : ((email.match(/[a-z0-9._%+@-]{4,}/g) || []).sort((x, y) => y.length - x.length)[0] || '');
+  if (!needle) return null;
   let docs;
   try {
-    docs = narrowable
-      ? await env.DB.prepare(
-        "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team') " +
-        "AND merchant IN (SELECT merchant FROM store_docs WHERE feature IN ('employee-access', 'team') AND instr(lower(data), ?) > 0)"
-      ).bind(email).all()
-      : await env.DB.prepare(
-        "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team')"
-      ).all();
+    docs = await env.DB.prepare(
+      "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team') " +
+      "AND merchant IN (SELECT merchant FROM store_docs WHERE feature IN ('employee-access', 'team') AND instr(lower(data), ?) > 0)"
+    ).bind(needle).all();
   } catch (_) { return null; }
 
   const rows = (docs && docs.results) || [];
@@ -1258,9 +1258,14 @@ export function isNonLatinName(s) {
  * every latin name answers with no I/O. */
 /**
  * @param {import('../../types/tenant').AccountInput} aid
- * @returns {Promise<import('../../types/tenant').MerchantSlug>}
+ * @returns {Promise<import('../../types/tenant').MerchantSlug | ''>}
  */
 export async function accountSlug(env, business, aid) {
+  /* Pas de nom d'établissement, pas de magasin : slugMerchant('') rend le slug
+   * partagé 'client', et le repli sur l'e-mail laissait n'importe qui choisir
+   * son slug (« -@riad.nour » → riad-nour) puis appairer une caisse sur un
+   * magasin sans propriétaire inscrit (audit du 26 nov.). */
+  if (!String(business || '').trim()) return '';
   const slug = slugMerchant(business);
   if (!isNonLatinName(business) || !aid || !env || !env.DB) return slug;
   try {

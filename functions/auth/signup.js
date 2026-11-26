@@ -35,6 +35,10 @@ export async function onRequestPost(context) {
     if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'name' }, 400);
   }
+  if (!business) {   // le nom du commerce EST le magasin : sans lui, rien ne le désigne (audit du 26 nov.)
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    return json({ error: 'business' }, 400);
+  }
   const problem = passwordProblem(password, { email, business });
   if (problem) {
     if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();

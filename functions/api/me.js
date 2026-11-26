@@ -205,7 +205,7 @@ export async function onRequestGet(context) {
     if (acc) {
       // Which établissements this account owns, and whether it has ever set one
       // up. Server-authoritative, so the wizard stops guessing from localStorage.
-      const slug = await accountSlug(env, acc.business || acc.email, sess.aid);
+      const slug = await accountSlug(env, acc.business, sess.aid);   // jamais l'e-mail : un compte sans nom n'a pas encore de magasin
       const est = await establishments(env, sess.aid, slug);
       // The business subtype (boutique|restaurant|…) the operator/onboarding stored
       // for THIS merchant, keyed by its own slug — same convention the config/roster

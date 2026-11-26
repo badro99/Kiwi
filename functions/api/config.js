@@ -424,6 +424,7 @@ export async function onRequestPost(context) {
   const acc = await env.DB.prepare('SELECT business, created_ts FROM accounts WHERE id = ?').bind(sess.aid).first();
   if (!acc) return json({ error: 'unauthorized' }, 401);
   const accSlug = await accountSlug(env, acc.business, sess.aid);
+  if (!accSlug) return json({ error: 'business-required' }, 403);   // un compte sans nom ne réclame pas le magasin partagé 'client'
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }

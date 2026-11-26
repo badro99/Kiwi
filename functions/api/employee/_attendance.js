@@ -1,4 +1,4 @@
-import { json, targetKey, limitCheck, limitFail, limitClear, rateLimitUnavailable } from '../../auth/_lib.js';
+import { json, targetKey, limitReserve, limitClear } from '../../auth/_lib.js';
 import { retainCorrection } from '../_attendance-corrections.js';
 import { capAttendance, punchRefusal } from '../_attendance-cap.js';
 import { servedDuring, verifiedProgress } from './_progress-truth.js';
@@ -77,12 +77,9 @@ export async function handleAttendance({ actor, store, request, action, body }) 
    * de validité et « pointer » sans être au comptoir. Même compteur que la
    * connexion, rattaché à l'employé (pas à son adresse, qui change). */
   const codeTarget = await targetKey(env.AUTH_SECRET, 'attcode', merchant + ':' + auth.pin.id);
-  const codeLimited = codeTarget ? await limitCheck(request, env, 'attcode', codeTarget) : null;
-  if (codeLimited) return codeLimited;
-  if (!presenceCode) {
-    if (codeTarget && !await limitFail(request, env, 'attcode', codeTarget)) return rateLimitUnavailable();
-    return json({ error: 'attendance-code-invalid' }, 403);
-  }
+  const codeHold = codeTarget ? await limitReserve(request, env, 'attcode', codeTarget) : { ok: true, key: '' };   // réservé avant le verdict
+  if (!codeHold.ok) return codeHold.response;
+  if (!presenceCode) return json({ error: 'attendance-code-invalid' }, 403);
   if (codeTarget) await limitClear(request, env, 'attcode', codeTarget);
   const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members: [], hours: {}, shifts: {} });
   const member = memberFor(teamRow.data, auth.pin);

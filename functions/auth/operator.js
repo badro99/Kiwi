@@ -10,7 +10,7 @@
 
 import {
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE,
-  verifyPassword, json, limitCheck, limitFail, limitClear, rateLimitUnavailable,
+  verifyPassword, json, limitClear, limitReserve,
 } from './_lib.js';
 
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -21,8 +21,8 @@ export async function onRequestPost(context) {
 
   // Ce code ouvre la console d'administration : les ventes, les PIN et les
   // clients de TOUS les commerçants. Il n'avait aucun plafond d'essais.
-  const blocked = await limitCheck(request, env, 'op');
-  if (blocked) return blocked;
+  const hold = await limitReserve(request, env, 'op');   // l'essai est compté AVANT la comparaison : une rafale ne passe plus (audit du 26 nov.)
+  if (!hold.ok) return hold.response;
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
@@ -38,10 +38,7 @@ export async function onRequestPost(context) {
       }
     } catch (_) { /* table missing / db error → no match */ }
   }
-  if (!ok) {
-    if (!await limitFail(request, env, 'op')) return rateLimitUnavailable();
-    return json({ error: 'bad-code' }, 401);
-  }
+  if (!ok) return json({ error: 'bad-code' }, 401);
   await limitClear(request, env, 'op');
 
   if (!opId) return json({ error: 'operator-identity-missing' }, 503);

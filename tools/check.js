@@ -766,7 +766,7 @@ for (const test of [
   'team-code-guard-test.mjs',
   'team-access-rules-test.mjs',
   /* Vague 14 : la connexion employé ne lit que les magasins qui portent l'adresse. */
-  'employee-credential-scope-test.mjs',
+  'employee-credential-scope-test.mjs', 'account-slug-takeover-test.mjs', 'employee-login-burst-test.mjs',
   'team-split-test.mjs',
   'team-catalog-split-test.mjs', 'team-styles-split-test.mjs',
   'team-owners-split-test.mjs',

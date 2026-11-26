@@ -27,7 +27,7 @@ import { normalizeModifier, validModifier, normalizeOptionGroup } from './_rules
 //     /api/config POST). No session / no DB ⇒ neutral no-op (503) so static hosts
 //     (GitHub Pages, local) are unaffected.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, accountSlug, isOperator } from '../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, accountSlug, slugClaimedByOther, isOperator } from '../auth/_lib.js';
 import { sanitizeFormula } from './_menu-formula.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 /* The menu promotions rule (happy hour…), shared with the till and the waiter
@@ -380,8 +380,9 @@ async function storeOwner(env, slug) {
 }
 async function resolveMerchant(env, aid, accSlug, wanted, strict) {
   const w = str(wanted, 80).trim();
-  if (!w || w === accSlug) return accSlug;
+  if (!w || w === accSlug) return accSlug && (await slugClaimedByOther(env, accSlug, aid)) ? '' : accSlug;
   if ((await storeOwner(env, w)) === aid) return w;
+  if (accSlug && (await slugClaimedByOther(env, accSlug, aid))) return '';   // deux comptes au même nom : la carte n'est qu'à celui que le registre nomme
   /* En PUBLICATION, un slug que le registre ne reconnaît pas n'autorise pas à
    * écrire dans le magasin principal du compte : c'est comme ça que la ligne
    * `menus` de la boutique d'Amira s'est retrouvée à porter le nom de son café,

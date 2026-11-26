@@ -31,6 +31,12 @@ assert.equal(sql.prepare("SELECT count(*) n FROM operational_commands WHERE doma
 assert.equal((await call({action:'upload',payload:{...payload,amountCents:4000}})).httpStatus,409);
 assert.equal((await call({action:'upload',payload},other)).httpStatus,403);
 assert.equal((await call({action:'approve',id:payload.id})).httpStatus,403);
+// The owner's account, unlocked at the counter with a receptionist's code, does not decide the books (audit, 26 Nov 2026).
+const recepSid='ab'.repeat(16), recep='kiwi_sess='+await makeSession('fixture-a',env.AUTH_SECRET,0,recepSid);
+sql.prepare("INSERT INTO session_tiers(sid,account_id,tier,staff_id,updated_ts) VALUES(?,'fixture-a','reception','m9',?)").run(recepSid,Date.now());
+assert.equal((await call({action:'approve',id:payload.id},recep)).httpStatus,403,'a reception-tier session cannot approve a quarantined refund');
+assert.equal((await call({action:'decline',id:payload.id},recep)).httpStatus,403,'nor decline it');
+assert.equal((await call({action:'status',id:payload.id})).status,'pending','the operation stays pending for the owner');
 sql.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,? ,100,10000,'cash',?)").run('synthetic-sale','fixture-a',Date.now());
 loseSettlementAck=true;
 assert.equal((await call({action:'approve',id:payload.id},owner)).httpStatus,503);

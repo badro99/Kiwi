@@ -25,7 +25,7 @@ import {
   makeSession, sessionCookie, sessionNeedsRefresh, sessionRevocation,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
-  limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
+  limitClear, limitReserve, limitRelease, targetKey,
   TILL_COOKIE, TILL_STORE_COOKIE, TILL_STORE, tillVerification, readEmployee,
 } from './auth/_lib.js';
 import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
@@ -704,8 +704,6 @@ async function routeRequest(context) {
   // roster and creates a store-scoped employee session.
   if (request.method === 'POST' && path === UNLOCK_PATH) {
     if (!authSecret || !env.DB) return htmlResponse(authPage({ staffError: true, allowStaff: false, lang: requestedLanguage(request) }));
-    const tooMany = await limitCheck(request, env, 'employee');
-    if (tooMany) return tooMany;
     const form = await request.formData();
     const email = (form.get('email') || '').toString();
     const pin = (form.get('pin') || '').toString().replace(/\D/g, '').slice(0, 4);
@@ -715,12 +713,16 @@ async function routeRequest(context) {
      * le même scope et la même clé que POST /api/employee : l'attaquant ne gagne
      * rien à passer d'une porte à l'autre. */
     const target = await targetKey(authSecret, 'employee', email);
-    const tooManyTarget = target ? await limitCheck(request, env, 'employee', target) : null;
-    if (tooManyTarget) return tooManyTarget;
+    /* Essais RÉSERVÉS avant la comparaison : lire puis compter laissait passer une rafale (audit du 26 nov.). */
+    const sourceHold = await limitReserve(request, env, 'employee');
+    if (!sourceHold.ok) return sourceHold.response;
+    const targetHold = target ? await limitReserve(request, env, 'employee', target) : { ok: true, key: '' };
+    if (!targetHold.ok) { await limitRelease(env, sourceHold); return targetHold.response; }
     const employee = await findEmployeeCredential(env, email, pin);
     if (employee && !employee.ambiguous && String(employee.status || 'active') !== 'suspended') {
-      // Seul le compteur de la cible s'efface ; celui de la source garde sa mémoire.
+      // Seul le compteur de la cible s'efface ; la source rend sa réservation et garde sa mémoire.
       if (target) await limitClear(request, env, 'employee', target);
+      await limitRelease(env, sourceHold);
       const token = await employeeToken(authSecret, { merchant: employee.merchant, staffId: employee.id, authVersion: employee.authVersion });
       return new Response(null, {
         status: 303,
@@ -730,9 +732,6 @@ async function routeRequest(context) {
         },
       });
     }
-    const sourceOk = await limitFail(request, env, 'employee');
-    const targetOk = !target || await limitFail(request, env, 'employee', target);
-    if (!sourceOk || !targetOk) return rateLimitUnavailable();
     return htmlResponse(authPage({ staffError: true, allowStaff: true, lang: requestedLanguage(request) }));
   }
 
@@ -741,8 +740,8 @@ async function routeRequest(context) {
   if (authSecret && request.method === 'POST' && path === OPERATOR_PATH) {
     // Même plafond que /auth/operator, et le même compteur ('op') : sans quoi
     // il suffisait de revenir sur l'écran verrouillé pour repartir à zéro.
-    const tooMany = await limitCheck(request, env, 'op');
-    if (tooMany) return tooMany;
+    const opHold = await limitReserve(request, env, 'op');   // réservé avant la comparaison (audit du 26 nov.)
+    if (!opHold.ok) return opHold.response;
     const form = await request.formData();
     const tried = (form.get('code') || '').toString();
     let ok = false;
@@ -768,7 +767,6 @@ async function routeRequest(context) {
       }
       return new Response(null, { status: 303, headers });
     }
-    if (!await limitFail(request, env, 'op')) return rateLimitUnavailable();
     return htmlResponse(authPage({ allowStaff: !!(authSecret && env.DB), operatorError: true, lang: requestedLanguage(request) }));
   }
 
@@ -981,7 +979,7 @@ function authPage(opts) {
       encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
       operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
       strength: { label: 'Force', weak: 'faible', medium: 'moyen', strong: 'fort' },
-      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 10 caractères minimum.', short: 'Au moins 10 caractères.', common: 'Ce mot de passe est trop courant.', personal: 'Évitez votre e-mail ou le nom de votre commerce.', long: 'Mot de passe trop long.', exists: 'Cet e-mail a déjà un compte · connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', 'business-taken': 'Ce nom de commerce est déjà utilisé. Choisissez-en un autre ou connectez-vous.', too_many_attempts: 'Trop de tentatives. Patientez quelques minutes puis réessayez.', 'signup-unavailable': 'Création de compte momentanément indisponible. Réessayez dans un instant.', 'rate-limit-unavailable': 'Service momentanément indisponible. Réessayez dans un instant.', 'auth-unavailable': 'Connexion momentanément indisponible. Réessayez dans un instant.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
+      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', business: 'Indiquez le nom de votre commerce.', weak: 'Mot de passe : 10 caractères minimum.', short: 'Au moins 10 caractères.', common: 'Ce mot de passe est trop courant.', personal: 'Évitez votre e-mail ou le nom de votre commerce.', long: 'Mot de passe trop long.', exists: 'Cet e-mail a déjà un compte · connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', 'business-taken': 'Ce nom de commerce est déjà utilisé. Choisissez-en un autre ou connectez-vous.', too_many_attempts: 'Trop de tentatives. Patientez quelques minutes puis réessayez.', 'signup-unavailable': 'Création de compte momentanément indisponible. Réessayez dans un instant.', 'rate-limit-unavailable': 'Service momentanément indisponible. Réessayez dans un instant.', 'auth-unavailable': 'Connexion momentanément indisponible. Réessayez dans un instant.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
     },
     en: {
       title: 'Kiwi · Your account', welcome: 'Welcome <em>to Kiwi</em>.',
@@ -993,7 +991,7 @@ function authPage(opts) {
       encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
       operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
       strength: { label: 'Strength', weak: 'weak', medium: 'medium', strong: 'strong' },
-      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 10 characters.', short: 'At least 10 characters.', common: 'This password is too common.', personal: 'Avoid your email or business name.', long: 'Password is too long.', exists: 'This email already has an account · sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', 'business-taken': 'This business name is already in use. Choose another one or sign in.', too_many_attempts: 'Too many attempts. Wait a few minutes, then try again.', 'signup-unavailable': 'Account creation is temporarily unavailable. Try again in a moment.', 'rate-limit-unavailable': 'Service temporarily unavailable. Try again in a moment.', 'auth-unavailable': 'Sign-in is temporarily unavailable. Try again in a moment.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
+      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', business: 'Enter your business name.', weak: 'Password must contain at least 10 characters.', short: 'At least 10 characters.', common: 'This password is too common.', personal: 'Avoid your email or business name.', long: 'Password is too long.', exists: 'This email already has an account · sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', 'business-taken': 'This business name is already in use. Choose another one or sign in.', too_many_attempts: 'Too many attempts. Wait a few minutes, then try again.', 'signup-unavailable': 'Account creation is temporarily unavailable. Try again in a moment.', 'rate-limit-unavailable': 'Service temporarily unavailable. Try again in a moment.', 'auth-unavailable': 'Sign-in is temporarily unavailable. Try again in a moment.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
     },
     ar: {
       title: 'Kiwi · حسابك', welcome: 'مرحباً بك <em>في Kiwi</em>.',
@@ -1005,7 +1003,7 @@ function authPage(opts) {
       encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
       operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
       strength: { label: 'القوة', weak: 'ضعيفة', medium: 'متوسطة', strong: 'قوية' },
-      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.', short: '10 أحرف على الأقل.', common: 'كلمة المرور هذه شائعة جداً.', personal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', long: 'كلمة المرور طويلة جداً.', exists: 'يوجد حساب بهذا البريد · سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', 'business-taken': 'اسم النشاط هذا مستعمل من قبل. اختر اسماً آخر أو سجّل الدخول.', too_many_attempts: 'محاولات كثيرة. انتظر بضع دقائق ثم حاول مرة أخرى.', 'signup-unavailable': 'إنشاء الحساب غير متاح مؤقتاً. حاول بعد قليل.', 'rate-limit-unavailable': 'الخدمة غير متاحة مؤقتاً. حاول بعد قليل.', 'auth-unavailable': 'تسجيل الدخول غير متاح مؤقتاً. حاول بعد قليل.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
+      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', business: 'أدخل اسم نشاطك التجاري.', weak: 'يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.', short: '10 أحرف على الأقل.', common: 'كلمة المرور هذه شائعة جداً.', personal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', long: 'كلمة المرور طويلة جداً.', exists: 'يوجد حساب بهذا البريد · سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', 'business-taken': 'اسم النشاط هذا مستعمل من قبل. اختر اسماً آخر أو سجّل الدخول.', too_many_attempts: 'محاولات كثيرة. انتظر بضع دقائق ثم حاول مرة أخرى.', 'signup-unavailable': 'إنشاء الحساب غير متاح مؤقتاً. حاول بعد قليل.', 'rate-limit-unavailable': 'الخدمة غير متاحة مؤقتاً. حاول بعد قليل.', 'auth-unavailable': 'تسجيل الدخول غير متاح مؤقتاً. حاول بعد قليل.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
     }
   };
   const t = copy[lang];
@@ -1519,7 +1517,7 @@ function authPage(opts) {
         <input id="su-name" type="text" autocomplete="name" placeholder="${t.namePlaceholder}" required />
       </label>
       <label>${t.business}
-        <input id="su-biz" type="text" autocomplete="organization" placeholder="${t.businessPlaceholder}" />
+        <input id="su-biz" type="text" autocomplete="organization" required placeholder="${t.businessPlaceholder}" />
       </label>
       <label>${t.email}
         <input id="su-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />

@@ -4,6 +4,7 @@ import { activeAccountSession, storeOwner, accountSlug, isTillFor, isOperator, m
 import { onRequestPost as refund } from './sale/refund.js';
 import { onRequestPost as sale } from './sale.js';
 import { poke } from './_live.js';
+import { sessionTierAtLeast } from '../auth/_session-tier.js';
 
 const DOMAIN = 'quarantine';
 const validId = value => typeof value === 'string' && /^[A-Za-z0-9:_-]{1,64}$/.test(value);
@@ -81,6 +82,10 @@ export async function onRequestPost({request,env}) {
     }
     // Paired tills, employees and operators cannot decide the owner's books.
     if (!owner) return json({error:'owner-required'},403);
+    /* Le compte ne suffit pas : un tableau de bord déverrouillé au code d'une
+     * réceptionniste est la session du patron, et l'accord signe « Propriétaire »
+     * un remboursement en espèces (audit du 26 nov.). Seul le palier patron décide. */
+    if (!await sessionTierAtLeast(request,env,'owner')) return json({error:'tier',need:'owner'},403);
     if (!validId(body.id) || !['approve','decline'].includes(body.action)) return json({error:'bad-action'},400);
     let row=await find(env,merchant,body.id);
     if (!row) return json({error:'not-found'},404);

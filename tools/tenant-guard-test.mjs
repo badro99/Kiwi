@@ -381,7 +381,7 @@ function invoiceEnv(sale) {
     && login.includes("limitClear(request, env, 'login', target)")
     && !/limitClear\(request, env, 'login'\)/.test(login));
   ok('la connexion employé compte par cible et n\'efface que la cible',
-    employee.includes("limitCheck(request, env, 'employee', target)")
+    employee.includes("limitReserve(request, env, 'employee', target)")
     && employee.includes("limitClear(request, env, 'employee', target)")
     && !/limitClear\(request, env, 'employee'\)/.test(employee));
 }

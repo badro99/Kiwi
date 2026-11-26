@@ -68,7 +68,12 @@ const countryImport = "import { Countries, merchantCountry } from './_country.js
 const countryRead = "  /* Le pays d'exploitation : devise, TVA/IVA, identifiant fiscal (assets/country-catalog.js). Maroc par défaut. */\n  const country = await merchantCountry(env, merchant);\n";
 const countryFields = "    country, countryProfile: Countries.profile(country),\n";
 ok([countryImport, countryRead, countryFields].every((s) => routeNow.split(s).length === 2), 'the operating country sits once in the route: import, read, two answer fields');
-const routeBase = routeNow.replace(countryImport, '').replace(countryRead, '').replace(countryFields, '').replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '')
+/* A sixth (26 Nov, audit): an account with no business name claims no store; one
+ * line after the account slug, nothing of it touches the moved publish code
+ * (account-slug-takeover-test runs it against the real route). */
+const blankGuard = "  if (!accSlug) return json({ error: 'business-required' }, 403);   // un compte sans nom ne réclame pas le magasin partagé 'client'\n";
+ok(routeNow.split(blankGuard).length === 2, 'the blank-business refusal sits once in the route');
+const routeBase = routeNow.replace(blankGuard, '').replace(countryImport, '').replace(countryRead, '').replace(countryFields, '').replace(tierImport, '').replace(tierGuard, '').replace(ownerGuard, '').replace(holdImport, '').replace(holdBefore, '').replace(holdAfter, '')
   .replace(ownerTierBefore, '').replace(redoAfter, '');
 
 /* The function body, moved two spaces left, with `result` its own local. */

@@ -11,7 +11,7 @@ import { codeDocument, staffMemberId } from '../auth/_staff-codes.js';
 
 import {
   json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee, employeeNeedsRefresh,
-  findEmployeeCredential, employeeAuthRevision, limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
+  findEmployeeCredential, employeeAuthRevision, limitClear, limitReserve, limitRelease, targetKey,
 } from '../auth/_lib.js';
 import { storeOperationalState } from './_private.js';
 import { DEFAULT_CUTOFF, businessDate, merchantCutoff, merchantZone } from './_business-day.js';
@@ -318,28 +318,26 @@ export async function onRequestPost({ request, env }) {
      * coup, se trouvait donc en changeant d'adresse — et `limitClear` effaçait
      * l'ardoise à chaque réussite. La cible garde maintenant son propre
      * plafond, quelle que soit la source. */
-    const limited = await limitCheck(request, env, 'employee');
-    if (limited) return limited;
+    /* L'essai est RÉSERVÉ avant la comparaison (limitReserve), comme le code de
+     * caisse : vérifier puis compter laissait une rafale de 10 000 requêtes
+     * parallèles passer le contrôle avant qu'une seule faute soit écrite (audit
+     * du 26 nov.). Une réussite rend la réservation de la source. */
     const email = String(body.email || '').trim();
     const target = await targetKey(env.AUTH_SECRET, 'employee', email);
-    const limitedTarget = target ? await limitCheck(request, env, 'employee', target) : null;
-    if (limitedTarget) return limitedTarget;
-    const failBoth = async () => {
-      const sourceOk = await limitFail(request, env, 'employee');
-      const targetOk = !target || await limitFail(request, env, 'employee', target);
-      return sourceOk && targetOk;
-    };
+    const sourceHold = await limitReserve(request, env, 'employee');
+    if (!sourceHold.ok) return sourceHold.response;
+    const targetHold = target ? await limitReserve(request, env, 'employee', target) : { ok: true, key: '' };
+    if (!targetHold.ok) { await limitRelease(env, sourceHold); return targetHold.response; }
     const pin = String(body.pin || '').replace(/\D/g, '').slice(0, 4);
-    if (!email || pin.length !== 4) { if (!await failBoth()) return rateLimitUnavailable(); return json({ error: 'bad-employee-code' }, 401); }
-    const row = await findEmployeeCredential(env, email, pin);
-    if (row && row.ambiguous) {
-      if (!await failBoth()) return rateLimitUnavailable();
-      return json({ error: 'employee-access-ambiguous' }, 409);
-    }
+    if (!email || pin.length !== 4) return json({ error: 'bad-employee-code' }, 401);
+    let row;
+    try { row = await findEmployeeCredential(env, email, pin); }
+    catch (_) { await limitRelease(env, sourceHold); await limitRelease(env, targetHold); return json({ error: 'employee-unavailable' }, 503); }
+    if (row && row.ambiguous) return json({ error: 'employee-access-ambiguous' }, 409);
     if (!row || String(row.status || 'active') === 'suspended') {
-      if (!await failBoth()) return rateLimitUnavailable();
       return json({ error: row && row.status === 'suspended' ? 'store-suspended' : 'bad-employee-code' }, row && row.status === 'suspended' ? 403 : 401);
     }
+    await limitRelease(env, sourceHold);
     // Seul le compteur de la CIBLE s'efface ; celui de la source garde sa mémoire.
     if (target) await limitClear(request, env, 'employee', target);
     const merchant = row.merchant;
