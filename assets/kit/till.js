@@ -178,6 +178,7 @@
      bill: { title, meta, lines:[{id, qty, name, mods:[], price, sent, sentAt,
              sentQty, editOptions}], discount:{label, amount}, service:{label, amount},
              total, sendOnPay, paying, plain }
+     split: {label, amount} the shares of a split already paid (total is the rest).
      plain: a counter sale with no kitchen (the business-type tills, §18.3):
      one list without sent groups, no split, discount, print or overflow. */
   var KBill = K.make({
@@ -261,7 +262,7 @@
       var primary = sendFirst
         ? C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.send', { n: unsent.length }), id: 'pri', attrs: ' data-w="send"', disabled: paying })
         : C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.take_payment', { amount: money(b.total || 0) }), id: 'pri', attrs: ' data-w="pay"', disabled: !lines.length || paying });
-      var foot = '<footer class="ft">' + part(b.discount) + part(b.service) +
+      var foot = '<footer class="ft">' + part(b.discount) + part(b.service) + part(b.split) +
         '<div class="tot"><span class="k-body k-ink2">' + th('bill.total') + '</span><span class="k-title k-num" data-k-total>' + numHtml(money(b.total || 0)) + '</span></div>' +
         (b.plain ? '' : '<div class="sec2">' + C.button.render({ label: t('bill.split'), id: 'sp', attrs: ' data-w="split"', disabled: !lines.length || paying }) +
         C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) +
@@ -797,6 +798,8 @@
       K.tap(R, '[data-share]', function (el, e, g) { var i = Number(el.getAttribute('data-share')); if (i !== self.__pick) { K.haptic('Choose', g, { trigger: 'tap' }); self.__pick = i; self.render(); } });
       C.button.bind(R, function (el, g) {
         if (el.getAttribute('data-w') === 'leave') { self.emit('leave', null, { gestureId: g }); return; }   /* the header's Back (§10.30) */
+        /* Save the split without taking a share, or drop a saved one nothing was paid on (Browse, 26 Nov 2026). */
+        if (el.getAttribute('data-w') === 'save' || el.getAttribute('data-w') === 'cancel') { self.emit(el.getAttribute('data-w'), null, { gestureId: g }); return; }
         if (el.getAttribute('data-w') !== 'pay') return;
         var sh = self.shares();
         self.emit('pay-share', String(self.__pick + 1), { n: self.__pick + 1, amount: fromCents(sh[self.__pick] || 0), mode: self.__mode, gestureId: g });
@@ -807,6 +810,8 @@
     plan: function () { return { mode: this.__mode, n: this.__n, assign: Object.assign({}, this.__assign) }; },
     shares: function () {
       var b = this.bill || {}, total = cents(b.total);
+      /* A split already set up (saved, or a share paid): its parts, as they are. */
+      if (this.locked()) return this.parts.map(function (p) { return cents(p.amount); });
       if (this.__mode === 'equal') return shareMoney(total, this.__n);
       var self = this, sums = [];
       for (var i = 0; i < this.__n; i++) sums.push(0);
@@ -818,19 +823,25 @@
     /* A new bill starts a new split: the sheet is built once and reused, so
        the head count and the items given out stay from the last bill
        unless they are put back here (the host calls it, assets/caisse/till-frame.js). */
+    locked: function () { return Array.isArray(this.parts) && this.parts.length > 0; },
     fresh: function (n, quiet) {
       this.__mode = 'equal'; this.__n = Math.max(2, Math.min(20, Number(n) || 2)); this.__assign = {}; this.__pick = 0;
       if (!quiet) this.render();
     },
     render: function () {
-      var b = this.bill || {}, self = this, paid = this.paidShares || [];
+      var b = this.bill || {}, self = this, paid = this.paidShares || [], lock = this.locked();
+      if (lock) paid = this.parts.map(function (p, i) { return p.paid ? i + 1 : 0; }).filter(Boolean);
       var sh = this.shares();
       var unassigned = (b.lines || []).filter(function (l) { return !self.__assign[l.id]; }).length;
-      while (paid.indexOf(this.__pick + 1) >= 0 && this.__pick < sh.length - 1) this.__pick++;
+      /* The picked share is one still to pay with something in it: the last
+         share paid first left the button on it, an empty share by item did nothing. */
+      var open = function (i) { return paid.indexOf(i + 1) < 0 && sh[i] > 0; };
+      if (!open(this.__pick)) { for (var j = 0; j < sh.length; j++) if (open(j)) { this.__pick = j; break; } }
       var shares = '<ul class="sh" role="radiogroup" aria-label="' + esc(t('split.title', { amount: money(b.total || 0) })) + '">' + sh.map(function (c, i) {
-        var done = paid.indexOf(i + 1) >= 0, on = i === self.__pick;
-        return '<li role="none"><button type="button" class="srow k-body" role="radio" aria-checked="' + on + '" data-share="' + i + '"' + (done ? ' aria-disabled="true"' : '') + '>' +
-          '<span>' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + numHtml(money(fromCents(c))) + '</span></span>' + (done ? icon('task_alt', 20, 'k-accent-ink') : '') + '</button></li>';
+        var done = paid.indexOf(i + 1) >= 0, on = i === self.__pick && open(i);
+        return '<li role="none"><button type="button" class="srow k-body" role="radio" aria-checked="' + on + '" data-share="' + i + '"' + (done || !c ? ' aria-disabled="true"' : '') + '>' +
+          '<span class="sl">' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + numHtml(money(fromCents(c))) + '</span>' +
+          (lock && self.parts[i].label ? '<span class="k-foot k-ink2 sd">' + esc(self.parts[i].label) + '</span>' : '') + '</span>' + (done ? icon('task_alt', 20, 'k-accent-ink') : '') + '</button></li>';
       }).join('') + '</ul>';
       var mid = this.__mode === 'equal'
         ? C.stepper.render({ id: 'n', value: this.__n, min: 2, max: 20, label: t('split.shares') })
@@ -840,19 +851,23 @@
           return '<li class="it" data-l="' + esc(l.id) + '"><span class="k-body">' + esc(l.name) + '</span><span class="k-body k-num k-ink2">' + numHtml(money(l.amount)) + '</span>' +
             C.chip.group({ options: opts, value: self.__assign[l.id] ? String(self.__assign[l.id]) : null, label: l.name }) + '</li>';
         }).join('') + '</ul>' + (unassigned ? '<p class="k-foot k-ink2">' + th('split.unassigned', { n: unassigned }) + '</p>' : '');
-      var blocked = this.__mode === 'item' && unassigned > 0;
+      var blocked = !lock && this.__mode === 'item' && unassigned > 0;
       this.shadowRoot.innerHTML = '<div class="sp"><div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"' }) + '<h2 class="k-heading ti">' + th('split.title', { amount: money(b.total || 0) }) + '</h2></div>' +
-        '<k-segmented id="mode" value="' + this.__mode + '" label="' + esc(t('split.title', { amount: '' })) + '"></k-segmented>' + mid + shares +
+        (lock ? '' : '<k-segmented id="mode" value="' + this.__mode + '" label="' + esc(t('split.title', { amount: '' })) + '"></k-segmented>' + mid) + shares +
         (paid.length ? '<p class="k-foot k-ink2">' + th('split.progress', { paid: paid.length, total: sh.length }) + '</p>' : '') +
-        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ps', attrs: ' data-w="pay"', label: t('split.pay_share', { n: this.__pick + 1 }), disabled: blocked }) + '</div>';
+        C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ps', attrs: ' data-w="pay"', label: t('split.pay_share', { n: this.__pick + 1 }), disabled: blocked || !open(this.__pick) }) +
+        /* Set the shares up now, take them later; a saved split nothing was paid on can be undone. */
+        (!lock ? C.button.render({ size: 'L', full: true, id: 'sv', attrs: ' data-w="save"', label: t('split.save'), disabled: blocked })
+          : !paid.length ? C.button.render({ variant: 'tonal-danger', size: 'L', full: true, id: 'cx', attrs: ' data-w="cancel"', label: t('split.cancel') }) : '') + '</div>';
       var seg = this.$('#mode');
-      seg.options = [{ value: 'equal', label: t('split.equally') }, { value: 'item', label: t('split.by_item') }];
+      if (seg) seg.options = [{ value: 'equal', label: t('split.equally') }, { value: 'item', label: t('split.by_item') }];
     }
   });
   K.define('k-split', KSplit, {
-    props: ['bill', 'paidShares'],
+    props: ['bill', 'paidShares', 'parts'],
     css: C.button.css + C.chip.css + C.stepper.css + ':host{display:block}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}.sp{display:flex;flex-direction:column;gap:16px}.ti{margin:0}' +
       '.sh,.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}' +
+      '.sl{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding-block:8px}.sd{overflow-wrap:anywhere}' +
       '.srow{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);text-align:start}' +
       '.srow[aria-checked="true"]{background-color:var(--k-select);box-shadow:inset 0 0 0 var(--k-select-edge-w) var(--k-accent)}.srow[aria-disabled="true"]{color:var(--k-ink-3)}' +
       '.it{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding-block:8px;box-shadow:inset 0 -1px 0 var(--k-line)}.it .k-chips{grid-column:1/-1}'

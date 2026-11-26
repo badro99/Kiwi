@@ -1565,7 +1565,7 @@
       "Écris un message d'abord": ['Write a message first', 'اكتب رسالة أولًا'],
       'Message non envoyé': ['Message not sent', 'لم يتم إرسال الرسالة'],
       'vérifiez la connexion': ['check the connection', 'تحقق من الاتصال'],
-      'Split en pause': ['Split paused', 'التقسيم متوقف مؤقتًا'],
+      'Split en pause': ['Split paused', 'التقسيم متوقف مؤقتًا'], 'Partage enregistré · encaissez chaque part quand vous voulez': ['Split saved · take each share whenever you like', 'تم حفظ التقسيم · حصّل كل حصة متى شئت'], 'Un partage est en cours : encaissez ses parts': ['A split is open: take its shares', 'هناك تقسيم جارٍ: حصّل حصصه'], 'Addition plus basse que les parts déjà payées · vérifiez avant de continuer': ['The bill is now below the shares already paid · check before going on', 'الحساب أقل من الحصص المدفوعة · تحقّق قبل المتابعة'], 'Monnaie à rendre': ['Change to give', 'الباقي للزبون'], 'Reçu': ['Received', 'المستلَم'], 'Ajouts après le partage': ['Added after the split', 'أضيف بعد التقسيم'],
       'reprends quand tu veux': ['resume when you like', 'تابع متى شئت'],
       "Termine le split d'abord": ['Finish the split first', 'أنهِ التقسيم أولًا'],
       'Pourcentage non autorisé': ['Percentage not allowed', 'النسبة غير مسموح بها'],

@@ -228,8 +228,8 @@
     "sha": "af9300d80a51a2c5"
   },
   "assets/caisse-app.js": {
-    "v": "59",
-    "sha": "aa7a93e877a58453"
+    "v": "61",
+    "sha": "3b4b6c8c8e5cf7ea"
   },
   "assets/caisse-cash-recovery.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "70d570b6bdc44755"
   },
   "assets/caisse-lang.js": {
-    "v": "181",
-    "sha": "65aa9ddc740e3afd"
+    "v": "182",
+    "sha": "92e1ba6eaa4d1443"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -360,8 +360,8 @@
     "sha": "c1fabe71952b9b16"
   },
   "assets/caisse/held-sales.js": {
-    "v": "5",
-    "sha": "1ab9c2aab29f69af"
+    "v": "7",
+    "sha": "d7ce6b68b5c7ff77"
   },
   "assets/caisse/inventory.js": {
     "v": "10",
@@ -376,8 +376,8 @@
     "sha": "fc17e1de643f9b22"
   },
   "assets/caisse/payment.js": {
-    "v": "12",
-    "sha": "15f1383db7c7a7a2"
+    "v": "14",
+    "sha": "f0ec097b029312aa"
   },
   "assets/caisse/receipts.js": {
     "v": "7",
@@ -404,8 +404,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "27",
-    "sha": "ee28c8d70973da71"
+    "v": "28",
+    "sha": "cb53d139ddea5d3f"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -1180,16 +1180,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "17",
-    "sha": "43a510e05f951421"
+    "v": "18",
+    "sha": "c0df3fd02c0010e3"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "17",
-    "sha": "644cbaddc5f6218d"
+    "v": "18",
+    "sha": "d42d2cc3de60c2ec"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "17",
-    "sha": "1c8b2458cf792cbc"
+    "v": "18",
+    "sha": "700240cfdce9964a"
   },
   "assets/kit/team-pin.js": {
     "v": "5",
@@ -1220,8 +1220,8 @@
     "sha": "7b0a46f98e56c876"
   },
   "assets/kit/till.js": {
-    "v": "37",
-    "sha": "a6a41c2917d0ee2e"
+    "v": "38",
+    "sha": "821ff7d332f94f9f"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

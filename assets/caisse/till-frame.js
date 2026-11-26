@@ -121,6 +121,19 @@
         : d && d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise', amount: -amt } : null;
     /* Ce que montre le volet livré, et rien d'autre : un volet fermé est une
        addition vide. */
+    /* A split set up on this bill: the shares already paid come off, the total
+       and « Encaisser » say what is left (Browse, 26 Nov 2026: the bill said
+       the whole 530 MAD after a 90 MAD share was paid). */
+    function tillKitSplitRest(b) {
+      const stored = typeof tillKitSavedSplit === 'function' ? tillKitSavedSplit() : null;   /* synced with the bill first */
+      const saved = tillKitFlowHere() ? splitState.flow : stored;
+      if (!saved || !Array.isArray(saved.parts) || !saved.parts.length) return b;
+      const paid = saved.parts.filter(p => p && p.paid);
+      const base = (p) => Number(p.base != null ? p.base : p.amount) || 0;
+      b.split = { label: kkt('bill.split_paid', { paid: paid.length, total: saved.parts.length }), amount: -money(paid.reduce((s, p) => s + base(p), 0)) };
+      b.total = money(saved.parts.filter(p => p && !p.paid).reduce((s, p) => s + base(p), 0));
+      return b;
+    }
     function tillKitBill() {
       const empty = { title: '', meta: '', lines: [], total: 0 };
       if ($('#rp-active').hidden) return empty;
@@ -147,8 +160,8 @@
         const at = wasSent ? new Date(open.sentAt) : null;
         const sentAt = at ? String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') : '';
         const vrapLine = (l, i) => Object.assign(tillKitLine(l, i), wasSent ? { sent: true, sentAt, sentQty: 0 } : {});
-        return { title, meta, lines: cart.map(vrapLine), discount: tillKitDiscount(vrapDiscount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0, comment: counterCommentView() };
+        return tillKitSplitRest({ title, meta, lines: cart.map(vrapLine), discount: tillKitDiscount(vrapDiscount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0, comment: counterCommentView() });
       }
       if (mode === 'order' && selectedId) {
         const order = tableOrders[selectedId] || [];
@@ -163,8 +176,8 @@
           .filter((o) => o && String(o.table) === String(selectedId) && o.sentAt).map((o) => +new Date(o.sentAt)).filter(Boolean);
         const first = at.length ? new Date(Math.min(...at)) : null;
         const sentAt = first ? String(first.getHours()).padStart(2, '0') + ':' + String(first.getMinutes()).padStart(2, '0') : '';
-        return { title, meta, lines: lines.map((l, i) => Object.assign(tillKitLine(l, i), l.sent ? { sentAt } : {})), discount: tillKitDiscount(tables[selectedId].discount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0, comment: counterCommentView() };
+        return tillKitSplitRest({ title, meta, lines: lines.map((l, i) => Object.assign(tillKitLine(l, i), l.sent ? { sentAt } : {})), discount: tillKitDiscount(tables[selectedId].discount, disc),
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0, comment: counterCommentView() });
       }
       return empty;
     }
@@ -229,6 +242,7 @@
     
     function tillKitOpenPay() {
       if (!(currentTotal() > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition vide')); return; }
+      if (tillKitSplitStarted() && tillKitLockedSplit()) return;   /* the open split takes the rest, share by share */
       if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
       resetPayTip();
       const lang = window.KiwiCaisseLang, billName = $('#rp-table').textContent || '';
@@ -294,11 +308,15 @@
       const got = kind === 'cash' ? Math.round((+value.received || 0) * 100) / 100 : total;
       if (got < total) return;
       if (share) {
-        share.tip = tipNow;
-        share.amount = money(share.base + tipNow);
         const key = kind === 'card' ? 'carte' : kind === 'other' ? 'wallet' : 'cash';
         const idx = tillKitShare.idx;
-        splitPayCallback = () => markSplitPartPaid(idx, key);
+        /* The share's tip is written for the sale and kept only once it is recorded. */
+        splitPayCallback = () => {
+          share.tip = tipNow; share.amount = money(share.base + tipNow);
+          const entry = markSplitPartPaid(idx, key);
+          if (!share.paid) { share.tip = 0; share.amount = share.base; }
+          return entry;
+        };
       }
       tenderInFlight = true;
       let settled;
@@ -316,11 +334,14 @@
       if (tillKitSave !== true) { p.note = kkt('sync.screen_only'); p.noteTone = 'warning'; }
       else if (navigator.onLine === false || held) { p.note = kkt('sync.saved_here'); p.noteTone = ''; }
       else { p.note = ''; p.noteTone = ''; }
+      /* Ce qui a été reçu et la monnaie à rendre restent sous les yeux, pour
+         chaque part comme pour une addition entière (Browse, 26 nov. 2026). */
+      const change = kind === 'cash' ? Math.round((got - total) * 100) / 100 : 0;
+      if (change > 0) { p.note = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Reçu') + ' ' + fmtMADcents(got) + ' · ' + (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Monnaie à rendre') + ' ' + fmtMADcents(change) + (p.note ? ' · ' + p.note : ''); p.noteTone = 'warning'; }
       pay.paid();
       if (kind === 'cash') {
         /* markSplitPartPaid ouvre déjà le tiroir d'une part payée en espèces. */
         if (!share) openCashDrawer();
-        const change = Math.round((got - total) * 100) / 100;
         if (change > 0) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Monnaie à rendre') + ' : ' + fmtMAD(change));
       }
       if (sale) printSaleTicket(sale);
@@ -329,88 +350,157 @@
         window.KiwiTillFrame.closePay();
         if (share) tillKitAfterShare();
         try { tillKitPaint(); } catch (_) {}
-      }, 1200);
+      }, change > 0 ? 4000 : 1200);
     }
 
     
+    /* By item, one row per unit: 4 × Tajine can go to four people, as on the
+       shipped window (a weighed line stays whole). Row id « name#k ». */
     function tillKitSplitBill() {
-      return { total: splitState.total, lines: Object.entries(splitState.itemTotals)
-        .map(([name, info]) => ({ id: name, name, amount: money(info.totalQty * info.unitPrice) })) };
+      const lines = [];
+      Object.entries(splitState.itemTotals).forEach(([name, info]) => {
+        const q = info.totalQty;
+        if (Number.isInteger(q) && q > 1 && q <= 40) for (let k = 1; k <= q; k++) lines.push({ id: name + '#' + k, name: name + ' · ' + k + '/' + q, amount: money(info.unitPrice) });
+        else lines.push({ id: name + '#0', name: q > 1 || !Number.isInteger(q) ? q + ' × ' + name : name, amount: money(q * info.unitPrice) });
+      });
+      return { total: splitState.total, lines };
     }
     function tillKitPaidShares() {
-      if (!splitState.flow || !tillKitShareMap) return [];
-      return Object.keys(tillKitShareMap).map(Number)
-        .filter(n => { const p = splitState.flow.parts[tillKitShareMap[n]]; return p && p.paid; });
+      if (!splitState.flow) return [];
+      return splitState.flow.parts.map((p, i) => (p && p.paid ? i + 1 : 0)).filter(Boolean);
     }
+    /* The split saved for the bill on screen (the table, or this takeaway). */
+    function tillKitSavedSplit() {
+      if (mode !== 'vrap' && !selectedId) return null;
+      return syncSplitToBill(mode === 'vrap' ? null : selectedId);   /* dishes added or voided since (held-sales.js) */
+    }
+    function tillKitBillKey() { return mode === 'vrap' ? 'vrap:' + (vrapEditingNum == null ? 'new' : vrapEditingNum) : 'table:' + (selectedId || ''); }
+    /* splitState.flow belongs to the bill on screen. */
+    function tillKitFlowHere() {
+      return !!splitState.flow && (mode === 'vrap' ? splitState.isVrap : (!splitState.isVrap && splitState.tableId === selectedId));
+    }
+    /* A split is set up on this bill: saved, or a share already taken. Browse
+       (26 Nov 2026): the kit rebuilt a fresh split each time Diviser opened,
+       so after one share was paid and another table visited, the paid share
+       was forgotten and the next one was refused (« Répartition différente du
+       solde »). The saved split is the truth, as on the shipped window. */
     function tillKitSplitStarted() {
-      return !!(splitState.flow && splitState.flow.paidCount > 0 && splitState.flow.paidCount < splitState.flow.parts.length);
+      const saved = tillKitSavedSplit();   /* synced with the bill first: it may reset the flow */
+      if (tillKitFlowHere() && (splitState.flow.paidCount > 0 || saved)) return splitState.flow.paidCount < splitState.flow.parts.length;
+      return !!saved;
+    }
+    function tillKitLockedSplit() {
+      const saved = tillKitSavedSplit();
+      if (!tillKitFlowHere()) {
+        if (!saved) return false;
+        loadSplitFlow(mode === 'vrap' ? null : selectedId);
+        splitState.itemTotals = splitItemTotals(splitState.sourceLines);
+      }
+      tillKitShareMap = {};
+      splitState.flow.parts.forEach((_, i) => { tillKitShareMap[i + 1] = i; });
+      tillKitSplitKey = tillKitBillKey();
+      window.KiwiTillFrame.openPane('split', { bill: { total: splitState.total, lines: [] }, paidShares: tillKitPaidShares(),
+        parts: splitState.flow.parts.map(p => ({ amount: p.base != null ? p.base : p.amount, label: splitPartLabel(p.label), paid: !!p.paid })) });
+      return true;
     }
     function tillKitOpenSplit() {
       if (!(currentTotal() > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition vide')); return; }
+      if (tillKitSplitStarted() && tillKitLockedSplit()) return;
       const source = mode === 'vrap' ? null : selectedId;
-      const resume = tillKitSplitStarted() && (mode === 'vrap' ? splitState.isVrap : splitState.tableId === source);
-      if (!resume) {
-        openSplitModal(source);
-        $('#split-modal').classList.remove('is-open');
-        splitState.flow = null;
-        tillKitShareMap = null;
-      }
-      const pane = window.KiwiTillFrame.openPane('split', { bill: tillKitSplitBill(), paidShares: tillKitPaidShares() });
+      openSplitModal(source);
+      $('#split-modal').classList.remove('is-open');
+      splitState.flow = null;
+      tillKitShareMap = null;
+      tillKitSplitKey = tillKitBillKey();
+      const pane = window.KiwiTillFrame.openPane('split', { bill: tillKitSplitBill(), paidShares: [], parts: null });
       /* A new split starts from the shipped defaults (covers at the table). */
-      if (!resume && pane && pane.fresh) pane.fresh(splitState.numParts);
+      if (pane && pane.fresh) pane.fresh(splitState.numParts);
+    }
+    /* The plan on the pane becomes the shipped flow (launchSplitFlow, its
+       guards and messages). Returns the part each kit share became. */
+    function tillKitLaunchSplit() {
+      const plan = window.KiwiTillFrame.pane('split').plan();
+      splitState.tipMode = '0';
+      splitState.customTipPct = 0;
+      if (plan.mode === 'equal') { splitState.splitMode = 'egal'; splitState.numParts = plan.n; }
+      else {
+        splitState.splitMode = 'article';
+        splitState.numConvives = plan.n;
+        splitState.perConvive = {};
+        Object.entries(plan.assign).forEach(([row, s]) => {
+          const cut = row.lastIndexOf('#'), name = cut > 0 ? row.slice(0, cut) : row, info = splitState.itemTotals[name];
+          if (!info || !s) return;
+          const cart = (splitState.perConvive[s] = splitState.perConvive[s] || {});
+          cart[name] = (cart[name] || 0) + (row.slice(cut + 1) === '0' || cut < 0 ? info.totalQty : 1);
+        });
+      }
+      launchSplitFlow();
+      if (!splitState.flow) return null;
+      const map = {};
+      if (splitState.splitMode === 'egal') { for (let i = 1; i <= plan.n; i++) map[i] = i - 1; }
+      else {
+        let k = 0;
+        for (let c = 1; c <= plan.n; c++) if (splitState.perConvive[c] && Object.keys(splitState.perConvive[c]).length) map[c] = k++;
+      }
+      saveSplitFlow();   /* set up is saved at once: leaving, another table or a reload keeps it */
+      return map;
     }
     function tillKitPayShare(n) {
-      const el = window.KiwiTillFrame.pane('split');
-      if (!splitState.flow) {
-        const plan = el.plan();
-        splitState.tipMode = '0';
-        splitState.customTipPct = 0;
-        if (plan.mode === 'equal') { splitState.splitMode = 'egal'; splitState.numParts = plan.n; }
-        else {
-          splitState.splitMode = 'article';
-          splitState.numConvives = plan.n;
-          splitState.perConvive = {};
-          Object.entries(plan.assign).forEach(([name, s]) => {
-            const info = splitState.itemTotals[name];
-            if (info && s) (splitState.perConvive[s] = splitState.perConvive[s] || {})[name] = info.totalQty;
-          });
-        }
-        launchSplitFlow();
-        if (!splitState.flow) return;
-        tillKitShareMap = {};
-        if (splitState.splitMode === 'egal') { for (let i = 1; i <= plan.n; i++) tillKitShareMap[i] = i - 1; }
-        else {
-          let k = 0;
-          for (let c = 1; c <= plan.n; c++) if (splitState.perConvive[c] && Object.keys(splitState.perConvive[c]).length) tillKitShareMap[c] = k++;
-        }
+      let idx;
+      if (!tillKitFlowHere()) {
+        const map = tillKitLaunchSplit();
+        if (!map) return;
+        idx = map[n];
+        tillKitLockedSplit();
+      } else {
+        if (!tillKitShareMap) tillKitLockedSplit();
+        idx = tillKitShareMap[n];
       }
-      const idx = tillKitShareMap[n];
       const part = idx == null ? null : splitState.flow.parts[idx];
       if (!part || part.paid) return;
-      tillKitShare = { idx, n };
+      tillKitShare = { idx, n: idx + 1 };
       cashAmountOverride = part.base;
-      window.KiwiTillFrame.openPay({ bill: (splitState.sourceLabel || '') + ' · ' + kkt('split.share_n', { n }), due: part.base, method: null, tipPct: 0 });
+      resetPayTip();
+      window.KiwiTillFrame.openPay({ bill: (splitState.sourceLabel || '') + ' · ' + kkt('split.share_n', { n: idx + 1 }), due: part.base, method: null, tipPct: 0 });
+    }
+    /* « Enregistrer le partage » : the shares are set, nothing is taken. */
+    function tillKitSaveSplit() {
+      if (!tillKitFlowHere() && !tillKitLaunchSplit()) return;
+      const t = !splitState.isVrap && tables[splitState.tableId];
+      if (t && t.status !== 'khlass') { tableSettlement().project(t, { status: 'bgha-ykhlass' }); refreshTableNode(splitState.tableId); }
+      tillKitLockedSplit();
+      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Partage enregistré · encaissez chaque part quand vous voulez'));
+    }
+    /* « Annuler le partage » : only while no share was paid (the shipped rule). */
+    function tillKitCancelSplit() {
+      if (!tillKitFlowHere() || splitState.flow.paidCount > 0) return;
+      if (splitState.isVrap) vrapSplits.delete(vrapSplitKey(vrapEditingNum));
+      else tableSplits.delete(splitState.tableId);
+      try { persistShift(); } catch (_) {}
+      splitState.flow = null;
+      tillKitShareMap = null;
+      tillKitOpenSplit();
+      tillKitPaint();
     }
     function tillKitAfterShare() {
       tillKitShare = null;
       cashAmountOverride = null;
       splitPayCallback = null;
       const f = splitState.flow;
-      if (f && f.paidCount >= f.parts.length) {
+      if (!f || f.paidCount >= f.parts.length) {
         window.KiwiTillFrame.closePane('split');
         closeSplitModal({ skipRevert: true });
         splitState.flow = null;
         tillKitShareMap = null;
         return;
       }
-      window.KiwiTillFrame.openPane('split', { paidShares: tillKitPaidShares() });
+      tillKitLockedSplit();
     }
     function tillKitLeaveSplit() {
       window.KiwiTillFrame.closePane('split');
       cashAmountOverride = null;
       splitPayCallback = null;
-      /* Rien de payé : rien à reprendre. Une part payée garde le flux, que
-         Diviser rouvre là où il en était. */
+      /* A split that was set up stays saved; Diviser or Encaisser reopens it. */
       if (!tillKitSplitStarted()) { splitState.flow = null; tillKitShareMap = null; }
       tillKitPaint();
     }
@@ -945,6 +1035,8 @@
           return;
         case 'split.pay-share': tillKitPayShare(Number(id)); return;
         case 'split.leave': tillKitLeaveSplit(); return;
+        case 'split.save': tillKitSaveSplit(); return;
+        case 'split.cancel': tillKitCancelSplit(); return;
         case 'discount.apply': tillKitApplyDiscount(value); return;
         case 'discount.leave': window.KiwiTillFrame.closePane('discount'); tillKitPaint(); return;
         case 'discount.remove': tillKitRemoveDiscount(); return;
@@ -1016,7 +1108,14 @@
       if ($('#rp-active').hidden && !tenderInFlight) {
         window.KiwiTillFrame.closePay();
         window.KiwiTillFrame.closePane('discount');
-        if (!tillKitSplitStarted()) window.KiwiTillFrame.closePane('split');
+        window.KiwiTillFrame.closePane('split');   /* the split is saved; Diviser or Encaisser reopens it */
+      }
+      /* Another table or order came on screen under a split pane: it was this bill's split, not that one's. */
+      const sp = window.KiwiTillFrame.pane && window.KiwiTillFrame.pane('split');
+      if (sp && !sp.hidden && !tenderInFlight && !tillKitShare && tillKitSplitKey && tillKitSplitKey !== tillKitBillKey()) {
+        window.KiwiTillFrame.closePane('split');
+        tillKitShareMap = null;
+        if (!tillKitFlowHere()) cashAmountOverride = null;
       }
       window.KiwiTillFrame.paint({ sections: tillKitSections(), bill: tillKitBill(), rail: tillKitRail() });
       /* La barre d'addition du téléphone dit le total comme l'addition du kit

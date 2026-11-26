@@ -710,7 +710,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
        son montant, enregistrée par markSplitPartPaid comme au livré. Une part
        vide par article n'existe pas au livré : tillKitShareMap relie le numéro
        de part du kit à la part livrée. */
-    let tillKitShare = null, tillKitShareMap = null;/* La remise dans le volet (étape 4 (4), §10.31). <k-discount> choisit le
+    let tillKitShare = null, tillKitShareMap = null, tillKitSplitKey = '';/* La remise dans le volet (étape 4 (4), §10.31). <k-discount> choisit le
        mode, la valeur et le motif ; remiseState reçoit le même état que la
        fenêtre livrée et applyRemise() fait le reste : politique des
        pourcentages, accord du responsable (requireManager), plafond au
@@ -2471,12 +2471,12 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       toast(tr('Split en pause · reprends quand tu veux'));
       if (selectedId === splitState.tableId) renderRightPanel(selectedId);
     });
-    // Patch markSplitPartPaid via wrapper · save on every payment, delete on done
     const _origMarkPaid = markSplitPartPaid;
     markSplitPartPaid = function(partIdx, method) {
-      _origMarkPaid(partIdx, method);
+      const entry = _origMarkPaid(partIdx, method);   /* the share's sale back to finalizeTender; one not recorded saves nothing */
+      if (!entry || !splitState.flow) return entry;
       if (splitState.flow.paidCount >= splitState.flow.parts.length) {
-        if (splitState.isVrap) vrapSplits.delete(vrapSplitKey(vrapEditingNum));
+        if (splitState.isVrap) { for (const [k, v] of vrapSplits) if (v && String(v.id) === String(splitState.flow.id)) vrapSplits.delete(k); vrapSplits.delete(vrapSplitKey(vrapEditingNum)); }
         else tableSplits.delete(splitState.tableId);
         /* The payment journal was persisted before the final part changed the
            flow. Persist the deletion too, otherwise F5 restores a completed
@@ -2485,12 +2485,12 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       } else {
         saveSplitFlow();
         if (selectedId === splitState.tableId) renderRpSplitCard(selectedId);
-      }
+      } return entry;
     };
-    // Patch openSplitModal · if a saved split exists, jump directly to flow screen
     const _origOpenSplit = openSplitModal;
     openSplitModal = function(tableId) {
-      if ((mode === 'vrap' && currentVrapSplit()) || (mode !== 'vrap' && tableSplits.has(tableId))) {
+      if (!(typeof tillKit !== 'undefined' && tillKit) && typeof syncSplitToBill === 'function') syncSplitToBill(mode === 'vrap' ? null : tableId);   /* dishes added or voided since (held-sales.js) */
+      if ((mode === 'vrap' && currentVrapSplit()) || (mode !== 'vrap' && liveTableSplit(tableId))) {
         loadSplitFlow(tableId);
         $('#split-table-label').textContent = splitState.sourceLabel || tableId;
         $('#split-setup').hidden = true;
