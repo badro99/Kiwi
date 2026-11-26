@@ -43,6 +43,18 @@ async function voidSale(f, id) {
   ok(again.status === 409 && sql.prepare("SELECT balance_cents FROM store_credits WHERE id='v1'").get().balance_cents === 40000, 'a second void gives nothing back twice');
 }
 
+/* A2 · une consommation qui nomme un ticket payé en espèces ne revient pas à son annulation */
+{
+  const f = await fixture(ROOT); const { sql, merchant } = f;
+  sql.prepare(`INSERT INTO store_credits(id,merchant,code,customer_id,amount_cents,balance_cents,status,expires_ts,created_ts,updated_ts)
+    VALUES('v2',?,'AV-TESTB','client-fixture',40000,40000,'active',?,?,?)`).run(merchant, now + 30 * 86400000, now, now);
+  f.insert('sale-cash', 100000, { method: 'cash', ts: now });
+  const red = await f.call('credit', { action: 'redeem-batch', id: 'commit-2', saleId: 'sale-cash', credits: [{ code: 'AV-TESTB', amountCents: 40000 }] });
+  ok(red.status === 200, 'an avoir is spent under a cash ticket id', JSON.stringify(red.body));
+  const c = await voidSale(f, 'sale-cash');
+  ok(c.status === 200 && sql.prepare("SELECT balance_cents FROM store_credits WHERE id='v2'").get().balance_cents === 0, 'voiding that cash ticket gives no avoir back', JSON.stringify(c.body));
+}
+
 /* B · la vente « Livraison reçue » annulée rouvre le dû du livreur */
 {
   const f = await fixture(ROOT);

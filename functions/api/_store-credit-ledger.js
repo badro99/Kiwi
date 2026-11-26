@@ -22,7 +22,7 @@ export async function creditsIssuedCents(env, merchant, saleId) {
   try {
     const row = await env.DB.prepare(
       `SELECT COALESCE((SELECT SUM(amount_cents) FROM store_credit_events
-        WHERE merchant = ? AND ref_id = ? AND action = 'issue'), 0) - COALESCE((SELECT SUM(c.amount_cents) FROM store_credit_events c WHERE c.merchant = ? AND c.action = 'cancel' AND c.credit_id IN (SELECT i.credit_id FROM store_credit_events i WHERE i.merchant = ? AND i.ref_id = ? AND i.action = 'issue')), 0) AS c`
+        WHERE merchant = ? AND ref_id = ? AND action = 'issue'), 0) - COALESCE((SELECT SUM(MIN(c.amount_cents, i.amount_cents)) FROM store_credit_events c JOIN store_credit_events i ON i.credit_id = c.credit_id AND i.merchant = c.merchant AND i.action = 'issue' WHERE c.merchant = ? AND c.action = 'cancel' AND i.merchant = ? AND i.ref_id = ?), 0) AS c`
     ).bind(merchant, saleId, merchant, merchant, saleId).first();
     return Math.max(0, Math.round(Number(row && row.c) || 0));
   } catch (_) { throw new Error('store-credit-unavailable'); }
@@ -53,10 +53,23 @@ export async function voidCreditBackStatements(env, merchant, saleId, voidTs, ac
         WHERE merchant = ? AND ref_id = ? AND action = 'redeem' GROUP BY credit_id`
     ).bind(merchant, saleId).all()).results || [];
   } catch (_) { throw new Error('store-credit-unavailable'); }
+  /* Jamais plus que la part avoir que la vente elle-même a enregistrée : une
+     consommation qui nomme ce ticket sans l'avoir payé ne se rembourse pas. */
+  let cap = 0;
+  try {
+    const sale = await env.DB.prepare(`SELECT s.method, s.amount_cents, s.payment_parts, r.gross_ticket_cents FROM sales s
+      LEFT JOIN sale_receipts r ON r.merchant = s.merchant AND r.sale_id = s.id WHERE s.merchant = ? AND s.id = ?`).bind(merchant, saleId).first();
+    let parts = null;
+    try { parts = JSON.parse(sale && sale.payment_parts || 'null'); } catch (_) { parts = null; }
+    const isCredit = (m) => m === 'credit' || m === 'avoir';
+    if (Array.isArray(parts) && parts.length) cap = parts.reduce((n, x) => n + (x && isCredit(x.method) ? Math.max(0, Math.round(Number(x.amountCents) || 0)) : 0), 0);
+    else if (sale && isCredit(String(sale.method || ''))) cap = Math.max(Math.round(Number(sale.amount_cents) || 0), Math.round(Number(sale.gross_ticket_cents) || 0));
+  } catch (_) { throw new Error('store-credit-unavailable'); }
   const out = [];
   for (const row of rows) {
-    const cents = Math.round(Number(row.cents) || 0);
+    const cents = Math.min(Math.round(Number(row.cents) || 0), cap);
     if (!(cents > 0)) continue;
+    cap -= cents;
     const eventId = `void:${merchant}:${saleId}:${row.credit_id}`;
     out.push(env.DB.prepare(
       `UPDATE store_credits SET balance_cents = balance_cents + ?,

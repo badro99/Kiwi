@@ -269,7 +269,7 @@ export async function onRequestPost({ request, env }) {
               ), COALESCE(s.amount_cents, s.amount * 100)) - COALESCE((
                 SELECT SUM(e.amount_cents) FROM store_credit_events e
                  WHERE e.merchant = ? AND e.ref_id = ? AND e.action = 'issue'
-              ), 0) + COALESCE((SELECT SUM(c.amount_cents) FROM store_credit_events c WHERE c.merchant = ? AND c.action = 'cancel' AND c.credit_id IN (SELECT i.credit_id FROM store_credit_events i WHERE i.merchant = ? AND i.ref_id = ? AND i.action = 'issue')), 0) - COALESCE((
+              ), 0) + COALESCE((SELECT SUM(MIN(c.amount_cents, i.amount_cents)) FROM store_credit_events c JOIN store_credit_events i ON i.credit_id = c.credit_id AND i.merchant = c.merchant AND i.action = 'issue' WHERE c.merchant = ? AND c.action = 'cancel' AND i.merchant = ? AND i.ref_id = ?), 0) - COALESCE((
                 SELECT SUM(COALESCE(a.amount_cents, a.amount * 100)) FROM sale_audit a
                  WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund'
               ), 0)`

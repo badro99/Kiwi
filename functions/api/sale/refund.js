@@ -252,7 +252,7 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
           ), 0) - COALESCE((
             SELECT SUM(amount_cents) FROM store_credit_events
              WHERE merchant = ? AND ref_id = ? AND action = 'issue'
-          ), 0) + COALESCE((SELECT SUM(c.amount_cents) FROM store_credit_events c WHERE c.merchant = ? AND c.action = 'cancel' AND c.credit_id IN (SELECT i.credit_id FROM store_credit_events i WHERE i.merchant = ? AND i.ref_id = ? AND i.action = 'issue')), 0) AND (? = 1 OR ? = COALESCE((SELECT SUM(amount_cents) FROM sale_audit
+          ), 0) + COALESCE((SELECT SUM(MIN(c.amount_cents, i.amount_cents)) FROM store_credit_events c JOIN store_credit_events i ON i.credit_id = c.credit_id AND i.merchant = c.merchant AND i.action = 'issue' WHERE c.merchant = ? AND c.action = 'cancel' AND i.merchant = ? AND i.ref_id = ?), 0) AND (? = 1 OR ? = COALESCE((SELECT SUM(amount_cents) FROM sale_audit
              WHERE merchant = ? AND sale_id = ? AND action = 'refund'), 0)) AND EXISTS (
             SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL
           )${custody.sql}`
