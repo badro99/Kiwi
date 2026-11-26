@@ -52,7 +52,12 @@ export async function voidCreditBackStatements(env, merchant, saleId, voidTs, ac
       `SELECT credit_id, SUM(amount_cents) AS cents FROM store_credit_events
         WHERE merchant = ? AND ref_id = ? AND action = 'redeem' GROUP BY credit_id`
     ).bind(merchant, saleId).all()).results || [];
-  } catch (_) { throw new Error('store-credit-unavailable'); }
+  } catch (e) {
+    /* Une base sans registre d'avoirs n'a aucun avoir à rendre ; toute autre erreur bloque. */
+    if (/no such table/i.test(String(e && e.message))) return [];
+    throw new Error('store-credit-unavailable');
+  }
+  if (!rows.length) return [];
   /* Jamais plus que la part avoir que la vente elle-même a enregistrée : une
      consommation qui nomme ce ticket sans l'avoir payé ne se rembourse pas. */
   let cap = 0;
