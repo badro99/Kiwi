@@ -165,7 +165,7 @@ var SHELL = [
   '/assets/caisse/table-settlement.js?v=2',
   '/assets/caisse-accounting.js?v=45',
   '/assets/caisse-floor.js?v=27',
-  '/assets/caisse-kitchen.js?v=37',
+  '/assets/caisse-kitchen.js?v=42',
   '/assets/caisse/receipts.js?v=7',
   '/assets/caisse/closing.js?v=2',
   '/assets/caisse/delivery.js?v=12', '/assets/caisse-cash-recovery.js?v=1', '/assets/caisse-cash-refund.js?v=2',

@@ -76,7 +76,10 @@
          may already have closed or the physical table may already belong to a
          new party, but neither fact can make an old rejected line legitimate.
          This is deliberately narrower than clearing the table. */
-      if (o.status === 'rejected') {
+      const incomingLines = Array.isArray(o.lines) ? o.lines.filter(line => line && Math.max(0, Number(line.qty) || 0) > 0) : [];
+      /* Dernier plat annulé : `lines: []`, ses lignes quittent l'addition comme une refusée (audit du 26 nov.). */
+      if (o.status === 'rejected' || !incomingLines.length) {
+        if (!(tableOrders[id] || []).some(l => String(l.orderProLine || '').startsWith(orderId + ':'))) return false;
         const before = (tableOrders[id] || []).length;
         currentOrder().replaceTable(id, (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(orderId + ':')));
         const changed = tableOrders[id].length !== before;
@@ -87,12 +90,6 @@
         }
         return changed;
       }
-      const incomingLines = Array.isArray(o.lines)
-        ? o.lines.filter(line => line && Math.max(0, Number(line.qty) || 0) > 0) : [];
-      /* A queue shell with no billable line is not a table visit. Importing it
-         used to occupy the table, render “Annuler commande undefined”, and
-         leave a zero-MAD bill that could never be settled or cancelled. */
-      if (!incomingLines.length) return false;
       const activeSeat = phoneSeats.get(tableKey(id));
       /* ── UNE TABLE RÉGLÉE NE SE ROUVRE PAS TOUTE SEULE ──────────────────
        * This bridge handles cashier and staff tickets as well as customer
@@ -269,6 +266,23 @@
 
     function opIngest(o) {
       if (!o || !o.id) return;
+      const opKdsItem = (l) => {
+        const formulaTag = l.kind === 'formula-part' ? (l.formulaName ? `${l.formulaName}${l.slotLabel ? ' · ' + l.slotLabel : ''}` : (l.slotLabel || 'Formule')) : '';
+        const formulaNote = formulaTag ? `[${formulaTag}]` : '';
+        const ownVisuals = Array.isArray(l.visuals) ? l.visuals : [];
+        return {
+          q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0, uid: String(l.uid || ''),
+          kind: l.kind || '', formulaUid: l.formulaUid || '', slotLabel: l.slotLabel || '', formulaName: l.formulaName || '',
+          formulaExtra: l.kind === 'formula-part' ? Math.max(0, +l.formulaExtra || 0) : 0,
+          note: [formulaNote, ownVisuals.length ? '' : l.options, l.note].filter(Boolean).join(' · '),
+          visuals: ownVisuals.slice(),
+          /* Le poste porté PAR LA LIGNE gagne (figé à l'envoi par kitchen-relay.js) ; le repli
+             par nom reste pour le téléphone, qui n'a jamais porté de poste. */
+          stations: [(l.station && kdsStations().some(s => s.id === l.station))
+            ? l.station : kdsStationForName(l.name)],
+          stationReady: l.stationReady === true, stationAccepted: l.stationAccepted === true,
+        };
+      };
       if (o.status === 'archived') {
         rememberArchivedTakeaway(o.id);
         const archived = opTickets.get(o.id) || kdsOrders.find(t => t && t.opId === o.id)
@@ -408,30 +422,7 @@
           status: (isTakeaway && o.status === 'pending') ? 'held'
                 : (o.status === 'ready' ? 'ready' : 'new'),
           readyAt: o.status === 'ready' ? kdsNowHM() : null,
-          items: (o.lines || []).map(l => {
-            const formulaTag = l.kind === 'formula-part' ? (l.formulaName ? `${l.formulaName}${l.slotLabel ? ' · ' + l.slotLabel : ''}` : (l.slotLabel || 'Formule')) : '';
-            const formulaNote = formulaTag ? `[${formulaTag}]` : '';
-            const ownVisuals = Array.isArray(l.visuals) ? l.visuals : [];
-            return {
-              q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
-              kind: l.kind || '',
-              formulaUid: l.formulaUid || '',
-              slotLabel: l.slotLabel || '',
-              formulaName: l.formulaName || '',
-              formulaExtra: l.kind === 'formula-part' ? Math.max(0, +l.formulaExtra || 0) : 0,
-              note: [formulaNote, ownVisuals.length ? '' : l.options, l.note].filter(Boolean).join(' · '),
-              visuals: ownVisuals.slice(),
-              /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
-                 transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
-                 retrouver par le nom du plat serait le recalculer contre une
-                 carte qui a pu changer depuis. Le repli par nom reste pour les
-                 commandes du téléphone, qui n'ont jamais porté de poste. */
-              stations: [(l.station && kdsStations().some(s => s.id === l.station))
-                ? l.station : kdsStationForName(l.name)],
-              stationReady: l.stationReady === true,
-              stationAccepted: l.stationAccepted === true,
-            };
-          }),
+          items: (o.lines || []).map(opKdsItem),
           billItems: (o.lines || []).filter(l => l.kind !== 'formula-part').map(l => ({
             q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0, note: l.note || '',
             visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
@@ -480,6 +471,18 @@
         if (o.number != null && String(o.number).trim()) known.opNum = o.number;
       }
 
+      /* « + » du serveur sur un plat envoyé : facturé, jamais cuisiné (audit du 26 nov.). Les lignes suivent la file par uid (par rang avant l'uid), seul l'écart s'imprime. */
+      if (o.channel !== 'caisse' && !known.relayLines && Array.isArray(o.lines) && Array.isArray(known.items) && /^(accepted|ready|served)$/.test(o.status)) {
+        const added = [], next = [];
+        o.lines.forEach((line, i) => {
+          const q = Math.max(0, +(line && line.qty) || 0), uid = String((line && line.uid) || ''), item = (uid && known.items.find(it => it.uid === uid)) || (known.items[i] && !known.items[i].uid ? known.items[i] : null);
+          if (!q) return; if (!item) { next.push(opKdsItem(line)); added.push({ ...next[next.length - 1] }); return; }
+          if (q > item.q) added.push({ ...item, q: q - item.q, stationReady: false, stationAccepted: false });
+          Object.assign(item, { q, uid: item.uid || uid }); next.push(item);
+        });
+        known.items = next;
+        if (added.length && known.status !== 'held') printKitchenTickets(known, added, { remote: o.localKitchenAction === true ? false : (o.mode === 'table' && o.session && o.server ? 'connected' : true), sourceId: o.id, createdAt: o.updated_ts || Date.now() });
+      }
       /* Partial KDS readiness is stored on the canonical order lines. Pull it
          back into the local ticket so bar and kitchen tablets immediately see
          each other's progress without completing the entire order. */
@@ -493,11 +496,9 @@
       const staleAfterRecall = recallInFlight
         || (recallSeen > 0 && recalledAt < recallSeen && (Number(o.updated_ts) || 0) < recallSeen);
       if (!staleAfterRecall) {
-        (o.lines || []).forEach((line, index) => {
-          if (known.items && known.items[index]) {
-            known.items[index].stationReady = line.stationReady === true;
-            known.items[index].stationAccepted = line.stationAccepted === true;
-          }
+        (o.lines || []).filter(line => line && (Number(line.qty) || 0) > 0).forEach((line, index) => {
+          const item = known.items && ((line.uid && known.items.find(it => it.uid === String(line.uid))) || known.items[index]);
+          if (item) { item.stationReady = line.stationReady === true; item.stationAccepted = line.stationAccepted === true; }
         });
       }
       if (recalledAt > recallSeen && !recallInFlight) {
