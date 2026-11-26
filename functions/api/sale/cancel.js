@@ -465,15 +465,13 @@ export async function onRequestPost({ request, env }) {
     const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
     const creditBack = await voidCreditBackStatements(env, merchant, id, ts, actor,
       businessBoundary(addBusinessDays(businessDate(ts + 182 * 86400000, cutoff, zone), 1), cutoff, zone));
-    let hasCollections = true;   // une base sans livraisons encaissées n'a rien à rouvrir
-    try { await env.DB.prepare('SELECT 1 FROM delivery_collections LIMIT 0').all(); } catch (e) { hasCollections = !/no such table/i.test(String(e && e.message)); }
-    const collectionBack = hasCollections ? [env.DB.prepare(
+    const collectionBack = env.DB.prepare(
       `DELETE FROM delivery_collections WHERE merchant = ? AND collection_sale_id = ?
          AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts = ?)`
-    ).bind(merchant, id, merchant, id, ts)] : [];
+    ).bind(merchant, id, merchant, id, ts);
     let result;
-    try { result = await env.DB.batch([update, auditWithCents, ...chequeFix, ...creditBack, ...collectionBack]); }
-    catch (_) { result = await env.DB.batch([update, auditLegacy, ...chequeFix, ...creditBack, ...collectionBack]); }
+    try { result = await env.DB.batch([update, auditWithCents, ...chequeFix, ...creditBack, collectionBack]); }
+    catch (_) { result = await env.DB.batch([update, auditLegacy, ...chequeFix, ...creditBack, collectionBack]); }
     const changes = Number(result?.[0]?.meta?.changes ?? result?.[0]?.changes ?? 0);
     if (!changes) {
       /* Perdu contre une annulation concurrente, ou contre un remboursement

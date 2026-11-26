@@ -64,7 +64,8 @@ sqlite.exec(`
     void_reason TEXT,
     void_note TEXT,
     void_actor TEXT,
-    void_actor_id TEXT
+    void_actor_id TEXT,
+    payment_parts TEXT   -- read by the void's store-credit cap (_store-credit-ledger.js)
   );
 
   CREATE TABLE sale_audit (
