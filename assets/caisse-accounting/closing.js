@@ -237,7 +237,9 @@
     function currentBusinessDay() {
       const DR = window.KiwiDayReport;
       if (!DR) return '';
-      return DR.businessDay((window.KiwiLive?.now || Date.now)());
+      /* Tablette restée allumée la nuit : le Z suit la dernière activité du service, pas un jour vide (audit du 26 nov.). */
+      const at = (x) => (x && x.time instanceof Date ? x.time.getTime() : Number(x && (x.ts || x.time)) || 0);
+      return DR.businessDay(Math.max(shiftOpenedAt ? shiftOpenedAt.getTime() : 0, ...journal.filter(isReportableJournalEntry).map(at), ...(cashMovements || []).map(at)) || (window.KiwiLive?.now || Date.now)());
     }
     function buildDayReport(counted, closedAt) {
       const DR = window.KiwiDayReport;
