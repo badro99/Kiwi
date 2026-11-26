@@ -1119,6 +1119,7 @@ html[data-theme="dark"] .rmw-emoji-pop{background:#151C18!important;border-color
     if(failed){
       i18nCooldown=Date.now()+(failed==='quota'?6*3600e3:10*60e3);
       if(!o.silent)toast(failed==='quota'?ui('i18nQuota'):ui('i18nError'),'','warn');
+    }else if(!written&&o.silent){i18nCooldown=Date.now()+6*3600e3;/* rien de neuf (ex. « Espresso » gardé en latin) : la notification du store relançait l'IA en boucle (audit du 26 nov.) */
     }else if(!o.silent){toast(ui('i18nDone',{n:written}),'','success');}
     if(document.body.classList.contains('page-menu'))render();
   }
