@@ -177,6 +177,23 @@ await check('several days save in one request; one bad day writes nothing', asyn
   assert.equal(live().filter((x) => x.method === 'other').length, 3);
 });
 
+await check('the hist: prefix and the historique channel belong to this route alone', async () => {
+  /* /api/sale refuses both, so a till can never write a row the other tills would skip. */
+  const sale = fs.readFileSync(new URL('../functions/api/sale.js', import.meta.url), 'utf8');
+  assert.match(sale, /if \(\/\^hist:\/i\.test\(suppliedId\) \|\| channel === 'historique'\) return json\(\{ error: 'reserved-id' \}, 400\)/);
+  assert.ok(sale.indexOf("const channel = String(") < sale.indexOf("channel === 'historique'"), 'the channel is read before it is checked');
+  /* And a row that only looks like one (an old till row on that channel) is never read, replaced or voided as past sales. */
+  const id = 'hist:' + M + ':' + day(-30) + ':0';
+  db.prepare("INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ts, channel, written_by) VALUES (?, ?, 50, 5000, 'cash', 'Till', ?, 'historique', 'till:abc')").run(id, M, Date.parse(day(-30) + 'T13:00:00Z'));
+  const data = await (await get(owner)).json();
+  assert.ok(!data.days.some((d) => d.day === day(-30)), 'not listed as past sales');
+  assert.equal(data.firstTillDay, day(-30), 'it is a till sale, so the first till day moves back');
+  assert.equal((await post(owner, { merchant: M, day: day(-29), lines: burgers })).status, 409, 'days after it are now till days');
+  assert.equal((await post(owner, { merchant: M, day: day(-31), lines: [] })).status, 200, 'days before it stay open');
+  assert.equal(db.prepare('SELECT written_by FROM sales WHERE id = ?').get(id).written_by, 'till:abc');
+  db.prepare('DELETE FROM sales WHERE id = ?').run(id);
+});
+
 await check('a suspended store cannot write', async () => {
   db.prepare("UPDATE merchant_config SET status = 'suspended' WHERE merchant = ?").run(M);
   try { assert.equal((await post(owner, { merchant: M, day: day(-9), lines: burgers })).status, 403); }

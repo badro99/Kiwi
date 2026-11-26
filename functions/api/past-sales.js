@@ -66,7 +66,7 @@ async function authorise(request, env, asked, write) {
    encaissé une vente vivante : rien à partir de lui ne s'écrit ici. */
 async function firstTillDay(env, merchant, cutoff, zone) {
   const row = await env.DB.prepare(
-    "SELECT MIN(ts) AS ts FROM sales WHERE merchant = ? AND void_ts IS NULL AND id NOT LIKE 'hist:%'"
+    `SELECT MIN(ts) AS ts FROM sales WHERE merchant = ? AND void_ts IS NULL AND NOT (id LIKE 'hist:%' AND channel = '${PAST_CHANNEL}' AND written_by = 'account')`
   ).bind(merchant).first();
   const ts = row && Number(row.ts);
   return ts > 0 ? businessDate(ts, cutoff, zone) : '';
@@ -120,7 +120,7 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'forbidden' }, 403);
   const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
   const { results } = await env.DB.prepare(
-    'SELECT id, method, amount_cents, lines FROM sales WHERE merchant = ? AND id LIKE ? AND void_ts IS NULL ORDER BY id'
+    `SELECT id, method, amount_cents, lines FROM sales WHERE merchant = ? AND id LIKE ? AND channel = '${PAST_CHANNEL}' AND written_by = 'account' AND void_ts IS NULL ORDER BY id`
   ).bind(merchant, prefix(merchant) + '%').all();
   return json({
     ok: true,
@@ -190,7 +190,7 @@ function dayStatements(env, merchant, day, lines, method, now, ts) {
        ON CONFLICT(id) DO UPDATE SET amount = excluded.amount, amount_cents = excluded.amount_cents,
          method = excluded.method, lines = excluded.lines, ts = excluded.ts,
          void_ts = NULL, void_reason = NULL, void_note = NULL, void_actor = NULL, void_actor_id = NULL
-       WHERE sales.merchant = excluded.merchant AND sales.channel = '${PAST_CHANNEL}'`
+       WHERE sales.merchant = excluded.merchant AND sales.channel = '${PAST_CHANNEL}' AND sales.written_by = 'account'`
     ).bind(rowId(merchant, day, k), merchant, Math.round(cents / 100), cents, method, PAST_LABEL,
       'HIST-' + day.replace(/-/g, '') + (chunks.length > 1 ? '-' + (k + 1) : ''), ts, lines, PAST_CHANNEL);
   });
@@ -198,7 +198,7 @@ function dayStatements(env, merchant, day, lines, method, now, ts) {
      sortent des chiffres ; la ligne reste. */
   statements.push(env.DB.prepare(
     `UPDATE sales SET void_ts = ?, void_reason = 'autre', void_note = 'ventes antérieures remplacées', void_actor = 'proprietaire'
-     WHERE merchant = ? AND id LIKE ? AND channel = '${PAST_CHANNEL}' AND void_ts IS NULL
+     WHERE merchant = ? AND id LIKE ? AND channel = '${PAST_CHANNEL}' AND written_by = 'account' AND void_ts IS NULL
        AND CAST(substr(id, ?) AS INTEGER) >= ?`
   ).bind(now, merchant, prefix(merchant) + day + ':%', prefix(merchant).length + day.length + 2, chunks.length));
   return statements;

@@ -1034,7 +1034,7 @@
       if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return 0;
       let changed = false;
       (sales || []).forEach((sale) => {
-        if (!sale || !(Number(sale.amount) > 0)) return; if (String(sale.channel || '') === 'historique') return; // historique : ventes d'avant Kiwi (/api/past-sales), rapports seulement, ni ticket ni stock
+        if (!sale || !(Number(sale.amount) > 0)) return; if (String(sale.channel || '') === 'historique' && /^hist:/.test(String(sale.id || ''))) return; // historique : ventes d'avant Kiwi (/api/past-sales, canal et préfixe réservés par /api/sale), rapports seulement, ni ticket ni stock
         const sid = String(sale.id || sale.saleId || '');
         if (sid) activeCloudSaleIds.add(sid);
         /* The caisse journal is THIS service, not the commercial day. Closing
