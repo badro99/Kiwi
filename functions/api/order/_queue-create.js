@@ -267,6 +267,10 @@ function cleanLines(raw) {
     if (l.uid) line.uid = String(l.uid).slice(0, 60);
     if (l.id) line.id = String(l.id).slice(0, 60);
     if (l.course === 'suite') line.course = 'suite';
+    /* Le commentaire de la commande et « sur place / à emporter » voyagent sur
+       sa première ligne (assets/caisse/counter-flow.js) : sans nouvelle colonne. */
+    if (l.orderNote) line.orderNote = String(l.orderNote).slice(0, 200);
+    if (l.service === 'surplace' || l.service === 'emporter') line.service = l.service;
     out.push(line);
   }
   return out;

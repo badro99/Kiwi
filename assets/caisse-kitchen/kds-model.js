@@ -113,7 +113,7 @@
       const lines = sid === 'all' ? allItems : allItems.filter(i => i.stations.includes(sid));
       if (!lines.length) return o.status;
       if (sid !== 'all' && lines.every(i => i.stationReady === true)) return 'ready';
-      if (lines.every(i => i.stationAccepted === true)) return 'cooking';
+      if (lines.every(i => i.stationAccepted === true) || (o.status !== 'held' && typeof counterFlow === 'function' && counterFlow().direct === true)) return 'cooking'; /* ou « La cuisine commence tout de suite » (Paramètres › Commande au comptoir) */
       return o.status === 'cooking' && sid === 'all' ? 'cooking' : 'new';
     }
     function kdsGroup(status) {
@@ -172,7 +172,7 @@
           ${kdsTypeChip(o)}
           <span class="kit-status">${isReady ? kkt(o.pickedUp ? 'order.served' : 'order.ready') : kkt(isNew ? 'order.new' : 'order.preparing')}</span>
         </div>
-        <ul class="kit-items">${items}</ul>
+        ${o.service ? `<div class="kit-following">${o.service === 'surplace' ? 'Sur place' : 'À emporter'}</div>` : ''}<ul class="kit-items">${items}</ul>${o.comment ? `<div class="kit-item kit-comment"><span class="kit-inote">${KDS_SVG.note}<span>${kdsEsc(o.comment)}</span></span></div>` : ''}
         ${Array.isArray(o.following) && o.following.length && !isReady ? `<div class="kit-following">À suivre · ${o.following.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ')}</div>` : ''}
         ${act}`;
     }

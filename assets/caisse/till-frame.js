@@ -148,11 +148,11 @@
         const sentAt = at ? String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') : '';
         const vrapLine = (l, i) => Object.assign(tillKitLine(l, i), wasSent ? { sent: true, sentAt, sentQty: 0 } : {});
         return { title, meta, lines: cart.map(vrapLine), discount: tillKitDiscount(vrapDiscount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0 };
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0, comment: counterCommentView() };
       }
       if (mode === 'order' && selectedId) {
         const order = tableOrders[selectedId] || [];
-        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0), more: tillKitOverflowRows().length > 0 };
+        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0), more: tillKitOverflowRows().length > 0, comment: counterCommentView() };
       }
       if (selectedId && tables[selectedId]) {
         const lines = generateOrder(selectedId, tables[selectedId]);
@@ -164,7 +164,7 @@
         const first = at.length ? new Date(Math.min(...at)) : null;
         const sentAt = first ? String(first.getHours()).padStart(2, '0') + ':' + String(first.getMinutes()).padStart(2, '0') : '';
         return { title, meta, lines: lines.map((l, i) => Object.assign(tillKitLine(l, i), l.sent ? { sentAt } : {})), discount: tillKitDiscount(tables[selectedId].discount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0 };
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0, comment: counterCommentView() };
       }
       return empty;
     }
@@ -432,6 +432,7 @@
       const pane = window.KiwiTillFrame.openPane('discount', { bill: { total: money(tg.gross) }, policy: {
         configured: !!(P && P.configured && P.configured()),
         percentages: (P && P.percentages && P.percentages()) || [5, 10, 15, 20],
+        presets: (P && P.presets && P.presets()) || [],   /* remises nommées : seules proposées */
       } });
       const cur = tg.target === 'vrap' ? vrapDiscount : tables[tg.tableId].discount;
       if (pane && pane.fresh) pane.fresh(cur ? { mode: cur.kind === 'amount' ? 'amount' : 'percent', value: Number(cur.value) || 0,
@@ -450,7 +451,7 @@
       const tg = tillKitDiscountTarget();
       if (!tg) return;
       Object.assign(remiseState, { target: tg.target, tableId: tg.tableId, gross: tg.gross,
-        kind: v.mode === 'amount' ? 'amount' : 'pct', value: Number(v.value) || 0, reason: TILL_KIT_REASON[v.reason] || 'Autre' });
+        kind: v.mode === 'amount' ? 'amount' : 'pct', value: Number(v.value) || 0, reason: (v.reason === 'preset' && v.presetName) || TILL_KIT_REASON[v.reason] || 'Autre' });
       window.KiwiTillFrame.closePane('discount');
       applyRemise();
       tillKitPaint();
@@ -987,6 +988,7 @@
           tillKitOpenPay();
           return;
         case 'add-items': click('#rp-add-items'); return;
+        case 'comment': counterCommentEdit(); return;   /* commentaire cuisine de la commande (counter-flow.js) */
         case 'split': tillKitOpenSplit(); return;
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;

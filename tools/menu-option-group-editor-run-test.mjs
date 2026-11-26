@@ -142,6 +142,7 @@ await ok('creating a group writes the name, then kind and requirement, then ever
   assert.deepEqual(plain(h.calls), [
     ['addOptGroup', 'Lait'], ['updateOptGroup', 'g-new', { kind: 'many', required: true }],
     ['addOptChoice', 'g-new', 'Lait', 1.5, '🥛'], ['addOptChoice', 'g-new', 'Avoine', 0, ''],
+    ['orderOptChoices', 'g-new', ['name:Lait', 'name:Avoine']],
   ]);
   assert.equal(h.closed(), 1); assert.equal(h.rendered(), 1);
 });
@@ -154,6 +155,7 @@ await ok('editing patches a saved choice with its fields only, adds a new one, a
     ['deleteOptChoice', 'g1', 'c2'],
     ['updateOptChoice', 'g1', 'c1', { name: 'Soja', price: 2, emoji: '' }],
     ['addOptChoice', 'g1', 'Amande', 0, ''],
+    ['orderOptChoices', 'g1', ['c1', 'name:Amande']],
   ]);
   assert.ok(!JSON.stringify(h.calls).includes('"el"'), 'the row element is never sent to the store');
 });

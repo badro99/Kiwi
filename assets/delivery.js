@@ -280,6 +280,8 @@
     fillP: { fr: 'Calcule le prix de chaque produit depuis son prix en salle, arrondi au dirham. Les prix déjà saisis ne bougent pas.', en: 'Works out each product\'s price from its dine-in price, rounded to the dirham. Prices already set stay as they are.', ar: 'يحسب سعر كل منتج من سعره في القاعة، مقرّبًا إلى الدرهم. الأسعار المحددة تبقى كما هي.' },
     fillGo: { fr: 'Appliquer', en: 'Apply', ar: 'تطبيق' },
     filled: { fr: '{n} prix remplis', en: '{n} prices filled', ar: 'تم ملء {n} سعر' },
+    products: { fr: 'Prix des produits', en: 'Product prices', ar: 'أسعار المنتجات' },
+    productsP: { fr: 'Une case vide : ce produit n\'est pas proposé sur cette plateforme. « Remplir les prix » remplit les cases vides depuis la salle.', en: 'An empty box: this product is not offered on that platform. « Fill prices » fills empty boxes from the dine-in price.', ar: 'خانة فارغة: هذا المنتج غير معروض على هذه المنصة. «ملء الأسعار» يملأ الخانات الفارغة من سعر القاعة.' },
     choices: { fr: 'Prix des suppléments', en: 'Extra prices', ar: 'أسعار الإضافات' },
     choicesP: { fr: 'Une case vide garde le prix de la salle.', en: 'An empty box keeps the dine-in price.', ar: 'الخانة الفارغة تحتفظ بسعر القاعة.' },
     save: { fr: 'Enregistrer', en: 'Save', ar: 'حفظ' },
@@ -327,6 +329,9 @@
       .concat(plats.filter((p) => !p.preset));
     const h = house(d);
     const groups = optGroups().filter((g) => g && Array.isArray(g.choices) && g.choices.some((ch) => num(ch.price)));
+    /* Les produits aussi, pas seulement les suppléments (Jon's Burgers, 26 nov.
+       2026) : le même prix que la fiche produit (« Prix par plateforme »). */
+    const products = menuItems().filter((it) => it && it.id && !it.archived && num(it.price) != null);
     const body = `<div class="kdl-set">
         <div class="kdl-h">${esc(tr(S.platforms))}</div>
         <div class="kdl-list" data-kdl-list>${shown.map(rowFor).join('')}</div>
@@ -341,6 +346,7 @@
             <div class="kf-help">${esc(tr(S.houseP))}</div>
           </div>
         </div>
+        ${products.length ? `<div class="kdl-h">${esc(tr(S.products))}</div><div class="kf-help">${esc(tr(S.productsP))}</div><div class="kdl-choices" data-kdl-products></div>` : ''}
         ${groups.length ? `<div class="kdl-h">${esc(tr(S.choices))}</div><div class="kf-help">${esc(tr(S.choicesP))}</div><div class="kdl-choices" data-kdl-choices></div>` : ''}
       </div>`;
     const saveBtn = `<button class="kb atlas" type="button" data-kdl-save>${esc(tr(S.save))}</button>`;
@@ -376,6 +382,18 @@
         }).join('')}</tr>`).join('')).join('') + '</tbody></table>' : '';
     }
     paintChoices();
+    const typed = {};
+    function paintProducts() {
+      const box = q('[data-kdl-products]');
+      if (!box) return;
+      const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
+      box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(tr(S.dineIn))}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
+        + products.map((it) => `<tr><td>${esc(it.name || '')}</td><td class="kdl-base">${num(it.price)}</td>${on.map((pid) => {
+          const k = it.id + '|' + pid, v = k in typed ? num(typed[k]) : priceOf(it.id, pid);
+          return `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="kf-input" data-kdl-item="${esc(it.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${esc(tr(S.notSold))}" aria-label="${esc((it.name || '') + ' · ' + pid)}"></td>`;
+        }).join('')}</tr>`).join('') + '</tbody></table>' : '';
+    }
+    paintProducts();
 
     root.addEventListener('click', (e) => {
       const sw = e.target.closest('[data-kdl-on],[data-kdl-house]');
@@ -385,7 +403,7 @@
         sw.setAttribute('aria-checked', String(on));
         const card = sw.closest('.kdl-card');
         if (card) card.classList.toggle('is-on', on);
-        if (sw.hasAttribute('data-kdl-on')) paintChoices();
+        if (sw.hasAttribute('data-kdl-on')) { keepTyped(); paintProducts(); paintChoices(); }
         return;
       }
       const add = e.target.closest('[data-kdl-add]');
@@ -416,12 +434,36 @@
         if (pct == null) { row.querySelector('[data-kdl-pct]').focus(); return; }
         commit(false);
         const n = bulkFill(pid, pct, menuItems(), false);
+        Object.keys(typed).forEach((k) => delete typed[k]);
+        paintProducts();
         try { K.toast(tr(S.filled).replace('{n}', n), { type: 'success' }); } catch (_) {}
         return;
       }
       if (e.target.closest('[data-kdl-save]')) { if (commit(true)) m.close(); }
     });
 
+    /* Les prix produits que la grille montre, posés sur le document : une case
+       vide retire le produit de cette plateforme, une case non affichée ne
+       change rien. */
+    function productPrices(next, now) {
+      const by = {};
+      root.querySelectorAll('[data-kdl-item]').forEach((inp) => {
+        const id = inp.getAttribute('data-kdl-item');
+        by[id] = by[id] || Object.assign({}, (next.prices[id] && next.prices[id].by) || {});
+        const v = num(inp.value);
+        if (v == null) delete by[id][inp.getAttribute('data-p')]; else by[id][inp.getAttribute('data-p')] = v;
+      });
+      next.prices = Object.assign({}, next.prices);
+      Object.keys(by).forEach((id) => {
+        const before = JSON.stringify((next.prices[id] && next.prices[id].by) || {});
+        if (before !== JSON.stringify(by[id])) next.prices[id] = { by: by[id], at: now };
+      });
+    }
+    /* Un interrupteur repeint la grille : ce qui était tapé reste à l'écran,
+       rien n'est enregistré avant « Enregistrer ». */
+    function keepTyped() {
+      root.querySelectorAll('[data-kdl-item]').forEach((inp) => { typed[inp.getAttribute('data-kdl-item') + '|' + inp.getAttribute('data-p')] = inp.value; });
+    }
     /* Enregistre ce que la fenêtre montre. `final` : ferme aussi le volet. */
     function commit(final) {
       const err = q('[data-kdl-err]');
@@ -454,6 +496,7 @@
       });
       next.choices = Object.assign({}, next.choices);
       Object.keys(ch).forEach((cid) => { next.choices[cid] = { by: ch[cid], at: now }; });
+      productPrices(next, now);
       Object.keys(pending).forEach((k) => delete pending[k]);
       save(next);
       setCommissions(com);

@@ -36,7 +36,7 @@
     return text;
   }
   const t=(str)=>window.KiwiMenuI18n?window.KiwiMenuI18n.t(str,lang()):str;
-  const icons={caisse:'calculate',menu:'menu',languages:'translate',station:'skillet',book:'menu_book',leaf:'eco',chart:'bar_chart',clock:'schedule',alert:'warning',tag:'sell',promo:'percent',plus:'add',edit:'edit',trash:'delete',archive:'archive',restore:'settings_backup_restore',more:'more_vert'};
+  const icons={caisse:'calculate',menu:'menu',languages:'translate',station:'skillet',book:'menu_book',leaf:'eco',chart:'bar_chart',clock:'schedule',alert:'warning',tag:'sell',promo:'percent',plus:'add',edit:'edit',trash:'delete',archive:'archive',restore:'settings_backup_restore',more:'more_vert',up:'arrow_upward',down:'arrow_downward'};
   const catalogText=(key,fr)=>window.KiwiCatalogUI?.text(key,fr)||fr;
   const catalogLabel=(key,fr)=>window.KiwiCatalogUI?.label(key,fr)||esc(fr);
   const catalogIcon=(name)=>`<img class="catalog-icon" draggable="false" src="assets/icons/material/${name}.svg" alt="" aria-hidden="true"/>`;
@@ -214,7 +214,7 @@
     const used=D().items.filter(x=>(x.opts||[]).includes(g.id)).length;
     const gName=t(g.name);
     const choicesHtml=(g.choices||[]).map(c=>`<span class="mi-group-opt-pill">${esc(c.emoji||'')} ${esc(t(c.name))}${c.price?` <span class="price">+${cash(c.price)}</span>`:''}</span>`).join('')||esc(ui('noChoices'));
-    return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${esc(g.required?ui('required'):ui('optional'))}</span><span class="mi-group-card-pill mode">${esc(g.kind==='many'?ui('manyChoices'):ui('oneChoice'))}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">${esc(ui('usedByCount', { n: used }))}</div><div class="mi-group-card-acts"><button data-activation=write class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} ${esc(ui('editGroup'))}</button><button data-activation=write class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} ${esc(ui('delete'))}</button></div></div>`;
+    return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${esc(g.required?ui('required'):ui('optional'))}</span><span class="mi-group-card-pill mode">${esc(g.kind==='many'?ui('manyChoices'):ui('oneChoice'))}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">${esc(ui('usedByCount', { n: used }))}</div><div class="mi-group-card-acts">${[['up',-1,'moveUp'],['down',1,'moveDown']].map(([k,dl,l])=>{const at=D().opts.findIndex(o=>o&&o.id===g.id)+dl;return `<button data-activation=write class="btn-slim" data-action="rmw-group-move" data-arg="${g.id}:${dl}" aria-label="${esc(ui(l))}: ${esc(gName)}" title="${esc(ui(l))}"${at<0||at>=D().opts.length?' disabled':''}>${ic(k)}</button>`;}).join('')}<button data-activation=write class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} ${esc(ui('editGroup'))}</button><button data-activation=write class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} ${esc(ui('delete'))}</button></div></div>`;
   }
   function menuPanel(){
     searchStyle();shellStyle();
@@ -806,7 +806,7 @@
      photo et ce qui décide de la visibilité à droite. Même feuille que
      l'éditeur de recette (rmw-recipe-modal) : opaque, un seul style de champ,
      des interrupteurs pour ce qui est oui ou non, des icônes Material. */
-  const IT_ICON={add:'M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z',close:'m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z',del:'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z',check:'M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z',photo:'M480-480ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h320v80H200v560h560v-320h80v320q0 33-23.5 56.5T760-120H200Zm40-160h480L570-480 450-320l-90-120-120 160Zm440-320v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z',image:'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z'};
+  const IT_ICON={up:'M440-160v-487L216-423l-56-57 320-320 320 320-56 57-224-224v487h-80Z',add:'M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z',close:'m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z',del:'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z',check:'M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z',photo:'M480-480ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h320v80H200v560h560v-320h80v320q0 33-23.5 56.5T760-120H200Zm40-160h480L570-480 450-320l-90-120-120 160Zm440-320v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z',image:'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z'};
   const itSvg=(k)=>`<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="${IT_ICON[k]}"/></svg>`;
   function openItem(x){
     const d=D();if(!d.cats.length){openCategory(null);return;}
@@ -952,7 +952,7 @@
     p.onclick=e=>{const b=e.target.closest('[data-emoji]');if(!b)return;const v=b.dataset.emoji||'';button.dataset.value=v;button.innerHTML=v?esc(v):itSvg('add');button.classList.toggle('has',!!v);close();button.focus();};
     p.querySelector('button')?.focus();
   }
-  function choiceRow(c){const price=+c?.price||0;return `<div class="rmw-og-row" data-choice data-id="${esc(c?.id||'')}"><button type="button" class="rmw-og-mark${c?.emoji?' has':''}" data-emoji-btn data-value="${esc(c?.emoji||'')}" aria-label="${esc(ui('ogMarkPick'))}">${c?.emoji?esc(c.emoji):itSvg('add')}</button><input class="rmw-rx-in" data-choice-name placeholder="${esc(ui('addChoicePlaceholder'))}" value="${esc(c?.name||'')}" aria-label="${esc(ui('ogChoiceName'))}" autocomplete="off"/><span class="rmw-rx-suffix"><input class="rmw-rx-in" type="number" min="0" step="0.01" inputmode="decimal" data-choice-price value="${price>0?price:''}" placeholder="0" aria-label="${esc(ui('ogSupplement'))}"/><i>MAD</i></span><button class="rmw-rx-del" type="button" data-choice-del aria-label="${esc(ui('ogRemoveChoice'))}">${itSvg('close')}</button></div>`;}
+  function choiceRow(c){const price=+c?.price||0;return `<div class="rmw-og-row" data-choice data-id="${esc(c?.id||'')}"><button type="button" class="rmw-og-mark${c?.emoji?' has':''}" data-emoji-btn data-value="${esc(c?.emoji||'')}" aria-label="${esc(ui('ogMarkPick'))}">${c?.emoji?esc(c.emoji):itSvg('add')}</button><input class="rmw-rx-in" data-choice-name placeholder="${esc(ui('addChoicePlaceholder'))}" value="${esc(c?.name||'')}" aria-label="${esc(ui('ogChoiceName'))}" autocomplete="off"/><span class="rmw-rx-suffix"><input class="rmw-rx-in" type="number" min="0" step="0.01" inputmode="decimal" data-choice-price value="${price>0?price:''}" placeholder="0" aria-label="${esc(ui('ogSupplement'))}"/><i>MAD</i></span><button class="rmw-rx-del rmw-og-up" type="button" data-choice-up aria-label="${esc(ui('moveUp'))}" title="${esc(ui('moveUp'))}">${itSvg('up')}</button><button class="rmw-rx-del" type="button" data-choice-del aria-label="${esc(ui('ogRemoveChoice'))}">${itSvg('close')}</button></div>`;}
   /* Option group editor (2026-10-12). Two selects, a French-only help line,
      unlabelled price boxes pre-filled with « 0 », and a « Enregistrer » that
      did nothing at all when the name or every choice was empty. Now: the two
@@ -990,7 +990,7 @@
     m.el.addEventListener('change',e=>{const s=e.target.closest('[data-og-seg]');if(!s)return;$$('.rmw-og-segi',s).forEach(l=>l.classList.toggle('on',!!$('input',l).checked));rule();});
     m.el.addEventListener('input',e=>{if(e.target===nameEl&&nameEl.value.trim())setErr('name','');if(e.target.matches('[data-choice-name]')&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');if(!$$('[data-choice-name][aria-invalid="true"]',wrap).length)setErr('choices','');}});
     $('[data-choice-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',choiceRow(null));$('[data-choice-name]',wrap.lastElementChild)?.focus();};
-    wrap.onclick=e=>{const del=e.target.closest('[data-choice-del]');if(del){const row=del.closest('[data-choice]');if($$('[data-choice]',wrap).length>1){const next=row.nextElementSibling||row.previousElementSibling;row.remove();$('[data-choice-name]',next)?.focus();}else{row.dataset.id='';$('[data-choice-name]',row).value='';$('[data-choice-price]',row).value='';const b=$('[data-emoji-btn]',row);b.dataset.value='';b.innerHTML=itSvg('add');b.classList.remove('has');$('[data-choice-name]',row).focus();}return;}const b=e.target.closest('[data-emoji-btn]');if(b)emojiPicker(b);};
+    wrap.onclick=e=>{const up=e.target.closest('[data-choice-up]');if(up){const row=up.closest('[data-choice]'),prev=row.previousElementSibling;if(prev&&prev.matches('[data-choice]'))wrap.insertBefore(row,prev);up.focus();return;}const del=e.target.closest('[data-choice-del]');if(del){const row=del.closest('[data-choice]');if($$('[data-choice]',wrap).length>1){const next=row.nextElementSibling||row.previousElementSibling;row.remove();$('[data-choice-name]',next)?.focus();}else{row.dataset.id='';$('[data-choice-name]',row).value='';$('[data-choice-price]',row).value='';const b=$('[data-emoji-btn]',row);b.dataset.value='';b.innerHTML=itSvg('add');b.classList.remove('has');$('[data-choice-name]',row).focus();}return;}const b=e.target.closest('[data-emoji-btn]');if(b)emojiPicker(b);};
     $('[data-cancel]',m.el).onclick=m.close;
     $('[data-save]',m.el).onclick=()=>{
       const name=nameEl.value.trim();
@@ -1006,6 +1006,7 @@
       let id=g?.id;
       if(g){S().updateOptGroup(id,{name,kind:kindV,required});(g.choices||[]).filter(c=>!rows.some(x=>x.id===c.id)).forEach(c=>S().deleteOptChoice(id,c.id));rows.forEach(x=>x.id?S().updateOptChoice(id,x.id,{name:x.name,price:x.price,emoji:x.emoji}):S().addOptChoice(id,x.name,x.price,x.emoji));}
       else{S().addOptGroup(name);id=D().opts.at(-1)?.id;S().updateOptGroup(id,{kind:kindV,required});rows.forEach(x=>S().addOptChoice(id,x.name,x.price,x.emoji));}
+      S().orderOptChoices?.(id,rows.map(x=>x.id||'name:'+x.name));
       m.close();render();
     };
     setTimeout(()=>{if(!g)nameEl.focus();},60);
@@ -1024,7 +1025,7 @@
 .rmw-og-segi input:focus-visible+span{box-shadow:0 0 0 2px var(--atlas)}
 .rmw-og-rule{display:flex;align-items:center;gap:9px;margin:14px 0 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--atlas) 7%,var(--rx-field));color:var(--n-700);font-size:12.5px;line-height:1.45}
 .rmw-og-rule::before{content:'';flex:none;width:6px;height:6px;border-radius:50%;background:var(--atlas)}
-.rmw-og-cols,.rmw-og-row{display:grid;grid-template-columns:44px minmax(0,1fr) 132px 32px;gap:8px;align-items:center}
+.rmw-og-cols,.rmw-og-row{display:grid;grid-template-columns:44px minmax(0,1fr) 132px 32px 32px;gap:8px;align-items:center}
 .rmw-og-cols{padding:0 2px 6px;border-bottom:1px solid var(--n-200);font-size:11px;font-weight:600;color:var(--n-500)}
 .rmw-og-row{padding:8px 0;border-bottom:1px solid var(--n-200)}
 .rmw-og-mark{width:44px;height:38px;display:grid;place-items:center;padding:0;border:1px dashed var(--n-300);border-radius:10px;background:var(--rx-field);color:var(--n-500);font-size:20px;line-height:1;cursor:pointer;transition:border-color 140ms,color 140ms}
@@ -1042,7 +1043,7 @@
 .rmw-emoji-pop{max-width:calc(100vw - 16px);box-sizing:border-box;background:var(--paper)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 html[data-theme="dark"] .rmw-emoji-pop{background:#151C18!important;border-color:rgba(255,255,255,.1)}
 .rmw-emoji-pop button:focus-visible{outline:2px solid var(--atlas);outline-offset:1px}
-@media(max-width:620px){.rmw-og-grid{grid-template-columns:1fr}.rmw-og-cols{display:none}.rmw-og-row{grid-template-columns:44px minmax(0,1fr) 32px;grid-template-areas:"mark name del" ". price .";row-gap:8px}.rmw-og-row>.rmw-og-mark{grid-area:mark}.rmw-og-row>[data-choice-name]{grid-area:name}.rmw-og-row>.rmw-rx-suffix{grid-area:price}.rmw-og-row>.rmw-rx-del{grid-area:del}.rmw-og .rmw-rx-in{font-size:16px}}
+@media(max-width:620px){.rmw-og-grid{grid-template-columns:1fr}.rmw-og-cols{display:none}.rmw-og-row{grid-template-columns:44px minmax(0,1fr) 32px 32px;grid-template-areas:"mark name up del" ". price price .";row-gap:8px}.rmw-og-row>.rmw-og-up{grid-area:up}.rmw-og-row>.rmw-og-mark{grid-area:mark}.rmw-og-row>[data-choice-name]{grid-area:name}.rmw-og-row>.rmw-rx-suffix{grid-area:price}.rmw-og-row>.rmw-rx-del{grid-area:del}.rmw-og .rmw-rx-in{font-size:16px}}
 `;document.head.appendChild(s);}
   const {recipeUnitOptions, recipeIngredientRow, recipeLineInfo, recipeNutrition, recipeSummary, recipeDraft, openRecipe} = window.KiwiMenuWorkspaceParts.recipes({$, $$, esc, ui, venue, cash, cat, t, modal, recipeStyle: (...args)=>recipeStyle(...args), toast, S, render, pct1});
   function confirm(title,run,detail=ui('confirmDeleteDefault')){const m=modal({title,width:440,body:`<p>${esc(detail)}</p>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="kb danger" data-confirm>${esc(ui('delete'))}</button>`});$('[data-cancel]',m.el).onclick=m.close;$('[data-confirm]',m.el).onclick=()=>{run();m.close();render();};}
@@ -1236,6 +1237,7 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-item-delete']=(_e,id)=>{const x=item(id);openItemMenu=null;if(x)confirm(ui('deleteItemConfirm', { name: x.name }),()=>S().deleteItem(id));};
     H['rmw-group-add']=()=>openGroup(null);
     H['rmw-group-edit']=(_e,id)=>openGroup(group(id));
+    H['rmw-group-move']=(_e,arg)=>{const k=String(arg).lastIndexOf(':');S().moveOptGroup(String(arg).slice(0,k),+String(arg).slice(k+1));render();};
     H['rmw-group-delete']=(_e,id)=>{const g=group(id);if(g)confirm(ui('deleteGroupConfirm', { name: g.name }),()=>S().deleteOptGroup(id));};
     H['rmw-station-add']=()=>ask(ui('addStationTitle'),ui('stationNameLabel'),'',v=>S().addStation(v));
     H['rmw-station-edit']=(_e,id)=>ask(ui('renameStationTitle'),ui('stationNameLabel'),station(id)?.name,v=>S().renameStation(id,v));

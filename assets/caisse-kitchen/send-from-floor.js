@@ -130,7 +130,7 @@
         total: lines.reduce((s, l) => s + l.price * l.qty, 0),
       };
       if (firing) order.course = 'suite';
-      if (following.length) order.following = kitchenItemsFromLines(following);
+      if (following.length) order.following = kitchenItemsFromLines(following); if (typeof counterStampOrder === 'function') counterStampOrder(order); /* commentaire de la table */
       /* La suite est partie : l'annonce « à suivre » des bons précédents de
          cette table n'a plus rien à annoncer. */
       if (firing) kdsOrders.forEach((o) => { if (o && o.following && String(o.table) === String(tableId)) delete o.following; });

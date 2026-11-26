@@ -246,6 +246,30 @@
       return d;
     });
   }
+  /* L'ordre des groupes et des choix se règle à la main (Jon's Burgers,
+   * 26 nov. 2026) : la caisse pose les groupes dans l'ordre de la carte, et
+   * chaque produit suit cet ordre dès qu'un groupe bouge. */
+  function moveOptGroup(id, delta) {
+    return store.update((d) => {
+      d.opts = optsOf(d);
+      const i = d.opts.findIndex((g) => g && g.id === id), j = i + delta;
+      if (i < 0 || j < 0 || j >= d.opts.length) return d;
+      d.opts.splice(j, 0, d.opts.splice(i, 1)[0]);
+      const at = (gid) => d.opts.findIndex((g) => g && g.id === gid);
+      (d.items || []).forEach((it) => { if (it && Array.isArray(it.opts) && it.opts.length > 1) it.opts = it.opts.slice().sort((a, b) => at(a) - at(b)); });
+      return d;
+    });
+  }
+  /* keys : l'ordre voulu, un identifiant de choix ou « name:<nom> » pour un
+   * choix qui vient d'être créé et n'avait pas encore d'identifiant. */
+  function orderOptChoices(gid, keys) {
+    return store.update((d) => {
+      const g = optById(d, gid); if (!g || !Array.isArray(keys)) return d;
+      const rank = (c) => { let k = keys.indexOf(c.id); if (k < 0) k = keys.indexOf('name:' + c.name); return k < 0 ? keys.length : k; };
+      g.choices = (g.choices || []).map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c);
+      return d;
+    });
+  }
   /* Les groupes portés par un produit, dans l'ordre de la carte — le comptoir
    * les posera dans cet ordre. Un identifiant qui ne correspond plus à rien est
    * écarté ici plutôt que de faire échouer la vente au comptoir. */
@@ -1184,6 +1208,6 @@
 
 
     const { saveFormulaTemplate, deleteFormulaTemplate } = createFormulas({ store, cleanFormula, nid });
-    return { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot };
+    return { store, catById, itemById, itemsIn, stationsOf, stationById, cleanFormula, kitchenIdOf, ensureKitchen, optsOf, optById, OPT_EMOJIS, cleanOptEmoji, saveFormulaTemplate, deleteFormulaTemplate, addStation, renameStation, cycleStationColor, moveStation, deleteStation, setCategoryStation, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts, moveOptGroup, orderOptChoices, addCategory, renameCategory, moveCategory, orderItems, deleteCategory, addSubcategory, renameSubcategory, deleteSubcategory, addItem, updateItem, setI18n, setI18nEntry, clearI18n, setLanguages, MI, promosOf, savePromo, deletePromo, deleteItem, publish, boot };
   };
 })(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});

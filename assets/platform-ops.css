@@ -8,3 +8,8 @@
 .kpf-upload{border:1px dashed var(--n-300);border-radius:18px;background:var(--paper-soft);padding:24px;text-align:center;transition:border-color 160ms,background 160ms}.kpf-upload.is-drag{border-color:var(--atlas);background:color-mix(in srgb,var(--atlas) 7%,var(--surface))}
 .kpf-progress{height:4px;border-radius:999px;background:var(--n-200);overflow:hidden;margin-top:12px}.kpf-progress i{display:block;height:100%;width:var(--progress,0%);background:var(--atlas);transition:width 180ms}
 @media(max-width:600px){.kpf-bars{gap:5px;overflow-x:auto}.kpf-bar{min-width:34px}.kpf-upload{padding:18px;border-radius:15px}}
+/* Pas de zoom involontaire sur tablette et téléphone (Jon's Burgers, 26 nov. 2026).
+   Safari agrandit la page dès qu'un champ de moins de 16 px prend le focus et ne
+   la rend pas ; deux appuis rapides zooment aussi. Le pincement reste permis. */
+html{touch-action:manipulation}
+@media (hover:none) and (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select{font-size:max(16px,1em)!important}}

@@ -1,5 +1,5 @@
 {
-  "sha256": "a6dbd759d574fa73d56ce5112f98c282fb4cbadd8a58e45b7e28bd19bc8ad27a",
+  "sha256": "2f023fe54811324673e3b3088f89e051698025a09a0b32bab4ab67ec365892ca",
   "imports": "import { createCorrections } from './planning/corrections.js';\nimport { createPayrollView } from './planning/payroll-view.js';\nimport { createOptimiser } from './planning/optimiser.js';\nimport { createCsvImport } from './planning/csv-import.js';\nimport { createShiftEditor } from './planning/shift-editor.js';\n",
   "bindings": "  const corrections = createCorrections({ Kiwi: Kiwi, dateLocale: dateLocale, esc: esc, fetchDeadline: fetchDeadline, handlers: handlers, pad: pad, render: render, toast: toast, trLang: trLang });\n  const payrollView = createPayrollView({ AVATAR_COLORS: AVATAR_COLORS, IC: IC, Kiwi: Kiwi, buildPeriod: buildPeriod, correctionsHtml: (...args) => corrections.correctionsHtml(...args), deferredMark: (...args) => corrections.deferredMark(...args), esc: esc, dateLocale: dateLocale, fmtHours: fmtHours, fmtMad: fmtMad, fmtPay: fmtPay, getHours: getHours, getMembers: getMembers, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, pad: pad, payCents: payCents, payrollFigures: payrollFigures, periodNavigatorHtml: periodNavigatorHtml, periodPillsHtml: periodPillsHtml, render: render, renderPlanningPane: renderPlanningPane, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, svgIcon: svgIcon, t: t, teamKey: teamKey, toISO: toISO, trLang: trLang });\n  const optimiser = createOptimiser({ esc: esc, handlers: handlers, memberFullName: memberFullName, modal: modal, planningContext: planningContext, planningCopy: planningCopy, planningHolidaysByDay: planningHolidaysByDay, planningHoursKey: planningHoursKey, render: render, saveCustomTeams: saveCustomTeams, t: t, toast: toast, trLang: trLang });\n  const csvImport = createCsvImport({ Kiwi: Kiwi, esc: esc, getMembers: getMembers, handlers: handlers, live: live, lockBucket: lockBucket, memberFullName: memberFullName, modal: modal, pad: pad, render: render, saveCustomTeams: saveCustomTeams, teamKey: teamKey, trLang: trLang });\n  const shiftEditor = createShiftEditor({ AVATAR_COLORS: AVATAR_COLORS, HHMM_RE: HHMM_RE, addDays: addDays, applyLiveTeam: applyLiveTeam, buildPeriod: buildPeriod, compactPeriods: compactPeriods, dateLocale: dateLocale, esc: esc, fmtDur: fmtDur, fmtHours: fmtHours, fmtPay: fmtPay, fromISO: fromISO, getMembers: getMembers, getShifts: getShifts, handlers: handlers, hourlyPayFor: hourlyPayFor, initials: initials, jobName: jobName, live: live, memberFullName: memberFullName, normShift: normShift, payCents: payCents, saveCustomTeams: saveCustomTeams, shiftHours: shiftHours, shiftIsNextDay: shiftIsNextDay, shiftMinutes: shiftMinutes, t: t, teamKey: teamKey, toISO: toISO, toast: toast, trLang: trLang, visibleDays: visibleDays });\n  function deferredMark(...args) { return corrections.deferredMark(...args); }\n  function correctionsHtml(...args) { return corrections.correctionsHtml(...args); }\n  function renderHoursPane(...args) { return payrollView.renderHoursPane(...args); }\n  function updateHourTotals(...args) { return payrollView.updateHourTotals(...args); }\n  function payTiles(...args) { return payrollView.payTiles(...args); }\n  function payrollAccess(...args) { return payrollView.payrollAccess(...args); }\n  function renderPayrollBody(...args) { return payrollView.renderPayrollBody(...args); }\n  function renderCommissionsPane(...args) { return payrollView.renderCommissionsPane(...args); }\n  function commissionsOn(...args) { return payrollView.commissionsOn(...args); }\n  function commissionsLabel(...args) { return payrollView.commissionsLabel(...args); }\n  function forgetCommissions(...args) { return payrollView.forgetCommissions(...args); }\n  function fairScheduleCopy(...args) { return optimiser.fairScheduleCopy(...args); }\n  function optimizationCopy(...args) { return optimiser.optimizationCopy(...args); }\n  function closeShiftPop(...args) { return shiftEditor.closeShiftPop(...args); }\n  function planCellHtml(...args) { return shiftEditor.planCellHtml(...args); }\n  function planDaysHtml(...args) { return shiftEditor.planDaysHtml(...args); }\n  function shiftCellInner(...args) { return shiftEditor.shiftCellInner(...args); }\n  function shiftCellTitle(...args) { return shiftEditor.shiftCellTitle(...args); }\n\n",
   "anchor": "  /* Paie & planning ouvre sur le PLANNING",
@@ -110,22 +110,22 @@
           "length": 6912
         },
         {
-          "start": 59647,
-          "end": 64282,
+          "start": 59619,
+          "end": 64254,
           "marker": "  /* planning-part:payroll-view:2 */\n",
           "offset": 9740,
           "length": 4635
         },
         {
-          "start": 84643,
-          "end": 85367,
+          "start": 84615,
+          "end": 85339,
           "marker": "  /* planning-part:payroll-view:3 */\n",
           "offset": 14376,
           "length": 724
         },
         {
-          "start": 117856,
-          "end": 121921,
+          "start": 117828,
+          "end": 121893,
           "marker": "  /* planning-part:payroll-view:4 */\n",
           "offset": 15101,
           "length": 4065
@@ -169,16 +169,16 @@
       "fragments": [
         {
           "start": 21377,
-          "end": 34047,
+          "end": 34019,
           "marker": "  /* planning-part:optimiser:0 */\n",
           "offset": 616,
-          "length": 12670
+          "length": 12642
         },
         {
-          "start": 98411,
-          "end": 99958,
+          "start": 98383,
+          "end": 99930,
           "marker": "  /* planning-part:optimiser:1 */\n",
-          "offset": 13287,
+          "offset": 13259,
           "length": 1547
         }
       ]
@@ -211,8 +211,8 @@
       "suffix": "\n  return Object.freeze({  });\n}\n",
       "fragments": [
         {
-          "start": 73779,
-          "end": 82741,
+          "start": 73751,
+          "end": 82713,
           "marker": "  /* planning-part:csv-import:0 */\n",
           "offset": 452,
           "length": 8962
@@ -277,22 +277,22 @@
       "suffix": "\n  return Object.freeze({ closeShiftPop, planCellHtml, planDaysHtml, shiftCellInner, shiftCellTitle, isShiftPopOpen: () => !!shiftPop, });\n}\n",
       "fragments": [
         {
-          "start": 47043,
-          "end": 47256,
+          "start": 47015,
+          "end": 47228,
           "marker": "  /* planning-part:shift-editor:0 */\n",
           "offset": 1031,
           "length": 213
         },
         {
-          "start": 47458,
-          "end": 59646,
+          "start": 47430,
+          "end": 59618,
           "marker": "  /* planning-part:shift-editor:1 */\n",
           "offset": 1245,
           "length": 12188
         },
         {
-          "start": 86086,
-          "end": 92421,
+          "start": 86058,
+          "end": 92393,
           "marker": "  /* planning-part:shift-editor:2 */\n",
           "offset": 13434,
           "length": 6335

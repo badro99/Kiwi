@@ -508,6 +508,8 @@
                 ${settingsRow('receipt_long', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
                 ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || methodsSaved() || tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' })), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
                 ${settingsRow('percent', tr({ fr: 'Pourcentages de remise', en: 'Discount percentages', ar: 'نسب التخفيض' }), escape((window.KiwiDiscountPolicy?.percentages?.(vd?.id) || [5,10,15,20]).map(n => n + ' %').join(' · ')), { action: 'settings-discounts' })}
+                ${settingsRow('sell', tr({ fr: 'Remises nommées', en: 'Named discounts', ar: 'تخفيضات بأسماء' }), escape((window.KiwiDiscountPolicy?.presets?.(vd?.id) || []).map(p => p.name + ' ' + p.pct + ' %').join(' · ') || tr({ fr: 'Aucune · la caisse propose les pourcentages', en: 'None · the till offers the percentages', ar: 'لا شيء · الصندوق يقترح النسب' })), { action: 'settings-discount-presets' })}
+                ${(window.KiwiVenue?.getVenueType?.() || 'restaurant') === 'restaurant' ? settingsRow('storefront', tr({ fr: 'Commande au comptoir', en: 'Counter ordering', ar: 'الطلب في الكونتوار' }), escape(((f) => [f.payToKitchen && tr({ fr: 'Encaisser envoie en cuisine', en: 'Paying sends to the kitchen', ar: 'الدفع يرسل للمطبخ' }), f.typeAtPay && tr({ fr: 'Sur place ou à emporter au paiement', en: 'Eat in or take away at payment', ar: 'فالمحل أو للدار عند الدفع' }), f.direct && tr({ fr: 'Cuisine directe', en: 'Kitchen starts at once', ar: 'المطبخ يبدا دغيا' })].filter(Boolean).join(' · ') || tr({ fr: 'Envoyer en cuisine, puis encaisser', en: 'Send to kitchen, then charge', ar: 'صيفط للمطبخ، ومن بعد خلّص' }))(window.KiwiDiscountPolicy?.counterFlow?.(vd?.id) || {})), { action: 'settings-counter-flow' }) : ''}
                 ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(currencyLabel(getSet('currency', 'MAD'))), { action: 'settings-currency' })}
               </div>
             </div>
@@ -922,6 +924,9 @@
       });
     },
 
+    /* Paramètres › Caisse & Reçu : remises nommées, commande au comptoir (assets/till-policy-settings.js, chargé au premier usage). */
+    'settings-discount-presets': () => import('../till-policy-settings.js?v=1').then((m) => m.openPresets()).catch(() => toast('Réglage indisponible, rechargez la page', { type: 'warn' })),
+    'settings-counter-flow': () => import('../till-policy-settings.js?v=1').then((m) => m.openCounterFlow()).catch(() => toast('Réglage indisponible, rechargez la page', { type: 'warn' })),
     'settings-discounts': () => {
       const policy = window.KiwiDiscountPolicy;
       if (!policy) { toast('Réglage indisponible, rechargez la page', { type: 'warn' }); return; }

@@ -5,8 +5,17 @@
 import stockTestSource from './stock-test-source.cjs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { createRequire } from 'node:module';
 
-const source = stockTestSource();
+/* stock-test-source rebuilds the pre-split stock.js, and its replay of recorded
+   edits rewinds this very change (the proof keeps the shipped getSup as an
+   edit). Re-apply that one edit so the test reads the getSup that ships. */
+const split = createRequire(import.meta.url)('./fixtures/stock-controller/split.json');
+const supEdit = split.edits.find((e) => e.after.includes('suppliers in Approvisionnement'));
+assert.ok(supEdit, 'the shipped getSup edit is recorded in the stock split proof');
+let source = stockTestSource();
+assert.ok(source.includes(supEdit.before), 'the rebuilt stock source holds the rewound getSup line');
+source = source.replace(supEdit.before, () => supEdit.after);
 const data = new Map();
 const procurement = {
   doc() {

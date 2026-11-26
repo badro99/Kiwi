@@ -443,7 +443,7 @@
           pickedUpAt: o.status === 'served' ? vrapHandoverTime(vrapHandoverTimestamp(o.served_ts)) : null,
           total: o.total || 0,
         };
-        kdsOrders.push(t);
+        if (typeof counterFromQueue === 'function') counterFromQueue(t, o.lines); kdsOrders.push(t); /* commentaire et service d'un autre écran */
         opTickets.set(o.id, t);
         /* Un seul poste, choisi comme hub d'impression, reçoit les bons saisis
            sur le téléphone serveur, une autre caisse ou OrderPro. Les bons en
