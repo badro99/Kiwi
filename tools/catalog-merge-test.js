@@ -503,6 +503,8 @@ async function storageFailureIsSaid() {
   eq(cat.listVariants(pid)[0].stock, 4, 'la baisse de stock reste en mémoire');
   ok(heard >= 1, 'les abonnés sont prévenus du changement');
   ok(cat.durable() === false, 'durable() dit que la baisse ne vit qu\'en mémoire');
+  /* La surface n'est prévenue qu'après la réponse du second puits (ici absent). */
+  await new Promise((r) => setTimeout(r, 20));
   const said = events.filter((e) => e.type === 'kiwi:local-save');
   ok(said.length === 1 && said[0].detail && said[0].detail.store === 'catalog' && said[0].detail.durable === false,
     'un événement kiwi:local-save { durable:false } prévient la surface : ' + JSON.stringify(said.map((e) => e.detail)));

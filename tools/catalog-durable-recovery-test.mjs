@@ -58,8 +58,8 @@ let b = browser(idb, ls); const { p, v } = create(b.K);
 assert.equal(b.K.durable(), false, 'not durable before transaction commit');
 await settle();
 assert.equal(b.K.durable(), true, 'durable after IDB transaction commit');
-assert.equal(b.events[0].durable, false); assert.equal(b.events.at(-1).durable, true);
-assert.ok(b.events.every(e => e.store === 'catalog' && e.key === b.K._key));
+// Le second puits a pris : la surface n'entend rien (ni « non enregistré », ni « de nouveau »).
+assert.deepEqual(b.events, [], 'no local-save noise when IndexedDB keeps the copy');
 b = browser(idb, ls); let renders = 0; b.K.subscribe(() => renders++); await settle();
 assert.equal(b.K.getProduct(p.id).product.name, p.name);
 assert.equal(b.K.listVariants(p.id)[0].stock, 7);
@@ -70,7 +70,7 @@ ls.refusing = false; b = browser(idb, ls); await settle();
 assert.equal(JSON.parse(ls.getItem(b.K._key)).variants[0].stock, 7);
 const read = () => new Promise(resolve => { const r = idb.open('kiwi-catalog', 1); r.onsuccess = () => { const tx = r.result.transaction('docs', 'readonly'); const q = tx.objectStore('docs').get(b.K._key); q.onsuccess = () => resolve(q.result); }; });
 assert.equal(await read(), undefined, 'fallback removed after localStorage recovery');
-for (const unavailable of [undefined, { open() { throw Error('refused'); } }, shim(true)]) { const x = browser(unavailable, storage()); create(x.K); await settle(); assert.equal(x.K.durable(), false); }
+for (const unavailable of [undefined, { open() { throw Error('refused'); } }, shim(true)]) { const x = browser(unavailable, storage()); create(x.K); await settle(); assert.equal(x.K.durable(), false); assert.equal(x.events.length, 1, 'said once when nothing keeps the stock'); assert.equal(x.events[0].durable, false); assert.ok(x.events.every(e => e.store === 'catalog' && e.key === x.K._key)); }
 // Switch while both reads and writes are still pending, including A -> B -> A.
 const switchedDisk = makeIDB(), switchedLS = storage();
 const switched = browser(switchedDisk, switchedLS);
