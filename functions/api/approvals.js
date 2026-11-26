@@ -19,7 +19,7 @@ import { sessionPerson } from './_permissions.js';
 import { sendApnsToTokens } from './push/_dispatch.js';
 import {
   APPROVAL_ID_RE, EMPLOYEE_KINDS, MAX_PENDING, MAX_PER_MINUTE, cleanRequest, cleanSettings, ensureApprovalTables, grantFor,
-  loadApproval, needsApproval, newApprovalId, publicRow, pushMessage, readSettings, trustedRequest,
+  loadApproval, needsApproval, newApprovalId, publicRow, pushMessage, readSettings, trustedRequest, approvalsEnabled,
 } from './_owner-approvals.js';
 
 const TOKEN_RE = /^[0-9a-fA-F]{64,200}$/;
@@ -74,6 +74,7 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const merchant = slugOf(url.searchParams.get('merchant'));
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (!approvalsEnabled(merchant)) return json({ error: 'not-enabled' }, 404);
   const till = await tillFor(request, env, merchant);
   const owner = till ? null : await ownerFor(request, env, merchant);
   const waiter = till || owner ? null : await waiterFor(request, env, merchant);
@@ -118,6 +119,7 @@ export async function onRequestPost({ request, env }) {
   if (!body || typeof body !== 'object') return json({ error: 'bad-body' }, 400);
   const merchant = slugOf(body.merchant);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (!approvalsEnabled(merchant)) return json({ error: 'not-enabled' }, 404);
   const action = String(body.action || '');
   const now = Date.now();
   try {

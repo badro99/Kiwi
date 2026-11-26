@@ -94,7 +94,9 @@
     if (vars) Object.keys(vars).forEach(function (k) { s = s.replace('{' + k + '}', vars[k]); });
     return s;
   }
-  function merchant() { try { return String((window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant()) || '').trim().toLowerCase(); } catch (_) { return ''; } }
+  /* Browse seulement (patron, 26 nov. 2026), comme functions/api/_owner-approvals.js (APPROVAL_SHOPS). */
+  var SHOPS = ['browse'];
+  function merchant() { try { var m = String((window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant()) || '').trim().toLowerCase(); return SHOPS.indexOf(m) >= 0 ? m : ''; } catch (_) { return ''; } }
   function ownerRole() { try { var F = window.KiwiFeatureTruth; return !F || !F.role || F.role() === 'owner'; } catch (_) { return false; } }
   function toast(msg, type) { try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(msg, { type: type || 'info' }); } catch (_) {} }
   function mad(cents) {

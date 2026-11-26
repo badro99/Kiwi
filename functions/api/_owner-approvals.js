@@ -82,6 +82,11 @@ export async function ensureApprovalTables(db) {
 
 export const DEFAULT_SETTINGS = Object.freeze({ cashOut: false, cancel: false, managerFallback: true, minCents: 0 });
 
+/* Browse seulement (patron, 26 nov. 2026 : « personne d'autre n'en veut »). Ailleurs
+   rien n'est jamais demandé au patron et aucune table d'accord n'est lue. */
+export const APPROVAL_SHOPS = new Set(['browse']);
+export const approvalsEnabled = (merchant) => APPROVAL_SHOPS.has(String(merchant || '').trim().toLowerCase());
+
 export function settingsFromRow(row) {
   if (!row) return { ...DEFAULT_SETTINGS };
   return { cashOut: Number(row.cash_out) === 1, cancel: Number(row.cancel) === 1,
@@ -89,6 +94,7 @@ export function settingsFromRow(row) {
 }
 
 export async function readSettings(env, merchant) {
+  if (!approvalsEnabled(merchant)) return { ...DEFAULT_SETTINGS };
   await ensureApprovalTables(env.DB);
   const row = await env.DB.prepare('SELECT cash_out, cancel, manager_fallback, min_cents FROM owner_approval_settings WHERE merchant = ?')
     .bind(merchant).first();

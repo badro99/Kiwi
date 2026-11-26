@@ -25,7 +25,11 @@ const between = (text, tag) => {
   assert.ok(a >= 0 && b > a, 'marker ' + tag);
   return text.slice(a + ('/* <<split:' + tag + '>> */\n').length, b);
 };
-const H = between(part('handlers'), 'handlers');
+/* Deliberate changes since the move, put back before the byte comparison:
+ * owner approvals are Browse's only (26 Nov 2026, owner-approvals-test J1-J5). */
+const SINCE_MOVE = [["${window.KiwiEnv?.isReal?.() && String(window.KiwiLive?.merchant?.() || '').trim().toLowerCase() === 'browse' ? settingsRow('verified_user'",
+  "${window.KiwiEnv?.isReal?.() ? settingsRow('verified_user'"]];
+const H = SINCE_MOVE.reduce((acc, [now, then]) => { assert.equal(acc.split(now).length, 2, 'one deliberate change: ' + now.slice(0, 40)); return acc.replace(now, () => then); }, between(part('handlers'), 'handlers'));
 const [P1, P2] = between(part('helpers'), 'helpers').split('/* <<split:escape>> */\n');
 const block = core.match(/  \/\* <<split:moved>>[\s\S]*?<\/split:moved>> \*\/\n/);
 assert.ok(block, 'core marks the moved block once');

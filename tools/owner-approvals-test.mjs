@@ -44,7 +44,7 @@ const DB = {
 };
 const SECRET = 'synthetic-owner-approvals-only';
 const env = { DB, AUTH_SECRET: SECRET };
-const SHOP = 'approvals-fixture', OTHER = 'approvals-other';
+const SHOP = 'browse', OTHER = 'approvals-other';   // Browse is the only shop with owner approvals (26 Nov)
 const now = Date.now();
 sqlite.prepare("INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES ('acc-p','p@shop.ma','P','Shop','00','00',?)").run(now);
 sqlite.prepare("INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES ('acc-x','x@shop.ma','X','Other','00','00',?)").run(now);
@@ -515,6 +515,19 @@ let saleApproval, lineApproval;
   ok('I1 le panneau s\'installe', win.KiwiOwnerApprovals && typeof win.KiwiOwnerApprovals.open === 'function' && typeof win.KiwiOwnerApprovals.focus === 'function');
   const src = fs.readFileSync(path.join(ROOT, 'assets/owner-approvals.js'), 'utf8');
   ok('I2 le panneau n\'écrit aucun texte de demande en HTML', !/innerHTML/.test(src));
+}
+
+/* ── J · Browse seulement (patron, 26 nov. 2026) ── */
+{
+  const otherCookie = `${AUTH.TILL_COOKIE}=${await AUTH.tillToken(SECRET, OTHER)}`;
+  const set = await APPROVALS.onRequestPost({ request: req('/api/approvals', ownerCookie, { merchant: OTHER, action: 'settings', settings: { cashOut: true, cancel: true } }), env });
+  ok('J1 un autre commerce ne peut pas allumer les accords', set.status === 404 && (await set.json()).error === 'not-enabled');
+  const list = await APPROVALS.onRequestGet({ request: req('/api/approvals?merchant=' + OTHER + '&list=1', otherCookie), env });
+  ok('J2 ni lister des demandes', list.status === 404);
+  ok('J3 ses réglages restent éteints sans lire de table', JSON.stringify(await LIB.readSettings({ DB: null }, OTHER)) === JSON.stringify(LIB.DEFAULT_SETTINGS));
+  const gate = await LIB.ownerGate({ DB: null }, OTHER, { kind: 'cash-out', amountCents: 50000 });
+  ok('J4 une sortie d\'espèces chez lui passe sans accord', gate && gate.ok === true);
+  ok('J5 Browse, et lui seul, a les accords', LIB.approvalsEnabled('browse') && LIB.approvalsEnabled(' Browse ') && !LIB.approvalsEnabled(OTHER) && !LIB.approvalsEnabled(''));
 }
 
 console.log(`✓ owner-approvals-test : ${checks} vérifications (réglages du patron, montant relu au serveur, accord lié à la ligne et à la vente, preuve signée de la sortie)`);
