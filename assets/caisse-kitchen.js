@@ -2601,7 +2601,7 @@
           status: (isTakeaway && o.status === 'pending') ? 'held'
                 : (o.status === 'ready' ? 'ready' : 'new'),
           readyAt: o.status === 'ready' ? kdsNowHM() : null,
-          items: (o.lines || []).map(opKdsItem),
+          items: (o.lines || []).map(l => opKdsItem(l)),
           billItems: (o.lines || []).filter(l => l.kind !== 'formula-part').map(l => ({
             q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0, note: l.note || '',
             visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
