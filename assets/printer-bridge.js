@@ -998,7 +998,7 @@
     if (pairingLoad) return pairingLoad;
     pairingLoad = new Promise(function (resolve, reject) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-ui.js?v=17';
+      script.src = '/assets/printer/pairing-ui.js?v=18';
       function failed() {
         pairingLoad = null;
         script.remove();
@@ -1018,7 +1018,7 @@
     if (langLoad) return langLoad;
     langLoad = new Promise(function (resolve) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-lang.js?v=27';
+      script.src = '/assets/printer/pairing-lang.js?v=28';
       script.onload = function () { resolve(); };
       script.onerror = function () { langLoad = null; script.remove(); resolve(); };
       document.head.appendChild(script);
@@ -1099,7 +1099,7 @@
       if (name === 'kiwi:receipt-print') { if (event.detail.ok !== false) return; }
       else if (!(event.detail.count || event.detail.recoverable)) return;
       if (!loading) loading = new Promise(function (resolve) {
-        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=10';
+        var script = document.createElement('script'); script.src = '/assets/caisse-print-recovery.js?v=11';
         script.onload = function () { script.id = 'caisse-print-recovery-script'; resolve(); };
         script.onerror = function () { loading = null; script.remove(); };
         document.head.appendChild(script);

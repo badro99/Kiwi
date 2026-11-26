@@ -198,6 +198,11 @@
     var socket = nativeSocket();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
     var isLabel = (context.kind || 'label') === 'label';
+    /* « Voir les tickets non imprimés » (caisse-print-recovery.js) ouvre ce
+       panneau sur la liste elle-même. Avant, il s'ouvrait sur les réglages de
+       connexion et la liste dormait, repliée, dans la section du relais :
+       Mabs Outfitters, 26 nov. 2026, quatre tickets introuvables. */
+    var recovery = context.kind === 'recovery';
     /* The Kiwi Pro app's web view has no Web Bluetooth (WKWebView never, the
        Android WebView neither): offering "Rechercher une imprimante Bluetooth"
        there only ended on "utilisez Chrome". In the app, the printer is the
@@ -227,6 +232,11 @@
           (context.onBrowserPrint ? '<button data-activation=write class="kpr-btn kpr-browser" type="button" id="kpr-browser">' + tr(inApp ? 'Imprimer ou partager le PDF' : 'Imprimer') + '</button>' : '') +
           (context.onSavePdf ? '<button data-activation=write class="kpr-btn kpr-pdf" type="button" id="kpr-savepdf">' + tr('Enregistrer en PDF') + '</button>' : '') +
         '</div>' : '') +
+        (recovery ? '<section class="kpr-bt" id="kpr-unprinted">' +
+          '<h3>' + ic('receipt_long') + tr('Tickets non imprimés') + '</h3>' +
+          '<p id="kpr-unprinted-t">' + tr('Recherche des tickets non imprimés…') + '</p>' +
+          '<div id="kpr-unprinted-list" class="kpr-note"></div>' +
+        '</section>' : '') +
         (showBt ? '<div class="kpr-bt">' +
           '<h3>' + ic('bluetooth') + tr('Imprimante Bluetooth') + '</h3>' +
           '<p>' + tr('Sans installation. Kiwi imprime le reçu directement.') + '</p>' +
@@ -343,7 +353,7 @@
         label: { w: Number(lv[0]) || 50, h: Number(lv[1]) || 20 },
       };
     }
-    function close() { ov.remove(); }
+    function close() { ov.remove(); if (recovery) { try { window.dispatchEvent(new CustomEvent('kiwi:print-unprinted-reviewed', { detail: { closed: true } })); } catch (_) {} } }
     /* La caisse n'a pas window.Kiwi.toast : sans repli, chaque « Tester » du
        modal serait muet au comptoir · la surface qui s'en sert vraiment. */
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); else fallbackNotice(msg); } catch (_) {} }
@@ -711,6 +721,61 @@
       var sec = Math.round((Date.now() - ts) / 1000);
       return sec < 60 ? 'vu à l’instant' : sec < 3600 ? 'vu il y a ' + Math.round(sec / 60) + ' min' : 'vu il y a ' + Math.round(sec / 3600) + ' h';
     }
+    /* Une ligne « non imprimé » du relais, avec « Réimprimer » : le serveur
+       garde le ticket 24 h et en dépose une copie neuve. */
+    function relayJobRow(job, onDone) {
+      var row = document.createElement('div'); row.className = 'kpr-relay-row';
+      var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
+      var unsure = job.status === 'uncertain';
+      var words = dict ? [dict[unsure ? 'print.uncertain' : 'print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say(unsure ? 'Impression incertaine' : 'Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
+      row.innerHTML = '<span>' + esc(words[0] + ' · ' + unprintedWhat(job)) + '</span><button type="button">' + words[1] + '</button>';
+      row.querySelector('button').onclick = function () {
+        var btn = this; btn.disabled = true;
+        function failed() {
+          btn.disabled = false;
+          var error = row.querySelector('[role="alert"]');
+          if (!error) { error = document.createElement('small'); error.setAttribute('role', 'alert'); row.appendChild(error); }
+          error.textContent = words[2];
+        }
+        relayFetch('/jobs' + relayMerchantQS(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reprint-expired', id: job.id }) }).then(function (answer) {
+          if (answer.j && answer.j.ok) { row.remove(); if (onDone) onDone(); } else failed();
+        }).catch(failed);
+      };
+      return row;
+    }
+    /* La liste du mode « recovery » : les tickets que le serveur garde (relais,
+       toute sorte : reçu, bon, étiquette) et ceux que la file de CE poste a
+       mis de côté (kitchen-print-queue.js). Le compte restant part à l'alerte
+       de la caisse, qui s'éteint quand tout est ressorti. */
+    function paintUnprinted() {
+      var t = $('#kpr-unprinted-t'), list = $('#kpr-unprinted-list');
+      if (!t || !list) return;
+      var K = window.KiwiKitchenPrint;
+      var tell = function () {
+        var left = list.querySelectorAll('.kpr-relay-row').length;
+        t.textContent = left ? tr('Vérifiez que l’imprimante est allumée et sur le réseau, puis touchez « Réimprimer ».')
+          : context.receipts ? tr('Ces reçus ne sont pas sortis sur l’imprimante de cette caisse · réimprimez-les depuis « Vendus ».')
+          : tr('Aucun ticket en attente · tout est sorti.');
+        try { window.dispatchEvent(new CustomEvent('kiwi:print-unprinted-reviewed', { detail: { remaining: left } })); } catch (_) {}
+      };
+      var local = [];
+      try { local = (K && typeof K.recoverList === 'function') ? K.recoverList() : []; } catch (_) {}
+      local.forEach(function (x) {
+        var row = document.createElement('div'); row.className = 'kpr-relay-row';
+        row.innerHTML = '<span>' + esc(say('Non imprimé') + ' · ' + unprintedWhat({ kind: x.type, id: '', created_ts: x.createdAt }) + (x.label ? ' · ' + x.label : '')) + '</span><button type="button">' + esc(say('Réimprimer')) + '</button>';
+        row.querySelector('button').onclick = function () {
+          var reply = null; try { reply = K.reprintDropped(x.id); } catch (_) {}
+          if (reply && reply.accepted) { row.remove(); tell(); } else this.textContent = say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.');
+        };
+        list.appendChild(row);
+      });
+      relayFetch('/jobs' + relayMerchantQS()).then(function (r) {
+        if (!ov.isConnected) return;
+        if (!r.j || !r.j.ok) { t.textContent = tr('Liste indisponible hors connexion · réessayez dans un instant.'); return; }
+        (r.j.jobs || []).forEach(function (job) { list.appendChild(relayJobRow(job, tell)); });
+        tell();
+      }, function () { if (ov.isConnected) t.textContent = tr('Liste indisponible hors connexion · réessayez dans un instant.'); });
+    }
     function paintRelay() {
       var st = $('#kpr-relay-status'), t = $('#kpr-relay-status-t'), list = $('#kpr-relay-list'), local = $('#kpr-relay-pair-local');
       if (!st) return Promise.resolve(null);
@@ -731,26 +796,8 @@
         });
         relayFetch('/jobs' + relayMerchantQS()).then(function (r) {
           if (!ov.isConnected || !r.j || !r.j.ok) return;
-          (r.j.jobs || []).forEach(function (job) {
-            var row = document.createElement('div'); row.className = 'kpr-relay-row';
-            var i18n = window.KiwiI18n, dict = i18n && i18n.T[i18n.getLang()];
-            var unsure = job.status === 'uncertain';
-            var words = dict ? [dict[unsure ? 'print.uncertain' : 'print.notPrinted'], dict['print.reprint'], dict['print.recoveryFailed']] : [say(unsure ? 'Impression incertaine' : 'Non imprimé'), say('Réimprimer'), say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.')];
-            row.innerHTML = '<span>' + esc(words[0] + ' · ' + unprintedWhat(job)) + '</span><button type="button">' + words[1] + '</button>';
-            row.querySelector('button').onclick = function () {
-              var btn = this; btn.disabled = true;
-              function failed() {
-                btn.disabled = false;
-                var error = row.querySelector('[role="alert"]');
-                if (!error) { error = document.createElement('small'); error.setAttribute('role', 'alert'); row.appendChild(error); }
-                error.textContent = words[2];
-              }
-              relayFetch('/jobs' + relayMerchantQS(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reprint-expired', id: job.id }) }).then(function (answer) {
-                if (answer.j && answer.j.ok) row.remove(); else failed();
-              }).catch(failed);
-            };
-            list.appendChild(row);
-          });
+          if (recovery) return;   // la liste est en tête du panneau (paintUnprinted)
+          (r.j.jobs || []).forEach(function (job) { list.appendChild(relayJobRow(job)); });
         });
         // Le pont local n'est pas encore relais : on peut l'associer d'un clic, sans code à taper.
         if (local) local.style.display = (localPing && localPing.relay && !localPing.relay.paired) ? '' : 'none';
@@ -827,6 +874,7 @@
     });
 
     $('#kpr-close').addEventListener('click', close);
+    if (recovery) paintUnprinted();
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     $('#kpr-save').addEventListener('click', function () {
       var f = readForm();

@@ -54,7 +54,7 @@ var SHELL = [
   '/assets/hotel-economat-outbox.js?v=24',
   '/assets/tickets-recovery.js?v=5',
   '/assets/clients-audit.js?v=8',
-  '/assets/caisse-print-recovery.js?v=10',
+  '/assets/caisse-print-recovery.js?v=11',
   '/assets/printer-health.js?v=3',
   '/assets/printer/station-backup.js?v=3',
   '/assets/printer/print-diag.js?v=2',
@@ -79,7 +79,7 @@ var SHELL = [
   '/assets/pages-pro/boutique-promos-returns.js?v=28',
   '/assets/pages-pro/returns-policy.js?v=4',
   '/assets/day-report-conflicts.js?v=2',
-  '/assets/printer/pairing-lang.js?v=27',
+  '/assets/printer/pairing-lang.js?v=28',
   '/assets/planning/shift-editor.js?v=5',
   '/assets/planning/csv-import.js?v=5',
   '/assets/planning/optimiser.js?v=7',
@@ -458,8 +458,8 @@ var SHELL = [
   '/assets/live-socket.js?v=5',
   '/assets/escpos.js?v=26',
   '/assets/printer/transports.js?v=19',
-  '/assets/printer-bridge.js?v=103',
-  '/assets/printer/pairing-ui.js?v=17',
+  '/assets/printer-bridge.js?v=104',
+  '/assets/printer/pairing-ui.js?v=18',
   '/assets/barcode.js?v=6',
   '/assets/scan-wedge.js?v=1',
   '/assets/color-palette.js?v=9',
@@ -475,7 +475,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=182',
+  '/assets/caisse-lang.js?v=183',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=6',
   '/assets/till-policy-settings.js?v=1',
@@ -561,7 +561,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=45',
+  '/assets/kitchen-print-queue.js?v=46',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=39',
   '/assets/pos-dispatch.js?v=551',

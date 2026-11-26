@@ -23,7 +23,7 @@ const window = { addEventListener: (name, fn) => { listeners[name] = fn; }, Kiwi
   KiwiKitchenPrint: { reprintUnprinted: (ids) => { reprints.push(ids); return Promise.resolve(reprintAnswer); } } };
 vm.runInNewContext(source, { window, document, setTimeout: () => 0 });
 listeners['kiwi:kitchen-print-unprinted']({ detail: { count: 2, ids: ['pj_a', 'pj_b'], labels: 'Table 4 · #12, Table 9' } });
-const entry = nodes.get('caisse-print-recovery');
+let entry = nodes.get('caisse-print-recovery');
 assert.equal(view(entry).textContent, 'translated:Voir les tickets non imprimés (2)');
 assert.equal(entry.style.pointerEvents, 'auto', 'recovery entry remains clickable inside the informational toast stack');
 assert.equal(entry.attrs.role, 'alert', 'the alert is announced');
@@ -31,7 +31,11 @@ assert.match(text(entry), /2 bons de cuisine non imprimés · Table 4 · #12, Ta
 assert.equal(again(entry).hidden, false, 'a lost kitchen ticket offers Reprint on the alert itself');
 assert.equal(again(entry).textContent, 'translated:Réimprimer');
 view(entry).click();
-assert.equal(opens[0].kind, 'recovery', 'View still opens the same printer recovery UI');
+assert.equal(opens[0].kind, 'recovery', 'View opens the printer panel on its unprinted list');
+assert.equal(nodes.has('caisse-print-recovery'), false, 'the alert steps aside while the panel is open');
+await Promise.resolve(); await Promise.resolve();
+entry = nodes.get('caisse-print-recovery');
+assert.ok(entry, 'a panel that did not open gives the alert back');
 again(entry).click();
 assert.deepEqual(reprints[0], ['pj_a', 'pj_b'], 'Reprint sends exactly the unprinted kitchen tickets');
 assert.equal(again(entry).disabled, true, 'a second tap while sending does nothing');

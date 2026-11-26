@@ -1036,6 +1036,9 @@
     enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics, recoveryCopies: recoveryCopies,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
     reprintDropped: reprintDropped, diag: diag,
+    /* Ce que la liste de reprise garde, sans le contenu du papier : le panneau
+       « Tickets non imprimés » (printer/pairing-ui.js) l'affiche avec « Réimprimer ». */
+    recoverList: function () { return readRecover().map(function (x) { var p = x.payload || {}; return { id: x.id, type: x.type, createdAt: x.createdAt, reason: x.reason, label: [p.table, p.order].filter(Boolean).join(' · ').slice(0, 60) }; }); },
     relayLabel: relayLabel, pollUnprinted: pollUnprinted, reprintUnprinted: reprintUnprinted,
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */

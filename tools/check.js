@@ -2143,7 +2143,7 @@ section('Whole-project regressions');
     'retail-acompte-browser-test.mjs',
     'z-refund-total-coherence-test.mjs',
     'caisse-boot-restore-guard-test.mjs',
-    'close-register-durability-test.mjs', 'close-followup-test.mjs', 'close-followup-browser-test.mjs', 'boutique-cash-move-browser-test.mjs',
+    'close-register-durability-test.mjs', 'close-followup-test.mjs', 'close-followup-browser-test.mjs', 'boutique-cash-move-browser-test.mjs', 'print-recovery-view-browser-test.mjs',
     'kitchen-ticket-wrap-test.mjs',
     'escpos-arabic-browser-test.mjs',
     'escpos-unsupported-test.mjs',

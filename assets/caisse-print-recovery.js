@@ -3,6 +3,9 @@
   'use strict';
   function tr(text) { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(text) : text; }
   var localCount = 0, relayCount = 0, relayIds = [], relayLabels = '', reprintNote = '', reprinting = false;
+  /* listed : ce que le panneau « Tickets non imprimés » a trouvé au-delà des bons de cuisine (reçus
+     déposés sur le relais). open : le panneau est ouvert, l'alerte se retire pour ne pas le couvrir. */
+  var listed = 0, open = false;
   /* A failed receipt is its own entry, not part of the relay count. Failures are tracked by receipt identity
      (meta.ref; '' when unknown): printing the next customer's receipt must not hide this customer's unprinted one,
      and reprinting THIS receipt clears only its own entry. */
@@ -23,9 +26,9 @@
     }, function () { reprinting = false; reprintNote = tr('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.'); paint(); });
   }
   function paint() {
-    var count = localCount + relayCount + receiptFailed.size;
+    var count = localCount + relayCount + receiptFailed.size + listed;
     var entry = document.getElementById('caisse-print-recovery');
-    if (!count && !reprintNote) { if (entry) entry.remove(); return; }
+    if ((!count && !reprintNote) || open) { if (entry) entry.remove(); return; }
     if (!entry) {
       entry = document.createElement('div');
       entry.id = 'caisse-print-recovery'; entry.className = 'toast is-warn'; entry.style.pointerEvents = 'auto';
@@ -47,13 +50,17 @@
       entry.appendChild(copy);
       entry.querySelector('[data-reprint]').addEventListener('click', reprint);
       entry.querySelector('[data-view]').addEventListener('click', function () {
-        if (window.KiwiPrinter) window.KiwiPrinter.openSetup({ kind: 'recovery' });
+        if (!window.KiwiPrinter) return;
+        open = true; paint();
+        Promise.resolve(window.KiwiPrinter.openSetup({ kind: 'recovery', receipts: receiptFailed.size })).then(function () {
+          if (!document.getElementById('kpr-ov')) { open = false; paint(); }   // le panneau n'a pas pu s'ouvrir
+        }, function () { open = false; paint(); });
       });
       (document.getElementById('toast-stack') || document.body).appendChild(entry);
     }
     var msg = relayCount
       ? (relayCount > 1 ? tr(relayCount + ' bons de cuisine non imprimés') : tr('Bon de cuisine non imprimé')) + (relayLabels ? ' · ' + relayLabels : '')
-      : '';
+      : count > 1 ? tr('Tickets non imprimés') + ' · ' + count : tr('Ticket non imprimé');
     if (reprintNote) msg = (msg ? msg + ' · ' : '') + reprintNote;
     entry.querySelector('[data-msg]').textContent = msg;
     var again = entry.querySelector('[data-reprint]');
@@ -71,6 +78,14 @@
     relayIds = Array.isArray(d.ids) ? d.ids.slice(0, 20) : [];
     relayLabels = String(d.labels || '');
     if (!relayCount && reprintNote && !reprinting) reprintNote = '';   // tout est ressorti : l'alerte s'en va
+    paint();
+  });
+  /* Le panneau a montré la liste : elle fait foi. Les reçus comptés ici y sont (déposés sur le relais)
+     ou il a dit de les reprendre depuis « Vendus » ; il reste ce qu'elle compte encore. */
+  window.addEventListener('kiwi:print-unprinted-reviewed', function (event) {
+    var d = event.detail || {};
+    if (d.closed) open = false;
+    if (typeof d.remaining === 'number') { receiptFailed.clear(); listed = Math.max(0, d.remaining - localCount - relayCount); }
     paint();
   });
   window.addEventListener('kiwi:kitchen-print-recovery', function (event) { localCount = Number(event.detail && event.detail.recoverable) || 0; paint(); });
