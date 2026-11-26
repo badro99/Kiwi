@@ -668,7 +668,7 @@ public class KiwiPrinterSocketPlugin extends Plugin {
                 if (octets[i] < 0 || octets[i] > 255) return null;
             }
         } catch (NumberFormatException error) { return null; }
-        if (parts.length == 4 && octets[3] != 0) return null;
+        /* Une adresse complète (celle de l'appareil, 192.168.1.37) donne son /24 : la refuser faisait échouer toute recherche (audit du 26 nov.). */
         return octets[0] + "." + octets[1] + "." + octets[2];
     }
 

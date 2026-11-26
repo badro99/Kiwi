@@ -490,7 +490,7 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         guard parts.count == 3 || parts.count == 4 else { return nil }
         let octets = parts.compactMap { Int($0) }
         guard octets.count == parts.count, octets.allSatisfy({ (0...255).contains($0) }) else { return nil }
-        if parts.count == 4 && octets[3] != 0 { return nil }
+        /* Une adresse complète (celle de l'appareil, 192.168.1.37) donne son /24 : la refuser faisait échouer toute recherche (audit du 26 nov.). */
         return octets.prefix(3).map(String.init).joined(separator: ".")
     }
 
