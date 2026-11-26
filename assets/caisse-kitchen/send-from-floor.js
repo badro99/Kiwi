@@ -146,7 +146,7 @@
          allocation before freezing the paper document, otherwise the caisse
          can show local #64 while the server echo (and later reprints) use #3. */
       order.canonicalNumberPromise = relayToKitchen(order);
-      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
+      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items), () => printKitchenTickets(order, items));   /* un numéro qui échoue n'efface pas le bon */
       try { persistShift(); } catch (_) {}
       return order;
     }

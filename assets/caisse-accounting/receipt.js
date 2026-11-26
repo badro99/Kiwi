@@ -130,9 +130,9 @@
       if (!entry) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Aucun ticket à imprimer')); return; }
       const doc = receiptDocFor(entry, opts);
       if (!doc) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Impression indisponible sur cet appareil')); return; }
-      const queue = window.KiwiKitchenPrint;
-      if (queue && typeof queue.enqueueReceipt === 'function') {
-        const queued = queue.enqueueReceipt(entry.id, doc, opts && opts.copy ? 'manual-reprint' : 'original');
+      const queue = window.KiwiKitchenPrint;   /* Un duplicata demandé à la main sort tout de suite, sans attendre la file (Browse, 25 nov. 2026 : file arrêtée, seule l'impression directe sortait). */
+      if (queue && typeof queue.enqueueReceipt === 'function' && !(opts && opts.copy)) {
+        const queued = queue.enqueueReceipt(entry.id, doc, 'original');
         if (queued && queued.accepted) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket ajouté à la file d’impression'));
         else if (queued && queued.pending) toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket déjà en attente d’impression'));
         else toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket déjà imprimé'));

@@ -215,8 +215,8 @@ await page.evaluate((names) => { const cat = window.KiwiBoutiqueCatalog; names.f
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
 
 /* ── F · the dashboard form remembers too ─────────────────────────────────── */
-// coverage: surface=dashboard-product-editor locale=fr viewport=tablet
 {
+  // coverage: surface=dashboard-product-editor locale=fr viewport=tablet
   const { page: dash } = await dashboardWalker(h).open({ step() {}, watch: (p) => p }, 'dashboard-transactions', 'fr', 'tablet');
   const js = (sel) => dash.evaluate((sel) => document.querySelector(sel).click(), sel);
   await js('[data-action="venue-toggle"]'); await sleep(400);

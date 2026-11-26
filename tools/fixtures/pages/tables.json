@@ -19,7 +19,7 @@
       "end": 470247,
       "replacement": "const PDS_INLINE_CSS = tableData().PDS_INLINE_CSS;",
       "file": "assets/pages/tables-data.js",
-      "length": 107752
+      "length": 108664
     },
     {
       "start": 1047,

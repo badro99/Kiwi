@@ -17,9 +17,26 @@ const SINCE_MOVE = [
   ['/* The lowest number nobody uses. Counting up from the highest one made an\n   owner who cleared the starter tables (1 to 17, spread over the salle and\n   the terrasse) start their own plan at 18; a hole a deleted table left is\n   filled first, and two tables never share a number. */',
    '/* The next number nobody uses yet: highest numeric + 1, skipping taken ones. */'],
   ['  let n = 1;\n', '  let n = state.tables.reduce((m, t) => Math.max(m, parseInt(t.num, 10) || 0), 0) + 1;\n'],
+  /* 25 Nov (d667fb7c5 and the plan de salle passes that day): table number and chips stay upright when the table turns, the bill chip sits under the table, and from 1101 to 1600 px the plan takes the width. */
+  ["  const numDisp = /^\\d$/.test(String(t.num)) ? '0' + t.num : t.num;\n  const upSide = Math.abs(Math.round((t.rot || 0) / 90)) % 2 === 1;   // à 90° ou 270°, la couche droite échange largeur et hauteur\n",
+   "  const numDisp = /^\\d$/.test(String(t.num)) ? '0' + t.num : t.num;\n"],
+  ["      </svg>\n      <div class=\"pds-tbl-up\" style=\"width:${upSide ? g.h + P*2 : g.w + P*2}px; height:${upSide ? g.w + P*2 : g.h + P*2}px; transform:translate(-50%, -50%) rotate(${-(t.rot || 0)}deg);\">\n",
+   "      </svg>\n"],
+  ["      ${billChip}\n      </div>\n",
+   "      ${billChip}\n"],
   ];
-function asMovedSource(src) {
-  let out = SINCE_MOVE.reduce((acc, [now, then]) => { assert.equal(acc.split(now).length, 2, 'one deliberate change: ' + now.slice(0, 40)); return acc.replace(now, () => then); }, src);
+/* The same day's tables-data.js changes (upright chips, bill chip under the table, 1101 to 1600 px layout). */
+const DATA_SINCE_MOVE = [
+  ["  }\n  /* Le numéro et les pastilles restent droits (25 nov. 2026, Browse 1er étage : 9 tables sur 11 à 270°, numéros couchés) : seuls la table et ses chaises tournent. */\n  .pds-tbl-up { position:absolute; left:50%; top:50%; pointer-events:none; }\n",
+   "  }\n"],
+  ["    background:var(--atlas); color:#F7F5F0; font:600 10px/1 var(--font-ui, 'Inter Tight'), system-ui; font-variant-numeric:tabular-nums; }\n  .pds-bill-chip { position:absolute; bottom:calc(var(--pad, 0px) - 24px); left:50%; transform:translateX(-50%); /* sous la table : en haut, « 26 min » le recouvrait */\n",
+   "    background:var(--atlas); color:#F7F5F0; font:600 10px/1 var(--font-ui, 'Inter Tight'), system-ui; font-variant-numeric:tabular-nums; }\n  .pds-bill-chip { position:absolute; top:calc(var(--pad, 0px) - 24px); right:calc(var(--pad, 0px) - 6px);\n"],
+  ["  @media (max-width: 1100px) { .pds-page .pds-stage-grid { grid-template-columns:220px minmax(0, 1fr); } }\n  /* Le plan d'abord (propriétaire, 25 nov. 2026, Browse : une salle de 20 m sur 610 px) : jusqu'à 1600 px, « En ce moment » et la sélection passent sous le plan, côte à côte, et le plan prend leur largeur. */\n  @media (min-width: 1101px) and (max-width: 1600px) { .pds-page .pds-stage-grid { grid-template-columns:232px minmax(0, 1fr); } .pds-page .pds-rail { grid-row:span 2; }\n    .pds-page .pds-inspector { grid-column:2; position:static; max-height:none; min-height:0; overflow:visible; padding-right:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); align-items:start; } }\n",
+   "  @media (max-width: 1100px) { .pds-page .pds-stage-grid { grid-template-columns:220px minmax(0, 1fr); } }\n"],
+  ];
+const undoData = src => DATA_SINCE_MOVE.reduce((acc, [now, then]) => { assert.equal(acc.split(now).length, 2, 'one deliberate data change: ' + now.slice(0, 40)); return acc.replace(now, () => then); }, src);
+function asMovedSource(src, withData = true) {
+  let out = (withData ? DATA_SINCE_MOVE : []).concat(SINCE_MOVE).reduce((acc, [now, then]) => { assert.equal(acc.split(now).length, 2, 'one deliberate change: ' + now.slice(0, 40)); return acc.replace(now, () => then); }, src);
   /* « Ajouter une table » (case 'add-table') took pdsNextNum too; the wizard already did, and its copy comes first. */
   const addNow = '      const num = pdsNextNum(state);\n      const newT = {', addThen = '      const num = String(state.tables.length + 1);\n      const newT = {';
   assert.equal(out.split(addNow).length, 3, 'the wizard and « Ajouter une table » both take pdsNextNum');
@@ -31,11 +48,11 @@ assert.equal(asMoved.slice(0, boundary), original.slice(0, boundary), 'all origi
 const tableBody = original.slice(map.begin + map.pre.length, map.end);
 let expected = tableBody;
 for (const f of [...map.fragments].sort((a,b) => b.start - a.start)) expected = expected.slice(0,f.start) + f.replacement + expected.slice(f.end);
-assert.equal(asMovedSource(reconstructed.tableOwnerSource()), map.prefix + map.binding + expected + map.suffix);
+assert.equal(asMovedSource(reconstructed.tableOwnerSource(), false), map.prefix + map.binding + expected + map.suffix);
 for (const [file,prefix,suffix] of [
   ['assets/pages/tables-data.js',map.dataPrefix,map.dataSuffix],
   ['assets/pages/tables-drawing.js',map.drawingPrefix,map.drawingSuffix],
-]) assert.equal(read(file),prefix + map.fragments.filter(f => f.file === file).map(f => tableBody.slice(f.start,f.end)).join('\n\n') + suffix, file + ': exact original bodies');
+]) assert.equal(file === 'assets/pages/tables-data.js' ? undoData(read(file)) : read(file),prefix + map.fragments.filter(f => f.file === file).map(f => tableBody.slice(f.start,f.end)).join('\n\n') + suffix, file + ': exact original bodies');
 // The extracted factory must never snapshot a reassignable owner binding.
 const require = (await import('node:module')).createRequire(import.meta.url);
 const ts = require('../app/node_modules/typescript');

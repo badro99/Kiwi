@@ -10,7 +10,7 @@ const live = source.liveSource(), names = Object.keys(before);
 const money = ['money','minor','major'].map(name => declaration(live, name)).join('\n');
 const plain = value => JSON.parse(JSON.stringify(value));
 function context(modern) {
-  const c = vm.createContext({ cart: [], tableOrders: {}, tables: { T1: {} }, orders: {}, IS_DEMO: false,
+  const c = vm.createContext({ carteState: { codePromos: [] }, cart: [], tableOrders: {}, tables: { T1: {} }, orders: {}, IS_DEMO: false,
     kdsOrders: [], vrapDiscount: null, vrapEditingNum: null, vrapResumedExpiredId: null, mode: 'vrap', selectedId: 'T1',
     document: { querySelector: () => null }, window: {}, lineLabel: l => l.name, lineHeld: () => false,
     nativeHapticLight() {}, renderMenu() {}, renderCart() {}, renderOrderPanel() {}, renderVrapBoard() {}, startTableTimer() {},

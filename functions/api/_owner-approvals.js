@@ -297,6 +297,7 @@ export async function grantFor(env, merchant, row, now = Date.now()) {
     }
   }
   const actor = { id: OWNER_ACTOR_ID, name: String(row.decided_by || 'Propriétaire').slice(0, 60), role: 'owner' };
+  /** @type {{ id: string, kind: string, actor: { id: string, name: string, role: string, actProof?: string, actorProof?: string }, actProof?: string, actorProof?: string }} */
   const grant = { id: row.id, kind: row.kind, actor: { ...actor } };
   if (row.kind === 'cash-out') {
     grant.actProof = await tillActProof(env.AUTH_SECRET, merchant, actor, { kind: 'cash', amountCents: Number(row.amount_cents) || 0, move: 'out' }, now, row.id);

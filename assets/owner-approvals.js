@@ -102,10 +102,10 @@
     var s = v % 1 === 0 ? String(v) : v.toFixed(2).replace('.', ',');
     return s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' MAD';
   }
-  function el(tag, cls, text) {
+  function el(tag, cls, copy) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text != null) n.textContent = String(text);
+    if (copy != null) n.textContent = String(copy);
     return n;
   }
   function headline(item) { return t(item.kind) + (item.amountCents > 0 ? ' · ' + mad(item.amountCents) : ''); }
@@ -144,7 +144,9 @@
     state.timer = setTimeout(tick, ms);
   }
   function tick() {
-    if (document.visibilityState === 'hidden' || !merchant() || !ownerRole()) { schedule(IDLE_POLL_MS); return; }
+    /* Une démo n'a pas de demandes à attendre : pas d'appel en boucle au serveur (quiet-demo-hour). */
+    var real = false; try { real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); } catch (_) {}
+    if (document.visibilityState === 'hidden' || !real || !merchant() || !ownerRole()) { schedule(IDLE_POLL_MS); return; }
     load().then(function () { schedule(active() || pendingItems().length ? POLL_MS : IDLE_POLL_MS); },
       function (err) { if (err && err.status === 403) return; schedule(IDLE_POLL_MS); });
   }

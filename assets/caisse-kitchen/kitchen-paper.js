@@ -192,7 +192,7 @@
          fire-and-forget call let local sequence #25 reach accounting while the
          same order became permanent #86 moments later. */
       order.canonicalNumberPromise = relayToKitchen(order);
-      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
+      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items), () => printKitchenTickets(order, items));   /* un numéro qui échoue n'efface pas le bon */
       try { persistShift(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte'), 6500); }
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();

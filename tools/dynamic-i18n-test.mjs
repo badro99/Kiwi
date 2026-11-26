@@ -21,8 +21,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
 // employeePick(fr, en, ar) is the waiter app's explicit per-language choice.
 // ui(key) reads UI_I18N (menu workspace, menu scan; menu-i18n-test proves every
-// key has EN/AR); ozonLabel(fr) is the Ozon module's FR/EN/AR table.
-const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel|kkt|kt)$/; // kkt, kt : KiwiKit.t par clé (caisse-kitchen.js, pos-boutique/me-menu.js)
+// key has EN/AR); ozonLabel(fr) is the Ozon module's FR/EN/AR table; dlvT(key) is the
+// caisse delivery module's FR/EN/AR table (DLV_T, assets/caisse/delivery.js).
+const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel|kkt|kt|dlvT)$/; // kkt, kt : KiwiKit.t par clé (caisse-kitchen.js, pos-boutique/me-menu.js)
 // An icon helper takes a Material Symbols name (« storefront », « lock »), never text a person reads.
 const iconCall = /^(?:icon|materialIcon|itSvg)$/;
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;
@@ -43,9 +44,11 @@ export function scan(source, filename = 'fixture.js') {
     ts.forEachChild(n, index);
   }
   index(tree);
+  // A stylesheet (« .kdl-tile{display:grid} », a rule per line) is never words a person reads.
+  const css = (t) => /^\s*(?:@media|@keyframes|[.#\[:*a-z][^{}]*)\{[^{}]*[:;}]/i.test(t) && !/[{}]\s*[A-ZÀ-Ý][a-zà-ÿ]+\s+[a-zà-ÿ]{2,}/.test(t);
   function raw(n, html, seen = new Set()) {
     if (!n) return false;
-    if (ts.isStringLiteralLike(n)) return words(n.text, html);
+    if (ts.isStringLiteralLike(n)) return !html && css(n.text) ? false : words(n.text, html);
     // In HTML, read the template whole (each ${…} as \u0001): a ${…} inside a tag
     // (« <i style="--c:${c}"> ») must not leave half a tag to read as words.
     // A ${…} that sits inside a tag (« class="${on ? 'is-done' : ''}" », « ${busy ? 'disabled' : ''} ») is an
@@ -85,7 +88,10 @@ export function scan(source, filename = 'fixture.js') {
     let args = [], html = false;
     if (ts.isBinaryExpression(n) && [ts.SyntaxKind.EqualsToken, ts.SyntaxKind.PlusEqualsToken].includes(n.operatorToken.kind) && /^(textContent|innerText|innerHTML|title|placeholder)$/.test(prop(n.left))) {
       // Les feuilles de style ne sont pas des libellés.
-      if (!/(?:style|css)/i.test(n.left.expression.getText(tree))) args = [n.right];
+      // …nor is the text of a <style> element made on the spot (« const s = document.createElement('style') »).
+      const target = n.left.expression, made = ts.isIdentifier(target) ? bindings.get(target.text) : null;
+      const styleElement = made?.length === 1 && /^(?:document\.createElement|el)\(\s*['"]style['"]\s*\)$/.test(made[0].getText(tree));
+      if (!/(?:style|css)/i.test(target.getText(tree)) && !styleElement) args = [n.right];
       html = prop(n.left) === 'innerHTML';
     }
     if (ts.isCallExpression(n)) {
@@ -114,7 +120,7 @@ export function scan(source, filename = 'fixture.js') {
 for (const code of ["x.textContent = ok ? 'Bonjour' : t('b')", "x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'", "x.innerHTML=`<b title=\"Bonjour ${n}\">${t('x')}</b>`", "x.innerHTML=`<i data-c=\"${c}\">Bonjour</i>`"]) assert.equal(scan(code).length, 1, code);
 // The condition of « a ? b : c » is never displayed, only b or c (boutique-sizes.js, 2 Nov 2026).
 for (const code of ["const kind = 'taille'; x.textContent = grid(kind) ? w.grid : w.hint"]) assert.equal(scan(code).length, 0, code);
-for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'", "x.innerHTML=`<i style=\"--c:${c}\"></i>${t('x')}`", "x.innerHTML=`<input value=\"${v}\" placeholder=\"${t('p')}\">`"]) assert.equal(scan(code).length, 0, code);
+for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "const s = document.createElement('style'); s.textContent = '.a { color: red }'", "s.textContent = '.kdl-tile{display:inline-grid;place-items:center}'", "s.textContent = '#koa-cards{position:fixed}' + '.koa-card{color:var(--ink)}'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'", "x.innerHTML=`<i style=\"--c:${c}\"></i>${t('x')}`", "x.innerHTML=`<input value=\"${v}\" placeholder=\"${t('p')}\">`"]) assert.equal(scan(code).length, 0, code);
 function walk(dir) {
   return fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(e => {
     const rel = path.posix.join(dir, e.name);

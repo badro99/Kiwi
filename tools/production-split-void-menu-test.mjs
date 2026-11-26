@@ -133,6 +133,7 @@ function makeD1Adapter(db) {
  * ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N ---');
 {
+  /* m: 1 · the owner wrote these names by hand; a machine translation never renames a dish (2ed2af5ed). */
   const pastaCornerMenu = {
     langs: ['fr', 'ar', 'en'],
     cats: [
@@ -169,8 +170,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: [],
         i18n: {
           fr: { name: 'Penne', h: '1k0dmt6', desc: '' },
-          ar: { name: 'بيني', h: '1k0dmt6', desc: '' },
-          en: { name: 'Penne', h: '1k0dmt6', desc: '' },
+          ar: { name: 'بيني', h: '1k0dmt6', desc: '', m: 1 },
+          en: { name: 'Penne', h: '1k0dmt6', desc: '', m: 1 },
         },
       },
       {
@@ -185,8 +186,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: [],
         i18n: {
           fr: { name: 'Spaghetti', h: '1vgwnn1', desc: '' },
-          ar: { name: 'سباجيتي', h: '1vgwnn1', desc: '' },
-          en: { name: 'Spaghetti', h: '1vgwnn1', desc: '' },
+          ar: { name: 'سباجيتي', h: '1vgwnn1', desc: '', m: 1 },
+          en: { name: 'Spaghetti', h: '1vgwnn1', desc: '', m: 1 },
         },
       },
       {
@@ -201,8 +202,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: [],
         i18n: {
           fr: { name: 'Tagliatelle', h: '1pd0j1o', desc: '' },
-          ar: { name: 'تالياتيل', h: '1pd0j1o', desc: '' },
-          en: { name: 'Tagliatelle', h: '1pd0j1o', desc: '' },
+          ar: { name: 'تالياتيل', h: '1pd0j1o', desc: '', m: 1 },
+          en: { name: 'Tagliatelle', h: '1pd0j1o', desc: '', m: 1 },
         },
       },
       {
@@ -217,8 +218,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: [],
         i18n: {
           fr: { name: 'Pappardelle', h: '19r5pzi', desc: '' },
-          ar: { name: 'بابارديلا', h: '19r5pzi', desc: '' },
-          en: { name: 'Pappardelle', h: '19r5pzi', desc: '' },
+          ar: { name: 'بابارديلا', h: '19r5pzi', desc: '', m: 1 },
+          en: { name: 'Pappardelle', h: '19r5pzi', desc: '', m: 1 },
         },
       },
       {
@@ -233,8 +234,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: [],
         i18n: {
           fr: { name: 'Rosa Pomodoro', h: '8xb58o', desc: '' },
-          ar: { name: 'روزا بومودورو', h: '8xb58o', desc: '' },
-          en: { name: 'Rose Tomato', h: '8xb58o', desc: '' },
+          ar: { name: 'روزا بومودورو', h: '8xb58o', desc: '', m: 1 },
+          en: { name: 'Rose Tomato', h: '8xb58o', desc: '', m: 1 },
         },
       },
       {
@@ -249,8 +250,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: [],
         i18n: {
           fr: { name: 'Poulet', h: '85h065', desc: '' },
-          ar: { name: 'دجاج', h: '85h065', desc: '' },
-          en: { name: 'Chicken', h: '85h065', desc: '' },
+          ar: { name: 'دجاج', h: '85h065', desc: '', m: 1 },
+          en: { name: 'Chicken', h: '85h065', desc: '', m: 1 },
         },
       },
       {
@@ -264,8 +265,8 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
         opts: ['og_56'],
         i18n: {
           fr: { name: 'Prépare ton Plat', h: '1u50vmh', desc: '' },
-          ar: { name: 'جهز طبقك', h: '1u50vmh', desc: '' },
-          en: { name: 'Prepare Your Dish', h: '1u50vmh', desc: '' },
+          ar: { name: 'جهز طبقك', h: '1u50vmh', desc: '', m: 1 },
+          en: { name: 'Prepare Your Dish', h: '1u50vmh', desc: '', m: 1 },
         },
         formula: {
           slots: [

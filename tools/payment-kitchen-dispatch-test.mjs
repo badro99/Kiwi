@@ -172,7 +172,7 @@ assert.match(source, /function vrapIsCounterSale\(o\)/,
   'the counter-sale discriminant is a named, testable rule rather than an inline condition');
 assert.doesNotMatch(source, /const readyBtn = \(kdsDisabled/,
   'readiness is never restricted to stores without a KDS');
-assert.match(source, /action = readyBtn \|\| `<button class="vrap-act" data-vrap-handover=/,
+assert.match(source, /action = readyBtn \|\| \(?[^;]{0,160}?`<button class="vrap-act" data-vrap-handover=/,
   'paid takeaways must become ready before the caisse offers handover');
 assert.match(source, /remote: o\.localKitchenAction === true \? false[\s\S]{0,180}?o\.session && o\.server \? 'connected' : true[\s\S]{0,160}?sourceId: o\.id/,
   'operator acceptance prints locally, employee-authorised tables print on the connected caisse, and other polling remains hub-only');

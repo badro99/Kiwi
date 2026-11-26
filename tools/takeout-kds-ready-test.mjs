@@ -44,7 +44,7 @@ check('the only thing that removes it is the order coming from this counter',
 check('vrapOrderCard has no KDS/store restriction on the ready button',
   !/const readyBtn = \([^\n]*(?:kdsDisabled|merchant|slug|store)/i.test(CAISSE));
 check('Remettre au client is offered only after the ready action disappears',
-  /action = readyBtn \|\| `<button class="vrap-act" data-vrap-handover=/.test(CAISSE));
+  /action = readyBtn \|\| \(?[^;]{0,160}?`<button class="vrap-act" data-vrap-handover=/.test(CAISSE));
 
 // 3. vrapMarkReady function exists and updates status to ready + pushes to OrderPro
 check('vrapMarkReady function is defined', CAISSE.includes('function vrapMarkReady('));

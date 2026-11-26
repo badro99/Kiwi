@@ -70,7 +70,7 @@ await test('team salary formatter preserves 3000.50 MAD in every locale',()=>{
     assert.equal(format(3000.5),'3,000.50 MAD');
   }
 });
-await test('profile payroll tile and roster salary display exact centimes',()=>{
+await test('profile payroll tile shows exact centimes, the roster row no salary',()=>{
   for(const lang of ['fr','en','ar']) {
     const member={id:'m',firstName:'A',baseSalary:3000.5};
     const ctx={window:{},document:{documentElement:{lang}},Intl,Date,esc:String,memberState:{current:()=>({})},catalogFor:()=>({departments:[]}),tradeKey:()=>'',buildPeriod:()=>({days:[]}),getHours:()=>({}),toISO:()=>'',isCustomVenue:()=>false,memberDutyStatus:()=> 'off-duty',fmtHours:String,activeFilters:{},CONTRACT_TYPES:[],memberMatchesFilters:()=>true,svgIcon:()=>'',IC:{},initials:()=> 'A',AVATAR_COLORS:{},memberFullName:()=> 'A',jobName:String};
@@ -79,7 +79,7 @@ await test('profile payroll tile and roster salary display exact centimes',()=>{
     const code=['renderMembersTable','renderProfilesPane'].map(n=>declaration(read('assets/team/profile-ui.js'),n)).join('\n');
     const render=vm.runInNewContext(code+';renderProfilesPane',ctx);
     const html=render(T,{name:'Venue'},'own',[member]),expected=f(3000.5);
-    assert.equal(html.split(expected).length-1,2);
+    assert.equal(html.split(expected).length-1,1); // payroll total only; the salary stays off the row (ad90ca5b7)
     assert.ok(html.includes(new Intl.NumberFormat(lang==='en'?'en-GB':'fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(3000.5)+' MAD'));
   }
 });

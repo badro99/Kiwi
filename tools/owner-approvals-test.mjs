@@ -70,20 +70,20 @@ async function call(cookie, body) {
   const res = await APPROVALS.onRequestPost({ request: req('/api/approvals', cookie, { merchant: SHOP, ...body }), env });
   return { status: res.status, body: await res.json() };
 }
-async function read(cookie, query) {
+async function fetchApprovals(cookie, query) {
   const res = await APPROVALS.onRequestGet({ request: req('/api/approvals?merchant=' + SHOP + '&' + query, cookie), env });
   return { status: res.status, body: await res.json() };
 }
 
 /* ── A · réglages ── */
 {
-  const r = await read(tillCookie, 'settings=1');
+  const r = await fetchApprovals(tillCookie, 'settings=1');
   ok('A1 la caisse lit les réglages (tout éteint par défaut)', r.status === 200 && r.body.settings.cashOut === false && r.body.settings.cancel === false, JSON.stringify(r));
   const w = await call(tillCookie, { action: 'settings', settings: { cashOut: true } });
   ok('A2 la caisse ne règle rien', w.status === 403 && w.body.error === 'owner-on-till', JSON.stringify(w));
   const s = await call(strangerCookie, { action: 'settings', settings: { cashOut: true } });
   ok('A3 le patron d\'un autre commerce ne règle rien', s.status === 403, JSON.stringify(s));
-  const l = await read(tillCookie, 'list=1');
+  const l = await fetchApprovals(tillCookie, 'list=1');
   ok('A4 la caisse ne lit pas la liste des demandes', l.status === 403 && l.body.error === 'owner-only', JSON.stringify(l));
 }
 
@@ -131,7 +131,7 @@ let saleApproval, lineApproval;
 
 /* ── D · la décision ── */
 {
-  const early = await read(tillCookie, 'id=' + saleApproval);
+  const early = await fetchApprovals(tillCookie, 'id=' + saleApproval);
   ok('D1 en attente : aucune preuve pour la caisse', early.status === 200 && early.body.approval.status === 'pending' && !early.body.grant, JSON.stringify(early.body));
   const tillDecides = await call(tillCookie, { action: 'decide', id: saleApproval, verdict: 'approve' });
   ok('D2 la caisse ne s\'accorde rien', tillDecides.status === 403, JSON.stringify(tillDecides));
@@ -141,7 +141,7 @@ let saleApproval, lineApproval;
   ok('D3b une caisse où la session du patron est ouverte ne décide pas (revue Fable)', both.status === 403 && both.body.error === 'owner-on-till', JSON.stringify(both));
   const bothSettings = await call(tillCookie + '; ' + ownerCookie, { action: 'settings', settings: { cashOut: false } });
   ok('D3c ni ne coupe les accords', bothSettings.status === 403);
-  const list = await read(ownerCookie, 'list=1');
+  const list = await fetchApprovals(ownerCookie, 'list=1');
   ok('D4 le patron voit ses demandes en attente', list.status === 200 && list.body.items.filter((i) => i.status === 'pending').length === 2, JSON.stringify(list.body));
   const yes = await call(ownerCookie, { action: 'decide', id: saleApproval, verdict: 'approve' });
   ok('D5 le patron accepte', yes.status === 200 && yes.body.approval.status === 'approved', JSON.stringify(yes));
@@ -153,7 +153,7 @@ let saleApproval, lineApproval;
 
 /* ── E · une ligne de cuisine, et seulement elle ── */
 {
-  const g = await read(tillCookie, 'id=' + lineApproval);
+  const g = await fetchApprovals(tillCookie, 'id=' + lineApproval);
   ok('E1 la caisse reçoit une preuve de personne au nom du patron', g.body.grant && g.body.grant.actorProof && g.body.grant.actor.id === LIB.OWNER_ACTOR_ID, JSON.stringify(g.body));
   const pinActor = await AUTH.readTillActorProof(g.body.grant.actorProof, SECRET, SHOP);
   ok('E2 la preuve se relit', pinActor && pinActor.id === LIB.OWNER_ACTOR_ID);
@@ -206,11 +206,11 @@ let saleApproval, lineApproval;
   const r = await call(tillCookie, { action: 'request', kind: 'cash-out', amountCents: 35000, label: 'Fournisseur', requestedBy: 'Karim' });
   ok('G1 sortie déposée avec le montant demandé', r.status === 201 && r.body.approval.amountCents === 35000, JSON.stringify(r));
   await call(ownerCookie, { action: 'decide', id: r.body.approval.id, verdict: 'approve' });
-  const g = await read(tillCookie, 'id=' + r.body.approval.id);
+  const g = await fetchApprovals(tillCookie, 'id=' + r.body.approval.id);
   ok('G2 la caisse reçoit une preuve du geste', g.body.grant && g.body.grant.actProof, JSON.stringify(g.body));
   const proof = await ACT.readTillActProof(g.body.grant.actProof, SECRET, SHOP);
   ok('G3 preuve signée pour CE montant, sortie, au nom du patron', proof && proof.amountCents === 35000 && proof.move === 'out' && proof.id === LIB.OWNER_ACTOR_ID, JSON.stringify(proof));
-  const replay = await read(tillCookie, 'id=' + r.body.approval.id);
+  const replay = await fetchApprovals(tillCookie, 'id=' + r.body.approval.id);
   ok('G4 une réponse perdue se relit (deux minutes)', replay.body.grant && replay.body.grant.actProof);
   const p2 = await ACT.readTillActProof(replay.body.grant.actProof, SECRET, SHOP);
   ok('G4b chaque copie porte le même jti, celui de l\'accord (revue Fable)', p2 && p2.jti === proof.jti && proof.jti === r.body.approval.id);
@@ -219,7 +219,7 @@ let saleApproval, lineApproval;
   ok('G4c une seule sortie d\'espèces consomme l\'accord', first && !second, JSON.stringify({ first, second }));
   const refused = await call(tillCookie, { action: 'request', kind: 'cash-out', amountCents: 1000 });
   await call(ownerCookie, { action: 'decide', id: refused.body.approval.id, verdict: 'refuse' });
-  const rg = await read(tillCookie, 'id=' + refused.body.approval.id);
+  const rg = await fetchApprovals(tillCookie, 'id=' + refused.body.approval.id);
   ok('G5 refusée : aucune preuve', rg.body.approval.status === 'refused' && !rg.body.grant, JSON.stringify(rg.body));
   const w = await call(tillCookie, { action: 'request', kind: 'cash-out', amountCents: 1200 });
   const wd = await call(tillCookie, { action: 'withdraw', id: w.body.approval.id });
@@ -241,7 +241,7 @@ let saleApproval, lineApproval;
   ok('H6 la caisse n\'inscrit pas de téléphone', tillDev.status === 403);
   const dev = await call(ownerCookie, { action: 'device', token, lang: 'ar' });
   ok('H7 le patron inscrit son téléphone', dev.status === 200);
-  const list = await read(ownerCookie, 'list=1');
+  const list = await fetchApprovals(ownerCookie, 'list=1');
   ok('H8 le panneau compte ses téléphones', list.body.devices === 1, JSON.stringify(list.body.devices));
   const msg = LIB.pushMessage({ id: 'apr-x', merchant: SHOP, kind: 'cash-out', amount_cents: 35000, requested_by: 'Karim', label: 'Fournisseur' }, 'fr');
   ok('H9 la notification porte la catégorie des boutons et l\'identifiant', msg.category === 'KIWI_APPROVAL' && msg.data.kiwiApproval.id === 'apr-x' && /350 MAD/.test(msg.title), JSON.stringify(msg));
@@ -310,12 +310,12 @@ let saleApproval, lineApproval;
   ok('K4 son nom vient du serveur, pas du corps', rowV.requested_by === 'Sara Bennani' && rowV.requested_by_id === 'emp:' + STAFF && rowV.ref === 'ord-k|line-k1', JSON.stringify(rowV));
   const cash = await call(waiterCookie, { action: 'request', kind: 'cash-out', amountCents: 5000 });
   ok('K5 un serveur ne demande pas de sortie d\'espèces', cash.status === 403, JSON.stringify(cash));
-  const foreign = await read(waiterCookie, 'id=' + lineApproval);
+  const foreign = await fetchApprovals(waiterCookie, 'id=' + lineApproval);
   ok('K6 un serveur ne lit que ses propres demandes', foreign.status === 404, JSON.stringify(foreign));
-  const list = await read(waiterCookie, 'list=1');
+  const list = await fetchApprovals(waiterCookie, 'list=1');
   ok('K6b ni la liste du patron', list.status === 403);
   ok('K7 le patron accepte', await approve(askV.body.approval.id));
-  const seen = await read(waiterCookie, 'id=' + askV.body.approval.id);
+  const seen = await fetchApprovals(waiterCookie, 'id=' + askV.body.approval.id);
   ok('K8 le serveur voit l\'accord, sans aucune preuve signée', seen.status === 200 && seen.body.approval.status === 'approved' && !seen.body.grant, JSON.stringify(seen.body));
   const wrongLine = await queue(waiterCookie, { voidLine: { ...voidBody('voi-k2k2k2k2k2k2k2k2k2k2', askV.body.approval.id).voidLine, lineId: 'line-k2' } });
   ok('K9 l\'accord de la pastilla n\'annule pas le thé', wrongLine.status === 403 && wrongLine.body.error === 'owner-approval-invalid', JSON.stringify(wrongLine));

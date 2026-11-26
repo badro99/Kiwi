@@ -16,7 +16,11 @@ const frozen = gunzipSync(fs.readFileSync('tools/fixtures/team-owners/original.j
 assert.equal(hash(frozen), map.sha256);
 assert.equal(read('tools/fixtures/team-owners/sha256').trim(), map.sha256);
 const originals = JSON.parse(frozen);
-for (const file of map.files) assert.equal(originalFile(file), originals[file], file + ': byte-exact original reconstructed from live source');
+/* ad90ca5b7 (25 Nov) took the salary column off the employee list on purpose; team-split's
+ * frozen original was resealed with it, this one still holds the column, so it is put back here. */
+const SINCE_MOVE = { 'assets/team/profile-ui.js': [["          <td><div class=\"kt-chips\">${langChips || '<span class=\"eq-cell-empty\">·</span>'}</div></td>\n", "          <td><div class=\"kt-chips\">${langChips || '<span class=\"eq-cell-empty\">·</span>'}</div></td>\n          <td>${(+m.baseSalary || 0) > 0 || (+m.hourlyRate || 0) > 0\n            ? `<div class=\"eq-salary-v\">${(+m.baseSalary || 0) > 0 ? fmtMad(m.baseSalary) : '·'}</div><div class=\"eq-salary-sub\">${(+m.hourlyRate || 0) > 0 ? (window.KiwiNumber?.format((+m.hourlyRate), {}) ?? (+m.hourlyRate).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD/h' : '·'}</div>`\n            : `<div class=\"eq-salary-v\">·</div><div class=\"eq-salary-sub\">${esc(T.salaryUnset)}</div>`}</td>\n"], ["    }).join('');\n    /* Pas de colonne salaire : la liste se voit par-dessus l'épaule, le salaire reste dans la fiche de l'employé. */\n", "    }).join('');\n"], ["              <th>${esc(T.colLanguages)}</th>\n", "              <th>${esc(T.colLanguages)}</th>\n              <th>${esc(T.colSalary)}</th>\n"]] };
+const asMoved = (file, source) => (SINCE_MOVE[file] || []).reduce((acc, [now, then]) => { assert.equal(acc.split(now).length, 2, file + ': one deliberate change'); return acc.replace(now, () => then); }, source);
+for (const file of map.files) assert.equal(asMoved(file, originalFile(file)), originals[file], file + ': byte-exact original reconstructed from live source');
 for (const part of map.parts) {
   const source = read(part.file);
   assert.equal(source, part.prefix + part.fragments.map(f => source.slice(f.offset, f.offset + f.length) + '\n').join('') + part.suffix, part.file + ': entire declared wrapper');

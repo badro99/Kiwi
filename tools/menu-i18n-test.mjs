@@ -114,7 +114,7 @@ for (const page of ['OrderPro.html']) {
   }
   assert(/function menuTr\(e, l\)[\s\S]*?x\.h !== menuHash\(e\.name, e\.desc\)/.test(src), `${page} : menuTr vérifie la fraîcheur`);
 }
-assert(/langs\.forEach\(\(l\) => \{\s*const x = menuTr\(it, l\);\s*if \(x\) byLang\[l\]\[String\(it\.id\)\] =/.test(read('OrderPro.html'))
+assert(/langs\.forEach\(\(l\) => \{\s*const x = menuTr\(it, l\);\s*(?:\/\*[^]*?\*\/\s*)?if \(x\) byLang\[l\]\[String\(it\.id\)\] =/.test(read('OrderPro.html'))
   && /langs\.forEach\(l => \{ MENU_I18N\[l\] = byLang\[l\]; \}\);/.test(read('OrderPro.html')), 'OrderPro.html : chaque langue publiée remplie depuis it.i18n');
 assert(/menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('OrderPro.html')), 'onglets de catégories localisés dans l’app client');
 

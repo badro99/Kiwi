@@ -248,8 +248,8 @@
     "sha": "690e7d77e134c697"
   },
   "assets/caisse-kitchen.js": {
-    "v": "36",
-    "sha": "abfd9348d105f8d8"
+    "v": "37",
+    "sha": "39bce46ea509f95f"
   },
   "assets/caisse-lang.js": {
     "v": "178",
@@ -324,8 +324,8 @@
     "sha": "ad9f4d5ffc04a3f7"
   },
   "assets/caisse/cash-refund.js": {
-    "v": "1",
-    "sha": "f5fbe497fc9bc13c"
+    "v": "2",
+    "sha": "990ec865827d4ae1"
   },
   "assets/caisse/catalogue.js": {
     "v": "29",
@@ -528,8 +528,8 @@
     "sha": "2f2e29a063408cdf"
   },
   "assets/dashboard-shell.css": {
-    "v": "16",
-    "sha": "2d051757e5fef3fc"
+    "v": "17",
+    "sha": "749c11213fa30c14"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "2",
@@ -1560,8 +1560,8 @@
     "sha": "932c8200ffce19f4"
   },
   "assets/owner-approvals.js": {
-    "v": "4",
-    "sha": "da3419ff16742294"
+    "v": "5",
+    "sha": "41ad82c908efe2c9"
   },
   "assets/owner-ask.js": {
     "v": "3",
@@ -1684,8 +1684,8 @@
     "sha": "40cc6020db8daa13"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "345",
-    "sha": "9c158b1822c314cb"
+    "v": "347",
+    "sha": "58c3c673ba25384d"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2276,16 +2276,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "101",
-    "sha": "a81b99eaf48fff54"
+    "v": "102",
+    "sha": "4426876d3fd614b1"
   },
   "assets/printer-health.js": {
     "v": "3",
     "sha": "331149bdbb3a9d11"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "25",
-    "sha": "0db037296185cd0e"
+    "v": "26",
+    "sha": "19ec99c236cc2fd6"
   },
   "assets/printer/pairing-ui.js": {
     "v": "17",
@@ -2508,8 +2508,8 @@
     "sha": "b08da8689e842159"
   },
   "assets/sold-insights.js": {
-    "v": "24",
-    "sha": "1c3fb7534bbe8769"
+    "v": "25",
+    "sha": "0f3cb818b1aa615f"
   },
   "assets/staff-perms-till.js": {
     "v": "11",

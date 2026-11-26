@@ -14,9 +14,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = fs.readFileSync(path.join(ROOT, 'assets/sold-insights.js'), 'utf8');
-const lang = fs.readFileSync(path.join(ROOT, 'assets/caisse-lang.js'), 'utf8');
 
-function load(langCode = 'fr', { till = false, sales = [] } = {}) {
+function boot(langCode = 'fr', { till = false, sales = [] } = {}) {
   const window = {
     KiwiBoutiqueCatalog: { listCategories: () => [], listProducts: () => [], listVariants: () => [] },
     KiwiBoutiqueDemoDay: () => sales,
@@ -78,7 +77,7 @@ const today = { from: '2026-11-25', to: '2026-11-25' };
 
 /* 1. La journée de Santos, telle que le serveur et la caisse la connaissent. */
 {
-  const S = load();
+  const S = boot();
   const a = S.analyze(local.concat(server), today);
   ok(a.money.till === 410000, 'dans la caisse : 4 100 MAD, pas 10 750 (got ' + a.money.till / 100 + ')');
   ok(a.money.courier === 605000, 'chez le livreur : 6 050 MAD (got ' + a.money.courier / 100 + ')');
@@ -89,7 +88,7 @@ const today = { from: '2026-11-25', to: '2026-11-25' };
 
 /* 2. Le livreur rapporte une partie : l'argent change de case, il ne double pas. */
 {
-  const S = load();
+  const S = boot();
   const collection = { id: 'col-1', ref: '39505', ts: H(21, 10), amount: 1800, amountCents: 180000, method: 'cash', channel: 'delivery',
     label: 'Livraison reçue · Pantalon classe +3 art.', lines: [line('Pantalon classe L', 2, 400)] };
   const a = S.analyze(server.concat([collection]), today);
@@ -103,7 +102,7 @@ const today = { from: '2026-11-25', to: '2026-11-25' };
 
 /* 3. Un avoir n'est pas de l'argent en caisse ; un remboursement ne casse rien. */
 {
-  const S = load();
+  const S = boot();
   const credit = { id: 'x', ref: '50001', ts: H(12, 0), amount: 100, amountCents: 10000, method: 'split',
     paymentParts: [{ method: 'store-credit', amountCents: 30000 }, { method: 'cash', amountCents: 10000 }], lines: [line('Jupe', 1, 400)] };
   const refund = { id: 'r', ref: '50001', ts: H(13, 0), amount: -100, amountCents: -10000, method: 'cash', lines: [line('Jupe', 1, 400)] };
@@ -117,23 +116,23 @@ const today = { from: '2026-11-25', to: '2026-11-25' };
   const now = new Date(); const at = (m) => new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() - m).getTime();
   const day = [counter('1', at(30), 40000, 'cash', [line('Chemise', 2, 400)]), courier('2', at(20), 65000, [line('Manteau', 1, 650)]),
     courier('3', at(10), 40000, [line('Jupe', 1, 400)])];
-  const fr = paint(load('fr', { till: true, sales: day }));
+  const fr = paint(boot('fr', { till: true, sales: day }));
   ok(/L’argent/.test(fr) && /Dans la caisse/.test(fr) && /Chez le livreur/.test(fr), 'la bande dit « Dans la caisse » et « Chez le livreur »');
   ok(/<b>1\s?450<\/b>/.test(fr.replace(/&nbsp;|\u202f|\u00a0/g, ' ')) && /1 vente payée au comptoir/.test(fr) && /2 livraisons pas encore payées/.test(fr), '400 + 1 050 = 1 450 ; une vente au comptoir, deux livraisons en route');
   ok(!/Chiffre produits/.test(fr), 'la case « Chiffre produits » qui mélangeait les deux a disparu');
   ok(/class="ksold-money-bar" role="group" aria-label="[^"]*dans la caisse[^"]*chez le livreur/.test(fr), 'la barre se lit aussi au lecteur d’écran');
   ok(/prefers-reduced-motion:reduce\)\{\.ksold-money/.test(src), 'les rayures qui roulent s’arrêtent si l’appareil demande moins de mouvement');
-  const ar = paint(load('ar', { till: true, sales: day }));
+  const ar = paint(boot('ar', { till: true, sales: day }));
   ok(/في الصندوق/.test(ar) && /عند عامل التوصيل/.test(ar) && /طلبات توصيل لم تُدفع بعد: 2/.test(ar) && !/Dans la caisse/.test(ar), 'caisse en arabe (lue sur <html lang>) : la bande parle arabe');
-  const en = paint(load('en', { till: true, sales: day }));
+  const en = paint(boot('en', { till: true, sales: day }));
   ok(/In the till/.test(en) && /With the courier/.test(en) && /2 deliveries not paid yet/.test(en) && /Items sold/.test(en), 'caisse en anglais : toute la page suit, pas seulement la bande');
-  const none = paint(load('fr', { till: true, sales: [counter('9', at(5), 30000, 'cash', [line('Vist', 1, 300)])] }));
+  const none = paint(boot('fr', { till: true, sales: [counter('9', at(5), 30000, 'cash', [line('Vist', 1, 300)])] }));
   ok(/Dans la caisse/.test(none) && !/Chez le livreur/.test(none), 'sans livraison, un seul bloc : tout est dans la caisse');
 }
 
 /* 6. L'historique détaillé range chaque ticket là où est son argent. */
 {
-  const S = load();
+  const S = boot();
   const collection = { id: 'col-1', ref: '39505', ts: H(21, 10), amount: 1000, amountCents: 100000, method: 'cash', channel: 'delivery', label: 'Livraison reçue · Pantalon classe +3 art.', lines: [] };
   const credit = { id: 'x', ref: '50001', ts: H(12, 0), amount: 0, amountCents: 0, method: 'split', paymentParts: [{ method: 'store-credit', amountCents: 30000 }], lines: [line('Vist rey S', 1, 300)] };
   const a = S.analyze(local.concat(server, [collection, credit]), today);
@@ -147,7 +146,7 @@ const today = { from: '2026-11-25', to: '2026-11-25' };
   ok(a.money.list.some((r) => r.kind === 'credit' && r.cents === 30000), 'une vente payée en avoir a sa ligne à part, ni caisse ni livreur');
   ok(!a.money.list.some((r) => r.ref === '40003'), 'le ticket annulé n’est pas dans l’historique');
   ok(a.money.list.every((r, i, l) => !i || l[i - 1].ts >= r.ts), 'du plus récent au plus ancien');
-  const html = paint(load('fr', { till: true, sales: [counter('7', Date.now() - 60000, 40000, 'cash', [line('Chemise', 1, 400)]), courier('8', Date.now() - 30000, 65000, [line('Manteau', 1, 650)])] }));
+  const html = paint(boot('fr', { till: true, sales: [counter('7', Date.now() - 60000, 40000, 'cash', [line('Chemise', 1, 400)]), courier('8', Date.now() - 30000, 65000, [line('Manteau', 1, 650)])] }));
   ok(/ksold-hgrp is-till/.test(html) && /ksold-hgrp is-courier/.test(html) && /Chaque ticket est rangé là où se trouve son argent/.test(html), 'deux colonnes : dans la caisse, chez le livreur');
   ok(/<bdi>1× Manteau<\/bdi>/.test(html) && /à recevoir/.test(html), 'chaque article garde son ordre en arabe (bdi) ; la livraison dit « à recevoir »');
 }

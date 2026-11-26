@@ -154,7 +154,7 @@
       const amt = back
         ? '<span class="cm-row-was">' + fmtMAD(m.amount) + '</span>' + (full ? '' : '− ' + fmtMAD((c(m.amount) - back) / 100))
         : (m.type === 'in' ? '+ ' : '− ') + fmtMAD(m.amount);
-      return '<div class="cm-row"><span class="cm-row-ic cm-row-ic--' + m.type + '"><i data-lucide="' + (m.type === 'in' ? 'arrow-down-to-line' : 'arrow-up-from-line') + '"></i></span>'
+      return '<div class="cm-row"><span class="cm-row-ic cm-row-ic--' + m.type + '"><i data-icon="' + (m.type === 'in' ? 'download' : 'upload') + '"></i></span>'
         + '<span class="cm-row-reason">' + esc(m.reason || 'Autre') + (m.actorName ? ' · <span style="opacity:0.8">' + esc(m.actorName) + '</span>' : '')
         + (back ? '<span class="cm-row-tag">' + esc(L().tag) + (full ? '' : ' · ' + fmtMAD(back / 100)) + '</span>' : '') + '</span>'
         + '<span class="cm-row-time">' + hm(m.time) + '</span>'
