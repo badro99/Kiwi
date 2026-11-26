@@ -718,7 +718,8 @@
       const x = e && e.i18n && e.i18n[l];
       if (!x || !x.name) return null;
       if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
-      return x;
+      /* Plat, catégorie, option : le libellé du patron, sauf traduction à la main (Browse, 26 nov.). */
+      return x.m ? x : Object.assign({}, x, { name: String(e.name || '') });
     }
     const MENU_I18N = {
       fr: {},

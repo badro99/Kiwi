@@ -78,12 +78,12 @@ const n = M.apply(d, 'ar', {
   opts: [{ id: 'g1', name: 'درجة الطهي', choices: [{ id: 'x1', name: 'مطهو جيدا' }] }],
 });
 assert(n === 5, `apply : 5 traductions écrites, "Msemen" sans lettre arabe refusée (${n})`);
-assert(M.name(it, 'ar') === 'طاجين دجاج' && M.desc(it, 'ar') === 'ليمون مخلل', 'name/desc : traduction fraîche affichée');
+assert(M.name(it, 'ar') === 'Tajine poulet' && M.desc(it, 'ar') === 'ليمون مخلل', 'name : le libellé du patron reste (Browse, 26 nov.) ; desc : traduction fraîche affichée');
 assert(M.name(it, 'fr') === 'Tajine poulet' && M.name(it, 'en') === 'Tajine poulet', 'langue non traduite : canonique');
 assert(it.name === 'Tajine poulet', 'le libellé canonique n’est JAMAIS remplacé');
 M.index(d);
-assert(M.t('Plats', 'ar') === 'أطباق' && M.t('Bien cuit', 'ar') === 'مطهو جيدا', 't(str) retrouve l’entité par son libellé (catégorie, choix)');
-assert(M.t('Hot Drinks', 'fr') === 'Boissons chaudes', 'mini-dictionnaire : correspondance exacte conservée');
+assert(M.t('Plats', 'ar') === 'Plats' && M.t('Bien cuit', 'ar') === 'Bien cuit', 'catégorie et option : la traduction automatique ne renomme plus rien');
+assert(M.t('Hot Drinks', 'fr') === 'Hot Drinks', 'le mini-dictionnaire ne renomme plus un libellé du patron');
 assert(M.t('Strawberry milk shake', 'fr') === 'Strawberry milk shake', 'aucune substitution partielle (« Strawberry lait » est mort)');
 assert(M.needs(d, ['ar']).ar.count === 1 && M.needs(d, ['ar']).ar.items[0].id === 'it2', 'needs après apply : seul Msemen reste à traduire en arabe');
 it.name = 'Tajine poulet XL';
@@ -98,7 +98,8 @@ assert(M.status(it, 'ar') === 'manual' && M.status(d.cats[0], 'ar') === 'missing
 const s = M.summary(d);
 assert(s.ar.total === 6 && s.ar.manual === 1 && s.ar.missing === 5, 'summary : comptes par statut');
 const loc = M.item({ id: 'x', name: 'A', desc: 'B', i18n: { en: { name: 'A-en', desc: 'B-en', h: M.hash('A', 'B') } } }, 'en');
-assert(loc.name === 'A-en' && loc.desc === 'B-en' && loc._src.name === 'A', 'item() : copie localisée, canonique dans _src');
+assert(loc.name === 'A' && loc.desc === 'B-en' && loc._src.name === 'A', 'item() : nom tel qu’écrit, description localisée, canonique dans _src');
+{ const c = { id: 'cm', name: 'Plats chauds', i18n: { en: { name: 'Hot dishes', m: 1 } } }; M.index({ cats: [c], items: [] }); assert(M.t('Plats chauds', 'en') === 'Hot dishes' && M.name(c, 'en') === 'Hot dishes', 'une traduction écrite à la main par le patron est affichée (t et name)'); }
 
 /* ── même empreinte dans OrderPro, la seule app client (kiwi-order.html
    redirige vers elle depuis l'étape 3c) ─────────────────────────────── */
@@ -313,7 +314,7 @@ assert(ws.includes('nutritionCardPill(x)') && ws.includes('catalog-item-meta') &
 /* ── r18 i18n#2 / menu#0 : deux entités de même libellé ne s'héritent pas ─── */
 {
   const M = loadResolver();
-  const withI18n = (e, lang, name) => { e.i18n = Object.assign(e.i18n || {}, { [lang]: { name, h: M.hash(e.name, e.desc || '') } }); return e; };
+  const withI18n = (e, lang, name) => { e.i18n = Object.assign(e.i18n || {}, { [lang]: { name, m: 1 } }); return e; };
   const dish = withI18n({ id: 'it-jus', name: 'Jus', desc: '' }, 'en', 'Juice');
   const opt = withI18n({ id: 'ch-jus', name: 'Jus', desc: '' }, 'en', 'Fruit juice (side)');
   const bare = { id: 'ch-bare', name: 'Jus', desc: '' };

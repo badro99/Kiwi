@@ -397,18 +397,20 @@
     const target = asLang(lang) || activeLang();
     const clean = str.trim();
     if (!clean) return str;
+    /* Un libellé de la carte (plat, catégorie, option) s'affiche tel que le
+       patron l'a écrit : seule sa traduction faite à la main (m) le remplace.
+       Ni Kiwi AI ni le dictionnaire ne renomment plus rien (Browse, 26 nov. :
+       « Browse Brunch » devenait « Découvrez le Brunch »). Les descriptions,
+       elles, restent traduites (desc). */
     const e = resolveEntity(clean, target, id);
-    if (e === false) return clean;
-    if (e && fresh(e, target)) return e.i18n[target].name;
-    const k = norm(clean);
-    const dict = DICTIONARY[k] || DICTIONARY[k.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim()];
-    if (dict && dict[target]) return dict[target];
-    return clean;
+    const x = e ? entry(e, target) : null;
+    return x && x.m ? String(x.name) : clean;
   }
   function name(e, lang) {
     if (!e) return '';
     const target = asLang(lang) || activeLang();
-    if (fresh(e, target)) return e.i18n[target].name;
+    const x = entry(e, target);
+    if (x && x.m) return String(x.name);
     return translate(String(e.name || ''), target, e.id);
   }
   /* Le nom d'un PLAT est un nom propre : seule une traduction écrite à la main

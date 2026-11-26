@@ -1,5 +1,5 @@
 {
-  "sha256": "0649fa946c266c2969a0db6daf166f33ebb588d612ae0484a833f7ac5adcff24",
+  "sha256": "b429eff3104b265beb668988cada24699a8c2630b7207b1a860f881c91d2b767",
   "parts": [
     {
       "name": "session",
@@ -32,40 +32,40 @@
       "fragments": [
         {
           "name": "rebuildSent",
-          "start": 44344,
-          "end": 44698,
+          "start": 44510,
+          "end": 44864,
           "offset": 741,
           "length": 354,
           "marker": "    instances.session = KiwiOrderMenu.orderProParts.create('session', {\n      get LIVE() { return LIVE; },\n      get NET() { return NET; },\n      get bootState() { return bootState; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get currentOrderId() { return currentOrderId; }, set currentOrderId(value) { currentOrderId = value; },\n      get gotoScreen() { return gotoScreen; },\n      get onSessionClosed() { return onSessionClosed; },\n      get sentKey() { return sentKey; },\n      get sentLines() { return sentLines; }, set sentLines(value) { sentLines = value; },\n      get sentOrders() { return sentOrders; }, set sentOrders(value) { sentOrders = value; },\n      get sessionTotal() { return sessionTotal; }, set sessionTotal(value) { sessionTotal = value; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n      get toCents() { return toCents; },\n    });\n\n    // OrderPro session: rebuildSent is supplied by its private factory.\n"
         },
         {
           "name": "saveSent",
-          "start": 44698,
-          "end": 44955,
+          "start": 44864,
+          "end": 45121,
           "offset": 1096,
           "length": 257,
           "marker": "    // OrderPro session: saveSent is supplied by its private factory.\n"
         },
         {
           "name": "loadSent",
-          "start": 45085,
-          "end": 45698,
+          "start": 45251,
+          "end": 45864,
           "offset": 1354,
           "length": 613,
           "marker": "    // OrderPro session: loadSent is supplied by its private factory.\n"
         },
         {
           "name": "clearSent",
-          "start": 45698,
-          "end": 45881,
+          "start": 45864,
+          "end": 46047,
           "offset": 1968,
           "length": 183,
           "marker": "    // OrderPro session: clearSent is supplied by its private factory.\n"
         },
         {
           "name": "SESSION",
-          "start": 103127,
-          "end": 111625,
+          "start": 103293,
+          "end": 111791,
           "offset": 2152,
           "length": 8498,
           "marker": "    // OrderPro session: SESSION is supplied by its private factory.\n"
@@ -100,64 +100,64 @@
       "fragments": [
         {
           "name": "pressKey",
-          "start": 47824,
-          "end": 48214,
+          "start": 47990,
+          "end": 48380,
           "offset": 526,
           "length": 390,
           "marker": "    instances.table = KiwiOrderMenu.orderProParts.create('table', {\n      get $() { return $; },\n      get SESSION() { return SESSION; },\n      get gotoScreen() { return gotoScreen; },\n      get guestReady() { return guestReady; }, set guestReady(value) { guestReady = value; },\n      get onSessionClosed() { return onSessionClosed; },\n      get orderMode() { return orderMode; }, set orderMode(value) { orderMode = value; },\n      get t() { return t; },\n      get tableNumber() { return tableNumber; }, set tableNumber(value) { tableNumber = value; },\n    });\n\n    // OrderPro table: pressKey is supplied by its private factory.\n"
         },
         {
           "name": "renderTableDisplay",
-          "start": 48214,
-          "end": 48529,
+          "start": 48380,
+          "end": 48695,
           "offset": 917,
           "length": 315,
           "marker": "    // OrderPro table: renderTableDisplay is supplied by its private factory.\n"
         },
         {
           "name": "updateContinueState",
-          "start": 48529,
-          "end": 48674,
+          "start": 48695,
+          "end": 48840,
           "offset": 1233,
           "length": 145,
           "marker": "    // OrderPro table: updateContinueState is supplied by its private factory.\n"
         },
         {
           "name": "chooseMode",
-          "start": 121344,
-          "end": 121849,
+          "start": 121510,
+          "end": 122015,
           "offset": 1379,
           "length": 505,
           "marker": "    // OrderPro table: chooseMode is supplied by its private factory.\n"
         },
         {
           "name": "seatHere",
-          "start": 122059,
-          "end": 122570,
+          "start": 122225,
+          "end": 122736,
           "offset": 1885,
           "length": 511,
           "marker": "    // OrderPro table: seatHere is supplied by its private factory.\n"
         },
         {
           "name": "applyMenuMode",
-          "start": 122571,
-          "end": 123696,
+          "start": 122737,
+          "end": 123862,
           "offset": 2397,
           "length": 1125,
           "marker": "    // OrderPro table: applyMenuMode is supplied by its private factory.\n"
         },
         {
           "name": "guestLand",
-          "start": 123934,
-          "end": 124213,
+          "start": 124100,
+          "end": 124379,
           "offset": 3523,
           "length": 279,
           "marker": "    // OrderPro table: guestLand is supplied by its private factory.\n"
         },
         {
           "name": "commitTable",
-          "start": 124284,
-          "end": 124498,
+          "start": 124450,
+          "end": 124664,
           "offset": 3803,
           "length": 214,
           "marker": "    // OrderPro table: commitTable is supplied by its private factory.\n"
@@ -227,200 +227,200 @@
       "fragments": [
         {
           "name": "feedMedia",
-          "start": 51844,
-          "end": 54073,
+          "start": 52010,
+          "end": 54239,
           "offset": 1170,
           "length": 2229,
           "marker": "    instances.menu = KiwiOrderMenu.orderProParts.create('menu', {\n      get $() { return $; },\n      get $$() { return $$; },\n      get I18N() { return I18N; },\n      get ICON_CLASS() { return ICON_CLASS; },\n      get MENU() { return MENU; },\n      get MENU_ALL() { return MENU_ALL; },\n      get MENU_I18N() { return MENU_I18N; },\n      get MENU_SUBTABS() { return MENU_SUBTABS; },\n      get OPT() { return OPT; },\n      get addLineToCart() { return addLineToCart; },\n      get availabilitySignature() { return availabilitySignature; }, set availabilitySignature(value) { availabilitySignature = value; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get currentLang() { return currentLang; },\n      get customizerEditingKey() { return customizerEditingKey; }, set customizerEditingKey(value) { customizerEditingKey = value; },\n      get customizerEditingQty() { return customizerEditingQty; }, set customizerEditingQty(value) { customizerEditingQty = value; },\n      get customizerItem() { return customizerItem; }, set customizerItem(value) { customizerItem = value; },\n      get customizerNote() { return customizerNote; }, set customizerNote(value) { customizerNote = value; },\n      get customizerSelections() { return customizerSelections; }, set customizerSelections(value) { customizerSelections = value; },\n      get escapeHtml() { return escapeHtml; },\n      get itemI18n() { return itemI18n; },\n      get itemOf() { return itemOf; },\n      get menuTr() { return menuTr; },\n      get money() { return money; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n      get toCents() { return toCents; },\n    });\n\n    // OrderPro menu: feedMedia is supplied by its private factory.\n"
         },
         {
           "name": "dishMedia",
-          "start": 54357,
-          "end": 55706,
+          "start": 54523,
+          "end": 55872,
           "offset": 3400,
           "length": 1349,
           "marker": "    // OrderPro menu: dishMedia is supplied by its private factory.\n"
         },
         {
           "name": "dishTag",
-          "start": 55706,
-          "end": 55835,
+          "start": 55872,
+          "end": 56001,
           "offset": 4750,
           "length": 129,
           "marker": "    // OrderPro menu: dishTag is supplied by its private factory.\n"
         },
         {
           "name": "renderMenu",
-          "start": 55836,
-          "end": 57367,
+          "start": 56002,
+          "end": 57533,
           "offset": 4880,
           "length": 1531,
           "marker": "    // OrderPro menu: renderMenu is supplied by its private factory.\n"
         },
         {
           "name": "renderMenuSubtabs",
-          "start": 57368,
-          "end": 57843,
+          "start": 57534,
+          "end": 58009,
           "offset": 6412,
           "length": 475,
           "marker": "    // OrderPro menu: renderMenuSubtabs is supplied by its private factory.\n"
         },
         {
           "name": "activeMenuFilter",
-          "start": 57844,
-          "end": 58058,
+          "start": 58010,
+          "end": 58224,
           "offset": 6888,
           "length": 214,
           "marker": "    // OrderPro menu: activeMenuFilter is supplied by its private factory.\n"
         },
         {
           "name": "choiceLabel",
-          "start": 59582,
-          "end": 61657,
+          "start": 59748,
+          "end": 61823,
           "offset": 7103,
           "length": 2075,
           "marker": "    // OrderPro menu: choiceLabel is supplied by its private factory.\n"
         },
         {
           "name": "groupLabel",
-          "start": 61657,
-          "end": 62335,
+          "start": 61823,
+          "end": 62501,
           "offset": 9179,
           "length": 678,
           "marker": "    // OrderPro menu: groupLabel is supplied by its private factory.\n"
         },
         {
           "name": "choiceEmoji",
-          "start": 62335,
-          "end": 62463,
+          "start": 62501,
+          "end": 62629,
           "offset": 9858,
           "length": 128,
           "marker": "    // OrderPro menu: choiceEmoji is supplied by its private factory.\n"
         },
         {
           "name": "describeOptions",
-          "start": 62463,
-          "end": 63542,
+          "start": 62629,
+          "end": 63708,
           "offset": 9987,
           "length": 1079,
           "marker": "    // OrderPro menu: describeOptions is supplied by its private factory.\n"
         },
         {
           "name": "describeOptionChoices",
-          "start": 63542,
-          "end": 64098,
+          "start": 63708,
+          "end": 64264,
           "offset": 11067,
           "length": 556,
           "marker": "    // OrderPro menu: describeOptionChoices is supplied by its private factory.\n"
         },
         {
           "name": "describeOptionVisuals",
-          "start": 64098,
-          "end": 64762,
+          "start": 64264,
+          "end": 64928,
           "offset": 11624,
           "length": 664,
           "marker": "    // OrderPro menu: describeOptionVisuals is supplied by its private factory.\n"
         },
         {
           "name": "standaloneMenuItem",
-          "start": 68015,
-          "end": 68273,
+          "start": 68181,
+          "end": 68439,
           "offset": 12289,
           "length": 258,
           "marker": "    // OrderPro menu: standaloneMenuItem is supplied by its private factory.\n"
         },
         {
           "name": "handleAddClick",
-          "start": 68274,
-          "end": 68630,
+          "start": 68440,
+          "end": 68796,
           "offset": 12548,
           "length": 356,
           "marker": "    // OrderPro menu: handleAddClick is supplied by its private factory.\n"
         },
         {
           "name": "initialCustomizerSelections",
-          "start": 68678,
-          "end": 69127,
+          "start": 68844,
+          "end": 69293,
           "offset": 12905,
           "length": 449,
           "marker": "    // OrderPro menu: initialCustomizerSelections is supplied by its private factory.\n"
         },
         {
           "name": "unansweredRequiredOption",
-          "start": 69309,
-          "end": 69717,
+          "start": 69475,
+          "end": 69883,
           "offset": 13355,
           "length": 408,
           "marker": "    // OrderPro menu: unansweredRequiredOption is supplied by its private factory.\n"
         },
         {
           "name": "syncCustomizerGate",
-          "start": 69717,
-          "end": 70051,
+          "start": 69883,
+          "end": 70217,
           "offset": 13764,
           "length": 334,
           "marker": "    // OrderPro menu: syncCustomizerGate is supplied by its private factory.\n"
         },
         {
           "name": "openCustomizer",
-          "start": 70052,
-          "end": 73669,
+          "start": 70218,
+          "end": 73835,
           "offset": 14099,
           "length": 3617,
           "marker": "    // OrderPro menu: openCustomizer is supplied by its private factory.\n"
         },
         {
           "name": "closeCustomizer",
-          "start": 73669,
-          "end": 73920,
+          "start": 73835,
+          "end": 74086,
           "offset": 17717,
           "length": 251,
           "marker": "    // OrderPro menu: closeCustomizer is supplied by its private factory.\n"
         },
         {
           "name": "selectCustomizerChoice",
-          "start": 73920,
-          "end": 75441,
+          "start": 74086,
+          "end": 75607,
           "offset": 17969,
           "length": 1521,
           "marker": "    // OrderPro menu: selectCustomizerChoice is supplied by its private factory.\n"
         },
         {
           "name": "customizerUnitPrice",
-          "start": 75441,
-          "end": 76140,
+          "start": 75607,
+          "end": 76306,
           "offset": 19491,
           "length": 699,
           "marker": "    // OrderPro menu: customizerUnitPrice is supplied by its private factory.\n"
         },
         {
           "name": "refreshCustomizerPrice",
-          "start": 76140,
-          "end": 76266,
+          "start": 76306,
+          "end": 76432,
           "offset": 20191,
           "length": 126,
           "marker": "    // OrderPro menu: refreshCustomizerPrice is supplied by its private factory.\n"
         },
         {
           "name": "confirmCustomizer",
-          "start": 76266,
-          "end": 78080,
+          "start": 76432,
+          "end": 78246,
           "offset": 20318,
           "length": 1814,
           "marker": "    // OrderPro menu: confirmCustomizer is supplied by its private factory.\n"
         },
         {
           "name": "availabilityOf",
-          "start": 137014,
-          "end": 137312,
+          "start": 137180,
+          "end": 137478,
           "offset": 22133,
           "length": 298,
           "marker": "    // OrderPro menu: availabilityOf is supplied by its private factory.\n"
         },
         {
           "name": "bootRestaurant",
-          "start": 138270,
-          "end": 145883,
+          "start": 138436,
+          "end": 146049,
           "offset": 22432,
           "length": 7613,
           "marker": "    // OrderPro menu: bootRestaurant is supplied by its private factory.\n"
@@ -455,64 +455,64 @@
       "fragments": [
         {
           "name": "lineKey",
-          "start": 59116,
-          "end": 59581,
+          "start": 59282,
+          "end": 59747,
           "offset": 574,
           "length": 465,
           "marker": "    instances.cart = KiwiOrderMenu.orderProParts.create('cart', {\n      get $() { return $; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get describeOptions() { return describeOptions; },\n      get escapeHtml() { return escapeHtml; },\n      get money() { return money; },\n      get nameOf() { return nameOf; },\n      get showToast() { return showToast; },\n      get t() { return t; },\n    });\n\n    // OrderPro cart: lineKey is supplied by its private factory.\n"
         },
         {
           "name": "totals",
-          "start": 64763,
-          "end": 65218,
+          "start": 64929,
+          "end": 65384,
           "offset": 1040,
           "length": 455,
           "marker": "    // OrderPro cart: totals is supplied by its private factory.\n"
         },
         {
           "name": "refreshCartUI",
-          "start": 65218,
-          "end": 66956,
+          "start": 65384,
+          "end": 67122,
           "offset": 1496,
           "length": 1738,
           "marker": "    // OrderPro cart: refreshCartUI is supplied by its private factory.\n"
         },
         {
           "name": "addLineToCart",
-          "start": 67108,
-          "end": 67636,
+          "start": 67274,
+          "end": 67802,
           "offset": 3235,
           "length": 528,
           "marker": "    // OrderPro cart: addLineToCart is supplied by its private factory.\n"
         },
         {
           "name": "decFromCart",
-          "start": 67636,
-          "end": 67829,
+          "start": 67802,
+          "end": 67995,
           "offset": 3764,
           "length": 193,
           "marker": "    // OrderPro cart: decFromCart is supplied by its private factory.\n"
         },
         {
           "name": "incFromCart",
-          "start": 67829,
-          "end": 67954,
+          "start": 67995,
+          "end": 68120,
           "offset": 3958,
           "length": 125,
           "marker": "    // OrderPro cart: incFromCart is supplied by its private factory.\n"
         },
         {
           "name": "openCart",
-          "start": 90142,
-          "end": 90284,
+          "start": 90308,
+          "end": 90450,
           "offset": 4084,
           "length": 142,
           "marker": "    // OrderPro cart: openCart is supplied by its private factory.\n"
         },
         {
           "name": "closeCart",
-          "start": 90284,
-          "end": 90429,
+          "start": 90450,
+          "end": 90595,
           "offset": 4227,
           "length": 145,
           "marker": "    // OrderPro cart: closeCart is supplied by its private factory.\n"
@@ -610,256 +610,256 @@
       "fragments": [
         {
           "name": "sendServiceRequest",
-          "start": 78181,
-          "end": 78684,
+          "start": 78347,
+          "end": 78850,
           "offset": 1578,
           "length": 503,
           "marker": "    instances.payment = KiwiOrderMenu.orderProParts.create('payment', {\n      get $() { return $; },\n      get $$() { return $$; },\n      get MENU() { return MENU; },\n      get NET() { return NET; },\n      get ORDER_DONE() { return ORDER_DONE; },\n      get ORDER_STATE_KEY() { return ORDER_STATE_KEY; },\n      get PREP_STAGE() { return PREP_STAGE; },\n      get SESSION() { return SESSION; },\n      get TIP_LEVELS() { return TIP_LEVELS; },\n      get activeMenuFilter() { return activeMenuFilter; },\n      get cart() { return cart; }, set cart(value) { cart = value; },\n      get closeCart() { return closeCart; },\n      get cur() { return cur; },\n      get currentOrderId() { return currentOrderId; }, set currentOrderId(value) { currentOrderId = value; },\n      get describeOptionChoices() { return describeOptionChoices; },\n      get describeOptionVisuals() { return describeOptionVisuals; },\n      get describeOptions() { return describeOptions; },\n      get escapeHtml() { return escapeHtml; },\n      get fmtAmount() { return fmtAmount; },\n      get gotoScreen() { return gotoScreen; },\n      get groupLabel() { return groupLabel; },\n      get itemOf() { return itemOf; },\n      get lastStatus() { return lastStatus; }, set lastStatus(value) { lastStatus = value; },\n      get lineKey() { return lineKey; },\n      get money() { return money; },\n      get nameOf() { return nameOf; },\n      get openCustomizer() { return openCustomizer; },\n      get orderMode() { return orderMode; }, set orderMode(value) { orderMode = value; },\n      get orderNumber() { return orderNumber; }, set orderNumber(value) { orderNumber = value; },\n      get pendingRef() { return pendingRef; }, set pendingRef(value) { pendingRef = value; },\n      get rebuildSent() { return rebuildSent; },\n      get refreshCartUI() { return refreshCartUI; },\n      get reloadMenu() { return reloadMenu; },\n      get renderMenu() { return renderMenu; },\n      get renderMenuSubtabs() { return renderMenuSubtabs; },\n      get saveSent() { return saveSent; },\n      get sentLines() { return sentLines; }, set sentLines(value) { sentLines = value; },\n      get sentOrders() { return sentOrders; }, set sentOrders(value) { sentOrders = value; },\n      get serviceRequestPending() { return serviceRequestPending; }, set serviceRequestPending(value) { serviceRequestPending = value; },\n      get sessionTotal() { return sessionTotal; }, set sessionTotal(value) { sessionTotal = value; },\n      get showToast() { return showToast; },\n      get splitState() { return splitState; }, set splitState(value) { splitState = value; },\n      get t() { return t; },\n      get tableNumber() { return tableNumber; }, set tableNumber(value) { tableNumber = value; },\n      get tipPercent() { return tipPercent; }, set tipPercent(value) { tipPercent = value; },\n      get toCents() { return toCents; },\n      get totals() { return totals; },\n    });\n\n    // OrderPro payment: sendServiceRequest is supplied by its private factory.\n"
         },
         {
           "name": "callServer",
-          "start": 78684,
-          "end": 79034,
+          "start": 78850,
+          "end": 79200,
           "offset": 2082,
           "length": 350,
           "marker": "    // OrderPro payment: callServer is supplied by its private factory.\n"
         },
         {
           "name": "openBill",
-          "start": 79097,
-          "end": 79284,
+          "start": 79263,
+          "end": 79450,
           "offset": 2433,
           "length": 187,
           "marker": "    // OrderPro payment: openBill is supplied by its private factory.\n"
         },
         {
           "name": "renderBill",
-          "start": 79475,
-          "end": 81460,
+          "start": 79641,
+          "end": 81626,
           "offset": 2621,
           "length": 1985,
           "marker": "    // OrderPro payment: renderBill is supplied by its private factory.\n"
         },
         {
           "name": "closeBill",
-          "start": 81460,
-          "end": 81605,
+          "start": 81626,
+          "end": 81771,
           "offset": 4607,
           "length": 145,
           "marker": "    // OrderPro payment: closeBill is supplied by its private factory.\n"
         },
         {
           "name": "setTipPercent",
-          "start": 81964,
-          "end": 83412,
+          "start": 82130,
+          "end": 83578,
           "offset": 4753,
           "length": 1448,
           "marker": "    // OrderPro payment: setTipPercent is supplied by its private factory.\n"
         },
         {
           "name": "confirmBill",
-          "start": 83413,
-          "end": 83821,
+          "start": 83579,
+          "end": 83987,
           "offset": 6202,
           "length": 408,
           "marker": "    // OrderPro payment: confirmBill is supplied by its private factory.\n"
         },
         {
           "name": "openSplit",
-          "start": 83890,
-          "end": 84272,
+          "start": 84056,
+          "end": 84438,
           "offset": 6611,
           "length": 382,
           "marker": "    // OrderPro payment: openSplit is supplied by its private factory.\n"
         },
         {
           "name": "closeSplit",
-          "start": 84272,
-          "end": 84420,
+          "start": 84438,
+          "end": 84586,
           "offset": 6994,
           "length": 148,
           "marker": "    // OrderPro payment: closeSplit is supplied by its private factory.\n"
         },
         {
           "name": "setSplitMode",
-          "start": 84420,
-          "end": 84737,
+          "start": 84586,
+          "end": 84903,
           "offset": 7143,
           "length": 317,
           "marker": "    // OrderPro payment: setSplitMode is supplied by its private factory.\n"
         },
         {
           "name": "setEgalCount",
-          "start": 84737,
-          "end": 84968,
+          "start": 84903,
+          "end": 85134,
           "offset": 7461,
           "length": 231,
           "marker": "    // OrderPro payment: setEgalCount is supplied by its private factory.\n"
         },
         {
           "name": "setArticleCount",
-          "start": 84968,
-          "end": 85507,
+          "start": 85134,
+          "end": 85673,
           "offset": 7693,
           "length": 539,
           "marker": "    // OrderPro payment: setArticleCount is supplied by its private factory.\n"
         },
         {
           "name": "setSplitPerson",
-          "start": 85507,
-          "end": 85615,
+          "start": 85673,
+          "end": 85781,
           "offset": 8233,
           "length": 108,
           "marker": "    // OrderPro payment: setSplitPerson is supplied by its private factory.\n"
         },
         {
           "name": "toggleSplitItem",
-          "start": 85615,
-          "end": 85897,
+          "start": 85781,
+          "end": 86063,
           "offset": 8342,
           "length": 282,
           "marker": "    // OrderPro payment: toggleSplitItem is supplied by its private factory.\n"
         },
         {
           "name": "refreshSplitUI",
-          "start": 85898,
-          "end": 86736,
+          "start": 86064,
+          "end": 86902,
           "offset": 8625,
           "length": 838,
           "marker": "    // OrderPro payment: refreshSplitUI is supplied by its private factory.\n"
         },
         {
           "name": "personSubtotal",
-          "start": 86737,
-          "end": 86998,
+          "start": 86903,
+          "end": 87164,
           "offset": 9464,
           "length": 261,
           "marker": "    // OrderPro payment: personSubtotal is supplied by its private factory.\n"
         },
         {
           "name": "renderSplitArticle",
-          "start": 86999,
-          "end": 88705,
+          "start": 87165,
+          "end": 88871,
           "offset": 9726,
           "length": 1706,
           "marker": "    // OrderPro payment: renderSplitArticle is supplied by its private factory.\n"
         },
         {
           "name": "confirmSplit",
-          "start": 88706,
-          "end": 89490,
+          "start": 88872,
+          "end": 89656,
           "offset": 11433,
           "length": 784,
           "marker": "    // OrderPro payment: confirmSplit is supplied by its private factory.\n"
         },
         {
           "name": "sendOrder",
-          "start": 91060,
-          "end": 101813,
+          "start": 91226,
+          "end": 101979,
           "offset": 12218,
           "length": 10753,
           "marker": "    // OrderPro payment: sendOrder is supplied by its private factory.\n"
         },
         {
           "name": "onSessionClosed",
-          "start": 111918,
-          "end": 112538,
+          "start": 112084,
+          "end": 112704,
           "offset": 22972,
           "length": 620,
           "marker": "    // OrderPro payment: onSessionClosed is supplied by its private factory.\n"
         },
         {
           "name": "LIVE",
-          "start": 113449,
-          "end": 115540,
+          "start": 113615,
+          "end": 115706,
           "offset": 23593,
           "length": 2091,
           "marker": "    // OrderPro payment: LIVE is supplied by its private factory.\n"
         },
         {
           "name": "onOrderStatus",
-          "start": 115787,
-          "end": 116466,
+          "start": 115953,
+          "end": 116632,
           "offset": 25685,
           "length": 679,
           "marker": "    // OrderPro payment: onOrderStatus is supplied by its private factory.\n"
         },
         {
           "name": "applyOrderStatus",
-          "start": 116466,
-          "end": 119489,
+          "start": 116632,
+          "end": 119655,
           "offset": 26365,
           "length": 3023,
           "marker": "    // OrderPro payment: applyOrderStatus is supplied by its private factory.\n"
         },
         {
           "name": "watchTableOrder",
-          "start": 119490,
-          "end": 119869,
+          "start": 119656,
+          "end": 120035,
           "offset": 29389,
           "length": 379,
           "marker": "    // OrderPro payment: watchTableOrder is supplied by its private factory.\n"
         },
         {
           "name": "dropUnavailable",
-          "start": 120238,
-          "end": 120871,
+          "start": 120404,
+          "end": 121037,
           "offset": 29769,
           "length": 633,
           "marker": "    // OrderPro payment: dropUnavailable is supplied by its private factory.\n"
         },
         {
           "name": "restartMenu",
-          "start": 120948,
-          "end": 121281,
+          "start": 121114,
+          "end": 121447,
           "offset": 30403,
           "length": 333,
           "marker": "    // OrderPro payment: restartMenu is supplied by its private factory.\n"
         },
         {
           "name": "confirmCashierPayment",
-          "start": 124564,
-          "end": 124698,
+          "start": 124730,
+          "end": 124864,
           "offset": 30737,
           "length": 134,
           "marker": "    // OrderPro payment: confirmCashierPayment is supplied by its private factory.\n"
         },
         {
           "name": "startPreparing",
-          "start": 125222,
-          "end": 125928,
+          "start": 125388,
+          "end": 126094,
           "offset": 30872,
           "length": 706,
           "marker": "    // OrderPro payment: startPreparing is supplied by its private factory.\n"
         },
         {
           "name": "triggerReady",
-          "start": 126003,
-          "end": 126597,
+          "start": 126169,
+          "end": 126763,
           "offset": 31579,
           "length": 594,
           "marker": "    // OrderPro payment: triggerReady is supplied by its private factory.\n"
         },
         {
           "name": "playChime",
-          "start": 126678,
-          "end": 127549,
+          "start": 126844,
+          "end": 127715,
           "offset": 32174,
           "length": 871,
           "marker": "    // OrderPro payment: playChime is supplied by its private factory.\n"
         },
         {
           "name": "refreshPermBanner",
-          "start": 127615,
-          "end": 128600,
+          "start": 127781,
+          "end": 128766,
           "offset": 33046,
           "length": 985,
           "marker": "    // OrderPro payment: refreshPermBanner is supplied by its private factory.\n"
         },
         {
           "name": "askNotificationPermission",
-          "start": 128601,
-          "end": 129091,
+          "start": 128767,
+          "end": 129257,
           "offset": 34032,
           "length": 490,
           "marker": "    // OrderPro payment: askNotificationPermission is supplied by its private factory.\n"
@@ -870,8 +870,8 @@
   "states": [
     {
       "name": "orderMode",
-      "start": 39202,
-      "end": 39227,
+      "start": 39368,
+      "end": 39393,
       "marker": "    // Session owner binding: orderMode.\n",
       "before": "    let orderMode = ",
       "after": ";",
@@ -880,8 +880,8 @@
     },
     {
       "name": "tableNumber",
-      "start": 39257,
-      "end": 39283,
+      "start": 39423,
+      "end": 39449,
       "marker": "    // Session owner binding: tableNumber.\n",
       "before": "    let tableNumber = ",
       "after": ";\n",
@@ -890,8 +890,8 @@
     },
     {
       "name": "orderNumber",
-      "start": 39283,
-      "end": 39308,
+      "start": 39449,
+      "end": 39474,
       "marker": "    // Session owner binding: orderNumber.\n",
       "before": "    let orderNumber = ",
       "after": ";",
@@ -900,8 +900,8 @@
     },
     {
       "name": "cart",
-      "start": 39407,
-      "end": 39435,
+      "start": 39573,
+      "end": 39601,
       "marker": "    // Session owner binding: cart.\n",
       "before": "    const cart = ",
       "after": ";\n",
@@ -910,8 +910,8 @@
     },
     {
       "name": "sentOrders",
-      "start": 40201,
-      "end": 40226,
+      "start": 40367,
+      "end": 40392,
       "marker": "    // Session owner binding: sentOrders.\n",
       "before": "    let sentOrders = ",
       "after": ";\n",
@@ -920,8 +920,8 @@
     },
     {
       "name": "sentLines",
-      "start": 40226,
-      "end": 40251,
+      "start": 40392,
+      "end": 40417,
       "marker": "    // Session owner binding: sentLines.\n",
       "before": "    const sentLines = ",
       "after": ";",
@@ -930,8 +930,8 @@
     },
     {
       "name": "sessionTotal",
-      "start": 40304,
-      "end": 40329,
+      "start": 40470,
+      "end": 40495,
       "marker": "    // Session owner binding: sessionTotal.\n",
       "before": "    let sessionTotal = ",
       "after": ";",
@@ -940,8 +940,8 @@
     },
     {
       "name": "tipPercent",
-      "start": 42199,
-      "end": 42223,
+      "start": 42365,
+      "end": 42389,
       "marker": "    // Session owner binding: tipPercent.\n",
       "before": "    let tipPercent = ",
       "after": ";\n",
@@ -950,8 +950,8 @@
     },
     {
       "name": "splitState",
-      "start": 42243,
-      "end": 42452,
+      "start": 42409,
+      "end": 42618,
       "marker": "    // Session owner binding: splitState.\n",
       "before": "    let splitState = ",
       "after": ";\n",
@@ -960,8 +960,8 @@
     },
     {
       "name": "customizerItem",
-      "start": 42477,
-      "end": 42508,
+      "start": 42643,
+      "end": 42674,
       "marker": "    // Session owner binding: customizerItem.\n",
       "before": "    let customizerItem = ",
       "after": ";\n",
@@ -970,8 +970,8 @@
     },
     {
       "name": "customizerSelections",
-      "start": 42508,
-      "end": 42543,
+      "start": 42674,
+      "end": 42709,
       "marker": "    // Session owner binding: customizerSelections.\n",
       "before": "    let customizerSelections = ",
       "after": ";\n",
@@ -980,8 +980,8 @@
     },
     {
       "name": "customizerNote",
-      "start": 42543,
-      "end": 42572,
+      "start": 42709,
+      "end": 42738,
       "marker": "    // Session owner binding: customizerNote.\n",
       "before": "    let customizerNote = ",
       "after": ";\n",
@@ -990,8 +990,8 @@
     },
     {
       "name": "customizerEditingKey",
-      "start": 42572,
-      "end": 42609,
+      "start": 42738,
+      "end": 42775,
       "marker": "    // Session owner binding: customizerEditingKey.\n",
       "before": "    let customizerEditingKey = ",
       "after": ";\n",
@@ -1000,8 +1000,8 @@
     },
     {
       "name": "customizerEditingQty",
-      "start": 42609,
-      "end": 42643,
+      "start": 42775,
+      "end": 42809,
       "marker": "    // Session owner binding: customizerEditingQty.\n",
       "before": "    let customizerEditingQty = ",
       "after": ";\n",
@@ -1010,8 +1010,8 @@
     },
     {
       "name": "serviceRequestPending",
-      "start": 73972,
-      "end": 74011,
+      "start": 74138,
+      "end": 74177,
       "marker": "    // Session owner binding: serviceRequestPending.\n",
       "before": "    let serviceRequestPending = ",
       "after": ";\n",
@@ -1020,8 +1020,8 @@
     },
     {
       "name": "currentOrderId",
-      "start": 86421,
-      "end": 86450,
+      "start": 86587,
+      "end": 86616,
       "marker": "    // Session owner binding: currentOrderId.\n",
       "before": "    let currentOrderId = ",
       "after": ";\n",
@@ -1030,8 +1030,8 @@
     },
     {
       "name": "pendingRef",
-      "start": 86744,
-      "end": 86769,
+      "start": 86910,
+      "end": 86935,
       "marker": "    // Session owner binding: pendingRef.\n",
       "before": "    let pendingRef = ",
       "after": ";\n",
@@ -1040,8 +1040,8 @@
     },
     {
       "name": "lastStatus",
-      "start": 109315,
-      "end": 109340,
+      "start": 109481,
+      "end": 109506,
       "marker": "    // Session owner binding: lastStatus.\n",
       "before": "    let lastStatus = ",
       "after": ";\n",
@@ -1050,8 +1050,8 @@
     },
     {
       "name": "guestReady",
-      "start": 117460,
-      "end": 117487,
+      "start": 117626,
+      "end": 117653,
       "marker": "    // Session owner binding: guestReady.\n",
       "before": "    let guestReady = ",
       "after": ";\n",
@@ -1060,8 +1060,8 @@
     },
     {
       "name": "availabilitySignature",
-      "start": 130531,
-      "end": 130567,
+      "start": 130697,
+      "end": 130733,
       "marker": "    // Session owner binding: availabilitySignature.\n",
       "before": "    let availabilitySignature = ",
       "after": ";\n",
@@ -1079,8 +1079,8 @@
     },
     {
       "name": "OPT",
-      "start": 38454,
-      "end": 38474,
+      "start": 38620,
+      "end": 38640,
       "before": "    const OPT = ",
       "after": ";\n",
       "initializer": "{}",
@@ -1088,8 +1088,8 @@
     },
     {
       "name": "MENU",
-      "start": 38907,
-      "end": 38928,
+      "start": 39073,
+      "end": 39094,
       "before": "    const MENU = ",
       "after": ";\n",
       "initializer": "[]",
@@ -1097,8 +1097,8 @@
     },
     {
       "name": "MENU_ALL",
-      "start": 38928,
-      "end": 38960,
+      "start": 39094,
+      "end": 39126,
       "before": "    const MENU_ALL = ",
       "after": ";\n",
       "initializer": "new Map()",
@@ -1106,8 +1106,8 @@
     },
     {
       "name": "MENU_SUBTABS",
-      "start": 38960,
-      "end": 38996,
+      "start": 39126,
+      "end": 39162,
       "before": "    const MENU_SUBTABS = ",
       "after": ";\n",
       "initializer": "new Map()",
