@@ -1071,6 +1071,46 @@ const F = {
 };
 export const formWords = (lang) => F[lang] || F.fr;
 
+/* Deux articles du même nom (Santos, 26 nov. 2026 : en renommant les articles
+   en codes, CHE0001 a été créé une seconde fois sans que rien ne le dise). Le
+   nom se compare sans casse, sans accents ni espaces doublés ; `exceptId` est
+   l'article qu'on corrige. Les trois formulaires de la caisse et celui du
+   tableau de bord le disent sous le champ, et refusent d'enregistrer. */
+const normName = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+export function nameTaken(cat, name, exceptId) {
+  const n = normName(name);
+  if (!n || !cat || typeof cat.listProducts !== 'function') return null;
+  return cat.listProducts().find((p) => p && p.id !== exceptId && normName(p.name) === n) || null;
+}
+const TAKEN = {
+  fr: (n) => `« ${n} » existe déjà dans l’inventaire. Donnez un autre nom.`,
+  en: (n) => `“${n}” is already in the inventory. Choose another name.`,
+  ar: (n) => `«${n}» موجود من قبل في المخزون. اختر اسماً آخر.`,
+};
+/* Branche la vérification sur un champ « Nom » : le message apparaît dès la
+   frappe. Rend check(), à appeler au moment d'enregistrer : l'article qui
+   porte déjà ce nom, ou null. */
+export function wireNameCheck(input, cat, lang, exceptId) {
+  if (!input || !input.parentNode) return () => null;
+  const t = TAKEN[lang] || TAKEN.fr;   // FR / EN / AR
+  const takenEl = document.createElement('span');
+  takenEl.setAttribute('data-kbs-name-taken', '');
+  takenEl.setAttribute('role', 'alert');
+  takenEl.style.cssText = 'display:none;font-size:11.5px;font-weight:600;line-height:1.35;margin-top:4px;color:var(--danger, #cb5238)';
+  input.parentNode.appendChild(takenEl);
+  const check = () => {
+    const p = nameTaken(typeof cat === 'function' ? cat() : cat, input.value, exceptId);
+    takenEl.style.display = p ? 'block' : 'none';
+    takenEl.textContent = p ? t(p.name) : '';
+    if (p) input.setAttribute('aria-invalid', 'true');
+    else if (input.getAttribute('aria-invalid') === 'true' && input.value.trim()) input.setAttribute('aria-invalid', 'false');
+    return p;
+  };
+  input.addEventListener('input', check);
+  if (input.value.trim()) check();
+  return check;
+}
+
 /* Le bloc « Stock › Quantité totale », identique sur les deux formulaires. */
 export function totalFieldHtml(lang, kind) {
   const t = words(lang);

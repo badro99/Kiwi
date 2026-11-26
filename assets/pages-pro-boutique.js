@@ -1820,7 +1820,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=35', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=39', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -3328,7 +3328,7 @@ function _bqxPfRead(b) {
   const priceMsg = price.empty ? t.priceErr : price.bad ? t.moneyBad : !(price.n > 0) ? t.priceZero : '';
   _bqxPfMark(b, 'price', !!priceMsg, priceMsg);
   _bqxPfMark(b, 'cost', !!cost.bad, t.moneyBad);
-  if (!name || priceMsg || cost.bad) return null;
+  if (!name || priceMsg || cost.bad || (b.__kbsNameTaken && b.__kbsNameTaken())) return null;
   /* No card checked = the product carries a kind this trade does not list
      (retail-scan writes « unite »). Left as it is, never rewritten to the
      first card: the old select did exactly that on every save. */
@@ -3461,6 +3461,7 @@ function _bqxPfOpen(p) {
   const b = _bqxModal && _bqxModal.el;
   if (!b) return;
   b.classList.add('bqx-pf-modal');
+  _bqxSz().then((m) => { if (b.isConnected && m.wireNameCheck) b.__kbsNameTaken = m.wireNameCheck(b.querySelector('[data-bqx-name]'), CAT(), _bqxPfLang(), p ? p.id : undefined); }).catch(() => {});   // un nom déjà dans l'inventaire
   _bqxPfWire(b, p); _bqxPfDraft = null; const _dTok = (_bqxPfOpen.n = (_bqxPfOpen.n || 0) + 1); if (!p) import(new URL('assets/boutique-drafts.js?v=2', document.baseURI).href).then((m) => { if (_dTok === _bqxPfOpen.n && b.isConnected) _bqxPfDraft = m.rememberForm(b, 'new-product:dash:' + (_bqxVenue() || 'local'), _bqxPfLang()); }).catch(() => {});   // fermée par erreur, la saisie revient (chaque boutique la sienne)
   if (!p) setTimeout(() => { const i = b.querySelector('[data-bqx-name]'); if (i) i.focus(); }, 60);
 }

@@ -307,17 +307,10 @@
      enregistré. La mémoire garde la modification, la remontée serveur part
      quand même (schedulePush ne lit que la mémoire) ; ce qui manque, c'est
      qu'un rechargement la perdrait. On le DIT : persist() rend vrai ou faux,
-     durable() le lit, et l'événement « kiwi:local-save » prévient la surface
-     à chaque échec, puis une fois au retour à la normale. */
-  let localKept = true, partial = false;
+     durable() le lit, et « kiwi:local-save » prévient la surface quand rien ne
+     tient (la copie partie au second puits attend sa réponse), puis au retour. */
+  let localKept = true, partial = false, saidKept = true;   // saidKept : ce que la surface a entendu
   const shelf = PARTS.shelf ? PARTS.shelf() : null;   // gros catalogue : le rayon en local, la réserve en IndexedDB
-  /* `saidKept` : ce que la surface a entendu en dernier. On ne parle que quand
-     le stock ne tient NULLE PART : un refus de localStorage dont la copie part
-     au second puits attend la réponse du puits (quiet), et le rechargement la
-     relit (load). Avant, une tablette au quota plein affichait à chaque
-     enregistrement « non enregistré » puis « de nouveau enregistré » une
-     seconde plus tard (Santos, 26 nov.). */
-  let saidKept = true;
   function sayKept(ok, quiet) {
     localKept = ok;
     if (quiet || ok === saidKept) return;
@@ -332,8 +325,7 @@
     const out = shelf ? shelf.text(db, partial) : { text: JSON.stringify(db) }; let ok = false;
     try { localStorage.setItem(KEY, out.text); ok = true; } catch (e) {}
     const key = KEY, epoch = ++saveEpoch, load = loadEpoch;
-    // Le document vide du démarrage n'a rien à perdre : la lecture du puits suit.
-    sayKept(ok, !ok && (startingEmpty || !(out.split && partial)));
+    sayKept(ok, !ok && (startingEmpty || !(out.split && partial)));   // le vide du démarrage n'a rien à perdre
     if (out.split) return (partial || startingEmpty) ? ok : shelf.keep(well, key, db, wellOwner(), (kept) => { if (key === KEY && epoch === saveEpoch && load === loadEpoch && (!ok || !kept)) sayKept(kept); }, ok);
     if (!ok && !startingEmpty) well.save(key, db, kept => {
       if (key === KEY && epoch === saveEpoch && load === loadEpoch) sayKept(kept);

@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=406';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=299';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=407';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=300';
 import { openMoves } from './inv-moves.js?v=7';
-import * as SZ from '../boutique-sizes.js?v=35';
-import { openLabelPicker } from './label-picker.js?v=14';
+import * as SZ from '../boutique-sizes.js?v=39';
+import { openLabelPicker } from './label-picker.js?v=15';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
 import { sisterStock } from './sister-stock.js?v=1'; import { fieldErr } from '../field-error.js?v=2'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=299';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=300';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
-    import('./avance-restock.js?v=58').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=59').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -938,6 +938,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         pp.hidden = !(pr > 0); pp.innerHTML = pr > 0 ? `${esc(fmtNum(pr))} <small>MAD</small>` : '';
       };
       nameIn.addEventListener('input', () => { mark('name', false); paint(); });
+      const nameTaken = SZ.wireNameCheck(nameIn, cat, lang);   // un nom déjà dans l'inventaire
       priceIn.addEventListener('input', () => { mark('price', false); paint(); });
       catIn.addEventListener('change', paint);
       SZ.wireTotal(el, lang);
@@ -962,7 +963,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         mark('name', !name);
         mark('price', !(price > 0));
         const bc = SZ.readCode(el, cat, lang);
-        if (!name || !(price > 0) || total == null || !bc) {
+        if (!name || !(price > 0) || total == null || !bc || nameTaken()) {
           const bad = el.querySelector('.kbs-form [aria-invalid="true"]');
           if (bad) bad.focus();
           return;
@@ -1012,7 +1013,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       let icon = p.art || 'tshirt';
       wireIconPicker(el, (k) => { icon = k; });
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
+      const nameTaken = SZ.wireNameCheck($('#bqi-e-name', el), cat, szLang(), pid);
       $('#bqi-e-save', el).addEventListener('click', () => {
+        if (nameTaken()) { $('#bqi-e-name', el).focus(); return; }
         cat.updateProduct(pid, { name: $('#bqi-e-name', el).value.trim() || undefined, categoryId: $('#bqi-e-cat', el).value || null, kind: $('#bqi-e-kind', el).value, art: icon, priceMAD: bqMoney($('#bqi-e-price', el).value), cost: bqMoney($('#bqi-e-cost', el).value) });
         toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Produit mis à jour'));
         openInvProduct(pid);
@@ -1845,9 +1848,11 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <button class="bq-btn primary" id="bqx-fsave"><i data-lucide="check"></i>Enregistrer la correction</button>
       </div>`, (el) => {
       $('#bqx-back', el).onclick = () => paintIntake();
+      const nameTaken = SZ.wireNameCheck($('#bqx-fname', el), cat, szLang(), pid);
       $('#bqx-fsave', el).onclick = () => {
         const name = $('#bqx-fname', el).value.trim();
         if (!name) return fieldErr(el, '#bqx-fname', (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Écrivez le nom du produit.'));
+        if (nameTaken()) { $('#bqx-fname', el).focus(); return; }
         const patch = {
           name, categoryId: $('#bqx-fcat', el).value || null, kind: $('#bqx-fkind', el).value,
           priceMAD: bqMoney($('#bqx-fprice', el).value), cost: bqMoney($('#bqx-fcost', el).value),
