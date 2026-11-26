@@ -642,6 +642,11 @@
       }
       if (!slug) return;
       if (R.cutoff(slug) !== serverCutoff) R.setCutoff(serverCutoff, slug);
+      /* Les fenêtres du tableau de bord demandent la bascule sous l'identifiant de
+         l'établissement (own, scoped…), pas sous le slug : sans ce double, « Aujourd'hui »
+         commençait à 5 h quand la caisse avait publié 8 h (audit du 26 nov., #0096). */
+      var vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
+      if (vid && vid !== slug && R.cutoff(vid) !== serverCutoff) R.setCutoff(serverCutoff, vid);
     } catch (_) {}
   }
 

@@ -344,8 +344,10 @@ function buildCustomFeed(venue) {
       return cents > 0 ? cents / 100 : basketOf(s);
     };
     return sales.map((s, i) => {
-      const d = new Date(s.ts);
-      const t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      /* L'heure du commerce, pas celle de l'appareil (audit du 26 nov.), comme le fil démo plus haut. */
+      let t;
+      try { t = new Date(s.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), s.ts) || window.KiwiDayReport?.timezone?.() || undefined) }); }
+      catch (_) { const d = new Date(s.ts); t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const toReceive = !isRefund && (s.method === 'delivery' || s.method === 'credit');
       const shown = toReceive ? Math.max(Math.abs(+s.amount || 0), owedOf(s)) : Math.abs(s.amount || 0);

@@ -220,12 +220,12 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "44",
-    "sha": "c33501f7f441c855"
+    "v": "45",
+    "sha": "f88127e3326a81d9"
   },
   "assets/caisse-app.js": {
-    "v": "55",
-    "sha": "ee5327be08821b64"
+    "v": "56",
+    "sha": "bc204f70533e7637"
   },
   "assets/caisse-cash-recovery.js": {
     "v": "1",
@@ -536,16 +536,16 @@
     "sha": "37e7d396bdf155a8"
   },
   "assets/dateRange.js": {
-    "v": "157",
-    "sha": "6302d3716c8a2879"
+    "v": "158",
+    "sha": "0fa966cc35ecb7ed"
   },
   "assets/daterange/activity.js": {
-    "v": "7",
-    "sha": "e2d9f4cc77281b55"
+    "v": "8",
+    "sha": "a790a0292516c5c7"
   },
   "assets/daterange/cards.js": {
-    "v": "8",
-    "sha": "c0dd1f5ac24c1a4d"
+    "v": "9",
+    "sha": "77b9d01fa7e5efec"
   },
   "assets/daterange/date-picker.js": {
     "v": "5",
@@ -568,8 +568,8 @@
     "sha": "fed02e7171af24bd"
   },
   "assets/daterange/renderers.js": {
-    "v": "52",
-    "sha": "bfb16334d2439d8d"
+    "v": "53",
+    "sha": "25a252bb568ecd52"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -600,7 +600,7 @@
     "sha": "c7482a21636851d6"
   },
   "assets/delivery-receivables.js": {
-    "v": "2",
+    "v": "4",
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
@@ -1412,8 +1412,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "300",
-    "sha": "de912fd065df42d1"
+    "v": "301",
+    "sha": "13fbf08d8b0e1456"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -1676,8 +1676,8 @@
     "sha": "7a0b4f38ca51b055"
   },
   "assets/pages.js": {
-    "v": "14",
-    "sha": "91ea1202399b8d4c"
+    "v": "15",
+    "sha": "d3fb2a18040b7475"
   },
   "assets/pages/dashboard-loader.js": {
     "v": "118",
@@ -2456,8 +2456,8 @@
     "sha": "8abf8684b022329c"
   },
   "assets/sales-history.js": {
-    "v": "19",
-    "sha": "975da470928a50ed"
+    "v": "20",
+    "sha": "478d0edbeaf87f96"
   },
   "assets/salle-scan.js": {
     "v": "16",

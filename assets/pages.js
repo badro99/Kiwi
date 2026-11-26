@@ -121,8 +121,9 @@
         <table class="p-table" data-real-transactions>
           <thead><tr><th>${pageEsc(T.transactionsThTime)}</th><th>${pageEsc(T.transactionsThMethod)}</th><th>${pageEsc(L.detail)}</th><th class="right">${pageEsc(T.transactionsThAmount)}</th><th>${pageEsc(T.transactionsThStatus)}</th></tr></thead>
           <tbody>${rows.map((s) => {
-            const d = new Date(+s.ts || 0);
-            const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            let time;   // l'heure du commerce, pas celle de l'appareil (audit du 26 nov.)
+            try { time = new Date(+s.ts || 0).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: (globalThis.KiwiZoneLaw?.effectiveZone(window.KiwiDayReport?.timezone?.(), +s.ts || 0) || window.KiwiDayReport?.timezone?.() || undefined) }); }
+            catch (_) { const d = new Date(+s.ts || 0); time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
             const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
             const method = isRefund ? L.refund : (L.methods[String(s.method || '')] || L.sale);
             return `<tr><td class="mono">${pageEsc(time)}</td><td><b>${pageEsc(method)}</b></td><td style="color:var(--n-600);">${pageEsc(s.label || (isRefund ? L.refund : L.sale))}</td><td class="mono right">${pageEsc(fmt(s.amount, 2))}</td><td><span class="chip ok">${pageEsc(isRefund ? L.refunded : L.status)}</span></td></tr>`;

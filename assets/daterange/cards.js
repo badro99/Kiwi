@@ -655,6 +655,8 @@ function realLowStock() {
     return null;
   }
 
+/* « Livraison reçue » porte le panier du ticket livré : le compter serait vendre deux fois (audit du 26 nov.). */
+const isCollectionSale = (e) => /^Livraison re[çc]ue/i.test(String((e && e.label) || '')) && !/^(delivery|livraison)$/i.test(String((e && e.method) || ''));
 function realTopProducts(range) {
     const [from, to] = rangeBounds(range == null ? __state.currentRange : range);
     /* Une ligne boutique porte la taille dans son nom (« Hoodie Blue M ») et une
@@ -666,7 +668,7 @@ function realTopProducts(range) {
       const size = variant.slice(item.length + 1).split(':')[0];
       return size && name.length > size.length + 1 && name.endsWith(' ' + size) ? name.slice(0, -(size.length + 1)) : name;
     };
-    const sales = __state.realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to);
+    const sales = __state.realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to && !isCollectionSale(e));
     const by = new Map(); let covered = 0;
     sales.forEach((sale) => {
       const lines = Array.isArray(sale.lines) ? sale.lines.filter((l) => l && l.name && (+l.qty || 0) > 0) : [];
@@ -699,7 +701,7 @@ function realPairs(range) {
     let baskets = 0;
     __state.realSalesList().forEach((sale) => {
       const ts = +sale.ts || 0;
-      if (ts < from || ts >= to) return;
+      if (ts < from || ts >= to || isCollectionSale(sale)) return;
       const keys = new Set();
       (Array.isArray(sale.lines) ? sale.lines : []).forEach((l) => {
         if (!l || !l.name || !((+l.qty || 0) > 0)) return;

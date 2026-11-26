@@ -85,7 +85,8 @@ export function summarize(rows, from, to, cutoff, zone, atSale = false) {
     if (ts < from || ts >= to) continue;
     const bucket = days.get(businessDate(ts, cutoff, zone));
     if (!bucket) continue;
-    if (atSale && /^Règlement acompte/.test(String(row.label || ''))) continue;
+    /* À la vente, « Livraison reçue » règle un ticket déjà compté (audit du 26 nov.). */
+    if (atSale && /^(Règlement acompte|Livraison re[çc]ue)/.test(String(row.label || ''))) continue;
     /* Un chèque rejeté puis réglé : ses lignes d'ajustement ne sont ni une vente ni un remboursement. */
     /* À l'argent reçu, elles bougent le chiffre (rejet puis encaissement = la
        vente une fois) ; à la vente, la vente a déjà tout compté. */
@@ -106,7 +107,9 @@ export function summarize(rows, from, to, cutoff, zone, atSale = false) {
       bucket.refunds[method] = (bucket.refunds[method] || 0) + -cents;
       continue;
     }
-    bucket.count++; bucket.cents += cents;
+    /* « Livraison reçue » est l'argent d'un ticket livré déjà compté comme commande. */
+    if (!/^Livraison re[çc]ue/.test(String(row.label || '')) || /^(delivery|livraison)$/i.test(method.trim())) bucket.count++;
+    bucket.cents += cents;
     const m = bucket.methods[method] || (bucket.methods[method] = { count: 0, cents: 0 });
     m.count++; m.cents += cents;
     const tip = Math.round(Number(row.tip_cents));

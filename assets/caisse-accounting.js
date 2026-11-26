@@ -1054,9 +1054,9 @@
           /* Une addition réglée sur le téléphone d'un serveur est une vente du
              même commerce, sur le même stock. Ces lignes-là arrivent du serveur
              sans itemId · le moteur les repêche par nom de plat. L'identifiant
-             de mouvement dérive de la référence du ticket : que la vente entre
-             par le comptoir ou par le miroir, elle ne sort la marchandise
-             qu'une fois. */
+             de mouvement dérive de l'identifiant de la vente (jamais du numéro,
+             qui revient) : que la vente entre par le comptoir ou par le miroir,
+             elle ne sort la marchandise qu'une fois. */
         try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
         if (entry.channel === 'dining' || entry.channel === 'terrace'
           || String(entry.id).endsWith('-emp')) shift.tablesPaid++;

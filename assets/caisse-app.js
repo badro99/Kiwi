@@ -2733,7 +2733,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
         try {
           merchant = String(window.KiwiCloudDoc?.currentSlug?.()
             || window.KiwiLive?.merchant?.()
-            || window.KiwiPlatform?.pairedVenue?.()?.merchant
+            || currentMerchantSlug()
             || '').trim();
         } catch (_) {}
         return {

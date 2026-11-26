@@ -24,7 +24,14 @@
      négative (functions/api/store-credits.js). Le tiroir, le Z et les
      encaissements restent de l'argent reçu (assets/day-report.js). */
   const atSale = () => { try { return !!(window.KiwiVenue && window.KiwiVenue.revenueAtSale && window.KiwiVenue.revenueAtSale()); } catch (_) { return false; } };
-  const isSettlement = (e) => /^Règlement acompte/.test(String((e && e.label) || ''));
+  /* « Livraison reçue » est l'argent du livreur pour un ticket déjà compté à la
+     vente (audit du 26 nov. : la livraison comptait deux fois). */
+  const isSettlement = (e) => /^(Règlement acompte|Livraison re[çc]ue)/.test(String((e && e.label) || ''));
+  /* La part du livreur d'un ticket livré : deliveryDue la suit jusqu'au paiement. */
+  const courierPart = (e) => (Array.isArray(e && e.paymentParts) ? e.paymentParts : []).reduce((n, p) =>
+    n + (p && /^(delivery|livraison)$/i.test(String(p.method || '')) && +p.amountCents > 0 ? +p.amountCents / 100 : 0), 0);
+  /* L'argent du livreur pour un ticket livré déjà compté : de l'argent, pas une commande de plus. */
+  const isCollection = (e) => /^Livraison re[çc]ue/.test(String((e && e.label) || '')) && !/^(delivery|livraison)$/i.test(String((e && e.method) || '').trim());
   function saleValue(e) {
     const amount = Math.max(0, +e.amount || 0);
     if (!atSale()) return amount;
@@ -69,9 +76,10 @@
       if (isChequeAdjust(e)) { adj.push({ method: e.method, signed: Math.abs(+e.amount || 0) }); return; }
       if (atSale() && isSettlement(e)) return;
       const amt = saleValue(e);
-      revenue += amt; gross += amt; count++;
+      revenue += amt; gross += amt; if (!isCollection(e)) count++;
       const tender = tenderBucket(e.method);
-      if (atSale()) { const paid = tenderAmounts(e).reduce((n, part) => n + (part.key ? part.amount : 0), 0); collected += paid; receivable += Math.max(0, amt - paid); }
+      /* La part livreur reste hors du ticket : deliveryDue la suit jusqu'au paiement du livreur. */
+      if (atSale()) { const paid = tenderAmounts(e).reduce((n, part) => n + (part.key ? part.amount : 0), 0); collected += paid; receivable += Math.max(0, amt - paid - courierPart(e)); }
       else if (tender) collected += amt;
       else if (RECEIVABLE_METHODS.includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
       tenderAmounts(e).forEach(part => {
@@ -126,6 +134,9 @@
     const tenders = statsFromSales(whole.concat(splitRows), refunds, from, to, adjust);
     result.card = tenders.card;
     result.cash = tenders.cash;
+    /* Encaissé et créances suivent les parts d'un ticket divisé, comme le registre local (audit du 26 nov.). */
+    result.collected = tenders.collected;
+    result.receivable = tenders.receivable;
     return result;
   }
   // Supply the store clock explicitly; no DOM or global merchant state is read.
