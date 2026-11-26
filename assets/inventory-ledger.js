@@ -315,7 +315,12 @@
       var m = clean(raw);
       if (!m.id || !m.itemId || !m.qty) return;
       if (!byId.has(m.id)) { d.rows.push(m); byId.set(m.id, m); added++; }
-      else if (m.cursor) byId.get(m.id).cursor = m.cursor;
+      else if (m.cursor) {
+        /* Le serveur l'a acceptée (une sortie autorisée par code responsable,
+         * maison-stock-movements.js pushApproved) : le refus que la file a pu
+         * recevoir en l'envoyant sans code, juste avant, ne vaut plus. */
+        var had = byId.get(m.id); had.cursor = m.cursor; had.blocked = 0; had.refused = '';
+      }
       d.queued = d.queued.filter(function (id) { return id !== m.id; });
       /* Le curseur de lecture n'avance pas ici : il ne bouge qu'avec pull().
        * Le numéro d'une ligne qu'on vient d'écrire peut dépasser des lignes
@@ -421,10 +426,11 @@
     if (cursors.size) health.lastAcknowledgedAt = Date.now();
   }
   /* Une ligne mise de côté reste au stock local et à l'historique ; elle sort
-   * seulement de la file, avec la raison du refus. */
+   * seulement de la file, avec la raison du refus. Une ligne déjà acceptée
+   * (curseur serveur) le reste : le refus d'un renvoi sans code ne la défait pas. */
   function setAside(d, ids, why) {
     var out = new Set(ids);
-    d.rows.forEach(function (r) { if (out.has(r.id)) { r.blocked = 1; r.refused = String(why || 'refused').slice(0, 40); } });
+    d.rows.forEach(function (r) { if (out.has(r.id) && !(+r.cursor > 0)) { r.blocked = 1; r.refused = String(why || 'refused').slice(0, 40); } });
     d.queued = d.queued.filter(function (id) { return !out.has(id); });
   }
   /* 400 (ligne invalide), 409 (même id, autre contenu) et 422 désignent une

@@ -11,7 +11,7 @@
  * Ce destinataire n'entre PAS dans le carnet de clients : pas de fiche
  * cliente, pas de points, pas de fidélité. */
 
-import { shipChoices } from './transfers.js?v=7';
+import { shipChoices } from './transfers.js?v=8';
 
 const PHRASES = {
   'Envoyé de': ['Sent from', 'يُرسَل من'],

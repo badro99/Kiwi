@@ -245,6 +245,15 @@
    * catalogue, il rappelle `fromCatalog`, le registre reçoit la ligne complète.
    * L'appelant ne compose jamais la ligne lui-même — c'est ce qui empêche un
    * mouvement d'exister sans que le stock ait bougé, et l'inverse. */
+  function findVariant(cat, opts) {
+    var v = null;
+    try { v = (cat.listVariants(opts.productId) || []).find(function (x) { return x.id === opts.variantId; }) || null; } catch (_) {}
+    if (!v && opts.variantId && cat._doc) {
+      try { v = (cat._doc().variants || []).find(function (x) { return x.id === opts.variantId; }) || null; } catch (_) {}
+    }
+    return v;
+  }
+
   function record(opts) {
     opts = opts || {};
     var cat = CAT();
@@ -253,11 +262,7 @@
     var qty = Math.abs(Math.trunc(+opts.qty || 0));
     if (!qty) return { ok: false, reason: 'quantite' };
     if (!may(t.id)) return { ok: false, reason: 'non-autorise' };
-    var v = null;
-    try { v = (cat.listVariants(opts.productId) || []).find(function (x) { return x.id === opts.variantId; }) || null; } catch (_) {}
-    if (!v && opts.variantId && cat._doc) {
-      try { v = (cat._doc().variants || []).find(function (x) { return x.id === opts.variantId; }) || null; } catch (_) {}
-    }
+    var v = findVariant(cat, opts);
     if (!v) return { ok: false, reason: 'variante-introuvable' };
     var before = Math.max(0, +v.stock || 0);
     if (t.dir < 0 && before < qty) return { ok: false, reason: 'stock-insuffisant', before: before };
@@ -430,14 +435,16 @@
    * Hors ligne, on refuse : une déclaration de perte qu'on ne peut pas faire
    * autoriser n'est pas une déclaration, et on préfère le dire à l'employé
    * plutôt que de bouger le stock sur la foi d'un accord jamais vérifié. */
+  /* `row` peut être une liste : plusieurs lignes, un seul code (requestManualBatch). */
   function pushApproved(row, approval) {
     var L = LEDGER();
-    if (!L || !row) return Promise.resolve({ ok: false, reason: 'registre' });
+    var rows = (Array.isArray(row) ? row : [row]).filter(Boolean);
+    if (!L || !rows.length) return Promise.resolve({ ok: false, reason: 'registre' });
     return fetch('/api/inventory/movements', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        merchant: L.merchant(), movements: [row], approval: approval || '',
+        merchant: L.merchant(), movements: rows, approval: approval || '',
         terminalId: L.terminalId(),
       }),
     }).then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
@@ -445,8 +452,11 @@
         if (res.status !== 200 || !res.j || !res.j.ok) {
           return { ok: false, reason: (res.j && res.j.error) || ('http-' + res.status) };
         }
-        var accepted = (res.j.accepted || [])[0];
-        L.acknowledge([Object.assign({}, row, { cursor: accepted ? accepted.cursor : 1 })]);
+        var acc = res.j.accepted || [];
+        L.acknowledge(rows.map(function (x, i) {
+          var a = acc.find(function (y) { return y && y.id === x.id; }) || acc[i];
+          return Object.assign({}, x, { cursor: a ? a.cursor : 1 });
+        }));
         return { ok: true };
       })
       .catch(function () { return { ok: false, reason: 'reseau' }; });
@@ -472,38 +482,88 @@
     var res = record(opts);
     if (!res.ok) return Promise.resolve(res);
     if (!needsApproval(opts.type) || !res.row) return Promise.resolve(res);
-    var ask = window.requireManager;
-    if (typeof ask !== 'function') return Promise.resolve(res);
+    if (typeof window.requireManager !== 'function') return Promise.resolve(res);
     var t = typeById(opts.type);
+    return approve(t.label + ' · ' + Math.abs(res.after - res.before) + tx(' pièce(s)', ' piece(s)', ' قطعة'),
+      (res.row && (res.row.name || res.row.label)) || t.label, [res.row],
+      function () { undo(res, opts.type); },
+      function (who) { return Object.assign({}, res, { approvedBy: who }); });
+  }
+
+  /* Le code responsable, une fois, pour les lignes `rows` déjà écrites au
+   * catalogue. Refusé, pavé refermé ou serveur qui dit non : `back()` remet la
+   * marchandise où elle était. On surveille la fermeture du pavé plutôt qu'un
+   * délai fixe — le responsable prend le temps qu'il prend. */
+  function approve(label, item, rows, back, done) {
     return new Promise(function (resolve) {
       var settled = false;
-      if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'stock_adjust', key: 'act.stock_adjust', args: { item: (res.row && (res.row.name || res.row.label)) || t.label } });
-      ask(t.label + ' · ' + Math.abs(res.after - res.before) + tx(' pièce(s)', ' piece(s)', ' قطعة'), function () {
+      if (window.KiwiAuthAct) window.KiwiAuthAct({ kind: 'stock_adjust', key: 'act.stock_adjust', args: { item: item } });
+      window.requireManager(label, function () {
         settled = true;
         var mgr = null;
         try { mgr = window.KiwiCaissePairing && window.KiwiCaissePairing.lastManager(); } catch (_) {}
-        pushApproved(res.row, (mgr && mgr.approval) || '').then(function (out) {
-          if (!out.ok) { undo(res, opts.type); resolve({ ok: false, reason: out.reason }); return; }
-          resolve(Object.assign({}, res, { approvedBy: (mgr && mgr.name) || '' }));
+        pushApproved(rows, (mgr && mgr.approval) || '').then(function (out) {
+          if (!out.ok) { back(); resolve({ ok: false, reason: out.reason }); return; }
+          resolve(done((mgr && mgr.name) || ''));
         });
-      }, { kind: 'inventory', movementIds: [res.row.id] });
-      /* Le pavé refermé sans code validé : le mouvement n'a jamais été
-         autorisé, donc la marchandise revient d'où elle vient. On surveille la
-         fermeture du pavé plutôt qu'un délai fixe — le responsable prend le
-         temps qu'il prend. */
+      }, { kind: 'inventory', movementIds: rows.map(function (r) { return r.id; }) });
       var watch = setInterval(function () {
         if (settled) { clearInterval(watch); return; }
         var modal = document.getElementById('manager-modal');
         if (modal && modal.classList.contains('is-open')) return;
         clearInterval(watch);
-        settled = true; undo(res, opts.type); resolve({ ok: false, reason: 'non-autorise' });
+        settled = true; back(); resolve({ ok: false, reason: 'non-autorise' });
       }, 400);
     });
   }
 
+  /* PLUSIEURS LIGNES, UN SEUL CODE (propriétaire, 2026-11-26) : une réception
+   * de douze tailles ne demande pas douze fois le responsable. Tout est vérifié
+   * AVANT de toucher au stock (une ligne impossible n'en laisse pas d'autres à
+   * moitié faites), puis chaque ligne s'écrit comme `record`, et la capacité
+   * signée couvre toutes leurs ids d'un coup (stockProofScope côté serveur).
+   * Réponse : { ok, count, pieces, results } ou { ok:false, reason, index }. */
+  function requestManualBatch(list) {
+    var cat = CAT();
+    list = (list || []).filter(function (o) { return o && Math.abs(Math.trunc(+o.qty || 0)) > 0; });
+    if (!list.length) return Promise.resolve({ ok: false, reason: 'quantite' });
+    var need = Object.create(null);
+    for (var i = 0; i < list.length; i++) {
+      var o = list[i], t = typeById(o.type);
+      if (!cat || !t || !t.manual) return Promise.resolve({ ok: false, reason: 'type', index: i });
+      var v = findVariant(cat, o);
+      if (!v) return Promise.resolve({ ok: false, reason: 'variante-introuvable', index: i });
+      if (t.dir < 0) {
+        need[v.id] = (need[v.id] || 0) + Math.abs(Math.trunc(+o.qty));
+        var have = Math.max(0, +v.stock || 0);
+        if (have < need[v.id]) return Promise.resolve({ ok: false, reason: 'stock-insuffisant', index: i, before: have });
+      }
+    }
+    var done = [];
+    for (var j = 0; j < list.length; j++) {
+      var r = record(list[j]);
+      if (!r.ok) {
+        done.forEach(function (x) { undo(x.res, x.type); });
+        return Promise.resolve(Object.assign({}, r, { index: j }));
+      }
+      done.push({ res: r, type: list[j].type });
+    }
+    var pieces = done.reduce(function (s, x) { return s + Math.abs(x.res.after - x.res.before); }, 0);
+    var out = { ok: true, count: done.length, pieces: pieces, results: done.map(function (x) { return x.res; }) };
+    var rows = done.map(function (x) { return x.res.row; }).filter(Boolean);
+    var asks = list.some(function (x) { return needsApproval(x.type); });
+    if (!rows.length || !asks || typeof window.requireManager !== 'function') return Promise.resolve(out);
+    var one = list.every(function (x) { return x.type === list[0].type; });
+    var label = (one ? typeById(list[0].type).label : tx('Mouvement de stock', 'Stock movement', 'حركة مخزون'))
+      + ' · ' + pieces + tx(' pièce(s)', ' piece(s)', ' قطعة');
+    return approve(label, label, rows,
+      function () { done.forEach(function (x) { undo(x.res, x.type); }); },
+      function (who) { return Object.assign({}, out, { approvedBy: who }); });
+  }
+
   window.KiwiMaisonStock = {
     types: types, typeById: typeById, typeForMove: typeForMove,
-    record: record, requestManual: requestManual, pushApproved: pushApproved,
+    record: record, requestManual: requestManual, requestManualBatch: requestManualBatch, pushApproved: pushApproved,
     needsApproval: needsApproval, list: list, all: all, productHistory: productHistory,
     facets: facets, totals: totals, may: may, actorName: actorName,
     enable: enable, isMaison: isMaison, _decorate: decorate, _fromCatalog: fromCatalog,

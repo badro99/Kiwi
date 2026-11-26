@@ -23,6 +23,8 @@ const MAX_ROWS = 300;
 /* Ce que caisse-lang ne traduit pas encore (même forme que livraisons.js). */
 const PHRASES = {
   "Tableau de bord": ["Dashboard","لوحة القيادة"],
+  "Retour": ["Back","رجوع"],
+  "Nouveau mouvement": ["New movement","حركة جديدة"],
   "Import": ["Import","استيراد"],
   "Aucun mouvement trouvé": ["No movements found","لم يتم العثور على أي حركة"],
   "Changez la période ou les filtres.": ["Change the period or the filters.","غيّر الفترة أو عوامل التصفية."],
@@ -114,6 +116,12 @@ function css() {
   s.id = 'bqm-css';
   s.textContent = [
     '#pos-boutique .bqm-view{padding:22px 24px 20px;display:flex;flex-direction:column;gap:14px;min-width:0;}',
+    '#pos-boutique .bqm-head{display:flex;align-items:center;gap:12px;min-width:0;}',
+    '#pos-boutique .bqm-head>div{flex:1;min-width:0;}',
+    '#pos-boutique .bqm-back{flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:1px solid var(--line,#E2DDD2);background:var(--paper-elev,#FFFDFA);color:inherit;cursor:pointer;}',
+    '#pos-boutique .bqm-back svg,#pos-boutique .bqm-back i{width:20px;height:20px;}',
+    '[dir="rtl"] #pos-boutique .bqm-back svg,#pos-boutique[dir="rtl"] .bqm-back svg{transform:scaleX(-1);}',
+    '#pos-boutique .bqm-new{flex:none;margin-inline-end:40px;}',
     '#pos-boutique .bqm-head h3{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em;}',
     '#pos-boutique .bqm-head span{display:block;margin-top:4px;font-size:13px;color:var(--ink-3,#6F6C65);}',
     '#pos-boutique .bqm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}',
@@ -147,7 +155,9 @@ function css() {
   document.head.appendChild(s);
 }
 
-/* d : { setModal, esc, icons, catDB } — les outils de inventory.js, rien de copié. */
+/* d : { setModal, esc, icons, catDB } — les outils de inventory.js, rien de copié.
+   Ouvert depuis stock-move.js, d porte aussi `back` (revenir au choix) et
+   `onNew` (« Nouveau mouvement ») ; sans eux, l'écran reste celui d'avant. */
 export function openMoves(d) {
   const MZ = window.KiwiMaisonStock;
   if (!MZ || typeof MZ.list !== 'function') { if (d.toast) d.toast(tr('Registre des mouvements indisponible. Rechargez la caisse.')); return; }
@@ -161,7 +171,11 @@ export function openMoves(d) {
   const types = MZ.types().filter((t) => !fac.types.length || fac.types.indexOf(t.id) >= 0);
   const html = '<button class="bq-modal-x" data-inv-x aria-label="' + esc(tr('Fermer')) + '"><i data-icon="close"></i></button>'
     + '<div class="bqm-view">'
-    + '<div class="bqm-head"><h3>' + esc(tr('Mouvements de stock')) + '</h3><span>' + esc(tr('Chaque entrée et chaque sortie, avec le stock avant et après')) + '</span></div>'
+    + '<div class="bqm-head">'
+    + (d.back ? '<button type="button" class="bqm-back" data-bqm-back aria-label="' + esc(tr('Retour')) + '"><i data-icon="arrow_back"></i></button>' : '')
+    + '<div><h3>' + esc(tr('Mouvements de stock')) + '</h3><span>' + esc(tr('Chaque entrée et chaque sortie, avec le stock avant et après')) + '</span></div>'
+    + (d.onNew ? '<button type="button" class="bq-btn primary bqm-new" data-bqm-new><i data-icon="add"></i>' + esc(tr('Nouveau mouvement')) + '</button>' : '')
+    + '</div>'
     + '<div class="bqm-kpis" id="bqm-kpis"></div>'
     + '<div class="bqm-tools">'
     + '<input id="bqm-q" type="search" autocomplete="off" value="' + esc(f.q) + '" placeholder="' + esc(tr('Produit, type, référence…')) + '" />'
@@ -175,6 +189,8 @@ export function openMoves(d) {
   d.setModal(html, (el) => {
     el.style.width = 'min(1120px, 96vw)';
     paint(el, MZ, d);
+    const back = el.querySelector('[data-bqm-back]'); if (back) back.addEventListener('click', () => d.back());
+    const nw = el.querySelector('[data-bqm-new]'); if (nw) nw.addEventListener('click', () => d.onNew());
     const q = el.querySelector('#bqm-q');
     q.addEventListener('input', () => { f.q = q.value.trim(); paint(el, MZ, d); });
     el.querySelector('#bqm-days').addEventListener('change', (e) => { f.days = parseInt(e.target.value, 10) || 0; paint(el, MZ, d); });

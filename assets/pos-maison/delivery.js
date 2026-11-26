@@ -9,8 +9,8 @@
  * renforcé. Si la caissière a déjà rempli la livraison sur le ticket, la fiche
  * s'ouvre préremplie avec. Le créneau et l'emballage voyagent dans le
  * commentaire, pour que le livreur et la page Livraisons les voient. */
-import { bqDeliveryCard } from '../pos-boutique/delivery-card.js?v=10';
-import { bqLivraisons } from '../pos-boutique/livraisons.js?v=23';
+import { bqDeliveryCard } from '../pos-boutique/delivery-card.js?v=11';
+import { bqLivraisons } from '../pos-boutique/livraisons.js?v=24';
 
 const PHRASES = {
   'Livraison fragile': ['Fragile delivery', 'توصيل هش'],

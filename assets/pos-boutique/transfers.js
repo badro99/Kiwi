@@ -102,6 +102,10 @@ const CSS = [
    « Envoyé de » (delivery-card.js). Vide hors catalogue partagé. */
 let family = null;
 export function shipChoices() { return family && family.self ? [family.self].concat(family.shops) : []; }
+/* « Mouvements de stock › Nouveau › Transfert » (stock-move.js) ouvre ce même
+   envoi, déjà adressé à la boutique choisie. Faux tant que la famille n'est pas lue. */
+let live = null;
+export function startTransfer(merchant) { return !!(live && live(merchant)); }
 
 export function bqTransfers(root, d) {
   const slug = typeof d.slug === 'function' ? d.slug() : d.slug;
@@ -328,5 +332,13 @@ export function bqTransfers(root, d) {
   refresh();
   st.timer = setInterval(() => { if (!document.hidden) refresh(); }, POLL);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  live = (merchant) => {
+    const shop = ((st.data && st.data.shops) || []).find((x) => x.merchant === merchant);
+    if (!shop) return false;
+    open();
+    st.compose = { to: shop.merchant, toName: shop.name, lines: [], ref: 'snd-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) };
+    armScanCapture(onScan); paint();
+    return true;
+  };
   return { refresh, open, close };
 }
