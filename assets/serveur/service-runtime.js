@@ -610,14 +610,14 @@
          soi appartiendrait à l'employé suivant qui ouvre la même table. */
       employeePaymentRefsForgetAll();
       serviceBillAwaiting.clear();
-      activeTableId = null;
-      menuContextId = null;
+      activeTableId = null; menuContextId = null;
+      svResetSheets();   // aucune feuille ni brouillon ne survit à la session (assets/serveur/payment-support.js)
     }
 
     function prepareAttendanceGate(action) {
       attendanceAction = action === 'clock-out' ? 'clock-out' : 'clock-in';
       applyRoleToClockin();
-      resetNfc();
+      resetNfc(); consumeAttendanceCode();   // jamais le code du pointage précédent dans le champ
       const button = $('#ci-button');
       const caption = $('#nfc-caption');
       if (button) {
@@ -1678,7 +1678,7 @@
       }
 
       // Pre-send local modification
-      if (!line.sentQty || (line.qty > line.sentQty && delta < 0 && line.qty - 1 >= line.sentQty)) {
+      if (!line.sentQty || (line.qty > line.sentQty && (delta > 0 || line.qty - 1 >= line.sentQty))) {   // une unité attend encore « Lancer » : le geste reste ici
         tableOrders[tableId] = applyGroupedLineQtyDelta(order, line, delta, false);
         markDirty(tableId);
         renderTableDetail();
@@ -1757,7 +1757,7 @@
               qty: data.appendedLine.qty || delta,
               opts: line.opts || [],
               note: '',
-              sentQty: 0,
+              sentQty: data.appendedLine.qty || delta,   // déjà écrite en cuisine par ce geste : « Lancer » ne la renvoie pas
             });
             toast(`+1 ${line.name} ajouté`);
             renderTableDetail();
@@ -2087,10 +2087,7 @@
         } catch (_) {}
       });
 
-      // Clear Source Table
-      sourceT.status = 'khawya';
-      sourceT.covers = 0;
-      sourceT.elapsed = 0;
+      sourceT.status = 'khawya'; sourceT.covers = 0; sourceT.elapsed = 0;   // la table d'origine est libre
       delete sourceT.orderNo;
       delete tableOrders[source];
       serviceTableSessions.delete(source);
@@ -2101,7 +2098,9 @@
         if (order && String(order.table) === String(source)) order.table = target;
       });
 
-      publishServiceTableState(source, 'khawya', 0, true);
+      /* La fusion a déjà fermé la visite d'origine côté serveur : redemander sa fermeture était refusé
+         (409 session-required) et la table restait « En cours » partout. On publie seulement « libre ». */
+      publishServiceTableState(source, 'khawya', 0, false);
       publishServiceTableState(target, targetT.status, targetT.covers, false);
 
       $('#merge-table-modal').classList.remove('is-open');
@@ -2298,8 +2297,8 @@
         const kind = optionGroups[g].kind;
         optDraft.sel[g] = kind === 'multi' ? new Set() : (kind === 'toggle' ? false : null);
       });
+      $('#opt-modal').classList.add('is-open');   // ouverte d'abord : le sous-titre se mesure à l'écran (svOptReserve)
       renderOptionsSheet(false);
-      $('#opt-modal').classList.add('is-open');
     }
 
     function closeOptionsSheet() {
@@ -2335,12 +2334,12 @@
       const itemLabel = window.KiwiMenuI18n && window.KiwiMenuI18n.dish ? window.KiwiMenuI18n.dish(item, employeeLanguage) : item.name;
       $('#opt-modal-body').innerHTML = `
         <h3 class="modal-title">${esc(itemLabel)}</h3>
-        <p class="modal-subtle">${item.price} MAD${extra ? ` · +${extra} MAD d'options` : ''} · personnalisez avant d'ajouter à la commande</p>
+        <p class="modal-subtle">${esc(svOptSubtitle(item.price, extra))}</p>
         ${groupsHTML}
         <div class="opt-foot">
           <button class="td-btn ghost" id="opt-cancel">${employeeLanguage === 'ar' ? 'إلغاء' : (employeeLanguage === 'en' ? 'Cancel' : 'Annuler')}</button>
           <button class="td-btn primary" id="opt-confirm">${EMPLOYEE_TRANSLATIONS.word(employeeLanguage, 'btn_add')} · ${fmtMAD(total)}</button>
-        </div>`;
+        </div>`; svOptReserve();
     }
 
     function confirmOptions() {

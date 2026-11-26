@@ -194,6 +194,9 @@ function grab(src, startRe, label) {
       payTableId: 'T4', calls: [], renduCalls: 0,
       currentPayAmount: () => 150, fmtMADcents: (n) => String(n), lucide: { createIcons() {} },
     });
+    /* Le vrai lecteur de « Montant reçu » (assets/serveur/payment-support.js). */
+    const support = read('assets/serveur/payment-support.js');
+    vm.runInContext(support.slice(support.indexOf('function svMoneyInput('), support.indexOf('function svMoneyText(')), c);
     vm.runInContext(`
       async function markTablePaid(id, m) { calls.push([id, m]); return ${payResult}; }
       function updateRendu() { renduCalls++; }

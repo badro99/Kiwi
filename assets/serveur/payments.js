@@ -268,7 +268,7 @@ cardModal.addEventListener('click', (e) => {
 
     function updateRendu() {
       const total = currentPayAmount(payTableId);
-      const got = parseFloat(cashInput.value) || 0;
+      const got = svMoneyInput(cashInput.value);
       const diff = got - total;
       cashRendu.classList.remove('is-positive', 'is-short');
       if (got >= total) {
@@ -290,7 +290,7 @@ cardModal.addEventListener('click', (e) => {
       cashStepInput.hidden = false;
       cashStepSuccess.hidden = true;
       const total = currentPayAmount(tableId);
-      cashInput.value = total;
+      cashInput.value = svMoneyText(total);
       $('#cash-amount').textContent = fmtMADcents(total);
       updateRendu();
       // mark ka-tkhdam if applicable
@@ -345,7 +345,7 @@ cashInput.addEventListener('input', updateRendu);
 
 function serveurPaymentEvents7() {
 $$('.cash-preset').forEach(b => b.addEventListener('click', () => {
-      cashInput.value = (parseFloat(cashInput.value) || 0) + parseFloat(b.dataset.add);
+      cashInput.value = svMoneyText(svMoneyInput(cashInput.value) + parseFloat(b.dataset.add));
       updateRendu();
     }));
 }
@@ -355,7 +355,7 @@ cashConfirm.addEventListener('click', async () => {
       if (cashConfirm.dataset.busy === '1' || cashSettled) return;
       const tableId = payTableId;
       const total = currentPayAmount(tableId);
-      const got = parseFloat(cashInput.value) || 0;
+      const got = svMoneyInput(cashInput.value);
       cashConfirm.dataset.busy = '1';
       cashConfirm.disabled = true;
       let ok = false;
@@ -384,12 +384,12 @@ cashModal.addEventListener('click', (e) => {
       if (svBrowseGuard()) return false;
       const t = tables[id];
       if (!t || employeePaymentsInFlight.has(id)) return false;
-      const hasUnsent = (tableOrders[id] || []).some((line) =>
-        Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
+      const hasUnsent = (tableOrders[id] || []).some((line) => Math.max(0, Number(line.qty) || 0) > Math.max(0, Number(line.sentQty) || 0));
       if (hasUnsent || dirtyOrders.has(id)) {
         toast(employeePick(`Table ${id} · envoyez d'abord la commande en cuisine`, `Table ${id} · send the order to the kitchen first`, `الطاولة ${id} · أرسل الطلب إلى المطبخ أولاً`), 4800);
         return false;
       }
+      if (SV_DEMO && !serviceTableSessions.get(id)) return svDemoSettle(id);   // vitrine, aucune visite côté serveur : pas de vente à écrire (payment-support.js)
       const paidAmount = getTableTotal(id);
       const paidClient = tableClients.get(id);
       const paidLines = (tableOrders[id] || []).map((line) => {
@@ -1019,7 +1019,7 @@ cashModal.addEventListener('click', (e) => {
 
       if (method === 'carte') {
         $('#card-amount').textContent = fmtMADcents((part.amountCents + (part.tipCents || 0)) / 100);
-        $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
+        $$('[data-bind="table"]').forEach(el => el.textContent = `${splitState.tableId} · part ${partIdx + 1}`);
         splitPayCallback = () => {
           markSplitPartPaid(partIdx, 'carte');
           $('#split-modal').classList.add('is-open');
@@ -1038,7 +1038,7 @@ cashModal.addEventListener('click', (e) => {
         cardReaderArm(payTableId);
       } else {
         cashAmountOverride = (part.amountCents + (part.tipCents || 0)) / 100;
-        $$('[data-bind="table"]').forEach(el => el.textContent = `Part ${partIdx + 1} · ${splitState.tableId}`);
+        $$('[data-bind="table"]').forEach(el => el.textContent = `${splitState.tableId} · part ${partIdx + 1}`);
         cashPay = () => markSplitPartPaid(partIdx, 'cash');
         cashSettled = false;
         splitPayCallback = () => {
@@ -1046,7 +1046,7 @@ cashModal.addEventListener('click', (e) => {
         };
         cashStepInput.hidden = false;
         cashStepSuccess.hidden = true;
-        cashInput.value = cashAmountOverride;
+        cashInput.value = svMoneyText(cashAmountOverride);
         $('#cash-amount').textContent = fmtMADcents((part.amountCents + (part.tipCents || 0)) / 100);
         updateRendu();
         cashModal.classList.add('is-open');

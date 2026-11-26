@@ -124,3 +124,128 @@ function svAnnounceOrphans() {
   toast(employeePick('Commandes non envoyées en cuisine, laissées sur cette tablette · voyez avec le responsable', 'Orders not sent to the kitchen were left on this tablet · check with your manager', 'طلبات لم تُرسل إلى المطبخ بقيت على هذا الجهاز · راجع المسؤول') + ' (' + tables + ')', 9000);
   return fresh.length;
 }
+
+/* ── Feuilles et brouillons (chasse du 26 nov. 2026) ──────────────────────
+   Les feuilles (options, formule, couverts, paiement…) sont posées sur TOUS
+   les écrans. Ce qui suit les garde justes quand le sol bouge sous elles. */
+
+/* Fin de session : aucune feuille, aucun brouillon ne passe à la personne
+   suivante. Une feuille d'options restée ouverte couvrait l'écran du code
+   (vidéo iPad d'un client) et avalait le premier chiffre. Chaque remise à
+   zéro est isolée : au tout premier appel, certaines variables du noyau ne
+   sont pas encore déclarées. */
+function svResetSheets() {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('.modal-veil.is-open').forEach((el) => el.classList.remove('is-open'));
+  [() => { clearTimeout(cardSuccessTimer); clearTimeout(cardFootTimer); },
+    () => { optDraft = null; }, () => { fmlDraft = null; }, () => { newTableId = null; },
+    () => { voidLineTarget = null; }, () => { trfFromId = null; trfSelectedToId = null; },
+    () => { mrgSourceId = null; mrgSelectedTargetId = null; }, () => { payTableId = null; },
+    () => { splitPayCallback = null; cashAmountOverride = null; cashPay = null; cashSettled = false; },
+  ].forEach((reset) => { try { reset(); } catch (_) {} });
+}
+
+/* Ce qu'une feuille ouverte lit dans la carte : le plat, ses groupes
+   d'options et, pour une formule, chaque plat proposé. svApplyCarte la prend
+   avant d'échanger la carte et la compare après. */
+function svSheetSig() {
+  try { if (!optDraft && !fmlDraft) return null; } catch (_) { return null; }   // aucune feuille ouverte (ou noyau pas encore chargé)
+  const groupsOf = (ids) => (ids || []).map((g) => [g, optionGroups[g] || null]);
+  const dish = (id) => { const it = menuItems.find((m) => m.id === id); return it ? [it, groupsOf(itemOptions[id])] : null; };
+  const formula = (id) => {
+    const it = menuItems.find((m) => m.id === id);
+    if (!it || !it.formula) return null;
+    const pool = (typeof svFormulaItems !== 'undefined' && svFormulaItems.length) ? svFormulaItems : menuItems;
+    const parts = (it.formula.slots || []).flatMap((s) => (s.choices || []).map((c) => {
+      const part = pool.find((x) => x.id === c.itemId);
+      return part ? [part, groupsOf(part.opts && part.opts.length ? part.opts : itemOptions[c.itemId])] : null;
+    }));
+    return [it, groupsOf(itemOptions[id]), parts];
+  };
+  return { opt: optDraft ? JSON.stringify(dish(optDraft.itemId)) : '', fml: fmlDraft ? JSON.stringify(formula(fmlDraft.itemId)) : '' };
+}
+/* Le patron retire le plat ou change ses options pendant que sa feuille est
+   ouverte : elle lisait la nouvelle carte avec l'ancien brouillon, les
+   touchers ne faisaient plus rien et « Ajouter » était mort. On la ferme et
+   on le dit ; un changement ailleurs sur la carte ne la touche pas. */
+function svSheetsAfterCarte(before) {
+  if (!before || (!before.opt && !before.fml)) return;
+  const after = svSheetSig();
+  let closed = false;
+  if (before.opt && optDraft && after.opt !== before.opt) { closeOptionsSheet(); closed = true; }
+  if (before.fml && fmlDraft && after.fml !== before.fml) { closeFormulaSheet(); closed = true; }
+  if (closed) toast(employeePick('La carte vient de changer · reprenez ce plat', 'The menu just changed · pick this dish again', 'تغيّرت القائمة للتو · اختر هذا الطبق من جديد'), 4200);
+}
+
+/* Feuille d'options : un toucher ne reconstruit plus la feuille. Les pastilles
+   et le prix changent sur place, et le sous-titre réserve dès l'ouverture la
+   hauteur de sa version la plus longue : rien ne bouge sous le doigt. */
+function svOptSubtitle(price, extra) {
+  return `${price} MAD${extra ? ` · +${extra} MAD d'options` : ''} · personnalisez avant d'ajouter à la commande`;
+}
+function svOptReserve() {
+  const sub = document.querySelector('#opt-modal-body .modal-subtle');
+  const item = optDraft && menuItems.find((m) => m.id === optDraft.itemId);
+  if (!sub || !item || !sub.offsetHeight) return;
+  const most = (itemOptions[optDraft.itemId] || []).reduce((sum, g) => {
+    const def = optionGroups[g], prices = ((def && def.vals) || []).map((v) => Number(v.p) || 0);
+    return sum + (def && def.kind === 'multi' ? prices.reduce((a, b) => a + b, 0) : Math.max(0, ...prices));
+  }, 0);
+  if (!most) return;
+  const shown = sub.textContent;
+  sub.style.minHeight = '';
+  sub.textContent = svOptSubtitle(item.price, most);
+  const tall = sub.offsetHeight;
+  sub.textContent = shown;
+  if (tall > sub.offsetHeight) sub.style.minHeight = tall + 'px';
+}
+function svOptSync() {
+  const body = document.getElementById('opt-modal-body');
+  const item = optDraft && menuItems.find((m) => m.id === optDraft.itemId);
+  if (!body || !item) return;
+  body.querySelectorAll('.opt-pill').forEach((pill) => {
+    const g = pill.dataset.optGroup, def = optionGroups[g], sel = optDraft.sel[g];
+    const on = !def ? false : def.kind === 'multi' ? !!(sel && sel.has(pill.dataset.optVal)) : def.kind === 'toggle' ? sel === true : sel === pill.dataset.optVal;
+    pill.classList.toggle('on', on);
+  });
+  const extra = optsExtra(optsFromSel(optDraft.itemId, optDraft.sel));
+  const sub = body.querySelector('.modal-subtle'), confirm = body.querySelector('#opt-confirm');
+  if (sub) sub.textContent = svOptSubtitle(item.price, extra);
+  /* Seul le prix change : le libellé du bouton, déjà traduit par la feuille, reste tel quel. */
+  const priceAt = confirm ? confirm.textContent.lastIndexOf(' · ') : -1;
+  if (priceAt >= 0) confirm.textContent = confirm.textContent.slice(0, priceAt + 3) + fmtMAD(item.price + extra);
+}
+
+/* Vitrine (?demo=1) : pas de commerce derrière, donc pas de vente à écrire.
+   La table se libère comme après un paiement confirmé, pour qu'un prospect
+   voie espèces, carte et partage aller jusqu'au bout. */
+function svDemoSettle(id) {
+  const t = tables[id];
+  if (!t) return false;
+  tableClients.delete(id);
+  t.status = 'khawya'; t.covers = 0; t.elapsed = 0;
+  delete t.orderNo;
+  tableOrders[id] = [];   // vide, pas absent : la commande d'exemple ne revient pas sur la table libérée
+  dirtyOrders.delete(id);
+  tableSplits.delete(id);
+  tablesPaid++;
+  if (activeTableId === id) returnToFloor();
+  if (currentTab === 'tables') renderTables();
+  if (currentTab === 'notifications') renderNotifications();
+  if (currentTab === 'profil') renderProfil();
+  toast(employeePick(`Table ${id} · réglée ✓`, `Table ${id} · paid ✓`, `الطاولة ${id} · مدفوعة ✓`));
+  return true;
+}
+
+/* « Montant reçu » : un montant en dirhams tel qu'on le tape, virgule ou
+   point, deux décimales au plus. Tout le reste (« 1e3 », lettres) vaut 0 :
+   le champ était un type=number qui lisait « 1e3 » comme 1 000 et ne
+   laissait pas saisir 132,50. */
+function svMoneyInput(text) {
+  const clean = String(text == null ? '' : text).replace(/\s/g, '').replace(',', '.');
+  return /^\d+(\.\d{0,2})?$/.test(clean) ? Math.round(parseFloat(clean) * 100) / 100 : 0;
+}
+function svMoneyText(amount) {
+  const cents = Math.max(0, Math.round((Number(amount) || 0) * 100));
+  return cents % 100 ? (cents / 100).toFixed(2).replace('.', ',') : String(cents / 100);
+}

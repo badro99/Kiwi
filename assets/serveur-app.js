@@ -547,8 +547,7 @@
       if (!d || !Array.isArray(d.items)) return false;
       const cats = Array.isArray(d.cats) ? d.cats.filter(c => c && c.id) : [];
       svCats = cats;
-      const labels = { all: 'Tout' };
-      const order = ['all'];
+      const labels = { all: 'Tout' }, order = ['all'], sheetsBefore = svSheetSig();   // ce que lisent les feuilles ouvertes, avant l'échange
       /* Le routage vit sur la categorie (voir assets/menu-catalog.js). Le
          serveur lisait it.station, qui n'existe plus : sans ce report, chaque
          commande annoncait le premier poste de la liste. */
@@ -609,6 +608,7 @@
          une sous-catégorie ou une option par son libellé canonique. */
       try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (!catLabels[activeCat]) activeCat = 'all';
+      svSheetsAfterCarte(sheetsBefore);   // une feuille dont le plat a changé se ferme, les autres restent
       svWhenIdle('carte', () => { try { renderCatPills(); renderMenu(); } catch (_) {} });   // jamais sous le doigt : le plat touché serait perdu
       return true;
     }
@@ -859,13 +859,13 @@
       }
       let restored = 0;
       Object.keys(saved.tables).forEach((id) => {
-        const lines = Array.isArray(saved.tables[id]) ? saved.tables[id] : [];
-        const clean = lines.filter((line) => line && line.name && Number(line.qty) > 0)
+        const clean = (Array.isArray(saved.tables[id]) ? saved.tables[id] : []).filter((line) => line && line.name && Number(line.qty) > 0)
           .map((line) => ({ ...line, uid: line.uid || newLineUid(), sourceLocal: true }));
         if (!clean.length) return;
-        const existing = tableOrders[id] || [];
-        const known = new Set(existing.map((line) => line && line.uid));
+        const existing = tableOrders[id] || [], known = new Set(existing.map((line) => line && line.uid));
         tableOrders[id] = existing.concat(clean.filter((line) => !known.has(line.uid)));
+        /* Un brouillon revenu reste à envoyer (sans ce drapeau, plus de « Lancer » après un rechargement) et le compteur d'uid repart après lui. */
+        dirtyOrders.add(id); clean.forEach((line) => { const n = /^ln(\d+)$/.exec(line.uid); if (n && +n[1] > lineSeq) lineSeq = +n[1]; });
         restored += clean.length;
       });
       return restored;
@@ -1193,7 +1193,7 @@
           id:    l.id || '',
           name:  l.name,
           price: l.price,
-          qty:   l.qty,
+          qty:   l.qty, sentQty: l.qty,   // commande d'exemple déjà en cuisine
           note:  '',
         }));
       }
@@ -1367,7 +1367,7 @@
           // demo rule — 0000 → non-server employee (plongeur), any other → serveur.
           activeRole = resolveRole(entered);
           applyRoleToClockin();
-          resetNfc();
+          resetNfc(); consumeAttendanceCode();   // jamais le code du pointage précédent dans le champ
           showScreen('screen-clockin');
           lucide.createIcons();
         }, 560);
@@ -2080,7 +2080,7 @@
         /* La vitrine n'a pas de commerce derrière : rien à envoyer, et le
            parcours de démonstration doit rester instantané. */
         if (SV_DEMO) {
-          dirtyOrders.delete(sentId);
+          order.forEach((l) => { l.sentQty = l.qty; }); dirtyOrders.delete(sentId);   // partie, pour la vitrine : « Encaisser » la refusait sinon
           returnToFloor();
           toast(msg);
           return;
@@ -2512,12 +2512,12 @@
       if (e.target === $('#opt-modal') || e.target.closest('#opt-cancel')) { closeOptionsSheet(); return; }
       if (e.target.closest('#opt-confirm')) { confirmOptions(); return; }
       const pill = e.target.closest('.opt-pill');
-      if (!pill || !optDraft) return;
+      if (!pill || !optDraft || !optionGroups[pill.dataset.optGroup]) return;
       const g = pill.dataset.optGroup, val = pill.dataset.optVal, def = optionGroups[g];
       if (def.kind === 'multi') { const s = optDraft.sel[g]; s.has(val) ? s.delete(val) : s.add(val); }
       else if (def.kind === 'toggle') optDraft.sel[g] = !optDraft.sel[g];
       else optDraft.sel[g] = (optDraft.sel[g] === val ? null : val);
-      renderOptionsSheet(false);
+      svOptSync();   // sur place : reconstruire la feuille à chaque toucher la faisait bouger sous le doigt
     });
 
     /* ---------- Formule / Menus Composés Sheet ---------- */

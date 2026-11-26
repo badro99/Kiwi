@@ -34,6 +34,8 @@ const context = {
   renderCatPills() { paints++; }, renderMenu() { paints++; },
   /* Personne ne touche l'écran : le dessin part tout de suite. */
   svWhenIdle: (_key, fn) => fn(),
+  /* Aucune feuille ouverte ici ; leur garde est tenue par tools/serveur-service-continuity-browser-test.mjs. */
+  svSheetSig: () => null, svSheetsAfterCarte() {},
   console,
 };
 vm.createContext(context);
