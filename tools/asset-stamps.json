@@ -264,8 +264,8 @@
     "sha": "70d570b6bdc44755"
   },
   "assets/caisse-lang.js": {
-    "v": "180",
-    "sha": "61f33aebc7d65350"
+    "v": "181",
+    "sha": "65aa9ddc740e3afd"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1248,8 +1248,8 @@
     "sha": "ae1031a15dc813f1"
   },
   "assets/kiwi-health.js": {
-    "v": "3",
-    "sha": "266e8922d133159a"
+    "v": "4",
+    "sha": "31a48775c3c9be40"
   },
   "assets/kiwi-report.css": {
     "v": "2",
@@ -2292,16 +2292,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "102",
-    "sha": "4426876d3fd614b1"
+    "v": "103",
+    "sha": "43f40f37f60e1037"
   },
   "assets/printer-health.js": {
     "v": "3",
     "sha": "331149bdbb3a9d11"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "26",
-    "sha": "19ec99c236cc2fd6"
+    "v": "27",
+    "sha": "09c121dc32e82a70"
   },
   "assets/printer/pairing-ui.js": {
     "v": "17",
@@ -2316,8 +2316,8 @@
     "sha": "6c2348abd3242f7e"
   },
   "assets/printer/transports.js": {
-    "v": "18",
-    "sha": "436b76ed97f12a2e"
+    "v": "19",
+    "sha": "574fe5ee41bd8f31"
   },
   "assets/procurement.js": {
     "v": "7",

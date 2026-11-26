@@ -250,20 +250,33 @@
     if ((s = src('bridges'))) {
       var old = 0, unknown = 0, offB = 0;
       s.rows.forEach(function (b) {
-        var below = semverBelow(b.version, [1, 4, 0]);
+        /* L'app Android a sa propre numérotation (1.0.x) : la comparer à 1.4.0
+           la comptait toujours « ancienne ». Sa dernière version : 1.0.7. */
+        var below = semverBelow(b.version, b.platform === 'android' ? [1, 0, 7] : [1, 4, 0]);
         if (below === null) unknown++; else if (below) old++;
         if (now - (b.last_seen_ts || 0) > DAY) offB++;
       });
       out.push(st('Relais d’impression', old || offB ? 'watch' : 'ok', count(s),
-        old + ' sous 1.4.0 · ' + offB + ' muet(s) > 24 h' + (unknown ? ' · ' + unknown + ' version inconnue' : '')));
+        old + ' à mettre à jour (Android 1.0.7, bureau 1.4.0) · ' + offB + ' muet(s) > 24 h' + (unknown ? ' · ' + unknown + ' version inconnue' : '')));
     } else { out.push(na('Relais d’impression', 'print_bridges')); }
 
     if ((s = src('print'))) {
-      var failed = s.rows.filter(function (j) { return j.status === 'failed' || j.status === 'expired'; }).length;
+      /* « incertain » : pris par le pont sans accusé dans le bail, souvent un
+         pont bloqué sur l'imprimante (Pasta Corner, 26 nov. 2026). */
+      var failed = s.rows.filter(function (j) { return j.status === 'failed' || j.status === 'expired' || j.status === 'uncertain'; }).length;
+      var unsure = s.rows.filter(function (j) { return j.status === 'uncertain'; }).length;
       var rate = s.rows.length ? Math.round(failed / s.rows.length * 100) : 0;
       out.push(st('Impressions cloud 24 h', failed ? (rate >= 10 ? 'bad' : 'watch') : 'ok', count(s),
-        failed + ' échouée(s) ou expirée(s)' + (s.rows.length ? ' · ' + rate + ' %' : '')));
+        failed + ' échouée(s), expirée(s) ou incertaine(s)' + (unsure ? ' dont ' + unsure + ' incertaine(s)' : '') + (s.rows.length ? ' · ' + rate + ' %' : '')));
     } else { out.push(na('Impressions cloud 24 h', 'print_jobs')); }
+
+    /* Tâches ouvertes par la veille du relais (functions/api/print/_watch.js). */
+    if ((s = src('tasks'))) {
+      var printTasks = s.rows.filter(function (t) { return /^print:/.test(String(t.signal_key || '')) && t.status !== 'resolved'; });
+      var shops = printTasks.map(function (t) { return t.merchant; }).filter(function (m, i, a) { return a.indexOf(m) === i; });
+      out.push(st('Alertes impression ouvertes', printTasks.length ? 'bad' : 'ok', int(printTasks.length),
+        printTasks.length ? shops.slice(0, 4).join(' · ') + (shops.length > 4 ? ' · …' : '') : 'aucun pont bloqué ni lent signalé'));
+    } else { out.push(na('Alertes impression', 'operator_tasks')); }
 
     if ((s = src('errors'))) {
       var hits = s.rows.reduce(function (a, r) { return a + (Number(r.count) || 0); }, 0);

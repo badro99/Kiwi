@@ -85,19 +85,36 @@ git pull
 app/android/gradlew -p bridge/android assembleRelease
 cp bridge/android/app/build/outputs/apk/release/app-release.apk downloads/kiwi-print-bridge.apk
 git add downloads/kiwi-print-bridge.apk
-git commit -m "printer · publier le pont Android v1.0.6"
+git commit -m "printer · publier le pont Android v1.0.7"
 git push https://github.com/zaka33333-hash/Kiwi.git main
 git push https://github.com/badro99/Kiwi.git main
 ```
 
 Sur la tablette : télécharger l'APK depuis kiwi-os.com, **installer par-dessus**
 (sauf ce passage unique de 1.0.0 à 1.0.4), accepter « Ignorer les optimisations de batterie »,
-vérifier que l'application affiche **1.0.6**. Depuis la 1.0.5, une tablette au repos
+vérifier que l'application affiche **1.0.7**. Depuis la 1.0.5, une tablette au repos
 n'interroge plus kiwi-os.com qu'une fois toutes les 5 s, comme le pont de bureau. Depuis
 la 1.0.6, une imprimante qui n'avale plus ses données ne bloque plus le pont : chaque
 écriture a 8 s, une imprimante injoignable est rendue au serveur qui retente le ticket,
 et le tiroir ne reste plus coincé derrière (Pasta Corner, 26 novembre 2026, douze
 minutes de blocage en 1.0.5).
+
+Depuis la 1.0.7, l'app se surveille : 75 s sans tour complet, elle coupe la connexion à
+l'imprimante ; 150 s, elle se relance seule. Elle affiche aussi une notification
+« Kiwi Print Bridge 1.0.x disponible » quand kiwi-os.com a une version plus récente :
+la toucher télécharge l'APK, à installer par-dessus. Après une nouvelle version, relever
+`ANDROID_BRIDGE_LATEST` dans `functions/api/print/_watch.js` (print-watch-test vérifie
+qu'il suit `versionName`).
+
+## Être prévenu avant le commerçant
+
+Depuis le 26 novembre 2026, le relais ouvre une **tâche opérateur** (console, file des
+tâches, « Impression bloquée / lente / pont hors ligne · <commerce> ») et envoie un
+courriel à `SUPPORT_ALERT_EMAIL` quand un ticket est pris sans accusé dans les 30 s,
+récupéré plus de 15 s après son envoi, ou déposé sans pont en ligne. Une tâche par
+commerce et par journée de service, un courriel à l'ouverture et à la réouverture.
+Voir `functions/api/print/_watch.js`. La page Santé de Kiwi compte ces alertes et les
+tickets « incertains ».
 
 ---
 

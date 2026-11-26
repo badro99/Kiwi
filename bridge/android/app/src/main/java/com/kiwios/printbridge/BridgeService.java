@@ -1,5 +1,6 @@
 package com.kiwios.printbridge;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -7,20 +8,29 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public final class BridgeService extends Service {
     static final String ACTION_STATUS = "com.kiwios.printbridge.STATUS";
     static final String EXTRA_STATUS = "status";
     private static final String CHANNEL = "kiwi_print_bridge";
     private static final int NOTIFICATION_ID = 1707;
+    private static final String UPDATE_CHANNEL = "kiwi_print_bridge_update";
+    private static final int UPDATE_NOTIFICATION_ID = 1708;
+    private final LoopWatchdog watchdog = new LoopWatchdog(System.currentTimeMillis());
+    private ScheduledExecutorService guard;
+    private volatile String offeredUpdate = "";
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running;
     private int unauthorized;
@@ -36,6 +46,62 @@ public final class BridgeService extends Service {
         int warmPort = BridgeStore.warmPort(this);
         long warmAt = BridgeStore.warmAt(this);
         RelayClient.resumePrinterWarm(warmIp, warmPort, warmAt);
+        guard = Executors.newSingleThreadScheduledExecutor();
+        guard.scheduleWithFixedDelay(this::checkLoop, 15, 15, TimeUnit.SECONDS);
+    }
+
+    /* Le chien de garde (LoopWatchdog) : 75 s sans battement, on coupe la prise
+       de l'imprimante ; 150 s, on relance le processus par une alarme. */
+    private void checkLoop() {
+        try {
+            switch (watchdog.check(System.currentTimeMillis())) {
+                case ABORT_IO:
+                    RelayClient.abortPrinter();
+                    publish("Imprimante bloquée · connexion coupée, reprise…");
+                    break;
+                case RESTART:
+                    restartProcess();
+                    break;
+                default:
+                    break;
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void restartProcess() {
+        try {
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            PendingIntent again = PendingIntent.getForegroundService(this, 1, new Intent(this, BridgeService.class),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            if (am != null) am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 3000, again);
+        } catch (Throwable ignored) {}
+        // START_STICKY relance aussi le service si l'alarme est retardée.
+        releaseLocks();
+        android.os.Process.killProcess(android.os.Process.myPid());
+    }
+
+    /* Le serveur propose la nouvelle version : une notification qu'on touche pour
+       télécharger l'APK, une fois par version. */
+    private void offerUpdate(JSONObject response) {
+        String url = RelayClient.updateUrl(response);
+        if (url == null) return;
+        String version = RelayClient.updateVersion(response);
+        if (version.equals(offeredUpdate)) return;
+        offeredUpdate = version;
+        try {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel c = new NotificationChannel(UPDATE_CHANNEL, "Mises à jour", NotificationManager.IMPORTANCE_DEFAULT);
+                nm.createNotificationChannel(c);
+            }
+            PendingIntent open = PendingIntent.getActivity(this, 2, new Intent(Intent.ACTION_VIEW, Uri.parse(url)),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            nm.notify(UPDATE_NOTIFICATION_ID, new Notification.Builder(this, UPDATE_CHANNEL)
+                    .setSmallIcon(com.kiwios.printbridge.R.drawable.ic_kiwi)
+                    .setContentTitle("Kiwi Print Bridge " + version + " disponible")
+                    .setContentText("Touchez pour télécharger, puis installez par-dessus. L’association est gardée.")
+                    .setContentIntent(open).setAutoCancel(true).build());
+        } catch (Throwable ignored) {}
     }
 
     private void acquireLocks() {
@@ -64,6 +130,7 @@ public final class BridgeService extends Service {
 
     private void loop() {
         while (running) {
+            watchdog.beat(System.currentTimeMillis());
             String token = BridgeStore.token(this);
             if (token.isEmpty()) { publish("Non associé"); sleep(3000); continue; }
             try {
@@ -76,6 +143,7 @@ public final class BridgeService extends Service {
                 }
                 unauthorized = 0;
                 if (status != 200 || !response.optBoolean("ok")) throw new Exception(response.optString("error", "HTTP " + status));
+                offerUpdate(response);
                 JSONArray jobs = RelayClient.jobs(response);
                 int count = jobs == null ? 0 : jobs.length();
                 publish("En ligne · " + BridgeStore.merchant(this) + (count > 0 ? " · impression…" : ""));
@@ -104,6 +172,7 @@ public final class BridgeService extends Service {
                     }
                     try { RelayClient.ack(token, job.optString("id"), ok, bytes, error, uncertain); }
                     catch (Exception ignored) { /* le serveur conserve le claim ; ne jamais réimprimer à l'aveugle */ }
+                    watchdog.beat(System.currentTimeMillis());
                     publish(ok ? "Imprimé · " + BridgeStore.merchant(this) : "Échec d’impression · " + error);
                 }
                 sleep(count > 0 ? 250 : RelayClient.nextPollMs(response));
@@ -145,6 +214,12 @@ public final class BridgeService extends Service {
         try { if (wifiLock != null && wifiLock.isHeld()) wifiLock.release(); } catch (Exception ignored) {}
         wifiLock = null;
     }
-    @Override public void onDestroy() { running = false; worker.shutdownNow(); releaseLocks(); super.onDestroy(); }
+    @Override public void onDestroy() {
+        running = false;
+        worker.shutdownNow();
+        if (guard != null) guard.shutdownNow();
+        releaseLocks();
+        super.onDestroy();
+    }
     @Override public IBinder onBind(Intent intent) { return null; }
 }

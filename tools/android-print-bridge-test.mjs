@@ -39,8 +39,21 @@ check(/new PrinterException\("printer-write-timeout", true\)/.test(relay) && /ne
 check(/deadTargets\.contains\(key\)/.test(service) && /deadTargets\.add\(key\)/.test(service),
   'after a printer fails, the rest of the batch for it is acked at once instead of each waiting past the 30 s lease');
 check(service.includes('RelayClient.ack') && service.includes('BridgeStore.clearPair'), 'jobs are acknowledged and revoked credentials are cleared');
-check(build.includes('versionCode 7') && build.includes("versionName '1.0.6'"), 'Android bridge build is bumped to v1.0.6 (code 7)');
-check(relay.includes('VERSION = "1.0.6"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.6 with 10s keepalive interval');
+check(build.includes('versionCode 8') && build.includes("versionName '1.0.7'"), 'Android bridge build is bumped to v1.0.7 (code 8)');
+check(relay.includes('VERSION = "1.0.7"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.7 with 10s keepalive interval');
+// 1.0.7 · the service watches itself (LoopWatchdog, run on the JVM by android-bridge-jvm-test)
+// and offers the server's update. Here: the wiring the JVM cannot see.
+const watchdogSrc = read('bridge/android/app/src/main/java/com/kiwios/printbridge/LoopWatchdog.java');
+check(/ABORT_AFTER_MS = 75_000L/.test(watchdogSrc) && /RESTART_AFTER_MS = 150_000L/.test(watchdogSrc) && !/import android/.test(watchdogSrc),
+  'the watchdog thresholds are 75 s (cut the printer socket) and 150 s (restart), in a class with no Android import');
+check(/watchdog\.beat\(System\.currentTimeMillis\(\)\);\s*String token/.test(service) && (service.match(/watchdog\.beat\(/g) || []).length >= 2,
+  'the service loop beats at every poll and after every ticket');
+check(/scheduleWithFixedDelay\(this::checkLoop/.test(service) && /RelayClient\.abortPrinter\(\)/.test(service) && /setAndAllowWhileIdle\(/.test(service) && /killProcess\(/.test(service),
+  'a stalled loop cuts the printer socket, then restarts the process through an alarm');
+check(/static void abortPrinter\(\)/.test(relay) && !/static synchronized void abortPrinter/.test(relay) && /private static volatile Socket printerSocket/.test(relay),
+  'abortPrinter does not wait for the lock the stuck thread holds');
+check(/offerUpdate\(response\)/.test(service) && /RelayClient\.updateUrl\(response\)/.test(service) && /url\.startsWith\("https:\/\/kiwi-os\.com\/"\)/.test(relay),
+  'the update offer is shown once per version and only for an APK on kiwi-os.com');
 // The server paces every bridge (functions/api/print/jobs.js: 1 s in service, 5 s idle).
 // Up to 1.0.4 the APK slept a fixed second and ignored it: 86 400 polls a tablet a day.
 check(/sleep\(count > 0 \? 250 : RelayClient\.nextPollMs\(response\)\)/.test(service) && !/sleep\(count > 0 \? 250 : 1000\)/.test(service),

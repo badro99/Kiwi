@@ -24,6 +24,13 @@ import {
   BRIDGE_ONLINE_MS, JOB_TTL_MS, EXPIRED_RETENTION_MS, MAX_DATA_B64, CLAIM_BATCH, randomHex,
   bridgeFromRequest, dbDown, relayJson, isMissingTable, safeJsonParse, now,
 } from './_relay.js';
+import { SLOW_CLAIM_MS, raisePrintIncident, bridgeVersionFrom, updateOffer, saveTiming } from './_watch.js';
+
+/* Une alerte ne retarde jamais la réponse au pont ou à la caisse. */
+function later(context, promise) {
+  try { if (context && typeof context.waitUntil === 'function') { context.waitUntil(promise); return; } } catch (_) {}
+  promise.catch(() => {});
+}
 
 const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake', 'probe', 'other'];
 /* ── UNE IMPRIMANTE ÉTEINTE SE VOIT AVANT LA PREMIÈRE COMMANDE (Browse, 25 nov. 2026) ──
@@ -113,9 +120,11 @@ export async function onRequestGet(context) {
     const bridge = await bridgeFromRequest(request, env);
     if (bridge === undefined) return dbDown(request);
     if (!bridge) return relayJson({ ok: false, error: 'unauthorized' }, 401, request);
+    const seen = bridgeVersionFrom(request);
     try {
-      await env.DB.batch([
-        env.DB.prepare('UPDATE print_bridges SET last_seen_ts = ? WHERE id = ?').bind(t, bridge.id),
+      const swept = await env.DB.batch([
+        env.DB.prepare('UPDATE print_bridges SET last_seen_ts = ?, version = COALESCE(?, version) WHERE id = ?')
+          .bind(t, seen ? seen.version : null, bridge.id),
         env.DB.prepare(`UPDATE print_jobs SET status = 'expired', done_ts = ? WHERE merchant = ? AND status = 'queued' AND expires_ts <= ?`)
           .bind(t, bridge.merchant, t),
         /* A claimed ticket whose lease elapsed may have reached paper before
@@ -125,6 +134,11 @@ export async function onRequestGet(context) {
           WHERE merchant = ? AND status = 'claimed' AND claimed_ts <= ?`)
           .bind(UNCERTAIN_OUTPUT, bridge.merchant, t - CLAIM_LEASE_MS),
       ]);
+      /* Veille (_watch.js) : un ticket pris sans accusé dans le bail ouvre une
+       * tâche opérateur et prévient l'équipe, une fois par jour de service. */
+      const lapsed = Number(swept && swept[2] && swept[2].meta && swept[2].meta.changes) || 0;
+      const who = { bridge: bridge.name || bridge.id, version: seen ? seen.version : (bridge.version || '') };
+      if (lapsed > 0) later(context, raisePrintIncident(env, bridge.merchant, 'stuck', { ...who, count: lapsed }, t));
       /* Une imprimante morte ne bloque pas les autres (Browse, 23 nov. 2026 :
        * reçus en panne, tickets cuisine servis 7 à 10 min en retard). Un pont
        * imprime en série et chaque essai vers une imprimante éteinte lui coûte
@@ -149,6 +163,14 @@ export async function onRequestGet(context) {
                         ORDER BY error IS NOT NULL, created_ts LIMIT ${CLAIM_BATCH})
           RETURNING id, kind, target, data_b64, error, created_ts`
       ).bind(t, bridge.id, bridge.merchant, t, bridge.id, t, bridge.id).all();
+      /* Un ticket réclamé tard : pont occupé ou bloqué ailleurs. Un wake ou un
+       * probe n'attend personne au comptoir. */
+      let waitMs = 0;
+      for (const j of rs.results || []) {
+        if (j.kind === 'wake' || j.kind === 'probe') continue;
+        waitMs = Math.max(waitMs, t - (Number(j.created_ts) || t));
+      }
+      if (waitMs > SLOW_CLAIM_MS) later(context, raisePrintIncident(env, bridge.merchant, 'slow', { ...who, waitMs }, t));
       // RETURNING ne garantit pas l'ordre : le pont imprime dans l'ordre reçu.
       const jobs = (rs.results || [])
         .sort((a, b) => (a.error == null ? 0 : 1) - (b.error == null ? 0 : 1) || Number(a.created_ts) - Number(b.created_ts))
@@ -170,7 +192,9 @@ export async function onRequestGet(context) {
         const probe = probesOn(env) ? await keepAwakeProbe(env, bridge.merchant, bridge.id, t).catch(() => null) : null;
         if (probe) jobs.push(probe);
       }
-      return relayJson({ ok: true, merchant: bridge.merchant, jobs, poll }, 200, request);
+      /* Une app Android en retard le voit et propose sa mise à jour (1.0.7+). */
+      const update = updateOffer(seen);
+      return relayJson(update ? { ok: true, merchant: bridge.merchant, jobs, poll, update } : { ok: true, merchant: bridge.merchant, jobs, poll }, 200, request);
     } catch (e) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
       return relayJson({ ok: false, error: 'read-failed' }, 500, request);
@@ -307,6 +331,8 @@ export async function onRequestPost(context) {
                   bytes = 0, error = ?
             WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
         ).bind(t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t, t, t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t + RETRY_DELAY_MS, t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, error, id, bridge.merchant, bridge.id).run();
+      /* Ouverture et écriture mesurées par le pont : gardées sur la ligne (migration 0039). */
+      if (outcome === 'printed' && r && r.meta && r.meta.changes) later(context, saveTiming(env, bridge.merchant, bridge.id, id, body.timing));
       return relayJson({ ok: true, updated: !!(r && r.meta && r.meta.changes) }, 200, request);
     } catch (e) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
@@ -399,7 +425,11 @@ export async function onRequestPost(context) {
   try {
     // Quelqu'un doit venir chercher le ticket : sans pont en ligne, dire non tout
     // de suite vaut mieux qu'un reçu qui « part » et ne sort jamais.
-    if (!await bridgeOnline(env, merchant, t, bridgeId)) return relayJson({ ok: false, error: 'relay-offline' }, 409, request);
+    if (!await bridgeOnline(env, merchant, t, bridgeId)) {
+      /* Un wake ou un probe sans pont n'est pas un ticket perdu : pas d'alerte. */
+      if (kind !== 'wake' && kind !== 'probe') later(context, raisePrintIncident(env, merchant, 'offline', {}, t));
+      return relayJson({ ok: false, error: 'relay-offline' }, 409, request);
+    }
 
     const written = await env.DB.batch([
       env.DB.prepare(

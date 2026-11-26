@@ -27,6 +27,8 @@ const WINDOW_MS = 10 * 60 * 1000;
 const MAX_FAILS = 10;
 const WIDE_MAX_FAILS = 30;
 const BLOCK_MS = 15 * 60 * 1000;
+const SUPERSEDED_AFTER_MS = 60 * 60 * 1000;
+const ABANDONED_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 /* Comme /api/pair/redeem : un code de pont est global, un essai les tente tous.
  * On compte par réseau (IPv6 /64, IPv4 exacte) et, plus large, par opérateur
@@ -129,6 +131,20 @@ export async function onRequestPost(context) {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(id, row.merchant, name, platform, version, await sha256Hex(token), t, t).run();
     } catch (_) { return relayJson({ ok: false, error: 'write-failed' }, 500, request); }
+    /* Ré-appairer la même tablette laissait l'ancien appairage actif à côté du
+     * nouveau (Pasta Corner, 26 nov. 2026 : quatre ponts « actifs », dont un
+     * 1.0.0 et un 1.4.4 muets depuis des jours). Le nouveau prend la place de
+     * l'ancien du même nom et de la même plateforme muet depuis une heure, et
+     * de tout pont muet depuis 30 jours. Un pont vivant n'est jamais retiré :
+     * deux tablettes du même modèle dans une boutique continuent d'imprimer. */
+    try {
+      await env.DB.prepare(
+        `UPDATE print_bridges SET revoked_ts = ?
+          WHERE merchant = ? AND id != ? AND revoked_ts IS NULL
+            AND ((name = ? AND COALESCE(platform, '') = ? AND COALESCE(last_seen_ts, created_ts) < ?)
+                 OR COALESCE(last_seen_ts, created_ts) < ?)`
+      ).bind(t, row.merchant, id, name, platform, t - SUPERSEDED_AFTER_MS, t - ABANDONED_AFTER_MS).run();
+    } catch (_) { /* le nouvel appairage vaut quand même */ }
     // Le seul moment où le jeton circule en clair. Il n'est pas journalisé.
     return relayJson({ ok: true, token, bridgeId: id, merchant: row.merchant, name }, 200, request);
   }

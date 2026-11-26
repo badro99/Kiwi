@@ -578,7 +578,7 @@
   function relayAlertPaint(key) {
     var a = relayAlerts[key];
     if (!a) return;
-    if (!a.waiting.length && !a.lost.length && !a.bridge) { try { a.el && a.el.remove(); } catch (_) {} delete relayAlerts[key]; return; }
+    if (!a.waiting.length && !a.lost.length && !a.bridge && !a.stuck && !a.unsure.length) { try { a.el && a.el.remove(); } catch (_) {} delete relayAlerts[key]; return; }
     try {
       if (!a.el || !a.el.isConnected) {
         a.el = document.createElement('div');
@@ -588,8 +588,20 @@
           + 'display:flex;gap:12px;align-items:center;background:var(--ink,#0A0F0D);color:var(--paper,#F7F5F0);padding:12px 14px;'
           + 'border-radius:12px;border-left:6px solid var(--danger,#B44338);box-shadow:0 8px 28px rgba(0,0,0,.35);font-size:14px;line-height:1.35;';
         a.el.innerHTML = `<span data-msg style="flex:1"></span><button type="button" data-retry style="display:none;font:inherit;font-weight:600;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:0;border-radius:8px;padding:8px 12px;cursor:pointer">${esc(tr('Réessayer'))}</button>`
+          + `<button type="button" data-reprint style="display:none;font:inherit;font-weight:600;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);border:0;border-radius:8px;padding:8px 12px;cursor:pointer">${esc(tr('Pas sorti ? Réimprimer'))}</button>`
           + `<button type="button" data-close aria-label="${esc(tr('Fermer'))}" style="font:inherit;background:transparent;color:inherit;border:0;padding:4px 6px;cursor:pointer;font-size:18px">×</button>`;
-        a.el.querySelector('[data-close]').onclick = function () { a.waiting = []; a.lost = []; a.bridge = false; relayAlertPaint(key); };
+        a.el.querySelector('[data-close]').onclick = function () { a.waiting = []; a.lost = []; a.bridge = false; a.stuck = false; a.unsure = []; relayAlertPaint(key); };
+        /* Un ticket « incertain » a peut-être imprimé : seule l'équipe, qui voit
+           le papier, décide de le renvoyer. Le serveur le remet en file. */
+        a.el.querySelector('[data-reprint]').onclick = function () {
+          var again = a.unsure.splice(0);
+          relayAlertPaint(key);
+          var qs = relayMerchantQS();
+          again.forEach(function (u) {
+            relayFetch('/jobs' + qs, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'requeue-uncertain', id: u }) }, 8000)
+              .then(function (r) { if (r.j && r.j.ok && r.j.requeued) watchRelayJob(u, qs, 0, a.target, null, null); });
+          });
+        };
         a.el.querySelector('[data-retry]').onclick = function () {
           var again = a.lost.splice(0);
           relayAlertPaint(key);
@@ -597,32 +609,40 @@
         };
         document.body.appendChild(a.el);
       }
-      var msg = a.bridge && !a.waiting.length && !a.lost.length
+      /* Pasta Corner, 26 nov. 2026 : le pont avait pris les tickets et restait
+         bloqué sur l'imprimante. La caisse ne le disait que 4 s, en bas. */
+      var msg = a.stuck && !a.waiting.length && !a.lost.length
+        ? a.label + ' · ' + tr('le pont a pris le ticket mais l\u2019imprimante ne l\u2019a pas confirmé. Vérifiez qu\u2019elle est allumée et qu\u2019il reste du papier, puis redémarrez l\u2019app Kiwi Print Bridge sur la tablette.')
+        : !a.waiting.length && !a.lost.length && !a.bridge && a.unsure.length
+        ? a.label + ' · ' + tr('impression non confirmée.')
+        : a.bridge && !a.waiting.length && !a.lost.length
         ? a.label + ' · ' + tr('le pont d\u2019impression ne récupère plus les tickets. Vérifiez que la tablette du pont est allumée, connectée au Wi-Fi et l\u2019application ouverte.')
         : fillIn(tr('{label} ne répond pas ({why}). Vérifiez qu\u2019elle est allumée, branchée au réseau et qu\u2019il reste du papier.'), { label: a.label, why: a.why });
       if (a.waiting.length) msg += ' ' + fillIn(tr(a.waiting.length > 1 ? '{n} tickets attendent, ils sortiront dès son retour (10 min au plus).' : '{n} ticket attend, il sortira dès son retour (10 min au plus).'), { n: a.waiting.length });
       if (a.lost.length) msg += ' ' + fillIn(tr(a.lost.length > 1 ? '{n} tickets non imprimés.' : '{n} ticket non imprimé.'), { n: a.lost.length });
+      if (a.unsure.length) msg += ' ' + fillIn(tr(a.unsure.length > 1 ? '{n} tickets peut-être pas sortis : regardez l\u2019imprimante.' : '{n} ticket peut-être pas sorti : regardez l\u2019imprimante.'), { n: a.unsure.length });
       a.el.querySelector('[data-msg]').textContent = msg;
       a.el.querySelector('[data-retry]').style.display = a.lost.length ? '' : 'none';
+      a.el.querySelector('[data-reprint]').style.display = a.unsure.length ? '' : 'none';
     } catch (_) {}
   }
   function relayAlertFor(t) {
     var key = JSON.stringify(t || {});
-    return relayAlerts[key] || (relayAlerts[key] = { key: key, label: relayPrinterLabel(t), why: '', waiting: [], lost: [], bridge: false, el: null });
+    return relayAlerts[key] || (relayAlerts[key] = { key: key, target: t, label: relayPrinterLabel(t), why: '', waiting: [], lost: [], bridge: false, stuck: false, unsure: [], el: null });
   }
   function relayAlertDrop(list, id) { var i = list.indexOf(id); if (i >= 0) list.splice(i, 1); }
   /* Observe an accepted relay job without holding the local durable queue.
    * The server owns that job for ten minutes once POST /jobs succeeds, so the
    * watch runs in the background until the job is done, failed or expired. */
   function watchRelayJob(id, qs, bytesLength, target, bytes, kind) {
-    var started = Date.now();
+    var started = Date.now(), claimedSeen = 0;
     var a = target ? relayAlertFor(target) : null;
     (function tick() {
       relayFetch('/jobs' + (qs ? qs + '&' : '?') + 'id=' + encodeURIComponent(id), { method: 'GET' }, 5000).then(function (st) {
         var job = st.j && st.j.ok && st.j.job;
         if (job && job.status === 'done') {
           try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: true, id: id, bytes: job.bytes || bytesLength } })); } catch (_) {}
-          if (a) { a.waiting = []; a.bridge = false; relayAlertPaint(a.key); }   // l'imprimante répond de nouveau
+          if (a) { a.waiting = []; a.bridge = false; a.stuck = false; relayAlertDrop(a.unsure, id); relayAlertPaint(a.key); }   // l'imprimante répond de nouveau
           return;
         }
         if (job && (job.status === 'failed' || job.status === 'expired')) {
@@ -635,10 +655,15 @@
         if (job && job.status === 'uncertain') {
           var uncertainReason = job.error || 'output-unknown-ack-timeout';
           try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, uncertain: true, id: id, reason: uncertainReason } })); } catch (_) {}
-          fallbackNotice('Impression incertaine · vérifiez que le ticket est bien sorti');
-          if (a) { relayAlertDrop(a.waiting, id); relayAlertPaint(a.key); }
+          if (a) { relayAlertDrop(a.waiting, id); a.stuck = false; if (a.unsure.indexOf(id) < 0) a.unsure.push(id); relayAlertPaint(a.key); }
+          else fallbackNotice('Impression incertaine · vérifiez que le ticket est bien sorti');
           return;
         }
+        /* Pris par le pont, toujours pas confirmé 15 s plus tard (mesuré ici, pas
+           avec l'horloge du serveur) : le pont est coincé sur l'imprimante. */
+        if (job && job.status === 'claimed') { if (!claimedSeen) claimedSeen = Date.now(); }
+        else claimedSeen = 0;
+        if (a && claimedSeen && Date.now() - claimedSeen > 15000 && !a.stuck) { a.stuck = true; relayAlertPaint(a.key); }
         if (a && job && job.status === 'queued' && job.error && a.waiting.indexOf(id) < 0) {
           a.why = relayWhy(job.error); a.waiting.push(id); relayAlertPaint(a.key);   // le pont a essayé : l'imprimante ne répond pas
         } else if (a && job && job.status === 'queued' && !job.claimed_ts && Date.now() - started > 25000 && !a.bridge) {

@@ -1,0 +1,55 @@
+# Pont d'impression Android · le Java tourne contre de fausses imprimantes
+#
+# Pasta Corner, 26 nov. 2026 : le pont 1.0.5 est resté bloqué douze minutes sur
+# une imprimante qui n'avalait plus rien, tickets et tiroir compris. Le défaut
+# (aucune échéance sur l'écriture) était visible à la première exécution, mais
+# rien n'exécutait ce code : les tests ne faisaient que lire les sources, et la
+# plupart des machines qui lancent tools/check.js n'ont pas de JDK.
+#
+# Ce workflow compile RelayClient.java et LoopWatchdog.java tels qu'ils partent
+# dans l'APK et les fait tourner contre de vraies prises TCP
+# (tools/android-bridge-jvm-test.mjs), puis vérifie que l'APK se construit.
+# Il ne part que lorsqu'un fichier du pont ou de ses tests change, et sur un
+# seul des deux dépôts, pour ne pas dépenser de minutes pour rien.
+
+name: Pont Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bridge/android/**'
+      - 'tools/android-bridge-jvm-test.mjs'
+      - 'tools/android-print-bridge-test.mjs'
+      - '.github/workflows/android-bridge.yml'
+  pull_request:
+    paths:
+      - 'bridge/android/**'
+      - 'tools/android-bridge-jvm-test.mjs'
+      - 'tools/android-print-bridge-test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  bridge:
+    if: github.repository == 'zaka33333-hash/Kiwi'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Java du pont contre de fausses imprimantes
+        run: node tools/android-bridge-jvm-test.mjs
+      - name: Garde-fous du source
+        run: node tools/android-print-bridge-test.mjs
+      - name: L'APK se construit
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > bridge/android/local.properties
+          app/android/gradlew -p bridge/android assembleDebug --no-daemon -q

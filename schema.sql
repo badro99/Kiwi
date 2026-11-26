@@ -1940,7 +1940,10 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   claimed_ts INTEGER,
   done_ts    INTEGER,
   bytes      INTEGER,
-  error      TEXT
+  error      TEXT,
+  connect_ms INTEGER,                    -- mesures du pont à l'accusé (migration 0039) :
+  write_ms   INTEGER,                    -- ouverture de la prise, écriture,
+  reused     INTEGER                     -- prise déjà ouverte (1) ou neuve (0)
 );
 CREATE INDEX IF NOT EXISTS idx_print_jobs_queue ON print_jobs (merchant, status, created_ts);
 

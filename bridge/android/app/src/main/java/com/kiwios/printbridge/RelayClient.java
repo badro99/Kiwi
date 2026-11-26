@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class RelayClient {
-    static final String VERSION = "1.0.6";
+    static final String VERSION = "1.0.7";
     private static final long PRINTER_KEEPALIVE_MS = 10000;
     // Une journée couvrait la fermeture de nuit mais pas le jour de fermeture
     // hebdomadaire ni un week-end prolongé : au retour, le premier ticket
@@ -58,7 +58,7 @@ final class RelayClient {
     }
 
     private static final byte[] PRINTER_PROBE_BYTES = new byte[] { 0x10, 0x04, 0x01 };
-    private static Socket printerSocket;
+    private static volatile Socket printerSocket;
     private static OutputStream printerOutput;
     private static String printerIp = "";
     private static int printerPort = 9100;
@@ -159,6 +159,14 @@ final class RelayClient {
             guard.cancel(false);
         }
         if (fired.get()) { closePrinterSocket(); throw new PrinterException("printer-write-timeout", true); }
+    }
+
+    /* Appelé par le chien de garde du service, depuis un autre fil, sans prendre
+       le verrou de la classe (le fil bloqué le tient) : fermer la prise
+       débloque l'écriture ou la lecture en cours par une exception. */
+    static void abortPrinter() {
+        Socket s = printerSocket;
+        try { if (s != null) s.close(); } catch (Exception ignored) {}
     }
 
     private static boolean probePrinter() {
@@ -301,6 +309,34 @@ final class RelayClient {
     }
 
     static JSONArray jobs(JSONObject response) { return response.optJSONArray("jobs"); }
+
+    /* 1.0.7 · le serveur propose la mise à jour (functions/api/print/_watch.js,
+       updateOffer) : { version, url }. On ne la suit que si elle est vraiment
+       plus récente et qu'elle vient de kiwi-os.com. */
+    static String updateUrl(JSONObject response) {
+        JSONObject u = response == null ? null : response.optJSONObject("update");
+        if (u == null) return null;
+        String url = u.optString("url");
+        if (!newer(u.optString("version"), VERSION) || !url.startsWith("https://kiwi-os.com/")) return null;
+        return url;
+    }
+
+    static String updateVersion(JSONObject response) {
+        JSONObject u = response == null ? null : response.optJSONObject("update");
+        return u == null ? "" : u.optString("version");
+    }
+
+    static boolean newer(String candidate, String current) {
+        String[] a = String.valueOf(candidate).split("\\."), b = String.valueOf(current).split("\\.");
+        if (a.length != 3 || b.length != 3) return false;
+        try {
+            for (int i = 0; i < 3; i++) {
+                int x = Integer.parseInt(a[i]), y = Integer.parseInt(b[i]);
+                if (x != y) return x > y;
+            }
+        } catch (NumberFormatException e) { return false; }
+        return false;
+    }
 
     /* Le serveur dit quand revenir (`poll`) : 1 s pendant le service, 5 s au
        repos. Jusqu'à la 1.0.4 l'appli l'ignorait et demandait chaque seconde,
