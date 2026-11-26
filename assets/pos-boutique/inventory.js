@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=407';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=300';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=409';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=302';
 import { openMoves } from './inv-moves.js?v=7';
-import * as SZ from '../boutique-sizes.js?v=39';
-import { openLabelPicker } from './label-picker.js?v=15';
+import * as SZ from '../boutique-sizes.js?v=40';
+import { openLabelPicker } from './label-picker.js?v=16';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=24';
-import { sisterStock } from './sister-stock.js?v=1'; import { fieldErr } from '../field-error.js?v=2'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=4';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=300';
+import { sisterStock } from './sister-stock.js?v=1'; import { fieldErr } from '../field-error.js?v=2'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=5';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=302';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openMoves({ setModal: invSetModal, esc, icons, catDB, toast });   // en lecture (inv-moves.js)
-    import('./avance-restock.js?v=59').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=61').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -906,8 +906,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
                 <span class="bqx-pf-err" id="bqi-n-e-price" data-bqi-err="price" hidden>${esc(f.priceErr)}</span>
               </label>
               <label class="bqx-pf-f">
-                <span class="bqx-pf-l">${esc(f.cost)}<span class="bqx-pf-tag">${esc(f.optional)}</span></span>
-                <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" data-bqi-cost /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
+                <span class="bqx-pf-l">${esc(f.cost)}</span>
+                <span class="bqx-pf-money"><input class="bqx-pf-in" inputmode="decimal" autocomplete="off" data-bqi-cost aria-describedby="bqi-n-e-cost" /><span class="bqx-pf-unit" aria-hidden="true">MAD</span></span>
+                <span class="bqx-pf-err" id="bqi-n-e-cost" data-bqi-err="cost" hidden>${esc(f.costErr)}</span>
               </label>
             </div>
           </section>
@@ -927,7 +928,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       const nameIn = q('[data-bqx-name]'), catIn = q('[data-bqx-cat]'), priceIn = q('[data-bqi-price]'), costIn = q('[data-bqi-cost]');
       const mark = (key, on) => {
         const err = q(`[data-bqi-err="${key}"]`); if (err) err.hidden = !on;
-        const inp = key === 'name' ? nameIn : priceIn; inp.setAttribute('aria-invalid', on ? 'true' : 'false');
+        const inp = key === 'name' ? nameIn : key === 'cost' ? costIn : priceIn; inp.setAttribute('aria-invalid', on ? 'true' : 'false');
       };
       const paint = () => {
         const name = nameIn.value.trim();
@@ -940,6 +941,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       nameIn.addEventListener('input', () => { mark('name', false); paint(); });
       const nameTaken = SZ.wireNameCheck(nameIn, cat, lang);   // un nom déjà dans l'inventaire
       priceIn.addEventListener('input', () => { mark('price', false); paint(); });
+      costIn.addEventListener('input', () => mark('cost', false));   // le coût d'achat est exigé (owner, 26 nov. 2026)
       catIn.addEventListener('change', paint);
       SZ.wireTotal(el, lang);
       /* Un article déjà étiqueté : la douchette remplit le champ du code. */
@@ -962,8 +964,9 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const total = SZ.readTotal(el);
         mark('name', !name);
         mark('price', !(price > 0));
+        const cost = bqMoney(costIn.value); mark('cost', !(cost > 0));
         const bc = SZ.readCode(el, cat, lang);
-        if (!name || !(price > 0) || total == null || !bc || nameTaken()) {
+        if (!name || !(price > 0) || !(cost > 0) || total == null || !bc || nameTaken()) {
           const bad = el.querySelector('.kbs-form [aria-invalid="true"]');
           if (bad) bad.focus();
           return;
@@ -972,7 +975,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const ph = el.__kiwiTillPhoto || {};
         const made = SZ.createProduct(cat, {
           name, categoryId: catIn.value || null, kind, art: ph.art || '', artPicked: !!ph.artPicked,
-          priceMAD: price, cost: bqMoney(costIn.value),
+          priceMAD: price, cost,
         }, total, bc.code);
         if (!made.product) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Création impossible')); return; }
         disarmScanCapture();
@@ -1004,7 +1007,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label for="bqi-e-price">Prix de vente (MAD)</label><input id="bqi-e-price" type="number" min="0" value="${p.priceMAD}" /></div>
-          <div class="bqi-fg"><label for="bqi-e-cost">Coût d'achat (MAD)</label><input id="bqi-e-cost" type="number" min="0" value="${p.cost || 0}" /></div>
+          <div class="bqi-fg"><label for="bqi-e-cost">Coût d'achat (MAD)</label><input id="bqi-e-cost" type="number" min="0" value="${p.cost || ''}" /></div>
         </div>
         <div class="bqi-fg"><label>Icône du produit</label>${iconPickerHtml(p.art || 'tshirt')}</div>
       </div>
@@ -1016,6 +1019,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       const nameTaken = SZ.wireNameCheck($('#bqi-e-name', el), cat, szLang(), pid);
       $('#bqi-e-save', el).addEventListener('click', () => {
         if (nameTaken()) { $('#bqi-e-name', el).focus(); return; }
+        if (!(bqMoney($('#bqi-e-cost', el).value) > 0)) { fieldErr(el, '#bqi-e-cost', SZ.formWords(szLang()).costErr); return; }
         cat.updateProduct(pid, { name: $('#bqi-e-name', el).value.trim() || undefined, categoryId: $('#bqi-e-cat', el).value || null, kind: $('#bqi-e-kind', el).value, art: icon, priceMAD: bqMoney($('#bqi-e-price', el).value), cost: bqMoney($('#bqi-e-cost', el).value) });
         toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Produit mis à jour'));
         openInvProduct(pid);
@@ -1414,7 +1418,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         <div class="bqi-fg"><label for="bqx-newcat">Ou nouvelle catégorie</label><input id="bqx-newcat" placeholder="Laisser vide pour garder celle ci-dessus" autocomplete="off" /></div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label for="bqx-price">Prix de vente (MAD)</label><input id="bqx-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="349" /></div>
-          <div class="bqi-fg"><label for="bqx-cost">Coût d'achat (MAD)</label><input id="bqx-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="optionnel" /></div>
+          <div class="bqi-fg"><label for="bqx-cost">Coût d'achat (MAD)</label><input id="bqx-cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="120" /></div>
         </div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
@@ -1436,6 +1440,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       const kindSel = $('#bqx-kind', el), sizeList = $('#bqx-sizes', el);
       const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
       kindSel.onchange = fillSizes; fillSizes();
+      const nameTaken = SZ.wireNameCheck($('#bqx-name', el), cat, szLang());
 
       if (prev) $('#bqx-chain', el).onclick = () => intakeVariant(j, intake.lastProduct);
       const linkBtn = $('#bqx-link', el);
@@ -1445,6 +1450,8 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
       const save = () => {
         const name = $('#bqx-name', el).value.trim();
         if (!name) return fieldErr(el, '#bqx-name', (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Écrivez le nom du produit.'));
+        if (nameTaken()) { $('#bqx-name', el).focus(); return; }
+        if (!(bqMoney($('#bqx-cost', el).value) > 0)) return fieldErr(el, '#bqx-cost', SZ.formWords(szLang()).costErr);   // coût exigé (26 nov.)
         const size = $('#bqx-size', el).value.trim() || 'TU';
         const qty = Math.max(0, parseInt($('#bqx-qty', el).value, 10) || 0);
         let catId = $('#bqx-cat', el).value || null;
@@ -1840,7 +1847,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         </div>
         <div class="bqi-frow">
           <div class="bqi-fg"><label for="bqx-fprice">Prix de vente (MAD)</label><input id="bqx-fprice" type="number" min="0" step="0.01" value="${p.priceMAD}" /></div>
-          <div class="bqi-fg"><label for="bqx-fcost">Coût d'achat (MAD)</label><input id="bqx-fcost" type="number" min="0" step="0.01" value="${p.cost || 0}" /></div>
+          <div class="bqi-fg"><label for="bqx-fcost">Coût d'achat (MAD)</label><input id="bqx-fcost" type="number" min="0" step="0.01" value="${p.cost || ''}" /></div>
         </div>
       </div>
       <div class="bqi-modfoot bqx-foot">
@@ -1853,6 +1860,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const name = $('#bqx-fname', el).value.trim();
         if (!name) return fieldErr(el, '#bqx-fname', (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Écrivez le nom du produit.'));
         if (nameTaken()) { $('#bqx-fname', el).focus(); return; }
+        if (!(bqMoney($('#bqx-fcost', el).value) > 0)) return fieldErr(el, '#bqx-fcost', SZ.formWords(szLang()).costErr);
         const patch = {
           name, categoryId: $('#bqx-fcat', el).value || null, kind: $('#bqx-fkind', el).value,
           priceMAD: bqMoney($('#bqx-fprice', el).value), cost: bqMoney($('#bqx-fcost', el).value),

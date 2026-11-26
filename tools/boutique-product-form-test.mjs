@@ -121,9 +121,19 @@ ok('an empty name, an empty or zero price and a malformed cost are each written 
   assert.equal(_bqxPfRead(bad), null);
   assert.equal(bad.nodes['[data-bqx-pf-err="price"]'].textContent, _BQX_PF.fr.moneyBad);
 });
+ok('the purchase cost is required: empty or 0 is refused and says why (owner, 26 Nov 2026)', () => {
+  const { _bqxPfRead, _BQX_PF } = load('fr');
+  for (const cost of ['', '0']) {
+    const b = fakeForm({ name: 'Bougie', price: '45', cost });
+    assert.equal(_bqxPfRead(b), null, 'cost ' + JSON.stringify(cost));
+    assert.equal(b.nodes['[data-bqx-pf-err="cost"]'].hidden, false);
+    assert.equal(b.nodes['[data-bqx-pf-err="cost"]'].textContent, _BQX_PF.fr.costErr);
+  }
+  assert.ok(_BQX_PF.en.costErr && _BQX_PF.ar.costErr, 'said in English and Arabic too');
+});
 ok('a kind the trade does not list is left alone, not rewritten to the first card', () => {
   const { _bqxPfRead } = load('fr');
-  const f = _bqxPfRead(fakeForm({ name: 'Bougie', price: '45', cost: '' }));
+  const f = _bqxPfRead(fakeForm({ name: 'Bougie', price: '45', cost: '20' }));
   assert.equal(f.kind, undefined);
   assert.match(between("handlers['bqx-new-save']", '/* edit / delete product */'), /kind: f\.kind \|\| _bqxCopy\(\)\.defaultKind,/);
 });

@@ -87,6 +87,7 @@ async function catalogue(t, page, locale, viewport) {
   t.step('create a synthetic clothing product');
   await type(page, '[data-bqx-name]', 'TEST KIWI matrix garment');
   await type(page, '[data-bqx-price]', '180');
+  await type(page, '[data-bqx-cost]', '90');   // le coût d'achat est exigé (26 nov.)
   await click(page, '[data-bqx-kind][value="taille"]');
   if (await page.$('[data-bqx-ab]')) await click(page, '[data-bqx-ab][value="outright"]');
   await click(page, '[data-action="bqx-new-save"]');

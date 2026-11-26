@@ -57,6 +57,7 @@ const create = async (name) => {
   await type('[data-bqx-name]', name);
   await click('input[name="bqx-pf-kind"][value="tu"]');
   await type('[data-bqi-price]', '150');
+  await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
   await type('[data-kbs-total]', '1');
 };
 
@@ -88,7 +89,29 @@ await click('#bqi-e-save');
 ok((await named(TWO)).length === 1 && (await named(ONE)).length === 1, 'B · and refused: both keep their names');
 await close();
 
-await page.evaluate((names) => { const cat = window.KiwiBoutiqueCatalog; cat.listProducts().filter((p) => names.includes(p.name)).forEach((p) => cat.deleteProduct(p.id)); }, [ONE, TWO]);
+/* ── D · the purchase cost is required on the till (owner, 26 Nov 2026) ─── */
+await create('TEST KIWI ORD0010');
+await page.$eval('[data-bqi-cost]', (i) => { i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
+await click('#bqi-n-save');
+ok((await named('TEST KIWI ORD0010')).length === 0, 'D · no purchase cost: « Créer le produit » creates nothing');
+const costErr = await page.$eval('[data-bqi-err="cost"]', (e) => (e.hidden ? '' : e.textContent));
+ok(/coût d’achat/.test(costErr), 'D · and says why under the field', costErr);
+await type('[data-bqi-cost]', '80');
+await click('#bqi-n-save');
+ok((await named('TEST KIWI ORD0010')).length === 1, 'D · with a cost it is created');
+await close();
+await create('TEST KIWI ORD0002');
+await click('#bqi-n-save');
+await close();
+
+/* ── E · the inventory reads codes as numbers: ORD0002 before ORD0010 ───── */
+const order = await page.evaluate(() => {
+  const cat = window.KiwiBoutiqueCatalog;
+  return [...document.querySelectorAll('[data-inv-open]')].map((r) => (cat.getProduct(r.getAttribute('data-inv-open')) || { product: {} }).product.name).filter((x) => /^TEST KIWI (CHE|ORD)/.test(x || ''));
+});
+ok(JSON.stringify(order) === JSON.stringify([ONE, TWO, 'TEST KIWI ORD0002', 'TEST KIWI ORD0010']), 'E · till inventory sorted by name, numbers read as numbers (created 0010 first)', JSON.stringify(order));
+
+await page.evaluate((names) => { const cat = window.KiwiBoutiqueCatalog; cat.listProducts().filter((p) => names.includes(p.name)).forEach((p) => cat.deleteProduct(p.id)); }, [ONE, TWO, 'TEST KIWI ORD0010', 'TEST KIWI ORD0002']);
 ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
 
 /* ── C · the dashboard form ───────────────────────────────────────────────── */
@@ -107,6 +130,7 @@ ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
   await dash.evaluate(() => { const c = document.querySelector('[data-kbd-clear]'); if (c) c.click(); });
   await dash.type('[data-bqx-name]', existing.name.toUpperCase());
   await dash.type('[data-bqx-price]', '220');
+  await dash.type('[data-bqx-cost]', '100');
   await sleep(300);
   const msg = await dash.evaluate(() => { const m = document.querySelector('[data-kbs-name-taken]'); return m && m.offsetParent ? m.textContent : ''; });
   ok(msg.includes(existing.name), 'C · dashboard « Nouveau produit » says the name exists', msg);
@@ -114,6 +138,25 @@ ok(errors.length === 0, 'no page error', errors.slice(0, 3).join(' | '));
   const after = await dash.evaluate(() => window.KiwiBoutiqueCatalog.listProducts().length);
   ok(after === existing.n, 'C · and creates nothing', `${existing.n} → ${after}`);
   await dash.evaluate(() => { const c = document.querySelector('[data-kbd-clear]'); if (c) c.click(); });
+  await dash.keyboard.press('Escape'); await sleep(600);
+
+  /* ── F · dashboard grid order, and the banner for products without a cost ── */
+  await js('[data-nav="inventory"]'); await sleep(1000);
+  const gridNames = await dash.$$eval('#bqx-grid [data-action="bqx-open"]', (all) => all.map((c) => c.getAttribute('aria-label')).filter(Boolean));
+  const sorted = gridNames.slice().sort(new Intl.Collator('fr', { numeric: true, sensitivity: 'base' }).compare);
+  ok(gridNames.length > 2 && JSON.stringify(gridNames) === JSON.stringify(sorted), 'F · dashboard grid sorted by name', JSON.stringify(gridNames.slice(0, 6)));
+  const victim = await dash.evaluate(() => { const cat = window.KiwiBoutiqueCatalog; const p = cat.listProducts()[1]; cat.updateProduct(p.id, { cost: 0 }); return { id: p.id, name: p.name }; });
+  await js('[data-nav="inventory"]'); await sleep(1200);
+  const banner = await dash.evaluate(() => { const b = document.querySelector('[data-cost-nudge]'); return b && b.offsetParent ? b.textContent.replace(/\s+/g, ' ').trim() : ''; });
+  ok(/sans coût d’achat/.test(banner), 'F · the inventory says which products have no purchase cost', banner);
+  await dash.click('[data-cost-nudge-open]'); await sleep(500);
+  const row = `[data-cost-row="${victim.id}"] [data-cost-in]`;
+  ok(!!(await dash.$(row)), 'F · « Compléter maintenant » lists the product with a cost box', victim.name);
+  await dash.type(row, '85');
+  await dash.click('[data-cost-save]'); await sleep(900);
+  ok(await dash.evaluate((id) => window.KiwiBoutiqueCatalog.getProduct(id).product.cost, victim.id) === 85, 'F · the typed cost is saved on the product');
+  const gone = await dash.evaluate(() => window.KiwiBoutiqueCatalog.listProducts().filter((p) => !(p.cost > 0)).length === 0 ? !document.querySelector('[data-cost-nudge]') : true);
+  ok(gone, 'F · and the banner leaves once every cost is filled');
 }
 await h.close?.();
 console.log(`\nboutique-name-taken-browser: ${n} passed, ${bad} failed`);

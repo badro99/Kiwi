@@ -84,6 +84,7 @@ const NAME = 'TEST KIWI Jean retrait';
 await click('#bqi-new');
 await type('[data-bqx-name]', NAME);
 await type('[data-bqi-price]', '200');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await type('[data-kbs-total]', '5');
 await click('#bqi-n-save');
 await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });

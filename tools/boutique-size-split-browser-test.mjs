@@ -64,6 +64,7 @@ async function create(name, total) {
   await click('#bqi-new');
   await type('[data-bqx-name]', name);
   await type('[data-bqi-price]', '390');
+  await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
   await type('[data-kbs-total]', String(total));
   await click('#bqi-n-save');
   await page.waitForSelector('[data-kbsp-quick]', { visible: true, timeout: 8000 });
@@ -79,6 +80,7 @@ const ZERO = 'TEST KIWI Pull sans option';
 await click('#bqi-new');
 await type('[data-bqx-name]', ZERO);
 await type('[data-bqi-price]', '390');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await type('[data-kbs-total]', '6');
 await click('#bqi-n-save');
 await page.waitForSelector('[data-kbs-in]', { visible: true, timeout: 8000 });
@@ -304,6 +306,7 @@ await page.evaluate(() => {   // 105 shades already in the catalogue, like Elham
 await click('#bqi-new');
 await type('[data-bqx-name]', HUIT);
 await type('[data-bqi-price]', '180');
+await type('[data-bqi-cost]', '100');   // le coût d'achat est exigé (26 nov.)
 await page.$eval('input[name="bqx-pf-kind"][value="tu"]', (r) => r.click());
 await type('[data-kbs-total]', '5');
 await click('#bqi-n-save');
