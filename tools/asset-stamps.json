@@ -2468,8 +2468,8 @@
     "sha": "f5b140fee5f04dc7"
   },
   "assets/serveur-app.js": {
-    "v": "39",
-    "sha": "311897a796b8b7e2"
+    "v": "40",
+    "sha": "ed558d8d40cb29bd"
   },
   "assets/serveur-lang.js": {
     "v": "19",
@@ -2480,16 +2480,16 @@
     "sha": "912e7ccd5bd7d056"
   },
   "assets/serveur/payment-support.js": {
-    "v": "9",
-    "sha": "35eb41b159c67704"
+    "v": "13",
+    "sha": "f8a5b668e7497456"
   },
   "assets/serveur/reopened-bill.mjs": {
     "v": "1",
     "sha": "5911048d786d702a"
   },
   "assets/serveur/service.js": {
-    "v": "58",
-    "sha": "6991335b64caf2b0"
+    "v": "62",
+    "sha": "7b3cc9b0eb9c9e0f"
   },
   "assets/service-requests.js": {
     "v": "5",

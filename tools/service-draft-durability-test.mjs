@@ -56,7 +56,9 @@ function draftSandbox(storageBehaviour = {}) {
     currentUser: 'yasmine',
     svSlug: () => 'santos',
     tableOrders: {},
-    newLineUid: (() => { let n = 0; return () => 'ln' + (++n); })(),
+    /* Le drapeau « à envoyer » et le compteur d'uid du noyau : la reprise remet l'un et recale l'autre. */
+    dirtyOrders: new Set(), lineSeq: 0,
+    newLineUid() { return 'ln' + (++sandbox.lineSeq); },
   };
   vm.createContext(sandbox);
   // Les vraies fonctions, découpées du fichier expédié.
@@ -89,6 +91,13 @@ function draftSandbox(storageBehaviour = {}) {
   ok(s.tableOrders['5'] && s.tableOrders['5'][0].name === 'Tajine', 'avec le plat que le client a commandé');
   ok(s.tableOrders['5'][0].sourceLocal === true,
     'et toujours marquée comme brouillon local, pour que la fusion canonique la reconnaisse');
+  /* 26 nov. 2026 : la saisie revenait sans « Lancer la commande » (le bouton ne s'affiche que pour une
+     table marquée à envoyer), « Encaisser » la refusait et la cuisine ne recevait jamais rien. */
+  ok(s.dirtyOrders.has('5'), 'la table reprise est de nouveau marquée « à envoyer » : « Lancer » reste proposé');
+  s.tableOrders = {}; s.dirtyOrders.clear(); s.lineSeq = 0;
+  s.localStorage.setItem(s.svDraftsKey(), JSON.stringify({ at: Date.now(), tables: { 5: [{ uid: 'ln7', id: 'it', name: 'Tajine', qty: 1, sentQty: 0, sourceLocal: true }] } }));
+  s.svRestoreDrafts();
+  ok(s.newLineUid() === 'ln8', 'le prochain plat ne reprend pas l\'identifiant d\'une ligne revenue (ln7 puis ln8)');
 }
 
 {
