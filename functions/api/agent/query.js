@@ -166,18 +166,21 @@ export async function onRequestPost({ request, env }) {
     } else if (tool === 'operations_notes') {
       const r = range(data, cutoff, zone), page = offset(data);
       if (!r || page === null) return response({ error: 'invalid-range-or-offset' }, 400);
-      const rows = await env.DB.prepare(`SELECT id,body,actor_id,actor,ts FROM operator_notes
-        WHERE merchant = ? AND ts >= ? AND ts < ? ORDER BY ts DESC,id DESC LIMIT ? OFFSET ?`)
+      /* Seules les notes écrites par un agent : celles de l'équipe Kiwi (God Mode)
+         sur ce commerce restent internes, avec leurs auteurs (audit du 26 nov.). */
+      const rows = await env.DB.prepare(`SELECT id,body,actor,ts FROM operator_notes
+        WHERE merchant = ? AND actor = 'agent' AND ts >= ? AND ts < ? ORDER BY ts DESC,id DESC LIMIT ? OFFSET ?`)
         .bind(merchant, r.start, r.end, limit(data) + 1, page).all();
       const items = rows.results || [];
       result = { notes: items.slice(0, limit(data)), nextOffset: items.length > limit(data) ? page + limit(data) : null };
     } else if (tool === 'operations_tasks') {
       const r = range(data, cutoff, zone), page = offset(data);
       if (!r || page === null) return response({ error: 'invalid-range-or-offset' }, 400);
-      const rows = await env.DB.prepare(`SELECT id,title,detail,priority,status,assignee,due_ts,version,created_ts,updated_ts,created_by
+      const rows = await env.DB.prepare(`SELECT id,title,detail,priority,status,due_ts,version,created_ts,updated_ts
         FROM operator_tasks WHERE merchant = ? AND created_ts >= ? AND created_ts < ?
+        AND created_by IN (SELECT id FROM agent_keys WHERE merchant = ?)
         ORDER BY created_ts DESC,id DESC LIMIT ? OFFSET ?`)
-        .bind(merchant, r.start, r.end, limit(data) + 1, page).all();
+        .bind(merchant, r.start, r.end, merchant, limit(data) + 1, page).all();
       const items = rows.results || [];
       result = { tasks: items.slice(0, limit(data)), nextOffset: items.length > limit(data) ? page + limit(data) : null };
     } else {

@@ -154,7 +154,11 @@ check(note.status===201 && note.data.id.startsWith('agent-'),'operations note cr
 const noteReplay=await runAction({action:'create_operations_note',requestId:noteId,note:'Check the kitchen printer'},token);
 check(noteReplay.status===200 && noteReplay.data.replayed && noteReplay.data.id===note.data.id,'note retry idempotent');
 check((await runAction({action:'create_operations_note',requestId:noteId,note:'Different note'},token)).status===409,'note idempotency conflict');
+// Les notes et tâches de l'équipe Kiwi (God Mode) sur ce commerce restent internes (audit du 26 nov.).
+sql.prepare("INSERT INTO operator_notes (id,merchant,body,actor_id,actor,ts) VALUES ('op-note-1','agent-shop','Relancer le paiement, client douteux','op-badr','Badr',?)").run(Date.now());
+sql.prepare("INSERT INTO operator_tasks (id,merchant,title,detail,priority,assignee,mutation_id,created_ts,updated_ts,created_by) VALUES ('op-task-1','agent-shop','Suspendre si impayé','interne',1,'Badr','op-mut-1',?,?,'op-badr')").run(Date.now(),Date.now());
 const notes=await runQuery({tool:'operations_notes',from:day,to:day},token);
+check(notes.status===200 && !notes.data.notes.some(n=>n.id==='op-note-1') && notes.data.notes.every(n=>!('actor_id' in n)),'operator notes stay internal, no operator ids');
 check(notes.status===200 && notes.data.notes.length===1 && notes.data.notes[0].body==='Check the kitchen printer','note visible via read API');
 check(sql.prepare('SELECT COUNT(*) AS n FROM agent_audit WHERE key_id=? AND action=?').get(id,'create_operations_note').n===1,'note audited once');
 check(sql.prepare('SELECT COUNT(*) AS n FROM operator_notes WHERE merchant=?').get('other-shop').n===0,'no cross-tenant note');
@@ -164,6 +168,7 @@ check(task.status===201 && task.data.id.startsWith('agent-'),'task created');
 check((await runAction({action:'create_task',requestId:taskId,title:'Check printer',priority:2},token)).data.replayed,'task retry idempotent');
 check((await runAction({action:'create_task',requestId:taskId,title:'Different task',priority:2},token)).status===409,'task retry conflict');
 const tasks=await runQuery({tool:'operations_tasks',from:day,to:day},token);
+check(tasks.status===200 && !tasks.data.tasks.some(t=>t.id==='op-task-1') && tasks.data.tasks.every(t=>!('assignee' in t) && !('created_by' in t)),'operator tasks stay internal, no assignee');
 check(tasks.status===200 && tasks.data.tasks.length===1 && tasks.data.tasks[0].id===task.data.id,'task readable');
 check(sql.prepare('SELECT COUNT(*) AS n FROM operator_task_events WHERE merchant=?').get('agent-shop').n===1,'task event written once');
 check(sql.prepare('SELECT COUNT(*) AS n FROM operator_tasks WHERE merchant=?').get('other-shop').n===0,'no cross-tenant task');
