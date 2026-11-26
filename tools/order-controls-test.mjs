@@ -30,8 +30,9 @@ assert(cancel.includes('void_ts IS NULL'), 'cancellation must be race-safe');
  * the route refuses. Behaviour is proven in cashier-cancel-test.mjs. */
 assert(cancel.includes("error: 'atomic-cancel-unavailable'"), 'cancellation must refuse an adapter without transactions');
 assert((cancel.match(/WHERE changes\(\) = 1/g) || []).length >= 2, 'each audit insert must depend on the guarded void');
-/* The cheque portfolio's own statements (functions/api/_cheque-debt.js › saleVoidStatements) ride in the same batch, after the audit. */
-assert(/env\.DB\.batch\(\[update, auditWithCents(?:, \.\.\.chequeFix)?\]\)/.test(cancel), 'the void and its audit row must commit together');
+/* The cheque portfolio's own statements (functions/api/_cheque-debt.js › saleVoidStatements) ride in the same batch, after the audit,
+ * then the avoirs given back and the reopened delivery (money-void-credit-test.mjs proves both). */
+assert(/env\.DB\.batch\(\[update, auditWithCents(?:, \.\.\.chequeFix)?(?:, \.\.\.creditBack, collectionBack)?\]\)/.test(cancel), 'the void and its audit row must commit together');
 assert(cancel.includes("source === 'cashier' && !body.reopen && Date.now()"), 'cashier-only age boundary is missing');
 
 assert(reprint.includes("source: 'cashier'"), 'cashier cancellation source is missing');

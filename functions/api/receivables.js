@@ -62,7 +62,7 @@ export function owedCents(row) {
 }
 export const dueCents = owedCents;
 
-async function readDeliveries(db, merchant, saleId, withLines) {
+async function readDeliveries(db, merchant, saleId, withLines, olderThan) {
   const sql = (withParts, withReceipts) => `SELECT s.id, s.amount, s.amount_cents, s.method, s.label, s.ref, s.ts,${withLines ? ' s.lines,' : ''}
       EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'delivery-writeoff') AS delivery_written_off,
       EXISTS (SELECT 1 FROM sale_audit a WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund') AS delivery_returned
@@ -70,13 +70,17 @@ async function readDeliveries(db, merchant, saleId, withLines) {
     FROM sales s ${withReceipts ? 'LEFT JOIN sale_receipts r ON r.merchant = s.merchant AND r.sale_id = s.id' : ''}
     WHERE s.merchant = ? AND s.void_ts IS NULL ${saleId ? 'AND s.id = ?' : ''}
       AND (s.method = 'delivery' ${withParts ? `OR (s.method = 'split' AND s.payment_parts LIKE '%"delivery"%')` : ''})
-    ORDER BY s.ts DESC LIMIT ${OPEN_LIMIT}`;
+      ${olderThan ? `AND s.ts < ? AND NOT EXISTS (SELECT 1 FROM sale_audit w WHERE w.merchant = s.merchant AND w.sale_id = s.id AND w.action = 'delivery-writeoff')
+      AND (${withParts ? `s.payment_parts LIKE '%"delivery"%' OR ` : ''}COALESCE((SELECT SUM(dc.amount_cents) FROM delivery_collections dc WHERE dc.merchant = s.merchant AND dc.sale_id = s.id), 0)
+        < COALESCE(r.gross_ticket_cents, 0) - COALESCE(s.amount_cents, s.amount * 100))` : ''}
+    ORDER BY s.ts DESC LIMIT ${olderThan ? OPEN_LIMIT * 4 : OPEN_LIMIT}`;
   /* Une base pas encore guérie (sans payment_parts ou sans sale_receipts) garde
    * ce qu'elle sait : une livraison sans total connu ne s'invente pas. */
   for (const [parts, receipts] of [[true, true], [false, true], [true, false], [false, false]]) {
+    if (olderThan && !receipts) return [];   // sans total connu, pas de « encore dû » à chercher plus loin
     try {
       const st = db.prepare(sql(parts, receipts));
-      return (await (saleId ? st.bind(merchant, saleId) : st.bind(merchant)).all()).results || [];
+      return (await (saleId ? st.bind(merchant, saleId) : olderThan ? st.bind(merchant, olderThan) : st.bind(merchant)).all()).results || [];
     } catch (_) { /* colonne ou table absente : un cran plus simple */ }
   }
   return [];
@@ -253,6 +257,13 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const withLines = url.searchParams.get('lines') === '1';
   let rows = await readDeliveries(env.DB, merchant, null, withLines);
+  /* Les 500 plus récentes ne suffisent pas : une livraison impayée plus ancienne
+     sortait du « dû » (audit du 26 nov.). Au-delà, seules les encore ouvertes. */
+  if (rows.length >= OPEN_LIMIT) {
+    const seen = new Set(rows.map((r) => String(r.id)));
+    const older = await readDeliveries(env.DB, merchant, null, withLines, Math.min(...rows.map((r) => Number(r.ts) || 0)));
+    rows = rows.concat(older.filter((r) => !seen.has(String(r.id))));
+  }
   let bySale = await readCollections(env.DB, merchant);
   const returnsBySale = await readReturns(env.DB, merchant);
   const cards = await readDeliveryCards(env.DB, merchant);

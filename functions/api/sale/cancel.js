@@ -7,9 +7,9 @@
 
 import { safeDetail } from '../_safe-detail.js';
 import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
-import { businessDate, merchantZone } from '../_business-day.js';
+import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
-import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents } from '../_store-credit-ledger.js';
+import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents, voidCreditBackStatements } from '../_store-credit-ledger.js';
 import { ensureCollectionSchema } from '../receivables.js';
 import { voidSaleLoyalty } from '../clients.js';
 import { planSaleVoid, saleVoidStatements } from '../_cheque-debt.js';
@@ -459,9 +459,19 @@ export async function onRequestPost({ request, env }) {
        fermées), conditionnée à CETTE annulation (_cheque-debt.js › planSaleVoid). */
     const chequeFix = saleVoidStatements(env, merchant, await planSaleVoid(env, merchant, id).catch(() => []),
       { saleId: id, voidTs: ts, now: ts, actor, ref: sale.ref || '' });
+    /* L'avoir qui payait ce ticket revient à la cliente, et une « Livraison reçue »
+       annulée rouvre le dû du livreur : sans cela l'argent sortait des deux livres
+       (audit du 26 nov.). Les deux ne valent que si CETTE annulation a eu lieu. */
+    const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
+    const creditBack = await voidCreditBackStatements(env, merchant, id, ts, actor,
+      businessBoundary(addBusinessDays(businessDate(ts + 182 * 86400000, cutoff, zone), 1), cutoff, zone));
+    const collectionBack = env.DB.prepare(
+      `DELETE FROM delivery_collections WHERE merchant = ? AND collection_sale_id = ?
+         AND EXISTS (SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts = ?)`
+    ).bind(merchant, id, merchant, id, ts);
     let result;
-    try { result = await env.DB.batch([update, auditWithCents, ...chequeFix]); }
-    catch (_) { result = await env.DB.batch([update, auditLegacy, ...chequeFix]); }
+    try { result = await env.DB.batch([update, auditWithCents, ...chequeFix, ...creditBack, collectionBack]); }
+    catch (_) { result = await env.DB.batch([update, auditLegacy, ...chequeFix, ...creditBack, collectionBack]); }
     const changes = Number(result?.[0]?.meta?.changes ?? result?.[0]?.changes ?? 0);
     if (!changes) {
       /* Perdu contre une annulation concurrente, ou contre un remboursement

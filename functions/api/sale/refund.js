@@ -252,13 +252,13 @@ export async function onRequestPost({ request, env, quarantineSettlement = '' })
           ), 0) - COALESCE((
             SELECT SUM(amount_cents) FROM store_credit_events
              WHERE merchant = ? AND ref_id = ? AND action = 'issue'
-          ), 0) AND (? = 1 OR ? = COALESCE((SELECT SUM(amount_cents) FROM sale_audit
+          ), 0) + COALESCE((SELECT SUM(c.amount_cents) FROM store_credit_events c WHERE c.merchant = ? AND c.action = 'cancel' AND c.credit_id IN (SELECT i.credit_id FROM store_credit_events i WHERE i.merchant = ? AND i.ref_id = ? AND i.action = 'issue')), 0) AND (? = 1 OR ? = COALESCE((SELECT SUM(amount_cents) FROM sale_audit
              WHERE merchant = ? AND sale_id = ? AND action = 'refund'), 0)) AND EXISTS (
             SELECT 1 FROM sales WHERE merchant = ? AND id = ? AND void_ts IS NULL
           )${custody.sql}`
       ).bind(refundId, merchant, storedAmount, -moneyOut, refundMethod,
              label, refundRef, ts, JSON.stringify(actual.filter(p => p.method !== 'credit')), merchant, refundId, amountCents, originalCents, merchant, originalSaleId,
-             merchant, originalSaleId, !creditCents ? 1 : 0, returned, merchant, originalSaleId, merchant, originalSaleId, ...custody.args),
+             merchant, originalSaleId, merchant, merchant, originalSaleId, !creditCents ? 1 : 0, returned, merchant, originalSaleId, merchant, originalSaleId, ...custody.args),
       env.DB.prepare(
         `INSERT INTO sale_audit
            (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents,

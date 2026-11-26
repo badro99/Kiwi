@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=298';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=216';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=298';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=298';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=299';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=217';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=299';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=299';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=9';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
@@ -1850,7 +1850,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
     };
     const RS = window.KiwiRepeatSale, repeatSig = RS ? RS.signature(frozen.lines, total) : ''; // même panier qu'il y a < 2 min
     const beginPay = () => openPay({
-      amount: total,
+      amount: total, syncId: frozen.syncId,   // l'avoir consommé porte l'id de la vente à venir (sale/refund.js le relit)
       customerId: c ? c.id : null, priceList: frozen.priceList,
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, ticketOwner, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
       allowAccount: !!window.KiwiRetailBalances,   /* « Compte client » si God mode l'allume (retail-avance.js › retailModes) */

@@ -1,8 +1,8 @@
-import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=273';
+import { saleClient, root, state, businessDateKey, shiftDateKey, RETAIN_DAYS, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, ensureOriginalSale, stableRefundId, IS_DEMO, merchantSlug, recordReturn, refreshOps, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistStock, persistDay, openVeil, closeVeil, lineDeal, pieceUnitPrice, queueIfOffline, renderBadges, nextStandaloneTicketNumber, firstName, newSaleId, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, payExistingBalance, creditIntent, creditRequest, creditFromServer, persistAvoirs, avoirExpired, refreshRemoteAvoirs, BY_EAN , originalSalePayload } from '../pos-maison.js?v=274';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1';
-import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=186';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=186';
-import '../refund-split.js?v=2'; import { gxLabel } from './gift-exchange-entry.js?v=17';
+import { $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, releaseStock, fmtDayY, fmtValidUntil, barcode, $$, colorLabel, holdStock, renderExchNote, renderGrid, canHoldStock, rayonOf, fmtDT, clById, clientList, printDeliveryNoteNow, lookupScan, commitEan } from './sales.js?v=187';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=187';
+import '../refund-split.js?v=2'; import { gxLabel } from './gift-exchange-entry.js?v=18';
 import { paidCents } from '../pos-boutique/paid-share.js?v=2';
 import '../money-cents.js?v=7';
 import { mzDeliveryCard } from './delivery.js?v=28';
@@ -1361,7 +1361,7 @@ import('../pos-boutique/cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() 
              spend the same code between local validation and checkout. */
           remote = await creditRequest({
             action: 'redeem-batch', id: creditCommitId,
-            saleId: opts.sale && opts.sale.id,
+            saleId: opts.syncId || (opts.sale && opts.sale.id) || '',   // l'id serveur de la vente : sans lui un retour sur ce ticket était refusé (audit du 26 nov.)
             detail: opts.title || 'Vente Maison',
             credits: creditParts.map((part) => ({ code: part.code, amountCents: Math.round(part.amount * 100) })),
           });

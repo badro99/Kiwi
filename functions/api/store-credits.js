@@ -269,13 +269,13 @@ export async function onRequestPost({ request, env }) {
               ), COALESCE(s.amount_cents, s.amount * 100)) - COALESCE((
                 SELECT SUM(e.amount_cents) FROM store_credit_events e
                  WHERE e.merchant = ? AND e.ref_id = ? AND e.action = 'issue'
-              ), 0) - COALESCE((
+              ), 0) + COALESCE((SELECT SUM(c.amount_cents) FROM store_credit_events c WHERE c.merchant = ? AND c.action = 'cancel' AND c.credit_id IN (SELECT i.credit_id FROM store_credit_events i WHERE i.merchant = ? AND i.ref_id = ? AND i.action = 'issue')), 0) - COALESCE((
                 SELECT SUM(COALESCE(a.amount_cents, a.amount * 100)) FROM sale_audit a
                  WHERE a.merchant = s.merchant AND a.sale_id = s.id AND a.action = 'refund'
               ), 0)`
         ).bind(requestId, merchant, code, merchant, customerId, customerId, customerName, originalSaleId, originalRef,
           cents, cents, expiresAt, reason, issuer, eventId, at, at,
-          merchant, originalSaleId, cents, merchant, originalSaleId),
+          merchant, originalSaleId, cents, merchant, originalSaleId, merchant, merchant, originalSaleId),
         env.DB.prepare(
           `INSERT OR IGNORE INTO store_credit_events
              (id, merchant, credit_id, code, action, amount_cents, balance_after_cents, ref_id, actor, detail, ts)
@@ -430,6 +430,14 @@ export async function onRequestPost({ request, env }) {
            FROM store_credits WHERE merchant = ? AND code = ? AND last_event_id = ?`
       ).bind(eventId, merchant, Number(credit.balance_cents || 0), cleanId(body && body.refId, 96), actor,
         JSON.stringify({ reason: clean(body && body.reason, 500) }), at, merchant, code, eventId),
+      /* Chiffre « à la vente » : le retour en avoir (ret-<id>) avait retiré la
+         marchandise du chiffre. Un avoir annulé sans jamais servir rend ce retrait
+         (audit du 26 nov.) ; un avoir entamé garde sa ligne, la marchandise est partie. */
+      env.DB.prepare(
+        `UPDATE sales SET void_ts = ?, void_reason = 'avoir-cancelled'
+          WHERE merchant = ? AND id = 'ret-' || ? AND void_ts IS NULL AND amount_cents = -?
+            AND EXISTS (SELECT 1 FROM store_credit_events WHERE merchant = ? AND id = ?)`
+      ).bind(at, merchant, String(credit.id || ''), Number(credit.balance_cents || 0), merchant, eventId),
     ]);
   }
   const event = await env.DB.prepare('SELECT * FROM store_credit_events WHERE merchant = ? AND id = ?').bind(merchant, eventId).first();

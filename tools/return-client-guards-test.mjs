@@ -161,7 +161,7 @@ ok(caCtx.out === 640, 'boutique : la recette du jour compte l\'argent encaissé,
 ok(/requireManager\(`Avoir \$\{fmtMAD\(amount\)\} · ticket \$\{ticketRef \|\| originalSaleId\}/.test(boutique)
   && /avoirApproval\(amount, requestId, fromSaleId, context && context\.originalRef\)/.test(boutique),
   'boutique : l\'accord du responsable nomme le numéro du ticket');
-ok(/saleId: \(opts\.sale && opts\.sale\.id\) \|\| opts\.ref \|\| ''/.test(boutique),
+ok(/saleId: (?:opts\.syncId \|\| )?\(opts\.sale && opts\.sale\.id\) \|\| opts\.ref \|\| ''/.test(boutique),
   'boutique : la consommation d\'un avoir porte le numéro du ticket qui la fait');
 ok(/const av = clAvoirTotal\(c\);[\s\S]{0,400}data-bq-tk-av>Avoir \$\{fmtMAD\(av\.balance\)\}/.test(slice(boutique, 'function clientRow(', 'function renderTicket')),
   'boutique : l\'avoir de la cliente reste affiché sur le ticket');
