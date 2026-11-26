@@ -1,7 +1,8 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=309';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=310';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1'; import { mountExchCut, cutFields } from './exch-cut.js?v=7'; import { mzSaleDiscount } from '../pos-maison/sale-discount.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=309';
-import { _bqKey, syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=415';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=310';
+import { ticketDayIn, isTicketScan } from './ticket-scan.js?v=1';
+import { _bqKey, syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=416';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -14,7 +15,7 @@ import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt
 import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6';
 const M = globalThis.KiwiMoney;
 let CX = null, CQ = null;   /* chargés à part (ils importent la caisse, pas l'inverse) : l'échange groupé (essai Amira Boutique) et le chèque reçu, qui rejoint le portefeuille (cheque-sheet.js ; absent, il s'encaisse comme avant) */
-import('./exch-combined.js?v=71').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=72').then((m) => { CX = m; }).catch(() => {});
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
@@ -39,6 +40,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
     const dateKey = retDayKey; /* journée commerciale (5 h), comme le Z : minuit rangeait 0 h 30 au lendemain */
     const todayKey = retDayKey(tillNow()), yesterdayKey = retShiftDay(todayKey, -1), oldestKey = retShiftDay(todayKey, -(Math.max(retainDays(), windowDays()) - 1)), localKey = retShiftDay(todayKey, -(retainDays() - 1));
     if (state.retDate < oldestKey || state.retDate > todayKey) state.retDate = todayKey;
+    state.retDate = ticketDayIn(SALES, q, dateKey, oldestKey, todayKey) || state.retDate; /* N° exact (tapé ou scanné) : sa journée, ticket-scan.js */
     if (state.retDate < localKey && !askedDays.has(state.retDate)) { askedDays.add(state.retDate); syncReturnSales(state.retDate); }   // au-delà du journal local : la journée se lit sur le serveur
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
@@ -652,7 +654,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
        boutique marocaine sans une seule mention légale. */
     const K = window.KiwiReceipt;
     if (K) {
-      const doc = K.build(receiptDocInput(opts, parts, (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '', { merchant: merchantSlug(), clById }));
+      const doc = K.build(receiptDocInput(opts, parts, (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '', { merchant: merchantSlug(), clById }), { ticketCode: true }); /* le N° en Code 128 : un retour commence par un scan */
       /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
          avec son numéro, même si l'enseigne change de pied de page demain.
          persistDay() À NOUVEAU, et c'est tout l'intérêt : la vente a été écrite
@@ -1771,11 +1773,9 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
   function handleWedge(code) {
     if (scanCapture) { try { scanCapture(code); } catch (_) {} return; }  /* saisie inventaire */
-    if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) {
-      toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Terminez la fenêtre ouverte avant de scanner'));
-      return;
-    }
+    if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Terminez la fenêtre ouverte avant de scanner')); return; }
     if (state.view === 'inventaire') { invScanHandle(code); return; }   /* fiche stock */
+    if (isTicketScan(SALES, normScan(code), (c) => !!((window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.resolveScan(c)) || BY_EAN[c]))) { state.retQuery = normScan(code); state.ret = null; switchView('echanges'); return; } /* reçu → Échanges */
     if (state.view === 'scan') { lookupScan(code); return; }            /* vérif prix/stock */
     commitEan(code);                                                    /* vente → ticket */
   }

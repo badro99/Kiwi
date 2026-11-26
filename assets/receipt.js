@@ -414,8 +414,7 @@
   /* ── la fiche reçu ──────────────────────────────────────────────────────── */
 
   function getConfig(venueId) {
-    var vid = venueKey(venueId);
-    var s = CS();
+    var vid = venueKey(venueId), s = CS();
     return normalizeConfig(s && vid ? s.get(vid) : null);
   }
   function setConfig(cfg, venueId) {
@@ -617,6 +616,7 @@
         whatsapp: cfg.msg.whatsapp,
       },
       qr: qrFor(cfg),
+      ticketCode: (!refund && opts.ticketCode && str(sale.ref, 40)) || '', /* N° en Code 128 pour les retours, sur demande (boutique) */
       /* Le mot qui marque une réimpression. `copy: true` demande celui de la
        * langue du ticket — un caissier arabophone imprimait « DUPLICATA » parce
        * que l'appelant écrivait le mot français en dur, sur un reçu par ailleurs
@@ -962,8 +962,7 @@
     /* — quoi, quand, qui — */
     b.align('left'); rule();
     if (doc.meta.ref) row(T.no, doc.meta.ref);
-    if (doc.summary) row(T.period, doc.meta.date + '  ' + doc.meta.time);
-    else row(T.date, doc.meta.date + '  ' + doc.meta.time);
+    row(doc.summary ? T.period : T.date, doc.meta.date + '  ' + doc.meta.time);
     if (doc.meta.label) row('', doc.meta.label);
     if (doc.meta.cashier) row(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) row(T.terminal, doc.meta.terminal);
@@ -1036,11 +1035,11 @@
       if (doc.acompte.until && doc.acompte.remaining > 0) row('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { row(T.received, moneyMAD(doc.cash.received, doc)); row(T.change, moneyMAD(doc.cash.change, doc)); }
+    if (doc.ticketCode) b.feed(1).barcode(doc.ticketCode, { format: 'code128', height: 56, module: doc.paper === '58' || doc.paper === '57' || doc.paper === '44' ? 1 : 2 });
 
     /* — le pied — */
     b.align('center').feed(1);
-    if (doc.foot.thanks) b.line(doc.foot.thanks);
-    else b.line(T.thanks);
+    b.line(doc.foot.thanks || T.thanks);
     if (doc.foot.policy) wrapText(doc.foot.policy, cols).forEach(function (l) { b.line(l); });
     if (doc.foot.social) b.line(doc.foot.social);
     if (doc.foot.web) b.line(doc.foot.web);
@@ -1207,6 +1206,7 @@
       if (doc.acompte.until && doc.acompte.remaining > 0) R('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { R(T.received, moneyMAD(doc.cash.received, doc)); R(T.change, moneyMAD(doc.cash.change, doc)); }
+    if (doc.ticketCode && window.KiwiBarcode && window.KiwiBarcode.svg) out.push('<div class="kr-c kr-tcode">' + window.KiwiBarcode.svg(doc.ticketCode, { format: 'code128', height: 44 }) + '</div>');
 
     out.push('<div class="kr-rule"></div>');
     P('kr-c kr-thanks', doc.foot.thanks || T.thanks);
@@ -1265,7 +1265,7 @@
       '.kr-total{font-weight:700;font-size:14px;margin:1.4mm 0;}',
       '.kr-thanks{margin-top:1mm;}',
       '.kr-qr{word-break:break-all;}',
-      '.kr-kiwi{margin-top:3mm;letter-spacing:.14em;opacity:.6;}',
+      '.kr-kiwi{margin-top:3mm;letter-spacing:.14em;opacity:.6;}', '.kr-tcode{margin:2mm 0 0;}.kr-tcode svg{display:block;margin:0 auto;max-width:100%;height:auto;}',
     ].join('');
     document.head.appendChild(st);
   }
