@@ -87,6 +87,7 @@ const BQ_MORE_ICONS = [
      service (pos-boutique.js), Code de pointage (caisse-refresh.js) et
      Réimprimer (pos-reprint.js). */
   ['#bq-open-drawer', 'point_of_sale'],
+  ['#bq-cash-move', 'payments'],
   ['#bq-close-day', 'power_settings_new'],
   ['.kx-attendance-code', 'key'],
   ['.kx-reprint', 'receipt'],
@@ -159,6 +160,7 @@ function bqMoreActs() {
    inconnue se range dans Service, avant la fin de service. */
 const BQ_MORE_ORDER = [
   ['#bq-open-drawer', 1],
+  ['#bq-cash-move', 1],
   ['.kx-reprint, [data-bq-act="reprint"]', 2],
   ['.kx-attendance-code, [data-bq-act="clock"]', 3],
   ['#bq-close-day, [data-bq-act="endshift"]', 9],

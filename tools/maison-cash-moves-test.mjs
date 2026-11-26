@@ -9,7 +9,7 @@
  * Ce test tient : les totaux au centime, la forme remise au rapport du jour,
  * l'attendu du rapport (fond + espèces + entrées − sorties), et le câblage de
  * pos-maison.js (bouton, poste qui garde ses mouvements au rechargement, Z,
- * clôture, rapprochement). */
+ * clôture, rapprochement) et de pos-boutique.js, qui partage la feuille. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -74,6 +74,21 @@ ok(/cashMovements: only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)/.test(
 ok(/bqCloExpected = Math\.round\(\(\(bqShift \? bqShift\.float : 0\) \+ t\.cash \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100/.test(MAISON),
   'the closing sheet expects float + cash + in − out, like the Z');
 ok(/'Sorties de caisse', '− ' \+ fmtMAD\(mv\.movesOut\)/.test(MAISON), 'the closing sheet shows the cash-outs line');
+/* ── la caisse boutique, branchée sur la même feuille (26 nov. 2026) ──
+   Santos, Amira Boutique, Elham Brand : une dépense payée dans le tiroir
+   passait pour un écart, le Z ne portait que les ouvertures sans vente. */
+const BQ = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const KIT = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique/kit-2027.js'), 'utf8');
+ok(BQ.includes(`from './pos-maison/cash-moves.js?v=${RAW.match(/pos-maison\/cash-moves\.js\?v=(\d+)/)[1]}'`), 'pos-boutique imports the module at the same stamp as Maison');
+ok(/IS_DEMO \? '' : '<button class="bq-lock" id="bq-cash-move"/.test(BQ) && /\$\('#bq-cash-move', root\); if \(cashMove\) cashMove\.addEventListener\('click', \(\) => \{ if \(bqShift\) mzCashMoveFor\(\{ shift: \(\) => bqShift, save: bqShiftPersist, cashToday: \(\) => bqDayTotals\('store'\)\.cash \+ zDrawerCash\(salesToday\(\)\), real: pvReal, emit: bqCashEvent/.test(BQ),
+  'boutique: a real store has the button, wired with the shift, the day cash (courier cash included) and the reconciliation channel');
+ok(/dayAt: \+s\.dayAt \|\| 0, moves: Array\.isArray\(s\.moves\) \? s\.moves : \[\]/.test(BQ), 'boutique: a reload keeps the movements of the open shift');
+ok(/cashMovements: zDrawerMoves\(salesToday\(\), only\)\.concat\(only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)\)/.test(BQ),
+  'boutique: the store Z carries courier cash and the movements; the delivery Z has no drawer');
+ok(/bqCloExpected = Math\.round\(\(\(bqShift \? bqShift\.float : 0\) \+ t\.cash \+ zDrawerCash\(salesToday\(\)\) \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100/.test(BQ)
+  && /'Sorties de caisse', '− ' \+ fmtMAD\(mv\.movesOut\)/.test(BQ) && /'Entrées de caisse', '\+ ' \+ fmtMAD\(mv\.movesIn\)/.test(BQ),
+  'boutique: the closing sheet expects float + cash + courier cash + in − out and shows both lines');
+ok(/\['#bq-cash-move', 'payments'\]/.test(KIT) && /\['#bq-cash-move', 1\]/.test(KIT), 'boutique 2027: the button has its icon and sits in Service next to « Ouvrir le tiroir »');
 /* ── la feuille, exécutée (cash-moves.js) dans un DOM minimal ── */
 const { mzCashMoveFor } = await import('../assets/pos-maison/cash-moves.js');
 function node(id = '') {

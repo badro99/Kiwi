@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=307';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=224';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=307';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=307';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=308';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=225';
+import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=308';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=308';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=9'; import { isOddPid, oddInject, mountOddBox } from './pos-boutique/odd-box.js?v=4';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
-import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
+import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=7'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=8'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=3';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=26'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2'; import { giftTicket } from './pos-boutique/gift-ticket.js?v=6';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=27'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=1'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2'; import { giftTicket } from './pos-boutique/gift-ticket.js?v=6';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=23'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=7';
 
   'use strict';
@@ -1416,7 +1416,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             <i class="bq-net-dot"></i><span class="bq-net-label">En ligne</span>
           </button>
           <button class="bq-lock" id="bq-fs" title="Plein écran" aria-label="Basculer le plein écran" aria-pressed="false"><svg data-fs="enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><svg data-fs="exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Plein écran</span></button>
-          <button class="bq-lock" id="bq-open-drawer"><i data-lucide="point_of_sale"></i><span>Ouvrir le tiroir</span></button>${IS_DEMO ? '' : '<button class="bq-lock" id="bq-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
+          <button class="bq-lock" id="bq-open-drawer"><i data-lucide="point_of_sale"></i><span>Ouvrir le tiroir</span></button>${IS_DEMO ? '' : '<button class="bq-lock" id="bq-cash-move"><i data-lucide="swap_horiz"></i><span>Mouvement de caisse</span></button>'}${IS_DEMO ? '' : '<button class="bq-lock" id="bq-close-day"><i data-lucide="power"></i><span>Fin de service</span></button>'}
           <button class="bq-lock" id="bq-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
@@ -1471,7 +1471,9 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       window.KiwiPosDispatch.lock();
     });
     const closeDay = $('#bq-close-day', root);
-    if (closeDay) closeDay.addEventListener('click', bqOpenCloture); $('#bq-open-drawer', root).addEventListener('click', () => openDrawerNoSale((m) => bqCashEvent('movement', m))); bqTransfers(root, { slug: merchantSlug, demo: IS_DEMO, toast, icons, armScanCapture, disarmScanCapture, normScan, by: () => (STAFF.caissiere && STAFF.caissiere.name) || '' });
+    if (closeDay) closeDay.addEventListener('click', bqOpenCloture); $('#bq-open-drawer', root).addEventListener('click', () => openDrawerNoSale((m) => bqCashEvent('movement', m)));
+    /* Mouvement de caisse : la feuille de la caisse maison (pos-maison/cash-moves.js), même poste, mêmes règles. */
+    const cashMove = $('#bq-cash-move', root); if (cashMove) cashMove.addEventListener('click', () => { if (bqShift) mzCashMoveFor({ shift: () => bqShift, save: bqShiftPersist, cashToday: () => bqDayTotals('store').cash + zDrawerCash(salesToday()), real: pvReal, emit: bqCashEvent, name: () => (STAFF.caissiere && STAFF.caissiere.name) || '', fmt: fmtMAD, toast }); }); bqTransfers(root, { slug: merchantSlug, demo: IS_DEMO, toast, icons, armScanCapture, disarmScanCapture, normScan, by: () => (STAFF.caissiere && STAFF.caissiere.name) || '' });
     if (window.KiwiShiftNudge) window.KiwiShiftNudge.check({ host: root, scope: 'boutique@' + merchantSlug(),
       openedAt: () => bqShift && bqShift.openedAt, open: bqOpenCloture, isBusy: () => state.checkoutBusy });
     $('#bq-net', root).addEventListener('click', toggleOffline);
@@ -2112,7 +2114,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       /* Un poste ouvert avant que la boutique n'annonce ses postes n'a jamais
          été vu du registre : il s'annonce au premier passage (bqAnnounceOpen). */
       if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0,
-        sid: String(s.sid || ''), openSent: !!s.openSent, dayAt: +s.dayAt || 0 };
+        sid: String(s.sid || ''), openSent: !!s.openSent, dayAt: +s.dayAt || 0, moves: Array.isArray(s.moves) ? s.moves : [] };
     } catch (_) {}
   })();
   /* ── LE RÉCONCILIATEUR DOIT VOIR CE COMPTOIR ───────────────────────────────
@@ -2300,7 +2302,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       openedBy: bqShift ? bqShift.openedBy : '',
       closedBy: (STAFF.caissiere && STAFF.caissiere.name) || '',
       openingFloat: only !== 'delivery' && bqShift ? bqShift.float : 0,
-      cashMovements: zDrawerMoves(salesToday(), only), handovers: [],
+      cashMovements: zDrawerMoves(salesToday(), only).concat(only === 'delivery' ? [] : mzReportMoves(bqShift)), handovers: [],
       discounts: t.discounts, discountsCount: t.discountsN, cancels: 0, itemsReturned: t.itemsReturned,
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
@@ -2698,14 +2700,14 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
        revenait à imprimer un Z où la marchandise partie ne figure pas. */
     if (t.avoirUsed > 0) rows.push([`Réglé en avoir (${t.avoirUsedN})`, fmtMAD(t.avoirUsed), true, '']); rows.push(...zDeliveryRows(td, fmtMAD, zCollected(salesToday())));
 
-    /* Tiroir : fond + espèces. La boutique n'a ni pourboires ni mouvements de
-       caisse — les lignes qui n'existent pas ne s'affichent pas. */
-    bqCloExpected = (bqShift ? bqShift.float : 0) + t.cash + zDrawerCash(salesToday());   /* + les espèces qu'un livreur a laissées au comptoir */
+    /* Tiroir : fond + espèces + entrées − sorties de caisse. Pas de pourboires :
+       les lignes qui n'existent pas ne s'affichent pas. */
+    const mv = mzMoveTotals(bqShift); bqCloExpected = Math.round(((bqShift ? bqShift.float : 0) + t.cash + zDrawerCash(salesToday()) + mv.movesIn - mv.movesOut) * 100) / 100;   /* + les espèces qu'un livreur a laissées au comptoir */
     const dLines = [
       ["Fond d'ouverture", fmtMAD(bqShift ? bqShift.float : 0), ''],
       ['Espèces encaissées', '+ ' + fmtMAD(t.cash), ''], ...zDrawerRows(salesToday(), fmtMAD),
       ['Attendu en caisse', fmtMAD(bqCloExpected), 'is-total'],
-    ];
+    ]; if (mv.movesIn > 0) dLines.splice(dLines.length - 1, 0, ['Entrées de caisse', '+ ' + fmtMAD(mv.movesIn), '']); if (mv.movesOut > 0) dLines.splice(dLines.length - 1, 0, ['Sorties de caisse', '− ' + fmtMAD(mv.movesOut), '']);
 
     const nCats = (() => {
       const seen = {};
