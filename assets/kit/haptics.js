@@ -506,7 +506,7 @@ root.KiwiZoneLaw = { ZONE_LAWS, effectiveZone, DateTimeFormat };
   var doc = /** @type {any} */ (globalThis).document;
   try {   // même base que la balise de ce fichier : chaque page charge « assets/kit/… »
     var s = doc.createElement('script'); s.async = true;
-    s.src = new URL('assets/kit/calm-repaint.js?v=4', doc.baseURI).href;
+    s.src = new URL('assets/kit/calm-repaint.js?v=5', doc.baseURI).href;
     (doc.head || doc.documentElement).appendChild(s);
   } catch (_) {}
 })();

@@ -151,14 +151,17 @@
       `</dl>
       ${recipeNutrition(draft,api,hide)}`;
   }
+  /* Une ligne de l'éditeur, telle qu'elle sera enregistrée. */
+  function recipeRowLine(row,inv){
+    const units=window.KiwiRestaurantUnits,price=priceOf(row);
+    if(price!=null)return{stockId:'',name:$('[data-ing-name]',row).value.trim(),qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value,'')||'',price};
+    const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());
+    return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};
+  }
+  const lacksUnit=line=>!!(line.name||line.stockId)&&!line.unit&&line.price==null;
   function recipeDraft(root,x,api){
-    const inv=api.inventory(venue()),units=window.KiwiRestaurantUnits;
-    return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>{
-        const price=priceOf(row);
-        if(price!=null)return{stockId:'',name:$('[data-ing-name]',row).value.trim(),qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value,'')||'',price};
-        const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());
-        return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};
-      }).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};
+    const inv=api.inventory(venue());
+    return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>recipeRowLine(row,inv)).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};
   }
   function openRecipe(x,seed,from){
     const api=window.KiwiRestaurantRecipes,had=!!api?.get(x.id,x.name,venue()),r=seed||api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];
@@ -228,11 +231,19 @@
           `<button data-activation=write class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});
     m.el.classList.add('rmw-recipe-modal');
     let hideDraft=!!x.hideNutrition;
+    let needSeq=0;
     const wrap=$('[data-recipe-ingredients]',m.el),refresh=()=>{
       const info=$$('[data-recipe-ing]',m.el).map(row=>{
-        const li=recipeLineInfo(row,api,inv),meta=$('[data-ing-meta]',row),costEl=$('[data-ing-cost]',row);
+        const li=recipeLineInfo(row,api,inv),meta=$('[data-ing-meta]',row),costEl=$('[data-ing-cost]',row),sel=$('[data-ing-unit]',row);
+        /* La marque « unité à choisir » posée par un enregistrement refusé
+           part dès que la ligne n'en a plus besoin (unité, prix, ligne vidée). */
+        if(sel?.hasAttribute('aria-invalid')&&!lacksUnit(recipeRowLine(row,api.inventory(venue())))){
+          sel.removeAttribute('aria-invalid');
+          sel.removeAttribute('aria-describedby');
+        }
+        const need=!!sel?.hasAttribute('aria-invalid');
         row.dataset.state=li.empty?'':li.state;
-        if(meta)meta.textContent=li.empty?'':li.meta;
+        if(meta)meta.textContent=need?ui('rxUnitNeed'):li.empty?'':li.meta;
         if(costEl)costEl.textContent=li.manual?'':li.cost!=null?cash(li.cost):($('[data-ing-price]',row)?'':'·');
         return li;
       });
@@ -276,10 +287,22 @@
     $('[data-save]',m.el).onclick=()=>{
       const draft=recipeDraft(m.el,x,api);
       const refusal=!draft.ingredients.some(line=>line.qty>0||line.price!=null)?['rxToastQtyT','rxToastQty']
-        :draft.ingredients.some(line=>!line.unit&&line.price==null)?['rxToastUnitT','rxToastUnit']
+        :draft.ingredients.some(lacksUnit)?['rxToastUnitT','rxToastUnit']
         :api.tooLong?.(draft)?['rxToastCapT','rxToastCap']:null;
       if(refusal){
         toast(ui(refusal[0]),ui(refusal[1]),'warn');
+        /* « Unités manquantes » seul ne disait pas laquelle : chaque ligne
+           fautive est marquée, et la première liste d'unités prend le focus. */
+        if(refusal[0]==='rxToastUnitT'){
+          const stock=api.inventory(venue()),bad=$$('[data-recipe-ing]',m.el).filter(row=>lacksUnit(recipeRowLine(row,stock))).map(row=>{
+            const sel=$('[data-ing-unit]',row),meta=$('[data-ing-meta]',row);
+            sel.setAttribute('aria-invalid','true');
+            if(meta)sel.setAttribute('aria-describedby',meta.id||(meta.id='rmw-rx-need-'+(++needSeq)));
+            return sel;
+          });
+          refresh();
+          bad[0]?.focus();
+        }
         return;
       }
       S().updateItem(x.id,{hideNutrition:hideDraft});

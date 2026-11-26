@@ -136,3 +136,33 @@
   if (document.documentElement) start();
   else document.addEventListener('DOMContentLoaded', start);
 })();
+
+/* KiwiTapOnce · le second appui d'un double tap n'est pas une décision.
+   Sur un iPad, un doigt tape souvent deux fois. Quand le premier appui ferme
+   une feuille ou repeint une liste, le second tombait sur ce qui venait de
+   glisser dessous : le bon suivant en cuisine, l'article derrière la feuille.
+   Après un appui « à effet unique », un clic au même endroit dans les 400 ms
+   est ignoré ; ailleurs, ou plus tard, tout passe.
+     · déclaratif : data-tap-once sur le bouton qui ferme ou repeint ;
+     · impératif  : KiwiTapOnce.arm() dans le geste, quand il a deux entrées.
+   Ne jamais le poser sur un bouton qu'on répète exprès (« + », « +20 »).
+   Ici, hors du noyau du kit (budget de 35 Ko) et sans balise de plus : même
+   famille que le calme au repeint, ce qui se trouve sous le doigt quand la
+   page change. tools/ghost-tap-browser-test.mjs. */
+(function () {
+  var root = /** @type {any} */ (globalThis), doc = root.document;
+  if (!doc || typeof root.addEventListener !== 'function') return;
+  var WINDOW_MS = 400, RADIUS = 48, last = null, armed = null;
+  function arm() { if (last && Date.now() - last.t < 1000) armed = { x: last.x, y: last.y, t: Date.now() }; }
+  root.addEventListener('pointerdown', function (e) { last = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
+  root.addEventListener('click', function (e) {
+    if (!e.detail) return;                 // clavier ou el.click() : pas un doigt
+    var now = Date.now();
+    if (armed && now - armed.t < WINDOW_MS && Math.abs(armed.x - e.clientX) <= RADIUS && Math.abs(armed.y - e.clientY) <= RADIUS) {
+      e.stopImmediatePropagation(); e.preventDefault(); return;
+    }
+    last = { x: e.clientX, y: e.clientY, t: now };
+    armed = e.target && e.target.closest && e.target.closest('[data-tap-once]') ? { x: e.clientX, y: e.clientY, t: now } : null;
+  }, true);
+  root.KiwiTapOnce = { arm: arm, WINDOW_MS: WINDOW_MS };
+})();
