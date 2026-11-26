@@ -30,4 +30,16 @@ eq(M.dish('Le healthy', 'en', 'h1'), 'Le healthy', 'and so does an order line th
 eq(M.dish(tajine, 'en'), 'Chicken tagine', 'a translation the owner wrote by hand is shown');
 eq(M.dish('Tajine poulet', 'en'), 'Chicken tagine', 'also from the line label');
 eq(M.t('Boissons', 'en'), 'Drinks', 'categories keep their translation');
+/* Corriger seulement la description ne fait pas du nom de la machine un nom écrit à la main (audit du 26 nov.). */
+{
+  const state = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog/state.js'), 'utf8');
+  const a = state.indexOf('  function setI18nEntry('), b = state.indexOf('  function clearI18n(', a);
+  const item = { id: 'h2', name: 'Le healthy', desc: 'Bol frais', i18n: { en: { name: 'The healthy one', desc: 'Fresh bowl', h: M.hash('Le healthy', 'Bol frais') } } };
+  const d = { items: [item] };
+  const setI18nEntry = new Function('MI', 'store', 'i18nTarget', state.slice(a, b) + '\nreturn setI18nEntry;')(() => M, { update: (fn) => fn(d) }, (dd, kind, id) => dd.items.find((x) => x.id === id));
+  setI18nEntry('item', 'h2', null, 'en', { desc: 'A fresh bowl' });
+  eq(item.i18n.en.desc, 'A fresh bowl', 'the corrected description is kept');
+  eq(item.i18n.en.name === 'The healthy one' && item.i18n.en.m === 1, false, 'the machine name is not stamped as hand-written');
+  eq(M.dish(item, 'en'), 'Le healthy', 'and screens keep the owner\'s name');
+}
 console.log(`✓ menu-dish-name-test : ${checks} contrôles (nom de plat : main du patron seulement ; catégories traduites)`);

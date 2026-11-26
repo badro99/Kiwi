@@ -391,8 +391,8 @@
       const e = i18nTarget(d, kind, id, subId);
       if (!e) return d;
       const cur = (e.i18n && e.i18n[lang]) || {};
-      // Une description corrigée sans nom traduit garde le nom du patron : la correction n'est pas perdue.
-      const name = patch && patch.name != null ? patch.name : (cur.name || e.name);
+      // Une description corrigée sans nom garde le nom du patron, jamais celui de la machine (audit du 26 nov.).
+      const name = patch && patch.name != null ? patch.name : ((cur.m && cur.name) || e.name);
       const desc = patch && patch.desc != null ? patch.desc : (cur.desc != null ? cur.desc : null);
       okFlag = m.setManual(e, lang, name, desc);
       return d;
