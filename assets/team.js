@@ -507,7 +507,7 @@ import {} from './team/roster-list.js?v=9';
   let unsubscribeVenue = null;
   let unsubscribeLang = null;
   let liveTeam = { merchant: '', members: [] };
-  let liveTeamSignature = '';
+  let liveTeamSignature = '', liveTeamRoster = '', liveTeamHoursOnly = false;
   let liveTeamBusy = false;
   let liveTeamPendingRender = false;
 
@@ -538,6 +538,8 @@ import {} from './team/roster-list.js?v=9';
     if (teamIsBeingEdited()) { liveTeamPendingRender = true; return; }
     liveTeamPendingRender = false;
     if (pageActive) render();
+    /* Accueil, plan de salle, meilleurs vendeurs : ils lisent qui est là, pas les minutes. */
+    if (liveTeamHoursOnly) { liveTeamHoursOnly = false; return; }
     try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
   }
   function pollLiveTeam() {
@@ -550,14 +552,22 @@ import {} from './team/roster-list.js?v=9';
     }).then((response) => response.ok ? response.json() : null).then((data) => {
       if (!data || !data.ok || data.merchant !== merchant) { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); return; }
       memberState.resetReadFailure();
-      const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}, data.pendingCorrections || []]);
+      /* Un service en cours finit « maintenant » côté serveur : ses heures changent à
+         chaque seconde. Comparées à la seconde, elles redessinaient Équipe/Planning
+         chaque seconde et Accueil toutes les 20 s, toute la journée (Jon's Burgers,
+         26 nov.). La grille affiche des minutes : on compare des minutes. */
+      const roster = JSON.stringify([merchant, data.members || [], data.deferredPunches || {}, data.pendingCorrections || []]);
+      const minutes = {};
+      Object.keys(data.pointedHours || {}).forEach((id) => { const row = data.pointedHours[id] || {}; minutes[id] = Object.keys(row).map((d) => d + ':' + Math.floor((Number(row[d]) || 0) * 60)).join(','); });
+      const signature = roster + JSON.stringify(minutes);
+      liveTeamHoursOnly = roster === liveTeamRoster;
       /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
          La fusion des heures pointées se faisait à CHAQUE réponse, donc
          persistTeams() réécrivait 70 ko de localStorage toutes les secondes
          pour reposer exactement les mêmes octets. */
       if (signature === liveTeamSignature) { liveTeamDelay = Math.min(120000, liveTeamDelay * 2); return; }
       liveTeamDelay = LIVE_TEAM_FAST_MS;
-      liveTeamSignature = signature;
+      liveTeamSignature = signature; liveTeamRoster = roster;
       liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] }; noteProfileState();
       const venueKey = teamVenueKey();
       if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
@@ -694,7 +704,7 @@ import {} from './team/roster-list.js?v=9';
         if (!pageActive || !teamOnScreen()) return;
         const v2 = window.KiwiVenue.getCurrentVenueData();
         ensureVenueData(v2);
-        liveTeam = { merchant: '', members: [] }; noteProfileState(); liveTeamSignature = '';
+        liveTeam = { merchant: '', members: [] }; noteProfileState(); liveTeamSignature = ''; liveTeamRoster = '';
         pollLiveTeam();
         render();
       });

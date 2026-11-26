@@ -952,8 +952,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "73",
-    "sha": "a69c85ba97ce274b"
+    "v": "74",
+    "sha": "9dc65de4388af6b0"
   },
   "assets/interactive/handlers.js": {
     "v": "12",
@@ -1588,8 +1588,8 @@
     "sha": "676e336502a9fcb8"
   },
   "assets/pages-pro.css": {
-    "v": "6",
-    "sha": "41b935c8de4747fd"
+    "v": "7",
+    "sha": "8e6e3998cfb5cb02"
   },
   "assets/pages-pro.js": {
     "v": "2258",
@@ -1692,8 +1692,8 @@
     "sha": "369b3f53c9ea0038"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "357",
-    "sha": "129e702faddd328d"
+    "v": "358",
+    "sha": "7b7bf0846e1de0f8"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -1752,8 +1752,8 @@
     "sha": "a3a82b7cb89074a1"
   },
   "assets/planning/optimiser.js": {
-    "v": "5",
-    "sha": "1fc06c1fb77ddb4b"
+    "v": "7",
+    "sha": "e3094c4f09888417"
   },
   "assets/planning/pay-statement-archive.js": {
     "v": "5",
@@ -2604,12 +2604,12 @@
     "sha": "3cb977732d0c9fb3"
   },
   "assets/team-hours.js": {
-    "v": "38",
-    "sha": "ede6ccd85551c163"
+    "v": "40",
+    "sha": "407ba5d8807059db"
   },
   "assets/team.js": {
-    "v": "364",
-    "sha": "abb62c37ec4b4493"
+    "v": "366",
+    "sha": "e64e95243974f8a3"
   },
   "assets/team/access-rules.js": {
     "v": "8",

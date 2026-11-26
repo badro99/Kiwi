@@ -126,7 +126,7 @@ ok('real roster keeps salaries out of the list and honest attendance provenance 
   let renders = 0, writes = 0;
   const c = vm.createContext({ document: { hidden: false }, liveTeamBusy: false,
     isCustomVenue: () => true, teamSlug: () => 'shop', teamVenueKey: () => 'v',
-    liveTeamSignature: '', liveTeamDelay: 1000, LIVE_TEAM_FAST_MS: 1000,
+    liveTeamSignature: '', liveTeamRoster: '', liveTeamHoursOnly: false, liveTeamDelay: 1000, LIVE_TEAM_FAST_MS: 1000,
     fetchDeadline: async () => ({ ok: true, json: async () => reply }),
     memberState: { resetReadFailure() {}, current: () => hours }, noteProfileState() {},
     persistTeams: () => { writes++; }, applyLiveTeam: () => { renders++; }, teamReadTimedOut() {},
@@ -144,9 +144,21 @@ ok('real roster keeps salaries out of the list and honest attendance provenance 
   await c.pollLiveTeam();
   assert.equal(renders, 2, 'later presence change publishes again');
   assert.equal(c.liveTeamDelay, 1000);
+  /* Un service en cours finit « maintenant » : ses heures avancent à chaque seconde. Rien à redessiner. */
+  reply = { ...reply, pointedHours: { a: { '2026-10-06': 8 + 20 / 3600 } } };
+  await c.pollLiveTeam();
+  assert.equal(renders, 2, 'seconds nobody sees do not repaint (Jon\'s Burgers, 26 nov.)');
+  /* Une minute de plus : la grille bouge, mais l'équipe est la même, les autres écrans ne sont pas prévenus. */
+  reply = { ...reply, pointedHours: { a: { '2026-10-06': 8 + 61 / 3600 } } };
+  await c.pollLiveTeam();
+  assert.equal(renders, 3, 'a new minute repaints the hours grid');
+  assert.equal(c.liveTeamHoursOnly, true, 'and tells applyLiveTeam it is hours only');
+  reply = { ...reply, members: [{ id: 'a', present: true }, { id: 'b' }] };
+  await c.pollLiveTeam();
+  assert.equal(c.liveTeamHoursOnly, false, 'a roster change is announced to the other screens');
   reply = { ...reply, merchant: 'other' };
   await c.pollLiveTeam();
-  assert.equal(renders, 2, 'foreign merchant response cannot publish');
+  assert.equal(renders, 4, 'foreign merchant response cannot publish');
   assert.equal(c.liveTeamBusy, false, 'poll lock is released');
   passed++; console.log('  ✓ live team poll executes persistence, deduplication and publication');
 }

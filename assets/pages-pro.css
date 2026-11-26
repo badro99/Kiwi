@@ -444,6 +444,8 @@ html[data-theme="dark"] .sup-card { background: var(--paper-muted); }
 
 /* Disabled reorder arrow + ghost kb */
 .menu-cat-actions .ord-arrow[disabled], .kb[disabled] { cursor: not-allowed; pointer-events: none; }
+/* Un bouton éteint doit en avoir l'air : un vert plein qui ne répond pas (Planning, Jon's Burgers 26 nov.). */
+.kb[disabled] { opacity: .45; }
 
 /* Floor grid responsive: drawer at 1080 fits 6 col, narrows to 4/3 gracefully */
 @media (max-width: 900px) {

@@ -942,6 +942,31 @@
       "file": "assets/team.js",
       "original": "  /* ═══════════════ LA COPIE SERVEUR ═══════════════════════════════════════\n   * Ce roster n'avait AUCUN appel réseau. Vingt salariés, leurs contrats, leurs\n   * taux horaires, et quatre semaines de planning ne vivaient que dans le\n   * localStorage du navigateur qui les avait saisis : le commerçant ouvrait Kiwi\n   * sur l'iPad du comptoir et trouvait une équipe vide, avec une masse salariale\n   * à zéro. La page s'appelle « Paie & planning » — c'est de l'argent, et il\n   * faut le ressaisir à chaque appareil.\n   *\n   * On miroite donc par MAGASIN vers /api/store (assets/cloud-doc.js), qui porte\n   * les trois règles : ne jamais perdre de donnée sur une panne, ne jamais\n   * écraser l'autre appareil, ne jamais pousser avant d'avoir lu.\n   *\n   * La clé est le slug du magasin, pas `teamKey()`. teamKey d'une venue\n   * personnalisée EST son identifiant de venue, que venues.js tire de l'horloge\n   * à la création ou du slug à l'adoption : deux navigateurs du même commerçant\n   * ne s'accordent jamais dessus. cloud-doc.js fait la traduction.\n   *\n   * Le stockage local, lui, ne bouge pas d'un octet : kiwiTeamV2:custom garde\n   * ses seaux par venue, et toutes les lectures existantes trouvent leur roster\n   * là où il a toujours été. */\n",
       "replacement": "  /* Persistence documentation: assets/team/member-state.js (teamVenueKey). */ "
+    },
+    {
+      "file": "assets/team.js",
+      "original": "  let liveTeamSignature = '';\n",
+      "replacement": "  let liveTeamSignature = '', liveTeamRoster = '', liveTeamHoursOnly = false;\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "    if (pageActive) render();\n",
+      "replacement": "    if (pageActive) render();\n    /* Accueil, plan de salle, meilleurs vendeurs : ils lisent qui est là, pas les minutes. */\n    if (liveTeamHoursOnly) { liveTeamHoursOnly = false; return; }\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "      const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}, data.deferredPunches || {}, data.pendingCorrections || []]);\n",
+      "replacement": "      /* Un service en cours finit « maintenant » côté serveur : ses heures changent à\n         chaque seconde. Comparées à la seconde, elles redessinaient Équipe/Planning\n         chaque seconde et Accueil toutes les 20 s, toute la journée (Jon's Burgers,\n         26 nov.). La grille affiche des minutes : on compare des minutes. */\n      const roster = JSON.stringify([merchant, data.members || [], data.deferredPunches || {}, data.pendingCorrections || []]);\n      const minutes = {};\n      Object.keys(data.pointedHours || {}).forEach((id) => { const row = data.pointedHours[id] || {}; minutes[id] = Object.keys(row).map((d) => d + ':' + Math.floor((Number(row[d]) || 0) * 60)).join(','); });\n      const signature = roster + JSON.stringify(minutes);\n      liveTeamHoursOnly = roster === liveTeamRoster;\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "      liveTeamSignature = signature;\n",
+      "replacement": "      liveTeamSignature = signature; liveTeamRoster = roster;\n"
+    },
+    {
+      "file": "assets/team.js",
+      "original": "        liveTeam = { merchant: '', members: [] }; noteProfileState(); liveTeamSignature = '';\n",
+      "replacement": "        liveTeam = { merchant: '', members: [] }; noteProfileState(); liveTeamSignature = ''; liveTeamRoster = '';\n"
     }
   ],
   "scriptsBefore": {
@@ -950,7 +975,7 @@
     "kiwi-serveur.html": 27,
     "booking.html": 5
   },
-  "sha256": "dbaa2785a9917563a27e2e866dc121b6257190abf2441ecdaa37d4d3b47b2a47",
+  "sha256": "72da8d490c1ada3e44ee61aa1de111e6358c794e2b5e3ff3c591630853700b5f",
   "imports": [
     "./team/member-state.js",
     "./team/venue-scope.js",

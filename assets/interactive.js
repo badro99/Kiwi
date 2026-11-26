@@ -2058,15 +2058,15 @@ ar: {
     if (navKey !== 'payroll' && navKey !== 'equipe') {
       try { window.__kiwiTeamDeactivate?.(); } catch (_) {}
     }
-    document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     const navEl = document.querySelector(`.sidebar nav a[data-nav="${navKey}"]`);
-    if (navEl) navEl.classList.add('active');
+    document.querySelectorAll('.sidebar nav a.active').forEach((a) => { if (a !== navEl) a.classList.remove('active'); });
+    if (navEl && !navEl.classList.contains('active')) navEl.classList.add('active');
     lastGenPage = navKey;
     window.scrollTo({ top: keepY });
     /* Move screen-reader/keyboard focus to the new page's heading — without
      * this, focus stays on the sidebar link and the page change is silent. */
     h1.setAttribute('tabindex', '-1');
-    try { h1.focus({ preventScroll: true }); } catch (_) { h1.focus(); }
+    if (!repaint) try { h1.focus({ preventScroll: true }); } catch (_) { h1.focus(); }
     /* close() mirrors the drawer API so handlers converted from drawer() to
      * appPage() keep their dismiss wiring — "closing" a page returns home. */
     return { el: host, close: () => { if (handlers['nav-accueil']) handlers['nav-accueil'](); } };
@@ -2084,9 +2084,13 @@ ar: {
    * sweeps whatever is there, which is what appPage() has always done, so a new
    * shell can never be forgotten by an older module. Pass no name to clear. */
   function pageShell(name) {
-    const b = document.body;
-    [...b.classList].forEach((c) => { if (c.indexOf('page-') === 0) b.classList.remove(c); });
-    if (name) b.classList.add('page-' + name);
+    const b = document.body, want = name ? 'page-' + name : '';
+    /* Already there: touch nothing. Removing and re-adding the same class is
+     * still a class change, and calm-repaint reads a class change on a parent
+     * as a NAVIGATION: every repaint of Planning/Équipe replayed the page fade
+     * (Jon's Burgers, 26 nov. 2026). */
+    [...b.classList].forEach((c) => { if (c.indexOf('page-') === 0 && c !== want) b.classList.remove(c); });
+    if (want && !b.classList.contains(want)) b.classList.add(want);
   }
 
   window.Kiwi = {
