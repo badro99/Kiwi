@@ -1,0 +1,237 @@
+/* Stock · import d'une liste d'articles (CSV ou copier-coller depuis Excel).
+ * Jon's Burgers, 26 nov. 2026 : « faut-il entrer chaque article un par un, ou
+ * peut-on téléverser la liste, avec les prix, puis mettre les quantités ? ».
+ * Les deux : la colonne stock est facultative. Sans elle, les quantités se
+ * saisissent ensuite d'un coup dans l'Inventaire physique.
+ * Même écriture que « Ajouter un article » / « Modifier » (catalog.js) :
+ * un article existant (même nom) est mis à jour, jamais dupliqué ; rien n'est
+ * écrit avant « Importer ». */
+window.KiwiStockInternal.install('import', (S) => {
+  'use strict';
+  const { allCategories, catLabel, closeTopModal, countStock, currentStockFor, esc, getInv, getSup, lang, render, retailCatalog, stItemOverrides, stOverlayScope, stSaveOverlay, stShowReal, stStockOverrides, stockLocationId, stockUnit } = S;
+
+  const STR = {
+    fr: {
+      title: 'Importer une liste d’articles', tag: 'Stock',
+      help: 'Colonnes reconnues : article, unite, categorie, fournisseur, cout (prix d’achat par unité), stock, stock_ideal, seuil. Seule article est obligatoire. Sans colonne stock, saisissez ensuite les quantités dans l’Inventaire physique.',
+      choose: 'Choisir un fichier CSV', paste: 'ou collez ici les lignes copiées depuis Excel (avec la ligne d’en-tête)', read: 'Lire', template: 'Télécharger un modèle',
+      created: 'nouveaux', updated: 'mis à jour', counted: 'avec stock', cats: 'catégorie(s) créée(s)',
+      thName: 'Article', thUnit: 'Unité', thCat: 'Catégorie', thCost: 'Coût', thStock: 'Stock',
+      isNew: 'nouveau', issues: (n) => `${n} ligne(s) ignorée(s)`, line: 'Ligne', noName: 'article vide', twice: 'en double dans le fichier', badNum: 'nombre illisible', unitFix: (u) => `unité inconnue, comptée en ${u}`,
+      noCols: 'Aucune colonne « article » (ou nom, ingrédient, produit) dans ce fichier.', empty: 'Rien à lire : choisissez un fichier ou collez des lignes.',
+      go: (n) => `Importer ${n} article(s)`, done: 'Liste importée', doneDesc: (c, u) => `${c} nouveau(x) · ${u} mis à jour`,
+      retail: 'En boutique, l’import se fait depuis le catalogue (Importer un CSV).', unavailable: 'Import indisponible, rechargez la page.',
+    },
+    en: {
+      title: 'Import a list of items', tag: 'Stock',
+      help: 'Recognised columns: article, unite, categorie, fournisseur, cout (purchase cost per unit), stock, stock_ideal, seuil. Only article is required. Without a stock column, enter quantities afterwards in the Physical count.',
+      choose: 'Choose a CSV file', paste: 'or paste rows copied from Excel here (with the header row)', read: 'Read', template: 'Download a template',
+      created: 'new', updated: 'updated', counted: 'with stock', cats: 'categor(ies) created',
+      thName: 'Item', thUnit: 'Unit', thCat: 'Category', thCost: 'Cost', thStock: 'Stock',
+      isNew: 'new', issues: (n) => `${n} row(s) skipped`, line: 'Row', noName: 'empty item', twice: 'twice in the file', badNum: 'unreadable number', unitFix: (u) => `unknown unit, counted in ${u}`,
+      noCols: 'No “article” column (or nom, ingredient, produit) in this file.', empty: 'Nothing to read: choose a file or paste rows.',
+      go: (n) => `Import ${n} item(s)`, done: 'List imported', doneDesc: (c, u) => `${c} new · ${u} updated`,
+      retail: 'In a shop, import from the catalogue (Import a CSV).', unavailable: 'Import unavailable, reload the page.',
+    },
+    ar: {
+      title: 'استيراد لائحة أصناف', tag: 'المخزون',
+      help: 'الأعمدة المعروفة: article و unite و categorie و fournisseur و cout (ثمن الشراء للوحدة) و stock و stock_ideal و seuil. العمود article وحده إلزامي. بدون عمود stock، أدخل الكميات بعد ذلك في الجرد الفعلي.',
+      choose: 'اختر ملف CSV', paste: 'أو الصق هنا الأسطر المنسوخة من Excel (مع سطر العناوين)', read: 'قراءة', template: 'تنزيل نموذج',
+      created: 'جديدة', updated: 'محدَّثة', counted: 'بمخزون', cats: 'فئة منشأة',
+      thName: 'الصنف', thUnit: 'الوحدة', thCat: 'الفئة', thCost: 'التكلفة', thStock: 'المخزون',
+      isNew: 'جديد', issues: (n) => `${n} سطر متجاهَل`, line: 'السطر', noName: 'صنف فارغ', twice: 'مكرر في الملف', badNum: 'رقم غير مقروء', unitFix: (u) => `وحدة غير معروفة، تُحتسب بـ${u}`,
+      noCols: 'لا يوجد عمود "article" (أو nom أو ingredient أو produit) في هذا الملف.', empty: 'لا شيء للقراءة: اختر ملفاً أو الصق أسطراً.',
+      go: (n) => `استيراد ${n} صنف`, done: 'تم استيراد اللائحة', doneDesc: (c, u) => `${c} جديد · ${u} محدَّث`,
+      retail: 'في المتجر، يتم الاستيراد من الكتالوج (استيراد CSV).', unavailable: 'الاستيراد غير متاح، أعد تحميل الصفحة.',
+    },
+  };
+  const tr = (k, ...a) => { const s = (STR[lang()] || STR.fr)[k]; return typeof s === 'function' ? s(...a) : s; };
+
+  const COLS = {
+    name: ['article', 'nom', 'ingredient', 'produit', 'designation', 'libelle', 'matiere', 'name', 'item'],
+    unit: ['unite', 'unit', 'u', 'mesure', 'unite_de_mesure'],
+    cat: ['categorie', 'category', 'famille', 'rayon'],
+    sup: ['fournisseur', 'supplier', 'frs'],
+    cost: ['cout', 'cout_unitaire', 'prix', 'prix_achat', 'prix_d_achat', 'prix_unitaire', 'pu', 'cost', 'cout_mad', 'prix_mad'],
+    stock: ['stock', 'quantite', 'qte', 'qty', 'stock_actuel', 'en_stock', 'quantity'],
+    par: ['stock_ideal', 'par', 'stock_cible', 'niveau_ideal', 'par_level'],
+    reorder: ['seuil', 'seuil_commande', 'reorder', 'alerte', 'stock_min', 'minimum'],
+  };
+  const key = (s) => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
+
+  /* Texte → plan, sans rien écrire. */
+  function analyse(text) {
+    const imp = window.KiwiCatalogImport;
+    const parsed = imp && imp.parse ? imp.parse(text) : { ok: false };
+    if (!parsed.ok) return { ok: false, error: 'empty' };
+    const idx = {};
+    Object.keys(COLS).forEach((k) => { idx[k] = parsed.header.findIndex((h) => COLS[k].includes(h)); });
+    if (idx.name < 0) return { ok: false, error: 'noCols' };
+    /* « 0,054 » (Excel en français) est une décimale : une virgule seule n'est
+       jamais un séparateur de milliers ici, le lecteur générique lirait 54. */
+    const num = (s) => {
+      const v = String(s).replace(/\s*(?:MAD|DH|DHS)$/i, '').replace(/[\s  ]/g, '');
+      if (/^-?\d+,\d+$/.test(v)) return Number(v.replace(',', '.'));
+      return imp && imp._num ? imp._num(v) : Number(v);
+    };
+    const existing = new Map(getInv().map((it) => [key(it.name), it]));
+    const cats = new Map(allCategories().map((c) => [key(c.label), c.id]));
+    const rows = [], issues = [], seen = new Set();
+    parsed.rows.forEach((r, i) => {
+      const line = i + 2, cell = (k) => (idx[k] >= 0 ? String(r[idx[k]] == null ? '' : r[idx[k]]).trim() : '');
+      const name = cell('name').slice(0, 120);
+      if (!name) { issues.push({ line, why: tr('noName') }); return; }
+      if (seen.has(key(name))) { issues.push({ line, why: tr('twice'), name }); return; }
+      const nums = {};
+      for (const k of ['cost', 'stock', 'par', 'reorder']) {
+        const raw = cell(k);
+        if (!raw) continue;
+        const n = num(raw);
+        if (!(n >= 0)) { issues.push({ line, why: tr('badNum') + ' (' + k + ')', name }); return; }
+        nums[k] = n;
+      }
+      seen.add(key(name));
+      const rawUnit = cell('unit');
+      const unit = rawUnit ? stockUnit(rawUnit) : '';
+      if (rawUnit && key(unit) !== key(rawUnit) && !['kilo', 'kilogramme', 'kilogrammes', 'gramme', 'grammes', 'litre', 'litres', 'piece', 'pieces', 'unite', 'unites', 'pc', 'pcs'].includes(key(rawUnit))) issues.push({ line, why: tr('unitFix', unit), name, soft: true });
+      const catName = cell('cat');
+      rows.push({ name, unit, catName, catId: catName ? (cats.get(key(catName)) || '') : '', sup: cell('sup'), existing: existing.get(key(name)) || null, ...nums });
+    });
+    return { ok: true, rows, issues, newCats: [...new Set(rows.filter((r) => r.catName && !r.catId).map((r) => r.catName))] };
+  }
+
+  /* Le plan → les mêmes écritures que le formulaire d'article. */
+  function apply(plan) {
+    const catIds = new Map();
+    plan.newCats.forEach((label) => {
+      const id = 'usr-cat-' + label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4) + catIds.size;
+      S.stUserCategories.push({ id, label });
+      catIds.set(label, id);
+    });
+    const sups = getSup();
+    const supName = (raw) => { if (!raw) return ''; const s = sups.find((x) => key(x.name) === key(raw)); return s ? s.name : raw; };
+    const stamp = Date.now().toString(36);
+    let created = 0, updated = 0;
+    plan.rows.forEach((r, i) => {
+      const category = r.catId || catIds.get(r.catName) || '';
+      const it = r.existing;
+      if (it) {
+        const patch = { updatedAt: Date.now() };
+        if (r.unit) patch.unit = r.unit;
+        if (category) patch.category = category;
+        if (r.sup) patch.supplier = supName(r.sup);
+        if (r.cost != null) patch.costPerUnit = r.cost;
+        if (r.par != null) patch.parLevel = r.par;
+        if (r.reorder != null) patch.reorderLevel = r.reorder;
+        const before = currentStockFor(it);
+        const k = S.stUserItems.findIndex((x) => x.id === it.id);
+        if (k >= 0) S.stUserItems[k] = { ...S.stUserItems[k], ...patch, ...(r.stock != null ? { currentStock: r.stock } : {}) };
+        else if (r.stock != null) stStockOverrides[it.id] = r.stock;
+        stItemOverrides[it.id] = { ...(stItemOverrides[it.id] || {}), ...patch };
+        if (r.stock != null && Math.abs(r.stock - before) > 0.0005) countStock(it, r.stock, 'import-' + stamp + '-' + i);
+        updated++;
+      } else {
+        const par = r.par != null ? r.par : 0;
+        const reorderLevel = r.reorder != null ? r.reorder : Math.max(0, Math.round(par * 0.4));
+        const currentStock = r.stock != null ? r.stock : 0;
+        const item = {
+          id: 'usr-' + stamp + i.toString(36),
+          name: r.name, category: category || 'epicerie', unit: r.unit || 'unité', supplier: supName(r.sup),
+          currentStock, parLevel: par, reorderLevel, costPerUnit: r.cost != null ? r.cost : 0,
+          nutrition: null, gramsPerUnit: null, lastDelivery: null, deliveryFrequency: '·', usageThisWeek: 0, theoreticalUsage: 0,
+          status: currentStock <= 0 ? 'out' : (currentStock < reorderLevel ? 'low' : 'ok'), updatedAt: Date.now(),
+        };
+        S.stUserItems.push(item);
+        try { if (window.KiwiInventory && stShowReal()) window.KiwiInventory.ensureOpening(item.id, currentStock, { unitCost: item.costPerUnit, locationId: stockLocationId() }); } catch (_) {}
+        created++;
+      }
+    });
+    stSaveOverlay();
+    try { plan.rows.forEach((r) => r.existing && window.KiwiRestaurantRecipes?.recomputeForStock?.(r.existing.id, stOverlayScope())); } catch (_) {}
+    return { created, updated, cats: plan.newCats.length };
+  }
+
+  function template() {
+    const csv = 'article,unite,categorie,fournisseur,cout,stock,stock_ideal,seuil\n'
+      + 'Blanc de poulet,kg,Viandes,Boucherie,53,12,15,10\n'
+      + 'Tortilla,unité,Consommables,Nutrisla,1.875,240,400,108\n'
+      + 'Sauce fromage,g,Sauces,,0.054,3800,3800,950\n';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'modele-stock.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function open() {
+    const K = window.Kiwi;
+    if (!K || !K.modal) return null;
+    if (retailCatalog()) { K.toast?.(tr('retail'), { type: 'warn' }); return null; }
+    /* Le lecteur CSV (catalog-import.js) vient avec les outils du tableau de bord. */
+    if (!window.KiwiCatalogImport) {
+      const load = window.KiwiDashboardLoader && window.KiwiDashboardLoader.load;
+      if (!load) { K.toast?.(tr('unavailable'), { type: 'error' }); return null; }
+      load('workspace').then(() => open(), () => K.toast?.(tr('unavailable'), { type: 'error' }));
+      return null;
+    }
+    const m = K.modal({
+      tag: tr('tag'), title: tr('title'), width: 680,
+      body: '<div data-sti-body></div>',
+      foot: '<button class="st-btn primary" type="button" data-sti-go disabled style="width:100%;justify-content:center;padding:12px;opacity:.5;">' + esc(tr('go', 0)) + '</button>',
+    });
+    const body = m.el.querySelector('[data-sti-body]');
+    const go = m.el.querySelector('[data-sti-go]');
+    let plan = null, error = '';
+    const field = 'font:inherit;padding:8px 10px;border:1px solid var(--n-200,#dcd8cf);border-radius:9px;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D)';
+    /* A unit cost can be 0,054 MAD a gram: keep three decimals, money rounding would show 0,05. */
+    const costFmt = new Intl.NumberFormat(lang() === 'en' ? 'en-US' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    const unitCost = (n) => costFmt.format(n) + ' MAD';
+    function paint() {
+      let html = '<p style="font-size:12.5px;line-height:1.5;color:var(--n-600,#555);margin:0 0 10px;">' + esc(tr('help')) + '</p>'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"><button class="st-btn secondary" type="button" data-sti-pick>' + esc(tr('choose')) + '</button>'
+        + '<input type="file" hidden accept=".csv,.txt,.tsv,text/csv,text/plain" data-sti-file><button class="st-btn secondary" type="button" data-sti-tpl>' + esc(tr('template')) + '</button></div>'
+        + '<textarea data-sti-paste placeholder="' + esc(tr('paste')) + '" style="width:100%;box-sizing:border-box;min-height:110px;font-family:\'JetBrains Mono\',monospace;font-size:12px;' + field + '"></textarea>'
+        + '<div style="margin:8px 0 12px;"><button class="st-btn secondary" type="button" data-sti-read>' + esc(tr('read')) + '</button></div>';
+      if (error) html += '<p style="color:var(--danger,#cb5238);font-size:13px;">' + esc(tr(error)) + '</p>';
+      if (plan) {
+        const n = plan.rows.filter((r) => !r.existing).length, u = plan.rows.length - n, q = plan.rows.filter((r) => r.stock != null).length;
+        html += '<p style="font-size:13px;margin:0 0 8px;"><b>' + n + '</b> ' + esc(tr('created')) + ' · <b>' + u + '</b> ' + esc(tr('updated')) + ' · <b>' + q + '</b> ' + esc(tr('counted'))
+          + (plan.newCats.length ? ' · <b>' + plan.newCats.length + '</b> ' + esc(tr('cats')) : '') + '</p>'
+          + '<div style="max-height:38vh;overflow:auto;border:1px solid var(--n-200,#dcd8cf);border-radius:12px;"><table class="st-table" style="width:100%;font-size:13px;"><thead><tr><th>' + esc(tr('thName')) + '</th><th>' + esc(tr('thUnit')) + '</th><th>' + esc(tr('thCat')) + '</th><th style="text-align:end">' + esc(tr('thCost')) + '</th><th style="text-align:end">' + esc(tr('thStock')) + '</th></tr></thead><tbody>'
+          + plan.rows.slice(0, 200).map((r) => '<tr><td>' + esc(r.name) + (r.existing ? '' : ' <span class="st-chip">' + esc(tr('isNew')) + '</span>') + '</td><td>' + esc(r.unit || (r.existing ? r.existing.unit : 'unité')) + '</td><td>'
+            + esc(r.catName || (r.existing ? catLabel(r.existing.category) : '')) + '</td><td style="text-align:end">' + esc(r.cost != null ? unitCost(r.cost) : '') + '</td><td style="text-align:end">'
+            + esc(r.stock != null ? String(r.stock) : (r.existing ? String(currentStockFor(r.existing)) : '')) + '</td></tr>').join('') + '</tbody></table></div>';
+        if (plan.issues.length) html += '<p style="font-size:12.5px;color:var(--danger,#cb5238);margin-top:8px;">' + esc(tr('issues', plan.issues.filter((x) => !x.soft).length)) + ' · '
+          + plan.issues.slice(0, 8).map((x) => esc(tr('line') + ' ' + x.line + (x.name ? ' (' + x.name + ')' : '') + ' : ' + x.why)).join(' · ') + '</p>';
+      }
+      body.innerHTML = html;
+      const ok = !!(plan && plan.rows.length);
+      go.disabled = !ok; go.style.opacity = ok ? '1' : '.5'; go.textContent = tr('go', ok ? plan.rows.length : 0);
+    }
+    function use(text) {
+      const p = analyse(text);
+      if (!p.ok) { plan = null; error = p.error; } else if (!p.rows.length) { plan = null; error = 'empty'; } else { plan = p; error = ''; }
+      paint();
+    }
+    m.el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-sti-pick]')) { m.el.querySelector('[data-sti-file]').click(); return; }
+      if (e.target.closest('[data-sti-tpl]')) { template(); return; }
+      if (e.target.closest('[data-sti-read]')) { use(m.el.querySelector('[data-sti-paste]').value); return; }
+      if (e.target.closest('[data-sti-go]') && plan) {
+        const r = apply(plan);
+        closeTopModal();
+        K.toast?.(tr('done'), { type: 'success', desc: tr('doneDesc', r.created, r.updated) });
+        if (S.stPageActive) render();
+      }
+    });
+    m.el.addEventListener('change', (e) => {
+      const el = e.target;
+      if (!el.matches('[data-sti-file]') || !el.files || !el.files[0]) return;
+      const fr = new FileReader();
+      fr.onload = () => { const imp = window.KiwiCatalogImport; use(imp && imp._decode ? imp._decode(fr.result) : new TextDecoder().decode(fr.result)); };
+      fr.readAsArrayBuffer(el.files[0]);
+    });
+    paint();
+    return m;
+  }
+
+  return { open, analyse, apply };
+});

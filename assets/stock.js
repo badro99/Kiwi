@@ -2189,7 +2189,7 @@
 
     // Tabs / filters / view
     H['stock-workspace-actions']=()=>{
-      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')]];
+      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')],...(isRetailStock()?[]:[['stock-import-list',t('btnImport')]])];
       if(isRetailStock())actions.push(['stock-supplier-ranking',({en:'Supplier ranking',ar:'ترتيب الموردين'})[lang()]||'Classement des fournisseurs']);
       const m=window.Kiwi.modal({title:catalogText('stockActions','Outils du stock'),width:480,body:`<div class="catalog-sheet">${actions.map(([action,label])=>`<button type="button" data-catalog-stock="${action}">${esc(label)}</button>`).join('')}</div>`});
       m.el.querySelectorAll('[data-catalog-stock]').forEach(button=>button.onclick=()=>{m.close();H[button.dataset.catalogStock]?.(button);});
@@ -2225,6 +2225,7 @@
     H['stock-physical-count'] = () => openPhysicalCount();
     H['stock-count-sheet'] = () => openCountSheet();
     H['stock-add-item'] = () => openAddItem();
+    H['stock-import-list'] = () => stockParts.import.open();
 
     // Item actions
     H['stock-item-detail'] = (el) => openItemDetail(el.dataset.itemId);
@@ -2460,6 +2461,7 @@
   };
   /* URLs littérales : tools/stamps.js les découvre et remonte au chargeur. */
   const stockUrls = [
+    'assets/stock/import.js?v=1',
     'assets/stock/movements.js?v=3',
     'assets/stock/overview.js?v=3',
     'assets/stock/alerts.js?v=6',

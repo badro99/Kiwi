@@ -112,7 +112,8 @@
       title: T.transactionsTitle,
       subtitle: rows.length ? `${positive.length} · ${fmt(total)} MAD · ${day}` : empty,
       width: 920,
-      body: `<div data-tx-day-selector style="margin-bottom:16px;"></div>` + (rows.length ? `
+      /* Ventes d'avant Kiwi (assets/past-sales.js) : le propriétaire d'un vrai établissement. */
+      body: `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px;"><div data-tx-day-selector></div>${window.KiwiEnv?.isReal?.() ? `<button class="kb" type="button" data-action="past-sales-open">${pageEsc(T.transactionsPast)}</button>` : ''}</div>` + (rows.length ? `
         <div class="p-hero">
           <div class="l">${pageEsc(day === today ? T.transactionsHeroLabel : day)}</div>
           <div class="big">${pageEsc(fmt(total))} <span style="font-size:18px;opacity:.7;">MAD</span></div>
@@ -156,6 +157,7 @@
       transactionsFilter: "Filtrer",
       transactionsExport: "Exporter",
       transactionsNewSale: "Encaisser",
+      transactionsPast: "Ventes antérieures",
       transactionsThTime: "HEURE",
       transactionsThMethod: "MÉTHODE",
       transactionsThCustomer: "CLIENT",
@@ -400,6 +402,7 @@
       transactionsFilter: "Filter",
       transactionsExport: "Export",
       transactionsNewSale: "New Sale",
+      transactionsPast: "Past sales",
       transactionsThTime: "TIME",
       transactionsThMethod: "METHOD",
       transactionsThCustomer: "CUSTOMER",
@@ -640,6 +643,7 @@
       transactionsFilter: "تصفية",
       transactionsExport: "تصدير",
       transactionsNewSale: "تحصيل",
+      transactionsPast: "المبيعات السابقة",
       transactionsThTime: "الوقت",
       transactionsThMethod: "الطريقة",
       transactionsThCustomer: "الزبون",

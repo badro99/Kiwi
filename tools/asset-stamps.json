@@ -224,8 +224,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "47",
-    "sha": "fbfa3511cfc3eaaf"
+    "v": "48",
+    "sha": "a6af6aca9c71a0ce"
   },
   "assets/caisse-app.js": {
     "v": "56",
@@ -1580,8 +1580,8 @@
     "sha": "019b0b381221ac8c"
   },
   "assets/pages-pro-spa-starter.js": {
-    "v": "10",
-    "sha": "480a598f1ee4bf7b"
+    "v": "11",
+    "sha": "676e336502a9fcb8"
   },
   "assets/pages-pro.css": {
     "v": "6",
@@ -1680,16 +1680,16 @@
     "sha": "7a0b4f38ca51b055"
   },
   "assets/pages.js": {
-    "v": "15",
-    "sha": "d3fb2a18040b7475"
+    "v": "16",
+    "sha": "81d453d087fec9fe"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "118",
-    "sha": "40cc6020db8daa13"
+    "v": "119",
+    "sha": "369b3f53c9ea0038"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "355",
-    "sha": "178193dbb0ec006c"
+    "v": "356",
+    "sha": "3c5617768a13d4db"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -1710,6 +1710,10 @@
   "assets/pairing-commit.js": {
     "v": "15",
     "sha": "6de061c7ee12b006"
+  },
+  "assets/past-sales.js": {
+    "v": "1",
+    "sha": "0abdfa31acd26522"
   },
   "assets/permissions-catalog.js": {
     "v": "6",
@@ -2532,8 +2536,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "152",
-    "sha": "d852960750345995"
+    "v": "153",
+    "sha": "43165b39fce6b2ac"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2546,6 +2550,10 @@
   "assets/stock/counts.js": {
     "v": "12",
     "sha": "802b0269cbd00e8c"
+  },
+  "assets/stock/import.js": {
+    "v": "1",
+    "sha": "75f502a17562c8a1"
   },
   "assets/stock/intake.js": {
     "v": "23",
@@ -2580,8 +2588,8 @@
     "sha": "ad3af92eb31669f1"
   },
   "assets/stock/strings.js": {
-    "v": "27",
-    "sha": "e642f5952d132275"
+    "v": "28",
+    "sha": "fbe65a490ca293cc"
   },
   "assets/stock/suppliers.js": {
     "v": "6",

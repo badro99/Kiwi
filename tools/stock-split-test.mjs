@@ -93,11 +93,11 @@ for (const real of [false, true]) {
   assert.deepEqual(after.calls, before.calls, 'démarrage et inscriptions inchangés');
   assert.deepEqual(Object.keys(after.context).filter(k => k !== 'KiwiStockInternal').sort(), Object.keys(before.context).sort(), 'un seul namespace global ajouté');
   /* Handlers added after the split, each reviewed with its own suite: the split itself added none. */
-  const LATER = new Set(['stock-supplier-ranking']);   // b0559b9f0, tools/supplier-ranking-test.mjs
+  const LATER = new Set(['stock-supplier-ranking', 'stock-import-list']);   // b0559b9f0, tools/supplier-ranking-test.mjs ; import d'une liste, tools/past-sales-stock-import-test.mjs
   assert.deepEqual(Object.keys(after.context.Kiwi.handlers).filter(k => !LATER.has(k)), Object.keys(before.context.Kiwi.handlers));
   assert.equal(JSON.stringify(after.context.KiwiRestaurantStock.rows()), JSON.stringify(before.context.KiwiRestaurantStock.rows()), 'pont recettes disponible avant les parties');
-  /* Les huit parties de la découpe, plus photo.js (16d43fe1c, scan photo d'un BL), suppliers.js (b0559b9f0, classement des fournisseurs) et sourcing.js (qualités et fournisseurs en concurrence, tools/stock-sourcing-test.mjs). */
-  assert.equal(after.scripts.length, 11, 'les onze parties se préchargent au démarrage, un premier clic n’attend pas le réseau');
+  /* Les huit parties de la découpe, plus photo.js (16d43fe1c, scan photo d'un BL), suppliers.js (b0559b9f0, classement des fournisseurs) et sourcing.js (qualités et fournisseurs en concurrence, tools/stock-sourcing-test.mjs), et import.js (liste d'articles importée, tools/past-sales-stock-import-test.mjs). */
+  assert.equal(after.scripts.length, 12, 'les douze parties se préchargent au démarrage, un premier clic n’attend pas le réseau');
   let scope;
   const install = after.context.KiwiStockInternal.install;
   after.context.KiwiStockInternal.install = (name, factory) => install(name, s => { scope = s; return factory(s); });

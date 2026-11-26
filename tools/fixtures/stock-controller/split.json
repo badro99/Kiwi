@@ -414,6 +414,18 @@
     {
       "before": "    return [...filtered, ...stUserSuppliers.filter(s => !stDeletedSups.has(s.id))];",
       "after": "    const own = [...filtered, ...stUserSuppliers.filter(s => !stDeletedSups.has(s.id))];\n    /* A restaurant also enters suppliers in Approvisionnement; offer them\n       here too, once, so nobody types them twice (Jon's Burgers, 25 Nov). */\n    const key = (n) => String(n || '').trim().toLowerCase();\n    const seen = new Set(own.map((s) => key(s.name)));\n    const fromProcurement = (retailProcurementDoc().suppliers || [])\n      .filter((s) => s && s.active !== false && key(s.name) && !seen.has(key(s.name)) && !stDeletedSups.has(s.id) && seen.add(key(s.name)))\n      .map((s) => ({\n        id: s.id, name: s.name, location: s.address || '', category: s.categories || '',\n        contact: s.phone || '', deliverySchedule: (+s.leadDays || 0) ? `${+s.leadDays} j` : '·',\n        paymentTerms: s.paymentTerms || '·', rating: null, monthlySpend: 0, priceChangeLast30d: 0, procurement: true,\n      }));\n    return [...own, ...fromProcurement];"
+    },
+    {
+      "before": "      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')]];",
+      "after": "      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')],...(isRetailStock()?[]:[['stock-import-list',t('btnImport')]])];"
+    },
+    {
+      "before": "    H['stock-add-item'] = () => openAddItem();",
+      "after": "    H['stock-add-item'] = () => openAddItem();\n    H['stock-import-list'] = () => stockParts.import.open();"
+    },
+    {
+      "before": "  const stockUrls = [",
+      "after": "  const stockUrls = [\n    'assets/stock/import.js?v=1',"
     }
   ],
   "legacyBoundaries": {
@@ -504,6 +516,21 @@
         "stPageActive",
         "stUserSuppliers",
         "stockSourcing"
+      ]
+    },
+    "assets/stock/import.js": {
+      "globals": [
+        "Kiwi",
+        "KiwiCatalogImport",
+        "KiwiDashboardLoader",
+        "KiwiInventory",
+        "KiwiRestaurantRecipes",
+        "KiwiStockInternal"
+      ],
+      "state": [
+        "stPageActive",
+        "stUserCategories",
+        "stUserItems"
       ]
     }
   },
