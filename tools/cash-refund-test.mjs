@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* « Remboursement » d'une sortie de caisse (assets/caisse/cash-refund.js).
+/* « Remboursement » d'une sortie de caisse (assets/caisse-cash-refund.js).
  *
  * 25 nov. 2026 : un patron prend 100 MAD au tiroir, puis les rend. On tapait
  * −100 puis +100 et la liste du service lisait deux mouvements sans lien. Le
@@ -12,7 +12,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = fs.readFileSync(path.join(ROOT, 'assets/caisse/cash-refund.js'), 'utf8');
+const src = fs.readFileSync(path.join(ROOT, 'assets/caisse-cash-refund.js'), 'utf8');
 let passed = 0;
 const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log('  ✓ ' + label); };
 console.log('■ Remboursement d\'une sortie de caisse (tools/cash-refund-test.mjs)');

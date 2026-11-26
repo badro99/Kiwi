@@ -16,12 +16,36 @@ const ok = (value, message) => { assert.ok(value, message); checks += 1; console
 
 ok(/\(b\.plain \|\| !l\.editOptions \? '' : C\.button\.render\(\{ label: t\('bill\.edit_options'\)/.test(kit),
   'the bill shows « Modifier les options » only on a line the till marks editable');
-const line = frame.slice(frame.indexOf('function tillKitLine('), frame.indexOf('const tillKitDiscount'));
-ok(/editOptions: !sent && tillKitCanEditOptions\(l\)/.test(line), 'an unsent line with option groups is marked editable, a sent one never');
-const act = frame.slice(frame.indexOf('function tillKitAct('), frame.indexOf('function tillKitPaint('));
-ok(/case 'edit-options':/.test(act), 'the till handles the edit-options gesture');
-ok(/openOptSheet\(item, groups, [\s\S]{0,700}patchLine\(line,[\s\S]{0,300}, line\.opts\)/.test(act),
-  'editing reopens the sheet on the line\'s choices and patches that same line');
+// Behaviour: the real tillKitLine / tillKitCanEditOptions, on a menu where only the tacos has options.
+const lineSrc = frame.slice(frame.indexOf('    function tillKitLine('), frame.indexOf('    const tillKitDiscount'));
+const menu = [{ id: 'tacos', name: 'Tacos Double', price: 55, groups: ['sauce'] }, { id: 'coca', name: 'Coca', price: 12 }];
+const fctx = vm.createContext({ menuItems: menu, itemOptGroups: (it) => it.groups || [], optText: (o) => o.map((x) => x.c).join(', '), lineName: (l) => l.name });
+vm.runInContext(`${lineSrc}\nthis.line = tillKitLine; this.can = tillKitCanEditOptions;`, fctx);
+ok(fctx.line({ id: 'tacos', name: 'Tacos Double', qty: 1, price: 55 }, 0).editOptions === true
+  && fctx.line({ id: 'tacos', name: 'Tacos Double', qty: 1, price: 55, sent: true }, 0).editOptions === false
+  && fctx.line({ id: 'coca', name: 'Coca', qty: 1, price: 12 }, 1).editOptions === false
+  && fctx.line({ id: 'tacos', kind: 'formula', name: 'Menu', qty: 1, price: 70 }, 2).editOptions === false,
+'an unsent line with option groups is marked editable; a sent line, a plain dish or a formula never');
+// Behaviour: the real « edit-options » case of tillKitAct, with the sheet and the order stubbed.
+const caseStart = frame.indexOf("        case 'edit-options': {");
+const caseEnd = frame.indexOf('}, line.opts);', caseStart);
+assert.ok(caseStart > 0 && caseEnd > caseStart, 'edit-options case found');
+const caseSrc = frame.slice(caseStart, frame.indexOf('}', frame.indexOf('return;', caseEnd)) + 1);
+const sheet = [], patched = [];
+const actx = vm.createContext({ menuItems: menu, itemOptGroups: (it) => it.groups || [], mode: 'vrap', selectedId: null,
+  openOptSheet: (item, groups, done, preset) => sheet.push({ item, groups, done, preset }),
+  promoPrice: (_item, price) => ({ price }), optSig: (c) => c.map((x) => x.c).join('|'),
+  currentOrder: () => ({ patchLine: (line, patch, drop) => patched.push({ line, patch, drop }) }), renderCart() {}, renderMenu() {}, renderOrderPanel() {} });
+vm.runInContext(`${lineSrc}\nthis.act = function (line) { switch ('edit-options') {\n${caseSrc}\n} };`, actx);
+actx.act({ id: 'tacos', qty: 1, price: 55, sent: true, opts: [] });
+actx.act({ id: 'coca', qty: 1, price: 12 });
+ok(sheet.length === 0, 'the till ignores the gesture on a sent line or a dish without options');
+const tacos = { uid: 'u1', id: 'tacos', qty: 1, price: 55, opts: [{ g: 'sauce', c: 'biggy', p: 0 }] };
+actx.act(tacos);
+ok(sheet.length === 1 && sheet[0].item.id === 'tacos' && sheet[0].preset === tacos.opts, 'editing reopens the sheet on the line\'s own choices');
+sheet[0].done(sheet[0].item, [{ g: 'sauce', c: 'andalouse', p: 5 }]);
+ok(patched.length === 1 && patched[0].line === tacos && patched[0].patch.price === 60 && patched[0].patch.optSig === 'andalouse',
+  'confirming patches that same line with the new choices and price, never a new line');
 
 // Behaviour: the real openOptSheet, preset with the line's choices.
 const start = catalogue.indexOf('    function closeOptSheet()');

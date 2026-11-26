@@ -761,18 +761,18 @@
     const applyPromoCode = (raw) => {
       const P = window.KiwiMenuPromos, code = P ? P.normCode(raw) : '', slug = IS_DEMO ? '' : carteSlug();
       if (!code) return;
-      if (!slug || !billLines().length) { toast(slug ? 'Code promo · ajoutez d\'abord des articles' : 'Code promo · caisse non reliée'); return; }
+      if (!slug || !billLines().length) { toast(window.KiwiCaisseStrings.say(slug ? 'promo.add' : 'promo.unpaired')); return; }
       fetch('/api/menu?merchant=' + encodeURIComponent(slug) + '&code=' + encodeURIComponent(code), { credentials: 'omit' }).then(r => (r.ok ? r.json() : null)).then((j) => {
         const promo = j && j.promo && P.sanitize([j.promo])[0];
-        if (!promo) return toast('Code inconnu ou terminé · ' + code);
-        if (!P.isActive(promo, Date.now())) return toast('Code ' + code + ' · pas valable à cette heure');
+        if (!promo) return toast(window.KiwiCaisseStrings.say('promo.unknown', null, { c: code }));
+        if (!P.isActive(promo, Date.now())) return toast(window.KiwiCaisseStrings.say('promo.hours', null, { c: code }));
         setCodePromos(codesHere().filter(p => p.id !== promo.id).concat(promo), []);
-        toast('Code ' + code + ' appliqué · ' + promo.name);
-      }).catch(() => toast('Code promo · hors ligne, réessayez'));
+        toast(window.KiwiCaisseStrings.say('promo.applied', null, { c: code, n: promo.name }));
+      }).catch(() => toast(window.KiwiCaisseStrings.say('promo.offline')));
     };
     const paintPromoCode = () => { // sur la note ET dans « Payer en espèces » (Encaisser), dans tous les habillages
       [['.rp-pay', 'afterbegin', 'rp-code'], ['#cash-amount', 'afterend', 'cash-code']].forEach(([sel, at, id]) => { const host = $(sel); if (!host || $('#' + id)) return;
-        host.insertAdjacentHTML(at, `<form class="rp-client rp-code" id="${id}" style="cursor:text${id === 'cash-code' ? ';margin:12px 0 4px' : ''}"><svg viewBox="0 -960 960 960" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Z"/></svg><input class="rp-code-in" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Code promo" aria-label="Code promo" style="flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:0;text-transform:uppercase"><span class="rp-code-on" style="display:flex;gap:6px;flex-wrap:wrap"></span><button type="submit" style="border:0;background:transparent;color:var(--atlas);font:inherit;font-weight:600;cursor:pointer">Appliquer</button></form>`);
+        host.insertAdjacentHTML(at, `<form class="rp-client rp-code" id="${id}" style="cursor:text${id === 'cash-code' ? ';margin:12px 0 4px' : ''}"><svg viewBox="0 -960 960 960" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Z"/></svg><input class="rp-code-in" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="${window.KiwiCaisseStrings.say('promo.field')}" aria-label="${window.KiwiCaisseStrings.say('promo.field')}" style="flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:0;text-transform:uppercase"><span class="rp-code-on" style="display:flex;gap:6px;flex-wrap:wrap"></span><button type="submit" style="border:0;background:transparent;color:var(--atlas);font:inherit;font-weight:600;cursor:pointer">${window.KiwiCaisseStrings.say('promo.apply')}</button></form>`);
         const f = $('#' + id), i = f.querySelector('.rp-code-in'); i.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.stopPropagation(); }); // Entrée valide le code, jamais le paiement
         f.addEventListener('submit', (e) => { e.preventDefault(); applyPromoCode(i.value); i.value = ''; i.blur(); });
         f.addEventListener('click', (e) => { const x = e.target.closest('[data-code-x]'); if (!x) return; e.preventDefault(); setCodePromos(codesHere().filter(p => p.id !== x.dataset.codeX), [x.dataset.codeX]); });

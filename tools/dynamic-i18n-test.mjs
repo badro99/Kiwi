@@ -25,7 +25,7 @@ const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
 // caisse delivery module's FR/EN/AR table (DLV_T, assets/caisse/delivery.js).
 const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel|kkt|kt|dlvT)$/; // kkt, kt : KiwiKit.t par clé (caisse-kitchen.js, pos-boutique/me-menu.js)
 // An icon helper takes a Material Symbols name (« storefront », « lock »), never text a person reads.
-const iconCall = /^(?:icon|materialIcon|itSvg)$/;
+const iconCall = /^(?:icon|materialIcon|itSvg|logoHTML)$/; // logoHTML(platformId) draws a delivery platform's logo (assets/delivery.js)
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;
 const prop = n => ts.isPropertyAccessExpression(n) ? n.name.text : ts.isElementAccessExpression(n) && ts.isStringLiteral(n.argumentExpression) ? n.argumentExpression.text : '';
 const name = n => ts.isIdentifier(n) ? n.text : prop(n);
@@ -62,6 +62,22 @@ export function scan(source, filename = 'fixture.js') {
       });
       return words([n.head.text, ...n.templateSpans.map(s => s.literal.text)].join('\u0001'), html) || n.templateSpans.some((s, i) => !inTag[i] && raw(s.expression, html, seen));
     }
+    // « '<input aria-label="' + t('x') + '">' » : in HTML a + chain is one template, read whole like one.
+    if (html && ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const parts = [];
+      const flat = (x) => { if (ts.isParenthesizedExpression(x)) return flat(x.expression); if (ts.isBinaryExpression(x) && x.operatorToken.kind === ts.SyntaxKind.PlusToken) { flat(x.left); flat(x.right); } else parts.push(x); };
+      flat(n);
+      if (parts.some(ts.isStringLiteralLike)) {
+        let text = '', hit = false;
+        for (const x of parts) {
+          if (ts.isStringLiteralLike(x)) { text += x.text; continue; }
+          const tag = text.lastIndexOf('<') > text.lastIndexOf('>') && !/(?:title|aria-label|placeholder)\s*=\s*["']?[^"'<>]*$/i.test(text);
+          if (!tag && raw(x, html, seen)) hit = true;
+          text += '\u0001';
+        }
+        return hit || words(text, html);
+      }
+    }
     if (ts.isTemplateExpression(n)) return words(n.head.text, html) || n.templateSpans.some(s => words(s.literal.text, html) || raw(s.expression, html, seen));
     if (ts.isIdentifier(n)) {
       if (seen.has(n.text)) return false;
@@ -72,7 +88,7 @@ export function scan(source, filename = 'fixture.js') {
     }
     if (ts.isCallExpression(n)) {
       if (iconCall.test(name(n.expression))) return false;
-      if (translated.test(name(n.expression)) || /^(?:KiwiStrings|KiwiCaisseLang|KiwiServeurLang)\./.test(n.expression.getText(tree))) return false;
+      if (translated.test(name(n.expression)) || /^(?:window\.)?(?:KiwiStrings|KiwiCaisseLang|KiwiServeurLang|KiwiCaisseStrings)\./.test(n.expression.getText(tree))) return false;
       return n.arguments.some(a => raw(a, html, seen));
     }
     // Only the chosen branch of « a ? b : c » is displayed, never its condition.
@@ -83,14 +99,22 @@ export function scan(source, filename = 'fixture.js') {
     ts.forEachChild(n, child => { if (raw(child, html, seen)) found = true; });
     return found;
   }
+  // The declaration in scope where the name is used: « const s » means a different thing in each function.
+  function local(id, from) {
+    for (let p = from.parent; p; p = p.parent) {
+      if (!ts.isBlock(p) && !ts.isSourceFile(p)) continue;
+      for (const st of p.statements) if (ts.isVariableStatement(st)) for (const d of st.declarationList.declarations) if (ts.isIdentifier(d.name) && d.name.text === id && d.initializer) return d.initializer;
+    }
+    return null;
+  }
   const hits = [];
   function visit(n) {
     let args = [], html = false;
     if (ts.isBinaryExpression(n) && [ts.SyntaxKind.EqualsToken, ts.SyntaxKind.PlusEqualsToken].includes(n.operatorToken.kind) && /^(textContent|innerText|innerHTML|title|placeholder)$/.test(prop(n.left))) {
       // Les feuilles de style ne sont pas des libellés.
       // …nor is the text of a <style> element made on the spot (« const s = document.createElement('style') »).
-      const target = n.left.expression, made = ts.isIdentifier(target) ? bindings.get(target.text) : null;
-      const styleElement = made?.length === 1 && /^(?:document\.createElement|el)\(\s*['"]style['"]\s*\)$/.test(made[0].getText(tree));
+      const target = n.left.expression, made = ts.isIdentifier(target) ? local(target.text, n) : null;
+      const styleElement = !!made && /^(?:document\.createElement|el)\(\s*['"]style['"]\s*\)$/.test(made.getText(tree));
       if (!/(?:style|css)/i.test(target.getText(tree)) && !styleElement) args = [n.right];
       html = prop(n.left) === 'innerHTML';
     }
@@ -120,7 +144,8 @@ export function scan(source, filename = 'fixture.js') {
 for (const code of ["x.textContent = ok ? 'Bonjour' : t('b')", "x.textContent='Bonjour'", "x.innerText = `Hello ${n}`", "x.innerHTML='<b>Bonjour</b>'", "x.insertAdjacentHTML('beforeend','<p>Hello</p>')", "x.setAttribute('aria-label','Fermer')", "toast('Erreur', {desc:'Réessayez'})", "modal({title:'Bonjour'})", "const message='Bonjour'; x.textContent=message", "x.textContent=t('clé')+' non traduit'", "x.innerHTML=`<b title=\"Bonjour ${n}\">${t('x')}</b>`", "x.innerHTML=`<i data-c=\"${c}\">Bonjour</i>`"]) assert.equal(scan(code).length, 1, code);
 // The condition of « a ? b : c » is never displayed, only b or c (boutique-sizes.js, 2 Nov 2026).
 for (const code of ["const kind = 'taille'; x.textContent = grid(kind) ? w.grid : w.hint"]) assert.equal(scan(code).length, 0, code);
-for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "const s = document.createElement('style'); s.textContent = '.a { color: red }'", "s.textContent = '.kdl-tile{display:inline-grid;place-items:center}'", "s.textContent = '#koa-cards{position:fixed}' + '.koa-card{color:var(--ink)}'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'", "x.innerHTML=`<i style=\"--c:${c}\"></i>${t('x')}`", "x.innerHTML=`<input value=\"${v}\" placeholder=\"${t('p')}\">`"]) assert.equal(scan(code).length, 0, code);
+for (const code of ["x.innerHTML='<div class=\"c\">'+icon('storefront')+'</div>'", "x.textContent=t('Bonjour')", "x.textContent=mt('copied')", "x.innerHTML='<div class=\"hello\"></div>'", "x.setAttribute('class','hello')", "toast(T.saved,{type:'success'})", "style.textContent='body { color: red }'", "const s = document.createElement('style'); s.textContent = '.a { color: red }'", "s.textContent = '.kdl-tile{display:inline-grid;place-items:center}'", "s.textContent = '#koa-cards{position:fixed}' + '.koa-card{color:var(--ink)}'", "// x.textContent='Bonjour'", "x.textContent='١٢٣'", "x.innerHTML=`<i style=\"--c:${c}\"></i>${t('x')}`", "x.innerHTML=`<input value=\"${v}\" placeholder=\"${t('p')}\">`", "x.innerHTML = '<input aria-label=\"' + t('a') + '\" placeholder=\"' + t('p') + '\">'", "function a(){ const s = 1; } function b(){ const s = document.createElement('style'); s.textContent = '.a{color:red}'; } function c(){ const s = 2; }", "const HOUSE = 'livraison'; x.innerHTML = `<b>${logoHTML(HOUSE, 18)}</b>`"]) assert.equal(scan(code).length, 0, code);
+for (const code of ["x.innerHTML = '<b>' + name + '</b> Bonjour'", "x.innerHTML = '<input placeholder=\"' + 'Nom' + '\">'"]) assert.equal(scan(code).length, 1, code);
 function walk(dir) {
   return fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(e => {
     const rel = path.posix.join(dir, e.name);

@@ -25,6 +25,7 @@
       return (e > 0 ? '+ ' : '− ') + fmtMAD(Math.abs(e));
     }
     function pad2HO(n) { return String(n).padStart(2, '0'); }
+    function durHO(min) { const h = Math.floor(min / 60), m = min % 60; return h > 0 ? `${h}h ${pad2HO(m)}` : `${m} mn`; }   // le format de fmtDur, tenu ici
 
     /* Roll up journal + cash movements for ONE poste (entries since `sinceMs`). */
     function posteRollup(sinceMs) {
@@ -71,7 +72,7 @@
 
       const recap = [
         ['Poste ouvert à', `${pad2HO(openedAt.getHours())}:${pad2HO(openedAt.getMinutes())}`],
-        ['Durée du poste', fmtDur(durMin)],
+        ['Durée du poste', durHO(durMin)],
         ['Transactions',   String(r.txns)],
         ['Encaissé',       fmtMAD(r.revenue)],
       ];

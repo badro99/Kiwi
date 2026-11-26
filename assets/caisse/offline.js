@@ -482,7 +482,7 @@
       cashMovements.length = 0;
       (d.cashMovements || []).forEach(m => cashMovements.push({
         id: m.id, time: new Date(m.time), type: m.type, amount: m.amount, reason: m.reason,
-        actorId: m.actorId, actorName: m.actorName, ...(m.refundOf ? { refundOf: m.refundOf } : {}),   // remboursement d'une sortie (caisse/cash-refund.js)
+        actorId: m.actorId, actorName: m.actorName, ...(m.refundOf ? { refundOf: m.refundOf } : {}),   // remboursement d'une sortie (caisse-cash-refund.js)
       }));
       if (d.shift) {
         shift.discounts  = d.shift.discounts;

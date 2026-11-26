@@ -177,7 +177,7 @@
           if (ticket && ticket.id) delete state.orders[ticket.id];
         });
         delta.forEach(function (o) {
-          if (!state.seen[o.id] && o.status === 'pending') { fresh++; if (onFloor(o)) freshFloor++; if (o.channel === 'serveur') { freshWaiter++; waiterName = o.server || waiterName; } state.seen[o.id] = 1; }
+          if (!state.seen[o.id] && o.status === 'pending') { fresh++; if (onFloor(o)) freshFloor++; if (o.staff || o.channel === 'serveur') { freshWaiter++; waiterName = o.server || waiterName; } state.seen[o.id] = 1; }
           if (o.status === 'archived') delete state.orders[o.id];
           else state.orders[o.id] = o;
         });
@@ -554,7 +554,7 @@
         if (!(age > EXPIRY_WARN_MS)) return;
         state.expiryWarned[id] = 1;
         var left = Math.max(1, Math.round((30 * 60 * 1000 - age) / 60000));
-        var waiter = o.channel === 'serveur';   // n'expire pas : on rappelle qu'elle attend
+        var waiter = !!o.staff || o.channel === 'serveur';   // n'expire pas : on rappelle qu'elle attend (le relais la rend `kiwi` + staff)
         if (kitOnline()) { try { window.KiwiTillOnline.expiring(o, left, waiter); } catch (_) {} return; }
         var label = (o.number != null ? 'N°' + o.number : 'commande') +
           (o.mode === 'table' && o.table ? ' · Table ' + o.table : ' · À emporter');

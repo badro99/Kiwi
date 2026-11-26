@@ -37,7 +37,7 @@
     }
     function openCloture() {   /* #0164 · a recorded close never reopens its own count sheet. */
       if (registerClosed) { finishClose(); return; }
-      if (typeof recoverLostCashMovements === 'function') recoverLostCashMovements();   // une sortie gardée par le seul serveur (caisse/cash-recovery.js)
+      if (typeof recoverLostCashMovements === 'function') recoverLostCashMovements();   // une sortie gardée par le seul serveur (caisse-cash-recovery.js)
       if (tillKitOpenCount()) return;   // kiwiSkin2027:till, étape 4 (7)
       renderCloture(false);
       /* Dans la langue de la caisse AVANT de s'afficher : le balayage différé

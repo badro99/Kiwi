@@ -211,7 +211,7 @@
           serviceReopenedBills.set(id, bill);
         }
       });
-      (data.orders || []).forEach((order) => {
+      (data.orders || []).concat((data.expired || []).map((o) => ({ ...o, status: 'rejected' }))).forEach((order) => {   // refusée à la caisse : seulement dans « expired »
         if (!order || !order.id) return;
         const before = serviceOrderStatus.get(order.id) || '';
         serviceOrderStatus.set(order.id, order.status);
@@ -1321,7 +1321,7 @@
        * pour qu'une autre paire de mains appuie au comptoir. Le bouton est
        * ici, sur la table concernée. Refuser reste au comptoir. */
       const pendingOrder = svPendingOrderFor(id);
-      const pendingBannerHtml = pendingOrder && pendingOrder.channel === 'serveur' ? `<div class="td-pending-banner"><div class="td-pending-copy"><strong>Commande ${esc(serviceOrderRef(pendingOrder))} · En attente de la caisse</strong><span>Elle part en cuisine dès que la caisse la valide.</span></div></div>` : pendingOrder ? `
+      const pendingBannerHtml = pendingOrder && (pendingOrder.staff || pendingOrder.channel === 'serveur') ? `<div class="td-pending-banner"><div class="td-pending-copy"><strong>Commande ${esc(serviceOrderRef(pendingOrder))} · En attente de la caisse</strong><span>Elle part en cuisine dès que la caisse la valide.</span></div></div>` : pendingOrder ? `
         <div class="td-pending-banner">
           <div class="td-pending-copy">
             <strong>Commande ${esc(serviceOrderRef(pendingOrder))} en attente</strong>

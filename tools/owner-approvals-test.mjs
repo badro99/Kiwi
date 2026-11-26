@@ -377,8 +377,6 @@ let saleApproval, lineApproval;
   await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: false, managerFallback: false, minCents: 0 } });
   const off = await queue(waiterCookie, { voidLine: { orderId: 'ord-k2', table: '7', requestId: 'voi-k4k4k4k4k4k4k4k4k4k4', lineId: 'line-k9', qty: 1 } });
   ok('K23 accords éteints : rien ne change pour le serveur', off.status !== 403 || off.body.error !== 'owner-approval-required', JSON.stringify(off));
-  const askSrc = fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8');
-  ok('K24 le téléphone renvoie le même geste avec l\'accord, sans réécrire de texte en HTML', askSrc.includes("'voidLine', 'editLine', 'cancelTable'") && askSrc.includes('ownerApproval: answer.id') && !/innerHTML\s*=\s*(?!['"])\S/.test(askSrc));
   ok('K25 le module se charge sur la caisse et sur le téléphone du serveur', fs.readFileSync(path.join(ROOT, 'assets/service-requests.js'), 'utf8').includes('assets/owner-ask.js?v=')
     && /assets\/service-requests\.js/.test(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')) && /assets\/service-requests\.js/.test(fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')));
 }
@@ -392,13 +390,13 @@ let saleApproval, lineApproval;
 /* ── L · le module du téléphone, contre un serveur scripté ── */
 {
   const node = () => ({ textContent: '', disabled: false, listeners: {}, setAttribute() {}, addEventListener(n, f) { this.listeners[n] = f; } });
-  const made = [];
+  const made = [], html = [];
   const document = {
     documentElement: { getAttribute: () => 'fr', classList: { contains: () => false } },
     body: { appendChild() {} },
     createElement() {
       const el = { attrs: {}, children: [], listeners: {}, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener(n, f) { this.listeners[n] = f; }, showModal() { this.open = true; }, close() { this.open = false; }, remove() {} };
-      Object.defineProperty(el, 'innerHTML', { set() { el.children = [node(), node(), node(), node(), node()]; } });
+      Object.defineProperty(el, 'innerHTML', { set(v) { html.push(String(v)); el.children = [node(), node(), node(), node(), node()]; } });
       made.push(el);
       return el;
     },
@@ -410,7 +408,11 @@ let saleApproval, lineApproval;
     const url = String(input), body = init.body ? JSON.parse(init.body) : null;
     calls.push({ url, body, signal: init.signal });
     if (url === '/api/order/queue') {
-      return body.voidLine && body.voidLine.ownerApproval === 'apr-' + '1'.repeat(24) ? reply({ ok: true, directVoid: true })
+      const granted = 'apr-' + '1'.repeat(24);
+      if (body.status === 'rejected') return body.ownerApproval === granted ? reply({ ok: true, status: 'rejected' }) : reply({ error: 'owner-approval-required', ask: { kind: 'cancel-order', ref: body.id, amountCents: 6000 } }, 403);
+      if (body.editLine || body.cancelTable) return (body.editLine || body.cancelTable).ownerApproval === granted ? reply({ ok: true, slot: body.editLine ? 'editLine' : 'cancelTable' })
+        : reply({ error: 'owner-approval-required', ask: { kind: body.editLine ? 'edit-sent' : 'cancel-table', ref: 'x', amountCents: 100 } }, 403);
+      return body.voidLine && body.voidLine.ownerApproval === granted ? reply({ ok: true, directVoid: true })
         : reply({ error: 'owner-approval-required', ask: { kind: 'void-sent', ref: 'line-k1', amountCents: 12000 } }, 403);
     }
     if (url === '/api/approvals') return reply({ ok: true, approval: { id: 'apr-' + '1'.repeat(24), label: '1 × Pastilla', status: 'pending' } }, 201);
@@ -443,6 +445,20 @@ let saleApproval, lineApproval;
   ok('L5c rien n\'est renvoyé à la file après un retrait', calls.filter((c) => c.url === '/api/order/queue').length === 1);
   const other = await win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, closeTable: '7' }) });
   ok('L6 un refus sans geste connu passe tel quel', other.status === 403);
+  /* Un bon entier, une ligne modifiée, une table annulée : chaque geste revient avec l'accord à sa place. */
+  hold = false; step = 5; calls.length = 0; context.setTimeout = (f) => { Promise.resolve().then(f); return 0; };
+  const whole = await win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, id: 'ord-mmm009', status: 'rejected' }) });
+  const wholeResend = calls.filter((c) => c.url === '/api/order/queue')[1];
+  ok('M10 le module de la caisse renvoie un bon entier avec l\'accord à la racine du corps', whole.status === 200 && wholeResend && wholeResend.body.ownerApproval === 'apr-' + '1'.repeat(24) && wholeResend.body.id === 'ord-mmm009');
+  const slots = [];
+  for (const slot of ['editLine', 'cancelTable']) {
+    calls.length = 0; step = 5;
+    const r = await win.fetch('/api/order/queue', { method: 'POST', body: JSON.stringify({ merchant: SHOP, [slot]: { lineId: 'l-1', table: '7' } }) });
+    const again = calls.filter((c) => c.url === '/api/order/queue')[1];
+    slots.push(r.status === 200 && again && again.body[slot].ownerApproval === 'apr-' + '1'.repeat(24) && again.body[slot].lineId === 'l-1' && !again.body.ownerApproval);
+  }
+  ok('K24 le téléphone renvoie une ligne modifiée ou une table annulée avec l\'accord dans son geste', slots.every(Boolean), JSON.stringify(slots));
+  ok('K24b aucun texte de demande (« 1 × Pastilla ») n\'est écrit en HTML', html.length > 0 && html.every((h) => !/Pastilla|ord-mmm|line-k1/.test(h)), JSON.stringify(html));
 }
 
 /* ── M · un bon entier que la cuisine a déjà pris (« Annuler le bon » à la caisse) ── */
@@ -491,8 +507,6 @@ let saleApproval, lineApproval;
   ok('M9b un bon accepté entre la lecture et l\'écriture n\'est pas annulé sans le patron', raced.status === 409
     && sqlite.prepare("SELECT status FROM orders WHERE id = 'ord-mmm004'").get().status === 'accepted', String(raced.status));
   await call(ownerCookie, { action: 'settings', settings: { cashOut: false, cancel: false, managerFallback: false, minCents: 0 } });
-  const askSrc = fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8');
-  ok('M10 le module de la caisse renvoie un bon entier avec l\'accord à la racine du corps', askSrc.includes("body.status === 'rejected' && body.id") && askSrc.includes('body.ownerApproval = answer.id'));
   const panel = fs.readFileSync(path.join(ROOT, 'assets/owner-approvals.js'), 'utf8');
   ok('M11 le panneau du patron nomme les annulations de table et de bon dans les trois langues', (panel.match(/'cancel-table':/g) || []).length === 3 && (panel.match(/'cancel-order':/g) || []).length === 3);
 }

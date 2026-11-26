@@ -66,7 +66,7 @@
     'assets/briefing.js?v=54',
     'assets/simple-food-cost.js?v=29',
     'assets/finance.js?v=22',
-    'assets/delivery.js?v=9',
+    'assets/delivery.js?v=10',
     'assets/conformite.js?v=8',
     'assets/production-action-guard.js?v=9',
     'assets/staff-roles.js?v=4',

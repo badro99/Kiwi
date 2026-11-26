@@ -262,6 +262,7 @@
   const S = {
     title: { fr: 'Livraison', en: 'Delivery', ar: 'التوصيل' },
     tab: { fr: 'Livraison', en: 'Delivery', ar: 'التوصيل' },
+    dineIn: { fr: 'Salle', en: 'Dine-in', ar: 'القاعة' },
     lede: { fr: 'Allumez les plateformes avec lesquelles vous travaillez. La caisse propose alors «\u00a0Livraison\u00a0», avec les prix de chaque plateforme, et le rapport Z les compte chacune sous son nom.', en: 'Turn on the platforms you work with. The till then offers «\u00a0Delivery\u00a0» with each platform\'s prices, and the Z report counts each one under its own name.', ar: 'فعّل المنصات التي تعمل معها. يعرض الصندوق عندها «\u00a0التوصيل\u00a0» بأسعار كل منصة، ويحسب تقرير Z كل منصة باسمها.' },
     platforms: { fr: 'Plateformes', en: 'Platforms', ar: 'المنصات' },
     rate: { fr: 'Commission %', en: 'Commission %', ar: 'العمولة %' },
@@ -368,7 +369,7 @@
       if (!box) return;
       const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
       const cur = doc().choices;
-      box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(lang() === 'fr' ? 'Salle' : lang() === 'ar' ? 'القاعة' : 'Dine-in')}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
+      box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(tr(S.dineIn))}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
         + groups.map((g) => g.choices.filter((ch) => num(ch.price)).map((ch) => `<tr><td>${esc(g.name)} · ${esc(ch.name)}</td><td class="kdl-base">${num(ch.price)}</td>${on.map((pid) => {
           const v = cur[ch.id] && cur[ch.id].by ? num(cur[ch.id].by[pid]) : null;
           return `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="kf-input" data-kdl-choice="${esc(ch.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${num(ch.price)}"></td>`;

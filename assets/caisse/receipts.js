@@ -44,13 +44,14 @@
      * et un bandeau « CECI N'EST PAS UN REÇU » : assets/receipt-prebill.js,
      * chargé au premier tirage. Sans lignes, l'ancienne
      * addition reste le repli (printHardwareTicket). */
+    /* Sans options : le reçu prend l'enseigne du commerce (getBusiness), comme receiptOpts() le faisait pour un vrai commerce. */
     function printPreBill(ticket) {
       const lines = (() => { try { return currentSaleLines(); } catch (_) { return []; } })();
       if (!lines.length) { printHardwareTicket(ticket); return; }
       const say = (k) => toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr(k));
       const total = parseFloat(String((ticket && ticket.total) || '').replace(/[^\d.,-]/g, '').replace(',', '.'));
       import(new URL('assets/receipt-prebill.js?v=3', document.baseURI).href)
-        .then((m) => m.printPreBill({ lines, total, opts: receiptOpts(), label: ticket && ticket.title }))
+        .then((m) => m.printPreBill({ lines, total, opts: {}, label: ticket && ticket.title }))
         .then((r) => {
           if (!r || !r.ok) { say('Impression échouée'); return; }
           say(r.via === 'browser' ? 'Addition ouverte dans l\'impression système'

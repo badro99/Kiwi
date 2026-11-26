@@ -511,6 +511,46 @@
     "fr": "valable jusqu'au",
     "en": "valid until",
     "ar": "صالح حتى"
+  },
+  "promo.add": {
+    "fr": "Code promo · ajoutez d'abord des articles",
+    "en": "Promo code · add items first",
+    "ar": "كود الخصم · أضف المنتجات أولاً"
+  },
+  "promo.unpaired": {
+    "fr": "Code promo · caisse non reliée",
+    "en": "Promo code · till not paired",
+    "ar": "كود الخصم · الصندوق غير مربوط"
+  },
+  "promo.unknown": {
+    "fr": "Code inconnu ou terminé · {c}",
+    "en": "Unknown or expired code · {c}",
+    "ar": "كود غير معروف أو منتهٍ · {c}"
+  },
+  "promo.hours": {
+    "fr": "Code {c} · pas valable à cette heure",
+    "en": "Code {c} · not valid at this time",
+    "ar": "الكود {c} · غير صالح في هذا الوقت"
+  },
+  "promo.applied": {
+    "fr": "Code {c} appliqué · {n}",
+    "en": "Code {c} applied · {n}",
+    "ar": "تم تطبيق الكود {c} · {n}"
+  },
+  "promo.offline": {
+    "fr": "Code promo · hors ligne, réessayez",
+    "en": "Promo code · offline, try again",
+    "ar": "كود الخصم · لا يوجد اتصال، أعد المحاولة"
+  },
+  "promo.field": {
+    "fr": "Code promo",
+    "en": "Promo code",
+    "ar": "كود الخصم"
+  },
+  "promo.apply": {
+    "fr": "Appliquer",
+    "en": "Apply",
+    "ar": "تطبيق"
   }
 };
   function say(key, fr, vars) {
