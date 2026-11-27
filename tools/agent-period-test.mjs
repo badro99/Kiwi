@@ -137,6 +137,51 @@ for (const [q, L] of [
   const r = ask(q, L);
   ok(/^(?:llm|feature)\b/.test(r.route), `« ${q} » is a how-to or a slip → {${r.route}} ${r.text.slice(0, 80)}`);
 }
+// Round three (27 Nov): 60 more random questions. The shape of the question
+// decides, a money word only names its topic: « export my sales », « rent
+// recorded twice, how do I fix it », « if I delete a product, are its old
+// sales deleted » are about using the till, not a figure.
+for (const [q, L] of [
+  ['واش نقدر نبيع بالكريدي ونسجلو حتى يخلص؟', 'ar'],
+  ["J'ai tapé 500 au lieu de 50, je corrige comment sans supprimer la vente ?", 'fr'],
+  ['هل يمكن تصدير المبيعات إلى إكسل؟', 'ar'],
+  ['بغيت نمسح منتوج دخلتو بالغلط واش غادي تتمسح مبيعاتو القديمة؟', 'ar'],
+  ['t9ta3 internet, wach les ventes ghadi ydi3o?', 'fr'],
+  ["Le client a rendu une veste sans ticket, je fais quoi dans l'appli ?", 'fr'],
+  ['سجلت مصروف الكراء مرتين، كيفاش نصلحو؟', 'ar'],
+  ["Mon hôtel a encaissé une avance aujourd'hui pour une chambre la semaine prochaine : je la note où ?", 'fr'],
+  ['ila bghit nsdd la caisse daba wach n9dr n7ellha tani lyom', 'fr'],
+  ['My barcode scanner beeps but no item appears on screen, help!', 'en'],
+  ['واش نقدر نعرف شكون بدل الثمن البارح بالليل؟', 'ar'],
+  ["Le livreur dit qu'il manque 40 dirhams, comment retrouver sa dernière commande ?", 'fr'],
+  ['wach n9dr nkhdem b jouj dyal les caisses f nafs lma7al', 'fr'],
+  ['If I delete a category, what happens to the products inside it?', 'en'],
+  ['3lach ticket makaytprintach depuis ce matin', 'fr'],
+  ['How do I add a product with two sizes and different prices?', 'en'],
+  ['How do I change my opening hours for Ramadan?', 'en'],
+  ['شنو خاصني ندير باش نفتح الكاسة الصباح؟', 'ar'],
+  ['Je vends à crédit, comment noter un paiement partiel ?', 'fr'],
+]) {
+  const r = ask(q, L);
+  ok(/^(?:llm|feature)\b/.test(r.route), `« ${q} » is about using the till → {${r.route}} ${r.text.slice(0, 80)}`);
+}
+// ...while a question for a figure keeps its card, however it is phrased.
+for (const [q, L, want] of [
+  ["J'ai oublié combien j'ai vendu hier", 'fr', /^day/],
+  ["combien j'ai vendu hier ?", 'fr', /^day/],
+  ['what did I sell yesterday', 'en', /^day/],
+  ['شحال خلصت للموظفين هاد السيمانة كاملين؟', 'ar', /^(?!llm|feature)/],
+  ['Chhal dkhlt lyom ila 7yedt les retours ?', 'fr', /^(?:day|lookup|revenue)/],
+  ['wach n9dr nkhdem chi serveur b 3000 dh', 'fr', /^(?:hire|afford)/],
+  ['comment augmenter mes ventes ?', 'fr', /^advice/],
+  ['Can I see yesterday’s sales?', 'en', /^(?:day|lookup)/],
+  ['augmente mes prix de 10%', 'fr', /^price/],
+  ['wach n9der nakhod credit mn lbanka', 'fr', /^(?!llm|feature)/],
+  ['How do I check discounts last month in the till?', 'en', /^(?!notrend)/],
+  ['ramadan arrive je fais quoi', 'fr', /^season/],
+  ['شنو ندير باش نجيب الناس للمطعم؟', 'ar', /^advice/],
+  ['How have sales changed over six months?', 'en', /^notrend/],
+]) { const r = ask(q, L); ok(want.test(r.route), `« ${q} » keeps a figure route → {${r.route}} ${r.text.slice(0, 80)}`); }
 for (const [q, L, want] of [
   ['can i afford another waiter at 3000 dh', 'en', /^(?:hire|afford)/],
   ['wach n9der nzid serveur?', 'fr', /^hire/],

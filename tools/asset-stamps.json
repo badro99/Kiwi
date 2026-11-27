@@ -80,8 +80,8 @@
     "sha": "9f2e1a16520debe9"
   },
   "assets/agent-data.js": {
-    "v": "19",
-    "sha": "bff589cd559c572e"
+    "v": "20",
+    "sha": "630be344ab9d9912"
   },
   "assets/agent-doc-followup.js": {
     "v": "2",
@@ -104,8 +104,8 @@
     "sha": "30c8de89f6b2d25b"
   },
   "assets/agent.js": {
-    "v": "59",
-    "sha": "92bfbc5d13401ee1"
+    "v": "60",
+    "sha": "c4b5181ef6ea21fb"
   },
   "assets/agent/ui.js": {
     "v": "18",
