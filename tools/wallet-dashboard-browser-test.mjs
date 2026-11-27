@@ -7,7 +7,7 @@
  * What this holds, with real clicks from the customer directory:
  *   · opening « Programme fidélité » loads the Wallet panel under the
  *     programme, filled from the shop's « wallet » document;
- *   · the preview card takes the colours typed in and the programme's stamps;
+ *   · the preview card is Kiwi-branded (no colour pickers) with the programme's stamps;
  *   · the count line says how many customers hold the card, by phone type;
  *   · « Enregistrer » posts { feature:'wallet', merchant, data, baseRev } with
  *     the revision it read, and a stale answer is said, then reread. */
@@ -82,11 +82,11 @@ try {
       return { on: inputs.find((i) => i.type === 'checkbox').checked, values: inputs.filter((i) => i.type !== 'checkbox').map((i) => i.value) };
     });
     assert.equal(filled.on, true);
-    assert.ok(filled.values.includes('Matrix Café') && filled.values.includes('#112233') && filled.values.includes('Tanger'), JSON.stringify(filled.values));
+    assert.ok(filled.values.includes('Matrix Café') && filled.values.includes('Tanger') && !filled.values.includes('#112233'), JSON.stringify(filled.values));
 
-    t.step('the preview card wears the shop colours and the programme stamps');
+    t.step('the preview card wears Kiwi riad, never the shop old colours, and the programme stamps');
     const card = await page.$eval('.kiwi-modal .kw-wd-card', (c) => ({ bg: getComputedStyle(c).backgroundColor, text: c.textContent, dots: c.querySelectorAll('.kw-wd-dots i').length }));
-    assert.equal(card.bg, 'rgb(17, 34, 51)');
+    assert.equal(card.bg, 'rgb(5, 59, 44)', "Kiwi's riad, not the shop's #112233");
     assert.match(card.text, /Matrix Café/);
     assert.equal(card.dots, 8, 'one dot per stamp of « 8 visites »');
 

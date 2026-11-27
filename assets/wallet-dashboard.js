@@ -93,15 +93,16 @@
     var target = model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target);
     target = Math.max(2, Math.min(12, Number(target) || 10));
     var reward = model === 'amount' ? (cfg.amount && cfg.amount.reward) : model === 'product' ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward);
-    var bg = HEX.test(doc.bg || '') ? doc.bg : '#053B2C', ink = HEX.test(doc.color || '') ? doc.color : '#7DF2B0';
-    card.style.background = bg; card.style.color = ink; card.style.setProperty('--ink-c', ink);
+    card.style.background = 'radial-gradient(ellipse at top left,#0B6E4F,#053B2C 75%) #053B2C'; card.style.color = '#F7F5F0'; card.style.setProperty('--ink-c', '#7DF2B0');
     card.textContent = '';
+    var brand = el('img'); brand.src = '/assets/kiwi-newlogo-inverse.svg'; brand.alt = 'Kiwi'; brand.style.cssText = 'width:72px;height:28px;object-fit:contain;object-position:left'; card.appendChild(brand);
     var h = el('div', 'h');
-    h.appendChild(el('span', '', doc.name || ''));
+    h.appendChild(el('span', '', 'chez ' + (doc.name || '')));
     var who = el('span'); who.appendChild(el('span', 'l', t('client'))); who.appendChild(document.createTextNode(t('you'))); h.appendChild(who);
     card.appendChild(h);
     if (model === 'amount') {
       var p = el('div'); p.appendChild(el('span', 'l', t('points'))); p.appendChild(document.createTextNode('240')); card.appendChild(p);
+      var bar = el('div'); bar.style.cssText = 'height:10px;border-radius:10px;background:rgba(125,242,176,.18);overflow:hidden'; var fill = el('div'); fill.style.cssText = 'width:60%;height:100%;background:#7DF2B0;border-radius:inherit'; bar.appendChild(fill); card.appendChild(bar);
     } else {
       var dots = el('div', 'kw-wd-dots'); dots.style.setProperty('--n', target <= 6 ? target : Math.ceil(target / 2));
       for (var i = 0; i < target; i++) dots.appendChild(el('i', i < 3 ? 'on' : ''));
@@ -112,18 +113,19 @@
 
   function printStand(doc, slug) {
     var url = 'https://kiwi-os.com/carte/' + encodeURIComponent(slug);
-    var svg = window.KiwiQR ? window.KiwiQR.svg(url, { size: 260, margin: 2, ecl: 'M', dark: '#0A0F0D', light: '#FFFFFF' }) : '';
+    var svg = window.KiwiQR ? window.KiwiQR.svg(url, { size: 260, margin: 2, ecl: 'M', dark: '#0A0F0D', light: '#F7F5F0' }) : '';
     var w = window.open('', '_blank');
     if (!w) return;
     var d = w.document;
     d.open();
-    d.write('<!doctype html><meta charset="utf-8"><title></title><style>@page{size:A6;margin:8mm}body{margin:0;font-family:"Inter Tight",system-ui,sans-serif;text-align:center;color:#0A0F0D}' +
+    d.write('<!doctype html><meta charset="utf-8"><title></title><style>@page{size:A6;margin:8mm}body{margin:0;background:#F7F5F0;font-family:"Inter Tight",system-ui,sans-serif;text-align:center;color:#0A0F0D}' +
       '.s{display:flex;flex-direction:column;align-items:center;gap:4mm}.n{font-size:16pt;font-weight:600}.q svg{width:62mm;height:auto}.a{font-size:13pt;font-weight:600;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}.o{font-size:12pt;font-weight:600;color:#0B6E4F}.u{font-size:8pt;color:#5B635F}</style><div class="s"></div>');
     d.close();
     var box = d.querySelector('.s');
     var add = function (cls, text) { var n = d.createElement('div'); n.className = cls; n.textContent = text; box.appendChild(n); return n; };
     d.title = doc.name || slug;
-    add('n', doc.name || slug);
+    var logo = d.createElement('img'); logo.src = location.origin + '/assets/kiwi-newlogo.svg'; logo.alt = 'Kiwi'; logo.style.cssText = 'width:24mm;height:10mm;object-fit:contain'; box.appendChild(logo);
+    add('n', 'chez ' + (doc.name || slug));
     add('l', T.fr.standLine);
     add('o', offer(program(), 'fr'));
     var q = d.createElement('div'); q.className = 'q'; if (svg) q.appendChild(d.importNode(new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement, true)); box.appendChild(q);   /* dessin de qrcode.js, sans texte */
@@ -149,8 +151,6 @@
     var grid = el('div', 'kw-wd-grid');
     var field = function (label, input, wide) { var l = el('label', 'f' + (wide ? ' wide' : '')); l.appendChild(el('span', '', label)); l.appendChild(input); grid.appendChild(l); return input; };
     var name = field(t('name'), el('input'), true); name.type = 'text'; name.maxLength = 40;
-    var bg = field(t('bg'), el('input')); bg.type = 'color';
-    var ink = field(t('ink'), el('input')); ink.type = 'color';
     var address = field(t('address'), el('input'), true); address.type = 'text'; address.maxLength = 120;
     box.appendChild(grid);
     var card = el('div', 'kw-wd-card'); box.appendChild(card);
@@ -165,14 +165,13 @@
     var S = { doc: {}, rev: 0 };
     var read = function () {
       var d = Object.assign({}, S.doc);
-      d.on = on.checked; d.name = name.value.trim().slice(0, 40); d.bg = bg.value; d.color = ink.value; d.address = address.value.trim().slice(0, 120);
+      d.on = on.checked; d.name = name.value.trim().slice(0, 40); d.address = address.value.trim().slice(0, 120);
       return d;
     };
     var paint = function () { preview(card, read()); stand.disabled = !on.checked; };
     var fill = function (d) {
       S.doc = d || {};
       on.checked = !!S.doc.on; name.value = S.doc.name || ''; address.value = S.doc.address || '';
-      bg.value = HEX.test(S.doc.bg || '') ? S.doc.bg : '#053B2C'; ink.value = HEX.test(S.doc.color || '') ? S.doc.color : '#7DF2B0';
       whereSay.textContent = S.doc.lat != null && S.doc.lng != null ? t('located') : '';
       paint();
     };
@@ -180,7 +179,7 @@
       return fetch('/api/store?feature=wallet&merchant=' + encodeURIComponent(slug), { credentials: 'same-origin', cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { S.rev = Number(j && j.rev) || 0; fill((j && j.data) || {}); }, function () { fill({}); });
     };
-    [on, name, bg, ink, address].forEach(function (n) { n.addEventListener('input', paint); n.addEventListener('change', paint); });
+    [on, name, address].forEach(function (n) { n.addEventListener('input', paint); n.addEventListener('change', paint); });
     /* La fenêtre suit le programme choisi au-dessus : l'aperçu aussi. */
     prev.closest('.kiwi-modal').addEventListener('change', function (e) { if (!box.contains(e.target)) setTimeout(paint, 0); });
     locate.onclick = function () {

@@ -50,8 +50,9 @@ ok('pass.json: storeCard, ids, web service, colours, QR with the till id', () =>
   assert.equal(p.authenticationToken, card.authToken);
   assert.equal(p.webServiceURL, 'https://kiwi-os.com/api/wallet');
   assert.equal(p.organizationName, 'Pasta Corner');
-  assert.match(p.backgroundColor, /^rgb\(255, 248, 240\)$/);
-  assert.match(p.foregroundColor, /^rgb\(/);
+  assert.equal(p.backgroundColor, 'rgb(5, 59, 44)');
+  assert.equal(p.foregroundColor, 'rgb(247, 245, 240)');
+  assert.equal(p.labelColor, 'rgb(125, 242, 176)');
   assert.deepEqual(p.barcodes[0], { format: 'PKBarcodeFormatQR', message: 'KIWI-C:cl-42', messageEncoding: 'iso-8859-1', altText: 'Carte fidélité' });
   const bal = p.storeCard.primaryFields[0];
   assert.equal(bal.value, '7 / 10');
@@ -78,7 +79,7 @@ ok('the shop position becomes a lock-screen location', () => {
 ok('foreground stays readable on a dark background', () => {
   const v = cardView({ fidelity: PASTA, client: { stamps: 1 } });
   const p = passJson({ view: v, card, merchant: { ...merchant, color: '#F7F5F0', bg: '#053B2C' }, env, baseUrl: 'https://kiwi-os.com' });
-  assert.equal(p.foregroundColor, 'rgb(255, 255, 255)');
+  assert.equal(p.foregroundColor, 'rgb(247, 245, 240)');
 });
 
 ok('every change message carries %@, and "reward ready" rides on the balance that moves', () => {
@@ -93,3 +94,8 @@ ok('every change message carries %@, and "reward ready" rides on the balance tha
 });
 
 console.log(`wallet-card: ${pass} passed`);
+
+const { loyaltyClass } = await import('../functions/api/wallet/_google.js');
+const google = loyaltyClass({ WALLET_GOOGLE_ISSUER_ID: '123' }, { merchant, baseUrl: 'https://kiwi-os.com' });
+assert.equal(google.hexBackgroundColor, '#053B2C');
+assert.equal(google.programLogo.sourceUri.uri, 'https://kiwi-os.com/assets/wallet/kiwi-icon@3x.png');

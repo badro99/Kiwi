@@ -183,7 +183,7 @@ for (const lang of forLocales(['fr', 'ar'])) {
     assert.equal(s.balanceDir, 'ltr', 'numbers read left to right in every language');
     assert.equal(s.rewardBidi, 'plaintext', "the shop's own words keep their own direction");
     assert.deepEqual([s.stamps, s.on], [8, 3]);
-    assert.equal(s.bg, 'rgb(10, 15, 13)', "the shop's colour");
+    assert.equal(s.bg, 'rgb(5, 59, 44)', "Kiwi's riad, whatever colour the shop once chose");
   });
 }
 

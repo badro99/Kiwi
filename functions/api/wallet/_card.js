@@ -38,13 +38,9 @@ function lum(c) {
 }
 export const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 
-/* Background, text and label colours from the shop's two brand colours, with
-   the text always readable (4.5:1) and the label the brand colour when it is. */
-export function palette(merchant) {
-  const bg = rgbOf(merchant && merchant.bg, 0xF7F5F0), brand = rgbOf(merchant && merchant.color, 0x053B2C);
-  const dark = lum(bg) < 0.4;
-  const fg = dark ? [255, 255, 255] : (contrast(brand, bg) >= 4.5 ? brand : [10, 15, 13]);
-  const label = contrast(brand, bg) >= 3 ? brand : fg;
+/* Wallet surfaces always use the Kiwi product palette. */
+export function palette() {
+  const bg = [5, 59, 44], brand = [125, 242, 176], fg = [247, 245, 240], label = brand;
   return { bg, brand, fg, label, css: { bg: css(bg), fg: css(fg), label: css(label) } };
 }
 

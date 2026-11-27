@@ -108,22 +108,6 @@
   var isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   var isAndroid = /Android/.test(ua);
 
-  /* ── colours: the shop's two, kept readable (same rule as _card.js) ── */
-  function rgb(h) { var n = parseInt(String(h || '').slice(1), 16); return isNaN(n) ? [5, 59, 44] : [n >> 16 & 255, n >> 8 & 255, n & 255]; }
-  function lum(c) { return c.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce(function (a, v, i) { return a + v * [0.2126, 0.7152, 0.0722][i]; }, 0); }
-  function contrast(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
-  function css(c) { return 'rgb(' + c.join(',') + ')'; }
-  function paintColors(m) {
-    var bg = rgb(m.bg), brand = rgb(m.color), dark = lum(bg) < 0.4;
-    var fg = dark ? [255, 255, 255] : (contrast(brand, bg) >= 4.5 ? brand : [10, 15, 13]);
-    var s = $('wc-card').style;
-    s.setProperty('--c-bg', css(bg)); s.setProperty('--c-fg', css(fg));
-    s.setProperty('--c-label', css(contrast(brand, bg) >= 3 ? brand : fg));
-    s.setProperty('--c-ink', css(contrast(brand, bg) >= 2 ? brand : fg));
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', m.bg);
-  }
-
   /* ── the card ── */
   var shown = -1;
   function paintCard(m, v, opts) {
@@ -131,10 +115,9 @@
     shopName = m.name;
     document.title = m.name + ' · ' + t('title');
     $('wc-shopname').textContent = m.name;
-    $('wc-card-name').textContent = m.name;
+    $('wc-card-name').textContent = (lang === 'ar' ? 'عند ' : 'chez ') + m.name;
     $('wc-card').setAttribute('aria-label', t('title') + ' · ' + m.name);
-    if (m.logo) { $('wc-card-logo').src = m.logo; $('wc-card-logo').hidden = false; $('wc-card-name').hidden = true; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false; }
-    paintColors(m);
+    if (m.logo) { $('wc-card-logo').src = m.logo; $('wc-card-logo').hidden = false; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false; }
     $('wc-l-client').textContent = t('client');
     $('wc-l-balance').textContent = t(v.model === 'amount' ? 'points' : 'stamps');
     $('wc-l-reward').textContent = t('reward');
@@ -164,10 +147,37 @@
     shown = balance;
     $('wc-card').classList.remove('is-loading');
     if (opts.qr && window.KiwiQR) {
-      $('wc-qr').innerHTML = window.KiwiQR.svg(opts.qr, { size: 168, margin: 2, ecl: 'M', dark: '#0A0F0D', light: '#FFFFFF' });
+      var plate = document.createElement('button');
+      plate.type = 'button'; plate.className = 'wc-qr-plate'; plate.setAttribute('aria-label', t('show'));
+      plate.innerHTML = '<span class="wc-qr-face is-art">' + qrArt(opts.qr) + '</span>' +
+        '<span class="wc-qr-face is-plain">' + window.KiwiQR.svg(opts.qr, { size: 168, margin: 2, ecl: 'M', dark: '#0A0F0D', light: '#F7F5F0' }) + '</span>';
+      /* Some counter scanners only read dark-on-light codes: a tap turns the card's code into the classic one. */
+      plate.addEventListener('click', function () { plate.classList.toggle('is-flipped'); });
       var cap = document.createElement('div'); cap.className = 'wc-qr-cap'; cap.textContent = t('show');
-      $('wc-qr').appendChild(cap); $('wc-qr').hidden = false;
+      $('wc-qr').innerHTML = ''; $('wc-qr').appendChild(plate); $('wc-qr').appendChild(cap); $('wc-qr').hidden = false;
     }
+  }
+
+  /* The till code drawn in Kiwi ink: paper dots on the deep green, mint corner eyes,
+     the Kiwi leaf in the middle (level H keeps 30 % of the code to spare for it). */
+  function qrArt(text) {
+    var m = window.KiwiQR.matrix(text, 'H'), n = m.size, q = 2, dim = n + q * 2, mid = (n - 1) / 2, r = Math.round(n * 0.12);
+    var eye = function (x, y) { return (x < 8 && y < 8) || (x > n - 9 && y < 8) || (x < 8 && y > n - 9); };
+    var hole = function (x, y) { return Math.abs(x - mid) <= r && Math.abs(y - mid) <= r; };
+    var dots = '';
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      if (m.get(x, y) && !eye(x, y) && !hole(x, y)) dots += '<circle cx="' + (x + q + 0.5) + '" cy="' + (y + q + 0.5) + '" r="0.44"/>';
+    }
+    var eyes = [[0, 0], [n - 7, 0], [0, n - 7]].map(function (e) {
+      var ex = e[0] + q, ey = e[1] + q;
+      return '<rect x="' + (ex + 0.5) + '" y="' + (ey + 0.5) + '" width="6" height="6" rx="2" fill="none" stroke="#7DF2B0" stroke-width="1"/>' +
+        '<rect x="' + (ex + 2) + '" y="' + (ey + 2) + '" width="3" height="3" rx="1" fill="#7DF2B0"/>';
+    }).join('');
+    var b = 2 * r + 1, bx = mid - r + q;
+    var badge = '<rect x="' + (bx + 0.3) + '" y="' + (bx + 0.3) + '" width="' + (b - 0.6) + '" height="' + (b - 0.6) + '" rx="' + (b * 0.28).toFixed(2) + '" fill="#F7F5F0"/>' +
+      '<image href="/assets/wallet/kiwi-icon@3x.png" x="' + (bx + b * 0.2) + '" y="' + (bx + b * 0.2) + '" width="' + (b * 0.6) + '" height="' + (b * 0.6) + '"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + dim + ' ' + dim + '" role="img" aria-label="QR code">' +
+      '<g fill="#F7F5F0">' + dots + '</g>' + eyes + badge + '</svg>';
   }
 
   /* A card you can almost pick up: it leans toward the finger or the tilt. */

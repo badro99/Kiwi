@@ -115,7 +115,7 @@ await ok('a Google card is patched with the new balance, and told when the rewar
   assert.equal(patch.init.headers.Authorization, 'Bearer ya29.test');
   const body = JSON.parse(patch.init.body);
   assert.equal(body.loyaltyPoints.balance.string, '10 / 10');
-  assert.match(body.heroImage.sourceUri.uri, /\/api\/wallet\/strip\/10-10-b3261e-fff8f0@3\.png$/);
+  assert.match(body.heroImage.sourceUri.uri, /\/api\/wallet\/strip\/10-10-7df2b0-053b2c@3\.png$/);
   assert.equal(body.messages[0].messageType, 'TEXT_AND_NOTIFY');
   assert.equal(body.notifyPreference, 'NOTIFY_ON_UPDATE', 'a new balance is announced, not just stored');
   const tokenCall = calls.find((c) => c.url.includes('oauth2'));
@@ -153,6 +153,19 @@ await ok('a merge moves the Wallet card to the kept client, and the kept client 
   /* the routes reach the cards through the wrapped exports: the main cancel route
      tells them after its answer, the reopen path inline (voidSaleLoyalty above). */
   assert.match(fs.readFileSync(new URL('../functions/api/sale/cancel.js', import.meta.url), 'utf8'), /\{ id, ref: sale\.ref \|\| '' \}, waitUntil\);/);
+});
+
+await ok('deleting a client switches their Google card off and wipes the first name from it', async () => {
+  calls = []; _resetGoogleToken();
+  reply = (url) => url.includes('oauth2') ? new Response(JSON.stringify({ access_token: 'ya29.test', expires_in: 3600 })) : new Response('{}', { status: 200 });
+  const w = await world(GOOGLE);
+  const { retireGoogleCards } = await import('../functions/api/wallet/_retire.js');
+  assert.equal(await retireGoogleCards(w.env, 'pasta-corner', 'c1'), 1);
+  const patch = JSON.parse(calls.find((c) => c.init.method === 'PATCH').init.body);
+  assert.equal(patch.state, 'INACTIVE'); assert.equal(patch.accountName, 'Client');
+  assert.ok(!JSON.stringify(patch).includes('Salma'));
+  assert.match(fs.readFileSync(new URL('../functions/api/clients.js', import.meta.url), 'utf8'), /waitUntil\(retireGoogleCards\(env, merchant, id\)/);
+  reply = () => new Response('{}', { status: 200 });
 });
 
 await ok('nothing configured: the balance is recorded and nothing is sent', async () => {

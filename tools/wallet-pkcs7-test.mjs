@@ -122,7 +122,7 @@ try {
     assert.equal(p.locations[0].latitude, 33.59);
     assert.equal(verify('live/signature', 'live/manifest.json').status, 0);
     const logoPng = fs.readFileSync(path.join(out, 'logo@2x.png'));
-    assert.equal(logoPng.readUInt32BE(16), 320); assert.equal(logoPng.readUInt32BE(20), 100);
+    assert.equal(logoPng.readUInt32BE(16), 182); assert.equal(logoPng.readUInt32BE(20), 100);
     const wrong = await service.onRequest({ env, waitUntil() {}, params: { path: ['download', card.serial + '.pkpass'] }, request: new Request(`https://kiwi-os.com/api/wallet/v1/download/${card.serial}.pkpass?t=${'z'.repeat(32)}`) });
     assert.equal(wrong.status, 404);
   });

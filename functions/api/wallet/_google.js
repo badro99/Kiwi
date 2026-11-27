@@ -37,8 +37,8 @@ export const objectId = (env, serial) => `${env.WALLET_GOOGLE_ISSUER_ID}.${seria
 export function loyaltyClass(env, { merchant, baseUrl }) {
   const c = {
     id: classId(env, merchant.slug), issuerName: merchant.name, programName: 'Carte fidélité',
-    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/strip/logo-${merchant.slug}.png` } },
-    hexBackgroundColor: merchant.bg, reviewStatus: 'UNDER_REVIEW', countryCode: 'MA',
+    programLogo: { sourceUri: { uri: `${baseUrl}/assets/wallet/kiwi-icon@3x.png` } },
+    hexBackgroundColor: '#053B2C', reviewStatus: 'UNDER_REVIEW', countryCode: 'MA',
   };
   if (merchant.lat != null && merchant.lng != null) c.locations = [{ latitude: merchant.lat, longitude: merchant.lng }];
   return c;

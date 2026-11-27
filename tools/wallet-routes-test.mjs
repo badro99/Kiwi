@@ -249,7 +249,7 @@ await ok('Apple web service: registration needs the card token', async () => {
   assert.equal((await svc(w.env, 'POST', 'log', null, { logs: ['x'] })).status, 200);
 });
 
-await ok('the program logo is served only for a shop with the card on, and decoded once', async () => {
+await ok('the program logo is served only for a shop with the card on, with Kiwi artwork', async () => {
   const w = world();
   const zlib = await import('node:zlib');
   const { encodePng } = await import('../functions/api/wallet/_png.js');
@@ -262,7 +262,7 @@ await ok('the program logo is served only for a shop with the card on, and decod
   const before = _logoDecodes();
   const a = await get('pasta-corner'), b = await get('pasta-corner');
   assert.equal(a.status, 200); assert.equal(b.status, 200);
-  assert.equal(_logoDecodes() - before, 1);
+  assert.equal(_logoDecodes() - before, 0);
   void zlib;
 });
 
@@ -288,7 +288,7 @@ await ok('the web card shows the live balance to its token holder only', async (
   assert.equal(r.status, 200);
   const b = await r.json();
   assert.equal(b.card.text, '4 / 10'); assert.equal(b.card.firstName, 'Salma'); assert.equal(b.merchant.name, 'Pasta Corner');
-  assert.match(b.card.strip, /^\/api\/wallet\/strip\/4-10-b3261e-fff8f0@2\.png$/);
+  assert.match(b.card.strip, /^\/api\/wallet\/strip\/4-10-7df2b0-053b2c@2\.png$/);
   assert.equal((await get(`s=${serial}&t=${'x'.repeat(32)}`)).status, 401);
 });
 
@@ -300,7 +300,7 @@ await ok('GET enroll paints the shop card before the form: colours, program, rec
   assert.equal(r.status, 200);
   assert.deepEqual(r.body.merchant, { slug: 'pasta-corner', name: 'Pasta Corner', color: '#B3261E', bg: '#FFF8F0', logo: '' });
   assert.equal(r.body.program.target, 10); assert.equal(r.body.program.rewardLabel, '1 offert'); assert.equal(r.body.program.model, 'visit');
-  assert.match(r.body.program.strip, /^\/api\/wallet\/strip\/0-10-b3261e-fff8f0@2\.png$/);
+  assert.match(r.body.program.strip, /^\/api\/wallet\/strip\/0-10-7df2b0-053b2c@2\.png$/);
   assert.equal(r.body.receipt, 'ok');
   assert.ok(!/12000|120|cash/.test(JSON.stringify(r.body)), 'no amount or method leaks');
   assert.equal((await get('merchant=pasta-corner&r=nope')).body.receipt, 'unusable');
