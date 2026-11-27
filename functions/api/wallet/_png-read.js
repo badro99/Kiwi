@@ -5,9 +5,22 @@
 
 const MAX_PX = 8_000_000; /* a 2 800 × 2 800 logo; Santos's is 2 500 × 2 500 */
 
-async function inflate(bytes) {
-  const s = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
-  return new Uint8Array(await new Response(s).arrayBuffer());
+/* Inflates at most `cap` bytes: a few kilobytes of crafted deflate can expand
+   a thousandfold, so the stream stops (null) past what the header allows. */
+async function inflate(bytes, cap) {
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+  const parts = []; let n = 0;
+  for (;;) {
+    let r;
+    try { r = await reader.read(); } catch (_) { break; }   /* trailing junk after a complete image is tolerated */
+    if (r.done) break;
+    n += r.value.length;
+    if (n > cap) { try { await reader.cancel(); } catch (_) {} return null; }
+    parts.push(r.value);
+  }
+  const out = new Uint8Array(n); let o = 0;
+  for (const c of parts) { out.set(c, o); o += c.length; }
+  return out;
 }
 
 export async function decodePng(bytes) {
@@ -33,7 +46,10 @@ export async function decodePng(bytes) {
     const all = new Uint8Array(idat.reduce((n, c) => n + c.length, 0));
     let o = 0;
     for (const c of idat) { all.set(c, o); o += c.length; }
-    const raw = await inflate(all);
+    /* Rows of filter byte + packed pixels; Adam7's seven passes add at most a filter byte per row per pass. */
+    const rowBytes = Math.ceil((w * ch * depth) / 8) + 1;
+    const raw = await inflate(all, h * rowBytes + (interlace ? 7 * (h + 8) * 2 + 7 * 8 : 0));
+    if (!raw) return null;
     const bpp = Math.max(1, (ch * depth) >> 3), out = new Uint8Array(w * h * 4);
     /* Adam7 sends seven reduced images, each filtered on its own; a plain PNG is
        the one pass that covers every pixel. */

@@ -78,4 +78,16 @@ await ok('dark ink on a dark card is recoloured to the card text colour', () => 
   assert.deepEqual([...inkOn(img, [255, 248, 240], [10, 15, 13]).rgba], [10, 10, 10, 255], 'readable ink is left alone');
 });
 
+await ok('a logo whose data inflates past what its header allows is refused, never fully inflated', async () => {
+  /* IHDR says 10 × 10 RGBA (about 410 bytes of pixels); the IDAT inflates to 64 MB of zeros. */
+  const chunk = (t, d) => { const b = Buffer.alloc(12 + d.length); b.writeUInt32BE(d.length, 0); b.write(t, 4, 'latin1'); d.copy(b, 8); b.writeUInt32BE(zlib.crc32(Buffer.concat([Buffer.from(t, 'latin1'), d])) >>> 0, 8 + d.length); return b; };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(10, 0); ihdr.writeUInt32BE(10, 4); ihdr[8] = 8; ihdr[9] = 6;
+  const bomb = zlib.deflateSync(Buffer.alloc(64 * 1024 * 1024), { level: 9 });
+  const file = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', bomb), chunk('IEND', Buffer.alloc(0))]);
+  assert.ok(file.length < 200_000, 'a small file');
+  const before = process.memoryUsage().arrayBuffers;
+  assert.equal(await decodePng(new Uint8Array(file)), null);
+  assert.ok(process.memoryUsage().arrayBuffers - before < 32 * 1024 * 1024, 'inflate stopped early');
+});
+
 console.log(`wallet-logo: ${pass} passed`);

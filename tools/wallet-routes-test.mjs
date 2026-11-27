@@ -249,7 +249,7 @@ await ok('Apple web service: registration needs the card token', async () => {
   assert.equal((await svc(w.env, 'POST', 'log', null, { logs: ['x'] })).status, 200);
 });
 
-await ok("the shop's tile is served only for a shop with the card on: its own logo on paper, decoded once", async () => {
+await ok("the shop's mark is served only for a shop with the card on: its logo in paper white on clear, decoded once", async () => {
   const w = world();
   const zlib = await import('node:zlib');
   const { encodePng } = await import('../functions/api/wallet/_png.js');
@@ -265,10 +265,13 @@ await ok("the shop's tile is served only for a shop with the card on: its own lo
   assert.equal(_logoDecodes() - before, 1, 'two requests, one decode');
   const { decodePng } = await import('../functions/api/wallet/_png-read.js');
   const tile = await decodePng(new Uint8Array(await (await get('pasta-corner')).arrayBuffer()));
-  assert.equal(tile.w, 240); assert.equal(tile.h, 240);
-  assert.deepEqual([...tile.rgba.slice(0, 4)], [247, 245, 240, 255], 'paper behind the logo');
-  let ink = 0; for (let q = 0; q < tile.rgba.length; q += 4) if (tile.rgba[q] < 80) ink++;
-  assert.ok(ink > 200, 'the logo keeps its own dark ink, not recoloured to Kiwi');
+  assert.ok(tile.w <= 480 && tile.h <= 160 && tile.w > tile.h, 'a wide box for a wide logo: ' + tile.w + 'x' + tile.h);
+  let ink = 0, clear = 0;
+  for (let q = 0; q < tile.rgba.length; q += 4) {
+    if (tile.rgba[q + 3] > 200) { ink++; assert.deepEqual([...tile.rgba.slice(q, q + 3)], [247, 245, 240], 'ink is paper white, like the Kiwi wordmark'); }
+    else if (tile.rgba[q + 3] === 0) clear++;
+  }
+  assert.ok(ink > 0 && clear > 0, 'paper ink on a clear ground: ' + ink + '/' + clear);
   void zlib;
 });
 

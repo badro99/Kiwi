@@ -52,16 +52,20 @@ export async function passImages({ merchant, view }) {
 
 export async function programLogo() { return kiwiArt('icon@3x.png'); }
 
-/* The shop's own mark for the web card's « Kiwi × shop » tile: its real
-   colours on paper, decoded once per logo version. null when it has none. */
+/* The shop's mark for the web card's « Kiwi × shop » lockup, drawn like the
+   Kiwi wordmark beside it: its silhouette in paper white on transparency, in a
+   wide box (logos are rarely square). Decoded once per logo version; null when
+   the shop has none or it cannot be read. */
 export async function shopTile(merchant) {
   const bytes = logoBytes(merchant.logoUrl);
   if (!bytes) return null;
-  const out = await cached(`tile/${await hex(merchant.logoUrl)}`, async () => {
+  const out = await cached(`mark/${await hex(merchant.logoUrl)}`, async () => {
     decodes++;
     const d = await decodePng(bytes);
     if (!d) return new Uint8Array(0);
-    const f = fit(keyOut(trim(d)), 240, 240, { fill: [247, 245, 240], pad: 22 });
+    const k = keyOut(trim(d)), px = k.rgba;
+    for (let q = 0; q < px.length; q += 4) { px[q] = 247; px[q + 1] = 245; px[q + 2] = 240; }
+    const s = Math.min(1, 480 / k.w, 160 / k.h), f = fit(k, Math.max(1, Math.round(k.w * s)), Math.max(1, Math.round(k.h * s)));
     return encodePng(f.w, f.h, f.rgba);
   });
   return out.length ? out : null;

@@ -119,9 +119,9 @@
     $('wc-mono').textContent = String(m.name || '').trim().charAt(0).toUpperCase();
     $('wc-card').setAttribute('aria-label', t('title') + ' · ' + m.name);
     if (m.logo) {
-      var lg = $('wc-card-logo'), tile = lg.parentNode;
-      lg.onload = function () { tile.classList.add('has-logo'); lg.hidden = false; };
-      lg.onerror = function () { tile.classList.remove('has-logo'); lg.hidden = true; };
+      var lg = $('wc-card-logo'), lock = lg.parentNode.parentNode;   /* .wc-lockup: the logo replaces the initial and the name */
+      lg.onload = function () { lock.classList.add('has-logo'); lg.hidden = false; $('wc-shoplogo').parentNode.classList.add('has-logo'); };
+      lg.onerror = function () { lock.classList.remove('has-logo'); lg.hidden = true; $('wc-shoplogo').hidden = true; };
       lg.src = m.logo; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false;
     }
     $('wc-l-client').textContent = t('client');
