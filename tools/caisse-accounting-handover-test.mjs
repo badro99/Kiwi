@@ -653,7 +653,7 @@ console.log('--- Test 10: Handover Compares the Card Terminal (TPE) With Kiwi --
   });
   env.renderHandoverCount(false);
   ok(env.handoverState.cardKiwi === 370, 'Kiwi card total covers the whole day (120 + 250), not only the poste');
-  ok(/Total carte Kiwi/.test(env.$('#ho-card').innerHTML) && /370/.test(env.$('#ho-card').innerHTML),
+  ok(/Cartes encaissées/.test(env.$('#ho-card').innerHTML) && /370/.test(env.$('#ho-card').innerHTML),
     'The handover shows Kiwi card total next to a terminal field');
   ok(env.$('#ho-card-ecart-val').textContent === 'À saisir', 'Nothing typed: the result waits');
 

@@ -290,11 +290,15 @@
     errRate: { fr: 'Une commission va de 0 à 60 %.', en: 'A commission is between 0 and 60 %.', ar: 'العمولة بين 0 و60 %.' },
     priceRow: { fr: 'Prix par plateforme', en: 'Price per platform', ar: 'السعر حسب المنصة' },
     notSold: { fr: 'pas vendu', en: 'not sold', ar: 'غير معروض' },
+    findPh: { fr: 'Rechercher parmi {n} produits', en: 'Search {n} products', ar: 'ابحث في {n} منتج' },
     priceHint: { fr: 'Case vide : ce produit n\'est pas proposé sur cette plateforme.', en: 'Empty box: this product is not offered on that platform.', ar: 'خانة فارغة: هذا المنتج غير معروض على هذه المنصة.' },
   };
 
   function menuItems() {
     try { return (window.KiwiMenuStore && window.KiwiMenuStore.items && window.KiwiMenuStore.items()) || []; } catch (_) { return []; }
+  }
+  function menuCats() {
+    try { return (window.KiwiMenuStore && window.KiwiMenuStore.categories && window.KiwiMenuStore.categories()) || []; } catch (_) { return []; }
   }
   function optGroups() {
     try { const d = window.KiwiMenuStore && window.KiwiMenuStore.data && window.KiwiMenuStore.data(); return (d && Array.isArray(d.opts)) ? d.opts : []; } catch (_) { return []; }
@@ -331,7 +335,14 @@
     const groups = optGroups().filter((g) => g && Array.isArray(g.choices) && g.choices.some((ch) => num(ch.price)));
     /* Les produits aussi, pas seulement les suppléments (Jon's Burgers, 26 nov.
        2026) : le même prix que la fiche produit (« Prix par plateforme »). */
-    const products = menuItems().filter((it) => it && it.id && !it.archived && num(it.price) != null);
+    /* Tous les plats actifs, rangés par section de la carte, même ceux sans
+       prix en salle (« pas tous », Jon's Burgers, 27 nov. 2026). */
+    const cats = menuCats();
+    const catRank = new Map(cats.map((c, i) => [String(c.id), i]));
+    const catName = (id) => { const c = cats.find((x) => String(x.id) === String(id)); return c ? String(c.name || '') : ''; };
+    const products = menuItems().filter((it) => it && it.id && !it.archived)
+      .map((it, i) => ({ it, i, r: catRank.has(String(it.catId)) ? catRank.get(String(it.catId)) : 1e6 }))
+      .sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.it);
     const body = `<div class="kdl-set">
         <div class="kdl-h">${esc(tr(S.platforms))}</div>
         <div class="kdl-list" data-kdl-list>${shown.map(rowFor).join('')}</div>
@@ -346,7 +357,7 @@
             <div class="kf-help">${esc(tr(S.houseP))}</div>
           </div>
         </div>
-        ${products.length ? `<div class="kdl-h">${esc(tr(S.products))}</div><div class="kf-help">${esc(tr(S.productsP))}</div><div class="kdl-choices" data-kdl-products></div>` : ''}
+        ${products.length ? `<div class="kdl-h">${esc(tr(S.products))}</div><div class="kf-help">${esc(tr(S.productsP))}</div><div class="kdl-find" data-find-scope><div class="kdl-find-bar" data-find="delivery-prices" data-find-ph="${esc(tr(S.findPh).replace('{n}', products.length))}"></div><div class="kdl-choices" data-kdl-products></div></div>` : ''}
         ${groups.length ? `<div class="kdl-h">${esc(tr(S.choices))}</div><div class="kf-help">${esc(tr(S.choicesP))}</div><div class="kdl-choices" data-kdl-choices></div>` : ''}
       </div>`;
     const saveBtn = `<button class="kb atlas" type="button" data-kdl-save>${esc(tr(S.save))}</button>`;
@@ -387,13 +398,23 @@
       const box = q('[data-kdl-products]');
       if (!box) return;
       const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
+      let lastCat = null;
+      const groupRow = (it) => {
+        const c = String(it.catId == null ? '' : it.catId);
+        if (c === lastCat) return '';
+        lastCat = c;
+        const name = catName(c);
+        return name ? `<tr class="kdl-grp" data-find-group><th colspan="${on.length + 2}">${esc(name)}</th></tr>` : '';
+      };
       box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(tr(S.dineIn))}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
-        + products.map((it) => `<tr><td>${esc(it.name || '')}</td><td class="kdl-base">${num(it.price)}</td>${on.map((pid) => {
+        + products.map((it) => `${groupRow(it)}<tr data-find-row data-find-text="${esc((it.name || '') + ' ' + catName(it.catId))}"><td>${esc(it.name || '')}</td><td class="kdl-base">${num(it.price) == null ? '·' : num(it.price)}</td>${on.map((pid) => {
           const k = it.id + '|' + pid, v = k in typed ? num(typed[k]) : priceOf(it.id, pid);
           return `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="kf-input" data-kdl-item="${esc(it.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${esc(tr(S.notSold))}" aria-label="${esc((it.name || '') + ' · ' + pid)}"></td>`;
         }).join('')}</tr>`).join('') + '</tbody></table>' : '';
     }
     paintProducts();
+    /* La barre de recherche (assets/find-bar.mjs) se pose d'elle-même. */
+    if (q('[data-find]')) import('/assets/find-bar.mjs?v=1').catch(() => {});
 
     root.addEventListener('click', (e) => {
       const sw = e.target.closest('[data-kdl-on],[data-kdl-house]');
@@ -526,6 +547,8 @@
       + '.kdl-sw.on::after{transform:translateX(14px)}[dir="rtl"] .kdl-sw.on::after{transform:translateX(-14px)}.kdl-sw:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}'
       + '.kdl-link{background:none;border:0;padding:4px 6px;font:inherit;font-size:13px;color:var(--n-500);cursor:pointer}.kdl-link:hover{color:var(--ink)}'
       + '.kdl-add{display:flex;gap:8px;align-items:center}.kdl-add .kf-input{flex:1}.kdl-err{color:var(--danger,#B42318);font-size:13px}'
+      + '.kdl-find{display:grid;gap:12px}.kdl-find-bar:empty{height:48px}'
+      + '.kdl-tbl .kdl-grp th{padding:16px 6px 6px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--n-500)}.kdl-tbl tbody>.kdl-grp:first-child th{padding-top:4px}'
       + '.kdl-tbl{width:100%;border-collapse:collapse;font-size:13px}.kdl-tbl td,.kdl-tbl th{padding:5px 6px;text-align:start;font-weight:500}.kdl-tbl .kf-input{padding:7px 10px;max-width:96px}.kdl-base{color:var(--n-500)}'
       + '.kdl-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.kdl-hint{font-size:11.5px;font-weight:400;color:var(--n-500)}.kdl-prices label{display:grid;gap:4px;font-size:12px}.kdl-prices .kdl-lbl{display:flex;align-items:center;gap:6px}'
       + '.kdl-split{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:13px}.kdl-split-i{display:inline-flex;align-items:center;gap:6px}.kdl-split-i b{font-weight:600}.kdl-split-i span{font-variant-numeric:tabular-nums;opacity:.8}'
@@ -723,6 +746,20 @@
     const go = () => { if (window.Kiwi && window.Kiwi.modal) wireMenuPage(); };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go();
   }
+
+  /* Les filtres « Ventes & activité » (pages-pro-spa-starter.js) demandent les
+     canaux de livraison par un événement : chaque option allumée devient un
+     filtre, et une vente d'un canal éteint depuis garde son nom. */
+  if (typeof document !== 'undefined') document.addEventListener('kiwi-sales-channels', (e) => {
+    const d = e && e.detail;
+    if (!d || !Array.isArray(d.channels)) return;
+    options().forEach((o) => d.channels.push({ id: o.id, name: o.name }));
+    d.isChannel = isChannel;
+    d.labelOf = labelOf;
+  });
+  const announce = () => { try { if (typeof document !== 'undefined') document.dispatchEvent(new Event('kiwi-delivery-change')); } catch (_) {} };
+  subs.add(announce);
+  if (typeof setTimeout === 'function') setTimeout(announce, 0);
 
   window.KiwiDelivery = {
     HOUSE, PRESETS, COLORS,

@@ -126,7 +126,7 @@
       handoverState.cardKiwi = handoverCardKiwi();
       const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
       box.innerHTML = `<div class="rm-section-label">${tr('Rapprochement carte')}</div>`
-        + `<div class="ho-recon"><div class="ho-recon-line is-total"><span>${tr('Total carte Kiwi')}</span><span class="mono">${fmtMAD(handoverState.cardKiwi)}</span></div></div>`
+        + `<div class="ho-recon"><div class="ho-recon-line is-total"><span>${tr('Cartes encaissées')}</span><span class="mono">${fmtMAD(handoverState.cardKiwi)}</span></div></div>`
         + `<div class="cash-input-row" style="margin-bottom:6px;"><label class="cash-input-label" for="ho-card-z">${tr('Total carte du terminal')}</label>`
         + `<input class="cash-input mono" id="ho-card-z" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" /></div>`
         + `<p class="modal-subtle">${tr('Imprimez les totaux du terminal sans faire le Z, puis recopiez le total carte.')}</p>`
@@ -246,7 +246,7 @@
         + `<div class="ho-slip-ecart ${ecartCls}"><span>Écart constaté</span><span class="mono">${fmtEcart(rec.ecart)}</span></div>`
         + `<div class="ho-slip-row" style="margin-top:8px;"><span class="k">Caisse transmise</span><span class="v mono">${fmtMAD(rec.counted)}</span></div>`
         + (rec.cardTerminal == null ? '' :
-            `<div class="ho-slip-row" style="margin-top:8px;"><span class="k">Total carte Kiwi</span><span class="v mono">${fmtMAD(rec.cardKiwi)}</span></div>`
+            `<div class="ho-slip-row" style="margin-top:8px;"><span class="k">Cartes encaissées</span><span class="v mono">${fmtMAD(rec.cardKiwi)}</span></div>`
           + `<div class="ho-slip-row"><span class="k">Total carte du terminal</span><span class="v mono">${fmtMAD(rec.cardTerminal)}</span></div>`
           + `<div class="ho-slip-ecart ${rec.cardGap === 0 ? 'is-ok' : 'is-off'}"><span>Résultat</span><span class="mono">${rec.cardGap === 0 ? 'Rapproché' : (rec.cardGap > 0 ? 'Terminal + ' : 'Kiwi + ') + fmtMAD(Math.abs(rec.cardGap))}</span></div>`)
         + `<div class="ho-slip-sign">`

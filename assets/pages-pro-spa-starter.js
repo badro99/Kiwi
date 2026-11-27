@@ -839,7 +839,7 @@
       renderRealTransactions('transactions', STARTERS.transactions);
     };
     H['sales-kind'] = (_el, kind) => {
-      salesKindByMerchant[auditMerchant()] = ['sale', 'refund', 'cancel'].includes(kind) ? kind : 'all';
+      salesKindByMerchant[auditMerchant()] = ['sale', 'refund', 'cancel', 'handover'].includes(kind) ? kind : 'all';
       renderRealTransactions('transactions', STARTERS.transactions);
     };
     H['sales-activity-retry'] = () => { loadCancelAudit(true); };
@@ -951,8 +951,15 @@
     const keys = parts ? [...new Set(parts.map(partKey).filter(salesMethodOk))] : [];
     return keys.length ? keys : [salesMethodKey(s)];
   };
-  const salesMethodHit = (s, chosen) => !chosen.length || salesMethodKeys(s).some((k) => chosen.includes(k));
+  /* Un canal de livraison (Glovo, livraison maison…) se filtre comme un moyen :
+     « ch-glovo ». La liste vient de qui les déclare (assets/delivery.js répond à
+     l'événement), sans que cette page lise un global de plus (27 nov. 2026). */
+  const chanKey = (s) => (s && s.channel ? 'ch-' + String(s.channel).toLowerCase() : '');
+  const deliveryChannels = () => { const detail = { channels: [], isChannel: null, labelOf: null }; try { document.dispatchEvent(new CustomEvent('kiwi-sales-channels', { detail })); } catch (_) {} return detail; };
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('kiwi-delivery-change', () => { if (transactionsOnScreen()) renderRealTransactions('transactions', STARTERS.transactions); });
+  const salesMethodHit = (s, chosen) => !chosen.length || chosen.includes(chanKey(s)) || salesMethodKeys(s).some((k) => chosen.includes(k));
   const salesAmountFor = (s, chosen) => {
+    if (chosen.includes(chanKey(s))) return Number(s.amount || 0);
     const parts = salesParts(s);
     if (!parts || !chosen.length || !parts.every((p) => Number.isFinite(Number(p.amountCents)))) return Number(s.amount || 0);
     return parts.filter((p) => chosen.includes(partKey(p))).reduce((a, p) => a + Math.round(Number(p.amountCents) || 0), 0) / 100;
@@ -1134,8 +1141,12 @@
     const methodLabels = {
       all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
       cash: L.cash, card: L.card, delivery: L.delivery,
-    }; const seenMethods = daySales.filter((s) => s.kind !== 'refund').flatMap(salesMethodKeys).filter(salesMethodOk);   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres */
-    const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods].filter((m) => (apart ? ['cash', 'card'] : ['cash', 'card', 'delivery']).includes(m) || seenMethods.includes(m) || selectedMethods.includes(m)))].map((method) => {
+    }; const dch = deliveryChannels(), vt = String(KV?.getVenueType?.() || vd.type || vd.subtype || '').toLowerCase(), resto = ['restaurant', 'cafe', 'café', 'restauration'].includes(vt) || dch.channels.length > 0;
+    /* Au restaurant, « Livraison » se dit par canal : un filtre par option allumée (Glovo, Livraison maison…), plus un canal vu ce jour-là ; aucun s'il n'y a pas de livraison. */
+    const chans = new Map(dch.channels.map((c) => ['ch-' + c.id, c.name])); daySales.forEach((s) => { const k = chanKey(s); if (k && !chans.has(k) && dch.isChannel && dch.isChannel(s.channel)) chans.set(k, (dch.labelOf && dch.labelOf(s.channel)) || s.channel); }); selectedMethods.filter((m) => m.startsWith('ch-') && !chans.has(m)).forEach((m) => chans.set(m, (dch.labelOf && dch.labelOf(m.slice(3))) || m.slice(3)));
+    chans.forEach((name, k) => { methodLabels[k] = name; });
+    const seenMethods = daySales.filter((s) => s.kind !== 'refund').flatMap(salesMethodKeys).filter(salesMethodOk).filter((m) => !(resto && m === 'platform'));   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres ; « platform » se lit par canal */
+    const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods.filter((m) => !m.startsWith('ch-'))].filter((m) => (apart || resto ? ['cash', 'card'] : ['cash', 'card', 'delivery']).includes(m) || seenMethods.includes(m) || selectedMethods.includes(m))), ...chans.keys()].map((method) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
       return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method] || L[method] || method)}</button>`;
     }).join('');

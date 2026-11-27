@@ -31,6 +31,8 @@ const DLV_T = {
   off: { fr: 'Pas vendu sur {n}', en: 'Not sold on {n}', ar: 'غير معروض على {n}' },
   send: { fr: 'Envoyer · {n}', en: 'Send · {n}', ar: 'إرسال · {n}' },
   fee: { fr: 'Frais de livraison', en: 'Delivery fee', ar: 'رسوم التوصيل' },
+  feeLess: { fr: 'Baisser les frais de {n}', en: 'Lower the fee by {n}', ar: 'خفض الرسوم بـ {n}' },
+  feeMore: { fr: 'Augmenter les frais de {n}', en: 'Raise the fee by {n}', ar: 'رفع الرسوم بـ {n}' },
   leave: { fr: 'Quitter la livraison', en: 'Leave delivery', ar: 'الخروج من التوصيل' },
   sent: { fr: '{n} · commande envoyée en cuisine', en: '{n} · order sent to the kitchen', ar: '{n} · أُرسل الطلب إلى المطبخ' },
   check: { fr: 'Encaissement à vérifier dans le journal avant de réessayer', en: 'Check the journal before trying again', ar: 'تحقق من السجل قبل إعادة المحاولة' },
@@ -190,7 +192,8 @@ function dlvStart(id) {
     currentOrder().append(cart, { uid: newLineUid(), id: 'dlv-fee', kind: 'fee', name: dlvT('fee'), price: opt.fee, qty: 1, note: '', opts: [], optSig: '' });
   }
   dlvRepaint();
-  const input = document.querySelector('.kdl-band input');
+  /* Le numéro de la plateforme prend le curseur ; les frais maison attendent qu'on les touche. */
+  const input = document.querySelector('.kdl-band input:not(.kdl-fee-in)');
   if (input && !window.matchMedia('(pointer: coarse)').matches) input.focus();
 }
 /* `quiet` : appelé par le retour au tableau (après l'envoi ou la flèche
@@ -279,6 +282,18 @@ function dlvCSS() {
     + '.kdl-band-name{font-weight:600;font-size:15px;white-space:nowrap}'
     + '.kdl-band input{flex:1;min-width:0;height:36px;padding:0 10px;border:1px solid var(--k-line,var(--line,rgba(0,0,0,.15)));border-radius:8px;background:transparent;color:inherit;font:inherit;font-family:"JetBrains Mono",ui-monospace,monospace;text-transform:uppercase}'
     + '.kdl-band input::placeholder{text-transform:none;font-family:inherit;opacity:.6}'
+    + '.kdl-fee{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:12px;min-width:0}'
+    + '.kdl-fee-l{font-size:13px;color:var(--k-ink-2,#5b635f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.kdl-fee-ctl{flex:none;display:flex;align-items:center;height:44px;padding:3px;border:1px solid var(--k-line,var(--line,rgba(0,0,0,.14)));border-radius:13px;background:var(--k-surface-0,var(--surface,#fff))}'
+    + '.kdl-fee-b{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:10px;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation;transition:background .14s ease,transform .1s ease}'
+    + '.kdl-fee-b:hover{background:color-mix(in srgb,currentColor 7%,transparent)}.kdl-fee-b:active{transform:scale(.92);background:color-mix(in srgb,currentColor 11%,transparent)}'
+    + '.kdl-fee-b:disabled{opacity:.3;cursor:default;transform:none;background:transparent}.kdl-fee-b svg{width:20px;height:20px}.kdl-fee-b:focus-visible{outline:2px solid var(--kdl-c,#0B6E4F);outline-offset:-2px}'
+    + '.kdl-fee-v{display:flex;align-items:baseline;justify-content:center;gap:4px;min-width:84px;padding:0 4px}'
+    + '.kdl-band .kdl-fee-in{flex:none;width:3.6ch;min-width:0;height:36px;padding:0;border:0;border-radius:0;outline:0;background:transparent;color:inherit;text-align:end;text-transform:none;font:600 17px/36px "JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}'
+    + '.kdl-fee-v{border-radius:8px;cursor:text;transition:background .14s ease}.kdl-fee-v:hover{background:color-mix(in srgb,currentColor 5%,transparent)}'
+    + '.kdl-fee-u{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--k-ink-2,#5b635f)}'
+    + '.kdl-fee-v:focus-within{box-shadow:0 0 0 2px color-mix(in srgb,var(--kdl-c,#0B6E4F) 45%,transparent)}'
+    + '@media (max-width:520px){.kdl-fee-l{display:none}}'
     + '.kdl-band-dup{font-size:12px;color:var(--k-warning,#9A6700);white-space:nowrap}'
     + '.kdl-band-x{flex:none;width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer}.kdl-band-x svg{width:20px;height:20px}'
     + '.menu-item.is-dlv-off{opacity:.38;filter:grayscale(1)}'
@@ -334,6 +349,7 @@ function dlvBand() {
     const back = document.getElementById('vrap-back-board');
     if (back) back.insertAdjacentElement('afterend', band); else builder.prepend(band);
     band.addEventListener('input', (e) => {
+      if (e.target.matches('.kdl-fee-in')) { dlvSetFee(e.target.value, true); return; }
       if (!e.target.matches('input')) return;
       const v = dlvRef(e.target.value);
       if (e.target.value !== v) e.target.value = v;
@@ -341,19 +357,73 @@ function dlvBand() {
       if (open) open.ref = v; else if (dlvCtx) dlvCtx.ref = v;
       dlvDup(band);
     });
-    band.addEventListener('click', (e) => { if (e.target.closest('.kdl-band-x')) dlvEnd(false); });
+    band.addEventListener('click', (e) => {
+      if (e.target.closest('.kdl-band-x')) { dlvEnd(false); return; }
+      const step = e.target.closest('[data-kdl-step]');
+      if (step) dlvSetFee(dlvFeeNow() + (+step.getAttribute('data-kdl-step') || 0));
+    });
+    /* Un champ de frais vidé puis quitté repart sur le montant de la note. */
+    band.addEventListener('focusout', (e) => { if (e.target.matches('.kdl-fee-in')) dlvFeeSync(band, true); });
   }
   if (band.getAttribute('data-id') !== c.id) {
     band.setAttribute('data-id', c.id);
     band.style.setProperty('--kdl-c', opt.color || 'var(--k-ink-2,#5b635f)');
     band.innerHTML = D.logoHTML(c.id, 28) + '<span class="kdl-band-name">' + dlvEsc(opt.name) + '</span>'
-      + (dlvIsHouse(c) ? '<span style="flex:1"></span>' : '<input type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="16" aria-label="' + dlvEsc(dlvT('ref', { n: opt.name })) + '" placeholder="' + dlvEsc(dlvT('ref', { n: opt.name })) + '">')
+      + (dlvIsHouse(c) ? dlvFeeHTML() : '<input type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="16" aria-label="' + dlvEsc(dlvT('ref', { n: opt.name })) + '" placeholder="' + dlvEsc(dlvT('ref', { n: opt.name })) + '">')
       + '<span class="kdl-band-dup" hidden></span>'
       + (dlvOpenOrder() ? '' : '<button type="button" class="kdl-band-x" aria-label="' + dlvEsc(dlvT('leave')) + '" title="' + dlvEsc(dlvT('leave')) + '">' + DLV_X + '</button>');
   }
-  const input = band.querySelector('input');
+  const input = band.querySelector('input:not(.kdl-fee-in)');
   if (input && document.activeElement !== input) input.value = c.ref || '';
+  dlvFeeSync(band);
   dlvDup(band);
+}
+
+/* ── les frais de la livraison maison (Jon's Burgers, 27 nov. 2026) ──
+   Le montant varie avec la course : le bandeau montre les frais réglés au
+   tableau de bord, avec − et + par pas de 5 MAD, et le champ se tape aussi.
+   La ligne « Frais de livraison » de la note suit ; à 0, elle disparaît. */
+const DLV_FEE_STEP = 5;
+const DLV_MINUS = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-440v-80h560v80H200Z"/></svg>';
+const DLV_PLUS = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>';
+function dlvFeeNow() {
+  return Math.round((cart || []).filter((l) => l && l.kind === 'fee').reduce((s, l) => s + (+l.price || 0) * (+l.qty || 0), 0) * 100) / 100;
+}
+const dlvFeeText = (n) => (Math.round(n * 100) % 100 ? (Math.round(n * 100) / 100).toFixed(2).replace('.', ',') : String(Math.round(n)));
+function dlvFeeHTML() {
+  const step = fmtMAD(DLV_FEE_STEP);
+  return '<span class="kdl-fee"><label class="kdl-fee-l" for="kdl-fee-in">' + dlvEsc(dlvT('fee')) + '</label>'
+    + '<span class="kdl-fee-ctl"><button type="button" class="kdl-fee-b" data-kdl-step="-' + DLV_FEE_STEP + '" aria-label="' + dlvEsc(dlvT('feeLess', { n: step })) + '">' + DLV_MINUS + '</button>'
+    + '<label class="kdl-fee-v"><input class="kdl-fee-in" id="kdl-fee-in" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="7"><span class="kdl-fee-u">MAD</span></label>'
+    + '<button type="button" class="kdl-fee-b" data-kdl-step="' + DLV_FEE_STEP + '" aria-label="' + dlvEsc(dlvT('feeMore', { n: step })) + '">' + DLV_PLUS + '</button></span></span>';
+}
+function dlvFeeSync(band, force) {
+  const inp = band && band.querySelector('.kdl-fee-in');
+  if (!inp) return;
+  const now = dlvFeeNow();
+  if (force || document.activeElement !== inp) inp.value = dlvFeeText(now);
+  const less = band.querySelector('[data-kdl-step^="-"]');
+  if (less) less.disabled = now <= 0;
+}
+/* `typing` : le caissier tape le montant ; on ne réécrit pas son champ. */
+function dlvSetFee(raw, typing) {
+  const c = dlvCur();
+  if (!c || !dlvIsHouse(c)) return;
+  const txt = String(raw == null ? '' : raw).replace(',', '.').replace(/[^0-9.]/g, '');
+  if (typing && txt === '') return;
+  let v = Math.round(Math.max(0, Math.min(9999, +txt || 0)) * 100) / 100;
+  if (!Number.isFinite(v)) v = 0;
+  const line = (cart || []).find((l) => l && l.kind === 'fee');
+  const order = currentOrder();
+  if (v > 0 && line) order.patchLine(line, { price: v, qty: 1 });
+  else if (v > 0) order.append(cart, { uid: newLineUid(), id: 'dlv-fee', kind: 'fee', name: dlvT('fee'), price: v, qty: 1, note: '', opts: [], optSig: '' });
+  else if (line) order.replaceCart((cart || []).filter((l) => !(l && l.kind === 'fee')));
+  const open = dlvOpenOrder();
+  if (open) open.fee = v;
+  try { renderCart(); } catch (_) {}
+  try { if (typeof tillKitPaint === 'function') tillKitPaint(); } catch (_) {}
+  const band = document.querySelector('#vrap-builder .kdl-band');
+  if (band) dlvFeeSync(band, !typing);
 }
 function dlvDup(band) {
   const el = band.querySelector('.kdl-band-dup');
@@ -417,7 +487,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=11';
+  s.src = 'assets/delivery.js?v=12';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

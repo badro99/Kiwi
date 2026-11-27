@@ -207,6 +207,36 @@ vm.runInContext("salesMethodsByMerchant[auditMerchant()]=['delivery']", ctx); re
 check('delivery filter counts its sales and keeps collected at zero', () => {
   assert.ok(html.includes('1 vente')); assert.ok(html.includes('Encaissements</span><strong>0 <small>MAD')); assert.ok(html.includes('850 <small>MAD'));
 });
+/* Jon's Burgers, 27 novembre : au restaurant, « Livraison » ne trouvait rien (une vente Glovo est réglée « platform », la
+   livraison maison en espèces). Un filtre par canal allumé, aucun quand rien ne l'est ; assets/delivery.js répond à l'événement. */
+let delivOn = [];
+document.dispatchEvent = (e) => { if (e.type !== 'kiwi-sales-channels') return; delivOn.forEach((c) => e.detail.channels.push(c));
+  e.detail.isChannel = (ch) => ['glovo', 'livraison'].includes(ch); e.detail.labelOf = (ch) => ({ glovo: 'Glovo', livraison: 'Livraison maison' })[ch] || ''; };
+ctx.CustomEvent = class { constructor(type, o) { this.type = type; this.detail = o && o.detail; } };
+ctx.window.KiwiVenue = { getVenueType: () => 'restaurant', getCurrentVenueData: () => ({}) };
+sales = [{ id: 'r1', amount: 41, ts: now, method: 'cash', lines: [] }];
+vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]", ctx); render();
+check('a restaurant with no delivery turned on gets no delivery filter', () => {
+  assert.ok(!html.includes('data-arg="delivery"')); assert.ok(!/data-arg="ch-/.test(html));
+});
+delivOn = [{ id: 'glovo', name: 'Glovo' }, { id: 'livraison', name: 'Livraison maison' }];
+sales = [{ id: 'r1', amount: 41, ts: now, method: 'cash', lines: [] }, { id: 'r2', amount: 66, ts: now, method: 'platform', channel: 'glovo', lines: [] },
+  { id: 'r3', amount: 85, ts: now, method: 'cash', channel: 'livraison', lines: [] }];
+render();
+check('one filter per delivery channel turned on, named, and no raw « platform »', () => {
+  assert.ok(html.includes('data-arg="ch-glovo" aria-pressed="false">Glovo</button>'));
+  assert.ok(html.includes('data-arg="ch-livraison" aria-pressed="false">Livraison maison</button>'));
+  assert.ok(!html.includes('data-arg="platform"')); assert.ok(!html.includes('data-arg="delivery"'));
+});
+vm.runInContext("salesMethodsByMerchant[auditMerchant()]=['ch-glovo']", ctx); render();
+check('the Glovo filter shows the Glovo sale only', () => { assert.ok(html.includes('1 vente')); assert.ok(html.includes('66 <small>MAD')); });
+vm.runInContext("salesMethodsByMerchant[auditMerchant()]=['ch-livraison']", ctx); render();
+check('the in-house delivery filter shows its own sale, paid in cash', () => { assert.ok(html.includes('1 vente')); assert.ok(html.includes('85 <small>MAD')); });
+delivOn = []; vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]", ctx); render();
+check('a channel turned off since keeps its filter while one of its sales is on the page', () => {
+  assert.ok(html.includes('data-arg="ch-glovo"')); assert.ok(html.includes('>Glovo</button>'));
+});
+delete ctx.window.KiwiVenue;
 vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]", ctx);
 tenant = 'empty-merchant'; sales = []; refunds = []; render(); await drain();
 check('merchant switch clears old history and supports empty real accounts', () => {

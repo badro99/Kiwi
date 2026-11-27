@@ -45,28 +45,31 @@ window.KiwiStockInternal.install('sourcing', (S) => {
     addRival: ['Ajouter un fournisseur concurrent', 'Add a competing supplier', 'أضف مورّداً منافساً'],
     famT: ['Même produit, autres qualités', 'Same product, other qualities', 'نفس المنتج، جودة أخرى'],
     thisOne: ['cet article', 'this item', 'هذا المنتج'],
-    perBase: ['{p} le {u}', '{p} per {u}', '{p} لكل {u}'],
+    perBase: ['{p} {u}', '{p} {u}', '{p} {u}'],
     more: ['{p} plus cher', '{p} dearer', 'أغلى بـ {p}'],
     famCheapest: ['le moins cher de la famille', 'cheapest in the family', 'الأرخص في العائلة'],
     needPack: ['Combien pèse 1 {u} ?', 'How much does 1 {u} weigh?', 'كم يزن {u} واحد؟'],
     needPackVol: ['Combien contient 1 {u} ?', 'How much does 1 {u} hold?', 'كم يحتوي {u} واحد؟'],
+    needPackCount: ['Combien de pièces dans 1 {u} ?', 'How many pieces in 1 {u}?', 'كم قطعة في {u} واحد؟'],
+    pieces: ['unités', 'units', 'وحدات'],
     save: ['Enregistrer', 'Save', 'حفظ'],
     packBad: ['Indiquez une quantité supérieure à zéro.', 'Enter a quantity above zero.', 'أدخل كمية أكبر من صفر.'],
     noCompare: ['Unités différentes : indiquez le contenu d’une {u} pour comparer.', 'Different units: say what one {u} holds to compare.', 'وحدات مختلفة: اذكر محتوى {u} واحد للمقارنة.'],
     open: ['Voir', 'Open', 'عرض'],
     qualities: ['{n} qualités', '{n} qualities', '{n} أنواع'],
-    range: ['de {a} à {b} le {u}', '{a} to {b} per {u}', 'من {a} إلى {b} لكل {u}'],
+    range: ['de {a} à {b} {u}', '{a} to {b} {u}', 'من {a} إلى {b} {u}'],
     famLabel: ['Famille de produit', 'Product family', 'عائلة المنتج'],
-    famHint: ['Le même produit qu’un autre article, d’une autre qualité ou d’un autre fournisseur (ex. Mascarpone). Les articles d’une famille sont comparés au kilo ou au litre.', 'The same product as another item, in another quality or from another supplier (e.g. Mascarpone). Items of one family are compared per kilo or per litre.', 'نفس منتج آخر بجودة أو مورّد مختلف (مثلاً ماسكاربوني). تُقارن منتجات العائلة الواحدة بالكيلو أو باللتر.'],
+    famHint: ['Le même produit qu’un autre article, d’une autre qualité ou d’un autre fournisseur (ex. Mascarpone). Les articles d’une famille sont comparés au kilo, au litre ou à la pièce.', 'The same product as another item, in another quality or from another supplier (e.g. Mascarpone). Items of one family are compared per kilo, per litre or per piece.', 'نفس منتج آخر بجودة أو مورّد مختلف (مثلاً ماسكاربوني). تُقارن منتجات العائلة الواحدة بالكيلو أو باللتر أو بالقطعة.'],
     famPh: ['Ex. Mascarpone', 'E.g. Mascarpone', 'مثلاً ماسكاربوني'],
     packLabel: ['Contenu d’une unité', 'What one unit holds', 'محتوى الوحدة الواحدة'],
-    packHint: ['Pour un article compté à la pièce : le poids ou le volume d’une pièce.', 'For an item counted by the piece: what one piece weighs or holds.', 'لمنتج يُعدّ بالقطعة: وزن أو حجم القطعة الواحدة.'],
+    packHint: ['Ce que contient une unité de stock : un poids, un volume ou un nombre de pièces (une barquette de 6 pains : 6 unités).', 'What one stock unit holds: a weight, a volume or a number of pieces (a tray of 6 buns: 6 units).', 'ما تحتويه وحدة المخزون: وزن أو حجم أو عدد قطع (علبة من 6 خبزات: 6 وحدات).'],
     orderCheaper: ['Moins cher pour cet article : {s}, {p} (votre principal : {q}).', 'Cheaper for this item: {s}, {p} (your main supplier: {q}).', 'الأرخص لهذا المنتج: {s}، {p} (مورّدك الرئيسي: {q}).'],
     orderPick: ['Commander chez {s}', 'Order from {s}', 'اطلب من {s}'],
     orderFamily: ['Autre qualité : {i} chez {s}, {p} contre {q}.', 'Other quality: {i} from {s}, {p} against {q}.', 'جودة أخرى: {i} من {s}، {p} مقابل {q}.'],
     orderFamilyBare: ['Autre qualité : {i}, {p} contre {q}.', 'Other quality: {i}, {p} against {q}.', 'جودة أخرى: {i}، {p} مقابل {q}.'],
   };
-  const UNIT_WORD = { kg: ['kilo', 'kilo', 'كيلو'], L: ['litre', 'litre', 'لتر'] };
+  /* « le kilo », « la pièce » : l'article suit le mot ; une autre unité s'écrit « / barquette ». */
+  const UNIT_WORD = { kg: ['le kilo', 'per kilo', 'لكل كيلو'], L: ['le litre', 'per litre', 'لكل لتر'], 'pièce': ['la pièce', 'per piece', 'للقطعة'] };
 
   const lang = () => { try { const l = S.lang(); return l === 'en' || l === 'ar' ? l : 'fr'; } catch (_) { return 'fr'; } };
   function tr(key, vars, l = lang()) {
@@ -87,17 +90,24 @@ window.KiwiStockInternal.install('sourcing', (S) => {
   }
   const supKey = (name) => familyKey(String(name || '').split(' · ')[0]);
   const MEASURE = { mg: ['mass', 0.001], g: ['mass', 1], kg: ['mass', 1000], ml: ['volume', 1], cl: ['volume', 10], L: ['volume', 1000], l: ['volume', 1000] };
-  /* Ce que contient une unité de stock, en g ou en ml ; null si on ne le sait pas. */
+  /* Une unité de stock qui contient des pièces (une barquette de 6 pains,
+     un carton de 50 gobelets) : 'count', comparé à la pièce (27 nov. 2026). */
+  const MEASURES = ['mass', 'volume', 'count'];
+  const measureOf = (m) => (MEASURES.indexOf(m) !== -1 ? m : 'mass');
+  /* Ce que contient une unité de stock, en g, en ml ou en pièces ; null si on ne le sait pas. */
   function baseQty(it) {
     const m = MEASURE[String(it && it.unit || '').trim()];
     if (m) return { measure: m[0], qty: m[1] };
     const pack = +(it && it.packSize);
-    if (pack > 0) return { measure: it.packMeasure === 'volume' ? 'volume' : 'mass', qty: pack };
+    if (pack > 0) return { measure: measureOf(it.packMeasure), qty: pack };
     const grams = +(it && it.gramsPerUnit);
     if (grams > 0) return { measure: 'mass', qty: grams };
     return null;
   }
   const num = (v) => { const n = +v; return Number.isFinite(n) && n > 0 ? n : null; };
+  /* Le choix du sélecteur « Contenu d'une unité » → grandeur et facteur. */
+  const unitMeasure = (u) => (u === 'ml' || u === 'L' ? 'volume' : u === 'unité' ? 'count' : 'mass');
+  const unitFactor = (u) => (u === 'kg' || u === 'L' ? 1000 : 1);
 
   /* Les réceptions du registre, par fournisseur : la plus récente d'abord. */
   function paidBySupplier(rows) {
@@ -168,18 +178,19 @@ window.KiwiStockInternal.install('sourcing', (S) => {
   function familyView(members, priceOf) {
     if (!members || members.length < 2) return null;
     const name = String(members[0].family).trim();
-    const counts = { mass: 0, volume: 0 };
+    const counts = { mass: 0, volume: 0, count: 0 };
     members.forEach((m) => { const b = baseQty(m); if (b) counts[b.measure]++; });
-    const measure = counts.mass || counts.volume ? (counts.mass >= counts.volume ? 'mass' : 'volume') : null;
+    const top = MEASURES.reduce((a, k) => (counts[k] > counts[a] ? k : a), 'mass');
+    const measure = counts[top] ? top : null;
     const units = new Set(members.map((m) => String(m.unit || '')));
     const sameUnit = units.size === 1 ? [...units][0] : '';
-    const base = measure === 'mass' ? 'kg' : measure === 'volume' ? 'L' : sameUnit;
+    const base = measure === 'mass' ? 'kg' : measure === 'volume' ? 'L' : measure === 'count' ? 'pièce' : sameUnit;
     const rows = members.map((m) => {
       const price = priceOf(m);
       let per = null; let need = false;
       if (measure) {
         const b = baseQty(m);
-        if (b && b.measure === measure) per = price > 0 ? price / (b.qty / 1000) : null;
+        if (b && b.measure === measure) per = price > 0 ? price / (measure === 'count' ? b.qty : b.qty / 1000) : null;
         else need = true;
       } else if (sameUnit) per = price > 0 ? price : null;
       else need = true;
@@ -219,7 +230,7 @@ window.KiwiStockInternal.install('sourcing', (S) => {
 
   const priceOf = (it) => unitPrice(it, offersOf(it));
   function viewFor(it, all) { return familyView(membersOf(it, all), priceOf); }
-  const baseWord = (u, l) => (UNIT_WORD[u] ? UNIT_WORD[u][l === 'en' ? 1 : l === 'ar' ? 2 : 0] : u);
+  const baseWord = (u, l) => (UNIT_WORD[u] ? UNIT_WORD[u][l === 'en' ? 1 : l === 'ar' ? 2 : 0] : '/ ' + u);
 
   /* ───────────────────────────── écriture ───────────────────────────── */
   function setPrincipal(itemId, cardId) {
@@ -242,7 +253,7 @@ window.KiwiStockInternal.install('sourcing', (S) => {
     const n = num(qty);
     if (!n) return false;
     const ov = S.stItemOverrides[itemId] || {};
-    S.stItemOverrides[itemId] = Object.assign({}, ov, { packSize: Math.round(n * 1000) / 1000, packMeasure: measure === 'volume' ? 'volume' : 'mass', updatedAt: Date.now() });
+    S.stItemOverrides[itemId] = Object.assign({}, ov, { packSize: Math.round(n * 1000) / 1000, packMeasure: measureOf(measure), updatedAt: Date.now() });
     S.stSaveOverlay();
     return true;
   }
@@ -370,10 +381,10 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
       const tail = r.cheapest ? `<div class="st-src-tail"><span class="st-src-badge st-src-low">${esc(tr('famCheapest', null, l))}</span></div>`
         : (r.over >= 1 ? `<span class="st-src-sub">${esc(tr('more', { p: pct(r.over) }, l))}</span>` : '');
       const pack = r.need ? `<div class="st-src-pack" data-src-pack="${esc(r.id)}">
-          <label class="st-src-sub" for="st-src-pack-${esc(r.id)}">${esc(tr(v.measure === 'volume' ? 'needPackVol' : 'needPack', { u: r.unit }, l))}</label>
+          <label class="st-src-sub" for="st-src-pack-${esc(r.id)}">${esc(tr(v.measure === 'volume' ? 'needPackVol' : v.measure === 'count' ? 'needPackCount' : 'needPack', { u: r.unit }, l))}</label>
           <input class="st-mb-input mono" id="st-src-pack-${esc(r.id)}" inputmode="decimal" autocomplete="off" data-src-pack-qty />
           <select class="st-mb-input" data-src-pack-unit aria-label="${esc(tr('packLabel', null, l))}">${v.measure === 'volume'
-            ? '<option value="ml">ml</option><option value="L">L</option>' : '<option value="g">g</option><option value="kg">kg</option>'}</select>
+            ? '<option value="ml">ml</option><option value="L">L</option>' : v.measure === 'count' ? `<option value="unité">${esc(tr('pieces', null, l))}</option>` : '<option value="g">g</option><option value="kg">kg</option>'}</select>
           <button data-activation=write class="st-btn small" type="button" data-src-pack-save>${esc(tr('save', null, l))}</button>
           <span class="st-src-err" data-src-pack-err hidden></span>
         </div>` : '';
@@ -422,8 +433,7 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
         const err = box.querySelector('[data-src-pack-err]');
         const n = num(qty);
         if (!n) { err.textContent = tr('packBad', null, l); err.hidden = false; return; }
-        const k = u === 'kg' || u === 'L' ? 1000 : 1;
-        setPack(box.getAttribute('data-src-pack'), n * k, u === 'ml' || u === 'L' ? 'volume' : 'mass');
+        setPack(box.getAttribute('data-src-pack'), n * unitFactor(u), unitMeasure(u));
         hooks.reopen(it.id);
       };
       box.querySelector('[data-src-pack-save]').addEventListener('click', save);
@@ -437,10 +447,11 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
     const l = lang();
     const names = [...new Set((all || []).map((x) => String(x && x.family || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
     const pack = num(existing && existing.packSize);
-    const vol = existing && existing.packMeasure === 'volume';
-    const kilo = pack && pack >= 1000 && pack % 100 === 0;
+    const measure = measureOf(existing && existing.packMeasure);
+    const vol = measure === 'volume', cnt = measure === 'count';
+    const kilo = !cnt && pack && pack >= 1000 && pack % 100 === 0;
     const shown = pack ? (kilo ? pack / 1000 : pack) : '';
-    const opt = (v, on) => `<option value="${v}"${on ? ' selected' : ''}>${v}</option>`;
+    const opt = (v, on, label) => `<option value="${v}"${on ? ' selected' : ''}>${esc(label || v)}</option>`;
     return `<div class="st-if-grid" data-src-form>
         <label class="st-if-f">
           <span class="st-if-l">${esc(tr('famLabel', null, l))}</span>
@@ -452,7 +463,7 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
           <label class="st-if-l" for="st-src-pack-form">${esc(tr('packLabel', null, l))}</label>
           <span class="st-src-pack">
             <input class="st-if-in" id="st-src-pack-form" inputmode="decimal" autocomplete="off" value="${esc(shown)}" data-src-pack-form />
-            <select class="st-if-in" data-src-pack-form-unit aria-label="${esc(tr('packLabel', null, l))}">${opt('g', !vol && !kilo)}${opt('kg', !vol && kilo)}${opt('ml', vol && !kilo)}${opt('L', vol && kilo)}</select>
+            <select class="st-if-in" data-src-pack-form-unit aria-label="${esc(tr('packLabel', null, l))}">${opt('g', !vol && !cnt && !kilo)}${opt('kg', !vol && !cnt && kilo)}${opt('ml', vol && !kilo)}${opt('L', vol && kilo)}${opt('unité', cnt, tr('pieces', null, l))}</select>
           </span>
           <span class="st-if-hint">${esc(tr('packHint', null, l))}</span>
         </div>
@@ -468,8 +479,8 @@ html body:not(#kno) .st-md-list-row.st-src-row{display:flex;align-items:flex-sta
     const n = num(raw);
     return {
       family,
-      packSize: n ? Math.round(n * (u === 'kg' || u === 'L' ? 1000 : 1) * 1000) / 1000 : null,
-      packMeasure: u === 'ml' || u === 'L' ? 'volume' : 'mass',
+      packSize: n ? Math.round(n * unitFactor(u) * 1000) / 1000 : null,
+      packMeasure: unitMeasure(u),
     };
   }
 

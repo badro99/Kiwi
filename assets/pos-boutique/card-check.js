@@ -30,7 +30,7 @@ export function cardCheckResult(kiwi, terminal, fmtMAD) {
 export function cardCheckHtml(kiwi, fmtMAD) {
   return `<div class="clo-drawer-box clo-card-box">
           <div class="clo-drawer-title">${tr('Rapprochement carte')}</div>
-          <div class="clo-drawer-line is-total"><span>${tr('Total carte Kiwi')}</span><span class="mono">${fmtMAD(kiwi)}</span></div>
+          <div class="clo-drawer-line is-total"><span>${tr('Cartes encaissées')}</span><span class="mono">${fmtMAD(kiwi)}</span></div>
           <div class="clo-count-row">
             <label for="bqclo-card">${tr('Total carte du Z terminal')}</label>
             <input class="clo-count-input" id="bqclo-card" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" aria-describedby="bqclo-card-help" />

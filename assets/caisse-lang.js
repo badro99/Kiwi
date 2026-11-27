@@ -2035,7 +2035,7 @@
       'Écart': ['Difference', 'الفرق'],
       'Rapprochement carte': ['Card reconciliation', 'مطابقة البطاقات'],
       'journée commerciale': ['business day', 'يوم العمل'],
-      'Total carte Kiwi': ['Kiwi card total', 'مجموع البطاقات في Kiwi'],
+      'Cartes encaissées': ['Card payments taken', 'مدفوعات البطاقة المحصّلة'],
       'Total carte du Z terminal': ['Terminal Z card total', 'مجموع بطاقات Z الجهاز'], 'Total carte du terminal': ['Terminal card total', 'مجموع بطاقات الجهاز'], 'Imprimez les totaux du terminal sans faire le Z, puis recopiez le total carte.': ['Print the terminal totals without running the Z, then copy the card total.', 'اطبع مجاميع جهاز الدفع دون إجراء Z، ثم انسخ مجموع البطاقات.'],
       "Recopiez le total carte imprimé par le terminal, même s'il est à zéro.": ['Copy the card total printed by the terminal, even if it is zero.', 'انسخ مجموع البطاقات المطبوع من الجهاز، حتى لو كان صفرًا.'],
       'Résultat': ['Result', 'النتيجة'],

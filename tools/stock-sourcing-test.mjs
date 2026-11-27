@@ -236,7 +236,19 @@ const tomates = { id: 'tom', name: 'Tomates', unit: 'kg', costPerUnit: 0, suppli
   assert.match(html, /<datalist id="st-src-families"><option value="Mascarpone"><\/option><option value="mascarponé"><\/option><\/datalist>/);
   assert.match(html, /value="1.5" data-src-pack-form/);
   assert.match(html, /<option value="kg" selected>/);
+  /* « Missing units like unit » (Jon's Burgers, 27 nov. 2026) : une barquette contient des pièces. */
+  eq(api.readForm(scope('Pain burger', '6', 'unité')), { family: 'Pain burger', packSize: 6, packMeasure: 'count' });
+  const tray = api.formField({ packSize: 6, packMeasure: 'count' }, []);
+  assert.match(tray, /<option value="unité" selected>unités<\/option>/);
+  assert.match(tray, /value="6" data-src-pack-form/, 'six pieces are never shown as kilos');
+  eq(api.baseQty({ unit: 'barquette', packSize: 6, packMeasure: 'count' }), { measure: 'count', qty: 6 });
+  const buns = api.familyView([{ id: 'b6', name: 'Pain x6', family: 'Pain', unit: 'barquette', packSize: 6, packMeasure: 'count', costPerUnit: 12 },
+    { id: 'b1', name: 'Pain', family: 'Pain', unit: 'pièce', packSize: 1, packMeasure: 'count', costPerUnit: 2.5 }], (it) => it.costPerUnit);
+  assert.equal(buns.base, 'pièce');
+  assert.equal(buns.rows[0].id, 'b6', '2 MAD the bun in a tray of 6 beats 2.50 alone');
+  assert.equal(buns.rows[0].per, 2);
   ok('the item form saves the family and the weight of a piece; clearing a field clears it');
+  ok('a tray holds a number of pieces, compared per piece');
 }
 
 {
