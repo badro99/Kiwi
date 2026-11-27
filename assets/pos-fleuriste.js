@@ -1218,9 +1218,13 @@
             <span class="ic"><i data-lucide="building-2"></i></span>
             <span class="l"><b>Sur compte B2B</b><span>${esc(cust.name)}, facture fin de mois</span></span>
           </button>` : ''}`}
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="fl-pay-opt" data-fl-offer><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}
         </div>`;
       icons();
       $$('[data-fl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#fl-pay-veil'); });
+      const offer = $('[data-fl-offer]', el);
+      if (offer) offer.onclick = () => KiwiPosSale.offer.ask({ amount: amountBase, focus: offer }).then((ok) => ok
+        && (settle ? done(amountBase, 'offert', 'settle', 0) : finishFresh('now', 'offert', total, KiwiPosSale.offer.tr('Ticket offert'))));
       $$('[data-fl-paymode]', el).forEach((b) => {
         b.onclick = () => {
           const mode = b.dataset.flPaymode;
@@ -1359,7 +1363,7 @@
            c'est le seul moment où l'argent rentre vraiment. */
         postDay(amount, method, `Solde ${order.id} · ${buyerLabel(order)}`, order.id, deliverySaleLines(order, amount));
         closeVeil('#fl-pay-veil');
-        toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (typeof ctx.onSettled === 'function') ctx.onSettled();
         return;
       }

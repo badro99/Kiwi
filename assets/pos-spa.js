@@ -1382,6 +1382,7 @@
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="sp-pay-opt" data-sp-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
         </div>`;
       icons();
       $$('[data-sp-close]', el).forEach((b) => { b.onclick = () => closeVeil('#sp-pay-veil'); });
@@ -1417,7 +1418,8 @@
         refreshTip();
       }
       $$('[data-sp-m]', el).forEach((b) => {
-        b.onclick = () => (b.dataset.spM === 'especes' ? stepCash() : stepCard());
+        b.onclick = () => (b.dataset.spM === 'offert' ? KiwiPosSale.offer.ask({ amount: base, focus: b }).then((ok) => { if (ok) { tip = 0; done('offert', 0); } })
+          : b.dataset.spM === 'especes' ? stepCash() : stepCard());
       });
     };
 
@@ -1519,7 +1521,7 @@
          Le toast garde le montant total laissé au comptoir. */
       postDay(base, method, tkLabel(t), t.num, saleLines(t), tip);
       queueIfOffline('Encaissement');
-      toast(`${t.num} encaissé, ${fmtMAD(base + tip)} en ${method}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+      toast(method === 'offert' ? `${t.num} · ${KiwiPosSale.offer.tr('Ticket offert')}` : `${t.num} encaissé, ${fmtMAD(base + tip)} en ${method}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (tip > 0) toast(`Pourboire ${fmtMAD(tip)} réparti, ${parts.map((p) => `${PR[p.id].short} ${p.amount}`).join(' · ')}`, 2800);
       ticketSeq++;
       freshTicket();

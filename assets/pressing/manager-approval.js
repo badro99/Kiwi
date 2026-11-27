@@ -83,6 +83,11 @@ export function tr(s) {
   try { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; } catch (_) { return s; }
 }
 
+/* A short message on the till's toast (caisse-app.js), for a caller with none. */
+export function say(msg) {
+  try { if (typeof window.KiwiCaisseToast === 'function') window.KiwiCaisseToast(msg); } catch (_) {}
+}
+
 /* The till's own context: real once signed in or paired (fail closed), the
  * store from the pressing scope, phrases through the till's language layer. */
 export function approveAtTill({ focus, sub } = {}) {

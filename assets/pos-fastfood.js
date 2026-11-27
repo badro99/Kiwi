@@ -1068,6 +1068,7 @@
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="ff-pay-opt" data-ff-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
           ${fresh ? `
           <button class="ff-pay-opt" data-ff-m="later">
             <span class="ic"><i data-lucide="hand-coins"></i></span>
@@ -1081,6 +1082,7 @@
           const m = b.dataset.ffM;
           if (m === 'especes') stepCash();
           else if (m === 'carte') stepCard();
+          else if (m === 'offert') KiwiPosSale.offer.ask({ amount, focus: b }).then((ok) => ok && done('offert', 0, null));
           else stepLater();
         };
       });
@@ -1171,13 +1173,13 @@
       if (settle) {
         order.pay.method = method;
         order.pay.paid += amount;
-        tally[method === 'carte' ? 'carte' : 'especes'] += amount;
+        if (method !== 'offert') tally[method === 'carte' ? 'carte' : 'especes'] += amount;
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas au moment de la commande. */
         postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`, saleLines(order, amount), received, rendu);
         closeVeil('#ff-pay-veil');
         queueIfOffline('Encaissement');
-        toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (ctx && typeof ctx.onDone === 'function') ctx.onDone();
         refreshOps();
         return;
@@ -1234,7 +1236,7 @@
   function payPill(o) {
     const due = dueOf(o);
     if (o.pay.method === 'glovo') return '<span class="ff-pill ok">Payé · Glovo</span>';
-    if (due <= 0) return `<span class="ff-pill ok">Payé · ${o.pay.method === 'carte' ? 'carte' : 'espèces'}</span>`;
+    if (due <= 0) return o.pay.method === 'offert' ? `<span class="ff-pill ok">${KiwiPosSale.offer.tr('Offert')}</span>` : `<span class="ff-pill ok">Payé · ${o.pay.method === 'carte' ? 'carte' : 'espèces'}</span>`;
     return `<span class="ff-pill due">À encaisser · ${due} MAD</span>`;
   }
   function chanPill(o) {

@@ -28,7 +28,7 @@ function ok(label, fn) {
 const sale = read('assets/pos-sale.js');
 ok('every register folds the phone ticket sheet after a paid sale, demo included', () => {
   assert.match(sale, /function ticketDone\(total, method\)/);
-  assert.match(sale, /if \(!\(total > 0\)\) return null;\n    if \(!isReal\(\)\) \{ ticketDone\(total, sale\.method\); return null; \}/);
+  assert.match(sale, /if \(!\(total > 0\)(?: && !gift)?\) return null;\n    if \(!isReal\(\)\) \{ ticketDone\(total, sale\.method\); return null; \}/);
 });
 ok('saleId and clientId reach the stored ledger row', () => {
   assert.match(sale, /creditClient\(entry\);[\s\S]{0,400}if \(entry\.saleId \|\| entry\.clientId \|\| entry\.syncState \|\| entry\.stockState\) write\(vertical, rows\);/);

@@ -617,7 +617,7 @@
     bL.textContent = livN || ''; bL.style.display = livN ? '' : 'none';
   }
   function renderStats() {
-    const paid = ORDERS.reduce((s, o) => s + o.pay.paid, 0);
+    const paid = ORDERS.reduce((s, o) => s + o.pay.paid - (o.pay.offered || 0), 0);
     $('#pz-stats', root).innerHTML =
       `${pvReal() ? 'Service' : 'Service du soir'}, <b>${ORDERS.length}</b> ${plu(ORDERS.length, 'commande')} · <b>${fmtMAD(paid)}</b> ${paid >= 2 ? 'encaissés' : 'encaissé'}`;
   }
@@ -1360,6 +1360,7 @@
             <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(amount)}</span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="pz-pay-opt" data-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}
           ${fresh && deferSpec ? `
           <button class="pz-pay-opt ${deferSpec.usual ? 'is-usual' : ''}" data-defer>
             <span class="ic"><i data-lucide="${deferSpec.icon}"></i></span>
@@ -1369,7 +1370,8 @@
       icons();
       $$('[data-pz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#pz-pay-veil'); });
       $$('[data-m]', el).forEach((b) => {
-        b.onclick = () => (b.dataset.m === 'especes' ? stepCash() : stepCard());
+        b.onclick = () => (b.dataset.m === 'offert' ? KiwiPosSale.offer.ask({ amount, focus: b }).then((ok) => ok && done('offert', 0))
+          : b.dataset.m === 'especes' ? stepCash() : stepCard());
       });
       const defer = $('[data-defer]', el);
       if (defer) defer.onclick = () => {
@@ -1444,25 +1446,26 @@
         order.pay.paid += amount;
         order.pay.method = method;
         order.pay.deferred = null;
+        if (method === 'offert') order.pay.offered = (order.pay.offered || 0) + amount;
         /* Le solde d'un « payer à table / au retrait / à la livraison » rentre
            ICI. remitOrder et deliverOrder passent tous les deux par openPay
            en mode settle, donc cette ligne les couvre tous les deux. */
         postDay(amount, method, `Solde ${order.id} · ${destLabel(order)}`, order.id, saleLines(order, amount));
         closeVeil('#pz-pay-veil');
-        toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         renderStats();
         if (ctx && typeof ctx.onSettled === 'function') ctx.onSettled();
         else refreshOps();
         return;
       }
-      order.pay = { method, paid: amount, deferred: null };
+      order.pay = { method, paid: amount, deferred: null, offered: method === 'offert' ? amount : 0 };
       /* Le différé (data-defer) sort par commitOrder sans passer ici : il ne
          prend rien au comptoir, ce n'est pas une recette tant que le solde
          n'est pas encaissé. */
       postDay(amount, method, `${order.id} · ${destLabel(order)}`, order.id, saleLines(order, amount));
       closeVeil('#pz-pay-veil');
       commitOrder(order);
-      toast(`Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+      toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
     };
 
     step1();

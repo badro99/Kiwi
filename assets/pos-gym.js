@@ -320,7 +320,8 @@
     passesToday: pvReal() ? 0 : 3,   /* séances uniques / pass journée vendus */
   };
 
-  const addRevenue = (bucket, amount) => { rollDay(); state.dayRevenue[bucket] = (state.dayRevenue[bucket] || 0) + amount; };
+  let giftNow = false;
+  const addRevenue = (bucket, amount) => { if (giftNow) return; rollDay(); state.dayRevenue[bucket] = (state.dayRevenue[bucket] || 0) + amount; };
   const revenueTotal = () => Object.values(state.dayRevenue).reduce((s, v) => s + v, 0);
 
   const passagesToday = () => MEMBERS.reduce((s, m) => s + (m.checkedToday ? 1 : 0), 0) + BASE_PASSAGES;
@@ -1704,10 +1705,19 @@
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="gy-pay-opt" data-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
         </div>`;
       icons(); bindX();
       $$('[data-m]', el).forEach((b) => {
         b.onclick = () => {
+          if (b.dataset.m === 'offert') {
+            KiwiPosSale.offer.ask({ amount: cfg.amount, focus: b }).then((ok) => {
+              if (!ok) return;
+              close(); giftNow = true;
+              try { cfg.onPaid('offert', 0); } finally { giftNow = false; }
+            });
+            return;
+          }
           if (b.dataset.m === 'carte' && state.offline) {
             toast('Hors-ligne, le lecteur carte ne répond pas. Encaissez en espèces.');
             return;

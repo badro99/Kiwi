@@ -962,6 +962,7 @@
             <span class="ic"><i data-icon="menu_book"></i></span>
             <span class="l"><b>Mettre à l'ardoise</b><span>Au carnet d'un voisin, réglé plus tard</span></span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="ep-pay-opt" data-ep-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
         </div>`;
       icons();
       $$('[data-ep-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ep-pay-veil'); });
@@ -970,6 +971,7 @@
           const m = b.dataset.epM;
           if (m === 'especes') stepCash();
           else if (m === 'carte') stepCard();
+          else if (m === 'offert') KiwiPosSale.offer.ask({ amount: total, focus: b }).then((ok) => ok && finishSale('offert', 0));
           else { closeVeil('#ep-pay-veil'); openCarnetPick(true); }
         };
       });
@@ -1047,7 +1049,7 @@
       recordSaleToDay(state.ticket, method);
       if (window.KiwiRepeatSale) window.KiwiRepeatSale.epicerieRemember(state.ticket, ITEMS, total);
       closeVeil('#ep-pay-veil');
-      const label = method === 'carte' ? 'carte' : 'espèces';
+      const label = method === 'offert' ? KiwiPosSale.offer.tr('Offert') : method === 'carte' ? 'carte' : 'espèces';
       ticketSeq++;
       freshTicket();
       renderTicket(); renderGrid(); renderBadges(); icons();
@@ -1078,7 +1080,7 @@
   }
   function recordSaleToDay(t, method) {
     const total = ticketTotal(t);
-    if (method === 'carte') day.carte += total; else day.especes += total;
+    if (method === 'carte') day.carte += total; else if (method !== 'offert') day.especes += total;
     day.tickets++;
     /* nourrir le top du jour */
     t.lines.forEach((ln) => {

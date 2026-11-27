@@ -165,6 +165,7 @@
     split: 'split', mixed: 'split', partage: 'split',
     credit: 'credit', ardoise: 'credit', acompte: 'credit',
     room: 'room', folio: 'room', chambre: 'room',
+    offert: 'complimentary', offerte: 'complimentary', offered: 'complimentary', complimentary: 'complimentary',
   };
   function normMethod(m) {
     /* NFD d'abord. Sans ça « chèque » se réduisait à « chque », introuvable
@@ -255,6 +256,8 @@
       }).filter(Boolean);
       if (options.length) o.options = options;
     }
+    var of = +(l.offered ?? l.of);
+    if (of > 0 && of <= 10000000) o.offered = Math.round(of * 100) / 100;
     if (l.foldedCount) o.foldedCount = l.foldedCount;
     return foldedLine(o);
   }
@@ -263,7 +266,7 @@
    * The print queue keeps the original job across a printer outage and dedupes
    * it by sale identity; a dashboard reconciliation must never print again. */
   function printCustomerReceipt(vertical, entry, sale, rows) {
-    if (!entry || !/^(cash|card|wallet|qr|tap|split)$/.test(entry.method)) return;
+    if (!entry || !/^(cash|card|wallet|qr|tap|split|complimentary)$/.test(entry.method)) return;
     var K = window.KiwiReceipt;
     if (!K || typeof K.build !== 'function') return;
     var doc;
@@ -459,14 +462,36 @@
     return String(t.getFullYear() * 10000 + (t.getMonth() + 1) * 100 + t.getDate());
   }
 
+  /* The manager who approved an offered ticket: given by the till, or the
+     approval « Offert » holds (end of this file) from the code just entered. The server takes an
+     actor id of letters, digits, ':' '_' '-' and never a bare 4-digit code. */
+  var offerApi = null;   /* « Offert », en fin de fichier : useOffer({ ask, take, available, tr, sub }) */
+  function useOffer(api) { if (api && typeof api.take === 'function') offerApi = api; }
+  function offeredBy(sale) {
+    var a = sale.approvedBy || null;
+    try { if (!a && offerApi) a = offerApi.take(); } catch (_) {}
+    if (!a) return null;
+    var id = String(a.id || a.name || '').replace(/[^A-Za-z0-9:_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+    if (!id) return null;
+    if (/^\d{4}$/.test(id)) id = 'staff:' + id;
+    return { id: id, name: String(a.name || '').slice(0, 100) };
+  }
+
   /* record(vertical, sale) → durable entry, or null on refusal.
      A full local journal refuses before payment completion and side effects. */
   function record(vertical, sale) {
     if (!sale) return null;
     var total = Math.round((+sale.total || 0) * 100) / 100;
+    /* « Offert » : le ticket entier est donné au client. Un responsable l'a
+       approuvé (« Offert », en fin de fichier), il vaut 0 MAD mais reste une vente : stock,
+       journal, Z et tableau de bord (« Offerte »). `total` est ce qu'il valait. */
+    var gift = normMethod(sale.method) === 'complimentary' ? offeredBy(sale) : null;
+    if (normMethod(sale.method) === 'complimentary' && !(gift && total > 0)) return null;
+    var gross = gift ? total : 0;
+    if (gift) total = 0;
     /* Montant nul ou négatif ⇒ ce n'est pas une recette. Les différés
        ('payer plus tard') et les avoirs passent par là et sont ignorés. */
-    if (!(total > 0)) return null;
+    if (!(total > 0) && !gift) return null;
     if (!isReal()) { ticketDone(total, sale.method); return null; }                 /* la démo reste en mémoire */
 
     var at = sale.at instanceof Date ? sale.at : new Date();
@@ -492,6 +517,11 @@
     if (sale.priceListId) { entry.priceListId = String(sale.priceListId).slice(0, 64); if (sale.priceListApproval) entry.priceListApproval = String(sale.priceListApproval).slice(0, 2048); }
     if (Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.map(cleanLine);
+    }
+    if (gift) {
+      if (!entry.lines || !entry.lines.length) entry.lines = [cleanLine({ name: entry.label, qty: 1, total: gross })];
+      entry.lines.forEach(function (l) { if (!(l.offered > 0) && l.total > 0) l.offered = Math.round(l.total / (l.qty || 1) * 100) / 100; l.total = 0; });
+      entry.offered = { gross: gross, by: gift.id, name: gift.name };
     }
     if (Array.isArray(sale.parts) && sale.parts.length) {
       entry.parts = sale.parts.slice(0, 8).map(function (p) {
@@ -535,6 +565,12 @@
           // Garder le détail local pour le reçu et le stock, borner seulement le miroir.
           lines: foldLines(entry.lines) || null,
         };
+        if (gift) {
+          payload.settlementKind = 'complimentary';
+          payload.grossAmountCents = payload.discountAmountCents = Math.round(gross * 100);
+          payload.discountReason = 'commercial';
+          payload.actorId = gift.id;
+        }
         if (entry.priceListId) { payload.priceListId = entry.priceListId; if (entry.priceListApproval) payload.priceListApproval = entry.priceListApproval; }
         /* Le reçu et le serveur gardent la même ventilation, mais seulement quand
            le serveur peut l'accepter telle quelle : de l'argent reçu (espèces,
@@ -991,7 +1027,8 @@
     feedDay: feedDay, foldLines: foldLines, snapshotLine: snapshotLine,
     record: record, businessDayKey: businessDayKey, today: today, totals: totals, nextSeq: nextSeq,
     hasRef: function (vertical, ref) { try { return !!ref && read(vertical, true).some(function (s) { return s && s.ref === ref; }); } catch (_) { return false; } },
-    isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
+    isReal: isReal, tenant: tenant, deviceTag: deviceTag, useOffer: useOffer,
+    get offer() { return offerApi; }, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
     attachClient: attachClient, attachedClient: attachedClient,
     readyReward: readyReward, armReward: armReward, armedReward: armedReward,
@@ -999,4 +1036,93 @@
     ingest: ingest, sync: sync, activate: activate, deactivate: deactivate,
     replayHeld: replayHeld, heldCount: heldCount,
   };
+})();
+
+/* « Offert » · encaisser 0 MAD dans chaque métier (27 nov. 2026).
+ * Dans ce fichier : kiwi-caisse.html ne prend plus de <script> (file-size ratchet).
+ * ---------------------------------------------------------------------------
+ * Le client le demandait : un cookie, un café, un ticket entier donné au
+ * client, et pourtant compté. Le restaurant, la boutique et la maison avaient
+ * leur chemin ; les quinze métiers qui encaissent par KiwiPosSale.record()
+ * refusaient tout total nul.
+ *
+ * Chaque écran de paiement propose maintenant « Offert ». Le bouton appelle
+ *
+ *   KiwiPosSale.offer.ask({ amount, focus }).then((ok) => ok && done('offert'))
+ *
+ * ask() demande le code d'un responsable (le même contrôle serveur que la
+ * remise du pressing : assets/pressing/manager-approval.js, POST /api/pin/verify,
+ * jamais de code comparé dans le navigateur) et garde son identité deux
+ * minutes. Le métier termine sa vente comme d'habitude avec la méthode
+ * « offert » et son total normal : pos-sale.js la reprend (take()) et
+ * l'enregistre à 0 MAD, chaque ligne gardant ce qu'elle valait. Le stock sort,
+ * le Z compte le ticket, le serveur l'apprend en vente « Offerte ».
+ *
+ * La démo approuve sans code (approveByManager), et n'écrit rien.
+ * =========================================================================== */
+(function () {
+  'use strict';
+
+  var held = null;            /* { actor, at } : l'accord en cours, à usage unique */
+  var TTL = 2 * 60 * 1000;
+
+  /* La langue et le toast de la caisse passent par manager-approval.js, chargé
+     dès le démarrage : pos-sale.js n'ajoute aucune globale (coupling ratchet). */
+  var M = null;
+  function mod() {
+    return M ? Promise.resolve(M) : import('./pressing/manager-approval.js?v=5').then(function (m) { M = m; return m; });
+  }
+  if (typeof setTimeout === 'function') setTimeout(function () { try { mod().catch(function () {}); } catch (_) {} }, 0);
+  function tr(s) { try { return M ? M.tr(s) : s; } catch (_) { return s; } }
+  function toast(msg) { try { if (M && M.say) M.say(msg); } catch (_) {} }
+  function isReal() { try { return !!(window.KiwiPosSale && window.KiwiPosSale.isReal && window.KiwiPosSale.isReal()); } catch (_) { return true; } }
+  function merchant() { try { return (window.KiwiPosSale && window.KiwiPosSale.tenant && window.KiwiPosSale.tenant()) || ''; } catch (_) { return ''; } }
+
+  var REFUSED = {
+    cancelled: 'Offert annulé',
+    refused: 'Code manager refusé',
+    'not-manager': 'Seul un responsable peut offrir',
+    unavailable: 'Vérification du code indisponible, rien n\'a été offert',
+  };
+
+  /* ask({ amount, focus }) → Promise<boolean>. true : un responsable a approuvé,
+     l'accord attend la vente (take). */
+  function ask(opts) {
+    opts = opts || {};
+    held = null;
+    var amount = +opts.amount || 0;
+    if (!(amount > 0)) { toast(tr('Rien à offrir')); return Promise.resolve(false); }
+    var sub = tr('Code responsable pour offrir ce ticket.');
+    return mod().then(function (m) {
+      return m.approveByManager({ merchant: merchant(), isReal: isReal(), tr: tr, focus: opts.focus, sub: sub });
+    }).then(function (res) {
+      if (!res || !res.ok) { toast(tr(REFUSED[res && res.reason] || REFUSED.refused)); return false; }
+      held = { actor: res.actor, at: Date.now() };
+      return true;
+    }, function () { toast(tr(REFUSED.unavailable)); return false; });
+  }
+
+  /* take() → l'identité du responsable, une seule fois, si l'accord a moins de
+     deux minutes. pos-sale.js l'appelle quand une vente « offert » arrive. */
+  function take() {
+    var h = held;
+    held = null;
+    if (!h || Date.now() - h.at > TTL) return null;
+    return h.actor;
+  }
+
+  /* available() → le bouton s'affiche. Le code se tape sur le pavé du kit
+     (Design 2027, la caisse de tous les clients) ; l'ancien habillage n'a pas
+     ce pavé et ne gagne rien (CLAUDE.md §4). La démo n'en a pas besoin. */
+  function available() {
+    if (!isReal()) return true;
+    try { return !!(window.customElements && window.customElements.get('k-pin-pad') && window.customElements.get('k-sheet')); } catch (_) { return false; }
+  }
+
+  /* Les mots du bouton, dans la langue de la caisse (caisse-lang.js). */
+  var SUB = 'Code responsable · 0 MAD, le stock suit';
+  function sub() { return tr(SUB); }
+
+  /* Rangé sous KiwiPosSale.offer : les métiers lisent déjà KiwiPosSale. */
+  if (window.KiwiPosSale && window.KiwiPosSale.useOffer) window.KiwiPosSale.useOffer({ ask: ask, take: take, available: available, tr: tr, sub: sub });
 })();

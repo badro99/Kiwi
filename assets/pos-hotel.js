@@ -510,8 +510,8 @@
           || (entry.ok !== undefined && entry.ok !== true)
           || typeof entry.then === 'function'
           || !Number.isFinite(entry.ts) || entry.ts <= 0
-          || !Number.isFinite(entry.total) || entry.total <= 0
-          || entry.total !== Math.round(total * 100) / 100
+          || !Number.isFinite(entry.total) || (entry.method === 'complimentary' ? entry.total !== 0
+            : (entry.total <= 0 || entry.total !== Math.round(total * 100) / 100))
           || typeof entry.m !== 'string' || !entry.m.trim()
           || typeof entry.method !== 'string' || !entry.method.trim()
           || typeof entry.ref !== 'string' || !entry.ref.trim()) return null;
@@ -1409,6 +1409,7 @@
               <span class="l"><b>Espèces</b><span>Rendu calculé</span></span>
               <span class="amt">${fmtMAD(t.due)}</span>
             </button>
+            ${window.KiwiPosSale?.offer?.available() ? `<button class="ht-pay-opt" data-ht-pm="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}
             ${online ? `
             <button class="ht-pay-opt" data-ht-pm="online">
               <span class="ic"><i data-icon="done_all"></i></span>
@@ -1430,6 +1431,7 @@
           if (m === 'carte') stepCard();
           else if (m === 'especes') stepCash();
           else if (m === 'online') done('online', t.due, 0);
+          else if (m === 'offert') KiwiPosSale.offer.ask({ amount: t.due, focus: b }).then((ok) => ok && done('offert', t.due, 0));
           else done(null, 0, 0);
         };
       });
@@ -1510,6 +1512,7 @@
       if (method === 'carte') st.payments.push({ method, amount, label: 'Solde au départ · carte' });
       if (method === 'especes') st.payments.push({ method, amount, label: 'Solde au départ · espèces' });
       if (method === 'online') st.payments.push({ method, amount, label: `Réglé en ligne · ${online}` });
+      if (method === 'offert') st.payments.push({ method, amount, label: KiwiPosSale.offer.tr('Offert') });
       /* Le folio déjà soldé passe par done(null, 0, 0) : rien n'est pris au
          comptoir ce jour-là, ce n'est donc pas une recette du jour — l'argent
          a été journalisé au moment où il est réellement rentré. */
@@ -1528,6 +1531,7 @@
       if (method === 'especes') toast(`Encaissé, ${fmtMAD(amount)} en espèces${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       else if (method === 'carte') toast(`Encaissé, ${fmtMAD(amount)} en carte`);
       else if (method === 'online') toast(`Solde marqué réglé via ${online}, versement OTA`);
+      else if (method === 'offert') toast(KiwiPosSale.offer.tr('Ticket offert'));
       else toast('Départ confirmé, folio déjà soldé');
       if (closed.caution === 'carte') setTimeout(() => toast(`Libérez l’empreinte ${fmtMAD(closed.cautionAmount)} sur le lecteur puis conservez son justificatif`), 650);
       else if (closed.caution === 'especes') setTimeout(() => toast(`Caution espèces ${fmtMAD(closed.cautionAmount)} marquée rendue`), 650);

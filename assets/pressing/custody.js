@@ -3,10 +3,10 @@
  * rack allocation, numbering, persistence and existing centime calculations.
  * Browser reads: KiwiCaisseLang, KiwiCaissePairing, KiwiCaisseTheme, KiwiClients, KiwiCloudDoc, KiwiConfig, KiwiEnv, KiwiEscPos, KiwiHardware, KiwiPhone, KiwiPlatform, KiwiPosDispatch, KiwiPosSale, KiwiPressing, KiwiPressingCatalog, KiwiPressingGarmentIcons, KiwiPressingOps, KiwiPrinter, KiwiReceipt, KiwiVerticalState, KiwiZoneLaw, __kiwiPinReset, addEventListener, lucide.
  * UI imports below supply factories only; state never enters a window global. */
-import { create as createDeposit } from './deposit.js?v=54';
-import { create as createWorkshop } from './workshop.js?v=54';
-import { create as createPickup } from './pickup.js?v=54';
-import { create as createRack } from './rack.js?v=54';
+import { create as createDeposit } from './deposit.js?v=57';
+import { create as createWorkshop } from './workshop.js?v=57';
+import { create as createPickup } from './pickup.js?v=57';
+import { create as createRack } from './rack.js?v=57';
 import '../merchant-policies.js?v=4';
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · PRESSING MODE — the laundry counter app inside kiwi-caisse.html
@@ -1172,7 +1172,7 @@ import '../merchant-policies.js?v=4';
     CUSTOMERS.forEach((c) => { if (c && !mirroredClients.has(c.id)) mirrorClient(c); });
   }
   function recordClientPurchase(order, amount, method, ref) {
-    if (!(amount > 0) || !pvReal() || !window.KiwiClients || !KiwiClients.recordPurchase) return;
+    if (!(amount > 0) || method === 'offert' || !pvReal() || !window.KiwiClients || !KiwiClients.recordPurchase) return;
     try {
       const c = custOf(order);
       const rec = c && c.phone ? mirrorClient(c) : null;
@@ -1764,7 +1764,8 @@ import '../merchant-policies.js?v=4';
           <button class="px-pay-opt" data-px-method="carte">
             <span class="ic"><i data-icon="credit_card"></i></span>
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire</span></span>
-          </button>` : ''}
+          </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="px-pay-opt" data-px-offer><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}` : ''}
         </div>`;
       icons();
       $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
@@ -1788,6 +1789,13 @@ import '../merchant-policies.js?v=4';
       $$('[data-px-method]', el).forEach((b) => {
         b.onclick = () => (b.dataset.pxMethod === 'especes' ? stepCash(amountBase, 'settle') : stepCard(amountBase, 'settle'));
       });
+      bindOffer(amountBase, 'settle');
+    };
+    /* « Offert » : un responsable confirme avec son code, le bon est soldé à
+       0 MAD et la vente part au journal comme offerte (pos-sale.js). */
+    const bindOffer = (amount, mode) => {
+      const b = $('[data-px-offer]', el);
+      if (b) b.onclick = () => KiwiPosSale.offer.ask({ amount, focus: b }).then((ok) => ok && done(amount, 'offert', mode, 0));
     };
 
     const stepAcompte = () => {
@@ -1857,12 +1865,14 @@ import '../merchant-policies.js?v=4';
             <span class="ic"><i data-icon="credit_card"></i></span>
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
+          ${mode === 'now' ? `${window.KiwiPosSale?.offer?.available() ? `<button class="px-pay-opt" data-px-offer><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}` : ''}
         </div>`;
       icons();
       $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-m]', el).forEach((b) => {
         b.onclick = () => (b.dataset.m === 'especes' ? stepCash(amount, mode) : stepCard(amount, mode));
       });
+      bindOffer(amount, mode);
     };
 
     const stepCash = (amount, mode) => {
@@ -1970,7 +1980,7 @@ import '../merchant-policies.js?v=4';
         recordClientPurchase(order, amount, method, settleRef);
         syncOwnerOps();
         closeVeil('#px-pay-veil');
-        toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (ctx && typeof ctx.onSettled === 'function') ctx.onSettled();
         return;
       }
@@ -1978,7 +1988,8 @@ import '../merchant-policies.js?v=4';
       pressingOps?.save?.('payment-recorded');
       finishFresh(mode === 'acompte'
         ? `Acompte ${fmtMAD(amount)} encaissé, solde ${fmtMAD(total - amount)} au retrait`
-        : `Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        : method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert')
+          : `Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
     };
 
     const finishFresh = (msg) => {

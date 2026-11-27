@@ -255,7 +255,7 @@
     const r = recette[spotId] || recette.marina;
     r.orders++;
     if (method === 'carte') r.carte += amount;
-    else r.especes += amount;
+    else if (method !== 'offert') r.especes += amount;
     postDay(amount, method, `Camion · ${SPOT[spotId] ? SPOT[spotId].label : 'Emplacement'}`, ref, orderLines(lines || []));
   }
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
@@ -668,7 +668,7 @@
       method,
       onPaid: (m, rendu) => {
         const o = createOrder(m);
-        toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(m === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         toast(o.anon ? `Commande n° ${o.n}, en prépa` : `« ${o.name} » n° ${o.n}, en prépa`);
       },
     });
@@ -745,10 +745,12 @@
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>Carte</b><span>Lecteur partenaire, paiement sur votre terminal</span></span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="ft-pay-opt" data-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
         </div>`;
       icons(); bindX();
       $$('[data-m]', el).forEach((b) => {
         b.onclick = () => {
+          if (b.dataset.m === 'offert') { KiwiPosSale.offer.ask({ amount: cfg.amount, focus: b }).then((ok) => { if (ok) { close(); cfg.onPaid('offert', 0); } }); return; }
           if (b.dataset.m === 'carte' && state.offline) {
             toast('Hors-ligne, le lecteur carte ne répond pas. Encaissez en espèces.');
             return;

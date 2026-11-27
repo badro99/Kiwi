@@ -1127,11 +1127,13 @@
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(total)}</span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="lb-pay-opt" data-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}
         </div>`;
       icons();
       $$('[data-lb-close]', el).forEach((b) => { b.onclick = () => closeVeil('#lb-pay-veil'); });
       $$('[data-m]', el).forEach((b) => {
-        b.onclick = () => (b.dataset.m === 'especes' ? stepCash() : stepCard());
+        b.onclick = () => (b.dataset.m === 'offert' ? KiwiPosSale.offer.ask({ amount: total, focus: b }).then((ok) => ok && done('offert', 0))
+          : b.dataset.m === 'especes' ? stepCash() : stepCard());
       });
     };
 
@@ -1200,13 +1202,13 @@
       const rewardUsed = !!cu && cartRemise(c) > 0;
       const mark = cu ? LOY.begin(cu) : null;
       postDay(total, method, cartLabel(c), c.num, saleLines(c, total));
-      const earnMsg = cu ? LOY.finish(cu, mark, { total, rewardUsed, ref: c.num, items: c.lines.map((l) => ({ name: ITEM[l.key].title, qty: l.qty })) }) : '';
+      const earnMsg = cu ? LOY.finish(cu, mark, { total: method === 'offert' ? 0 : total, rewardUsed, ref: c.num, items: c.lines.map((l) => ({ name: ITEM[l.key].title, qty: l.qty })) }) : '';
       if (pvReal() && WS()) c.lines.forEach((l) => { try { WS().catalog.sell(l.key, l.qty, c.num); } catch (_) {} });
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;
       freshCart();
       renderPanier(); renderBadges(); icons();
-      toast(`Encaissé, ${fmtMAD(total)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${earnMsg}`);
+      toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Encaissé, ${fmtMAD(total)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${earnMsg}`);
     };
 
     step1();

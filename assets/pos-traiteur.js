@@ -174,7 +174,7 @@
     livre:    { label: 'Livré' },
   };
   const STATUS_ORDER = ['devis', 'confirme', 'acompte', 'livre'];
-  const METHODS = { especes: 'espèces', carte: 'carte', virement: 'virement' };
+  const METHODS = { especes: 'espèces', carte: 'carte', virement: 'virement', offert: 'offert' };
 
   /* ───────────────────────── totals & échéancier ───────────────────────── */
   /* un plat est au menu sous son id, ou sous une variante d'options « id~choix » */
@@ -1640,6 +1640,7 @@
             <span class="ic"><i data-lucide="wallet"></i></span>
             <span class="l"><b>Virement reçu</b><span>Le classique des gros montants, référence notée pour la compta</span></span>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="tr-pay-opt" data-tr-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
         </div>`;
       icons();
       $$('[data-tr-close]', el).forEach((b) => { b.onclick = () => closeVeil('#tr-veil-pay'); });
@@ -1648,6 +1649,7 @@
           const m = b.dataset.trM;
           if (m === 'especes') stepCash();
           else if (m === 'carte') stepCard();
+          else if (m === 'offert') KiwiPosSale.offer.ask({ amount, focus: b }).then((ok) => ok && done('offert', 0, ''));
           else stepVirement();
         };
       });

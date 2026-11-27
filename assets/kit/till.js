@@ -423,8 +423,10 @@
       '.nt{display:flex;flex-direction:column;gap:4px}textarea{border:0;border-radius:var(--k-r-1);background-color:var(--k-surface-2);color:var(--k-ink-1);padding:10px 12px;resize:vertical}'
   });
 
-  /* ── <k-pay form state> .pay {bill, due, method, tipPct, received, noTip} ──
+  /* ── <k-pay form state> .pay {bill, due, method, tipPct, received, noTip, offer} ──
      noTip: no tip row, for a till whose sale record carries no tip.
+     offer: a fourth method, « Offert » (a manager's code, 0 MAD, the stock still
+     counted), for a till that records it (pos-autre.js, pos-sale.js).
      form: 'caps' (iPad pane) | 'flush' (phone sheet). */
   var TIPS = [0, 5, 10, 15];
   var KPay = K.make({
@@ -531,10 +533,10 @@
       var lay = this.str('layout', 'regular'), cmp = lay === 'compact' || lay === 'compact-short';
       var tip = this.tip(), owed = this.owed();
       var tipVal = p.tipPct ? t('pay.tip.pct', { pct: pctText(p.tipPct), amount: money(tip) }) : t('pay.tip.none');
-      var methods = ['cash', 'card', 'other'].map(function (m) {
+      var methods = ['cash', 'card', 'other'].concat(p.offer ? ['offer'] : []).map(function (m) {
         var on = p.method === m;
         return '<button type="button" class="mt k-body" role="radio" aria-checked="' + on + '" tabindex="' + (on || (!p.method && m === 'cash') ? 0 : -1) + '" data-method="' + m + '">' +
-          icon(m === 'cash' ? 'payments' : m === 'card' ? 'credit_card' : 'account_balance_wallet', 24) + '<span>' + th('pay.' + m) + '</span></button>';
+          icon(m === 'cash' ? 'payments' : m === 'card' ? 'credit_card' : m === 'offer' ? 'redeem' : 'account_balance_wallet', 24) + '<span>' + th('pay.' + m) + '</span></button>';
       }).join('');
       var lower = '';
       if (this.__tipEntry || p.method === 'cash') {
@@ -544,8 +546,8 @@
           '<p class="k-heading k-num chg" aria-live="polite"></p>' +
           (this.__tipEntry ? C.button.render({ variant: 'primary', size: 'L', full: true, id: 'td', attrs: ' data-w="tip-done"', label: t('action.done') }) : '<div class="pri"></div>') + '</div>';
       } else if (p.method) {
-        lower = '<div class="card"><p class="k-body">' + th('pay.card.body', { amount: money(owed) }) + '</p>' +
-          C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cf', attrs: ' data-w="confirm"', label: t(p.method === 'card' ? 'pay.card.confirm' : 'pay.cash.confirm'),
+        lower = '<div class="card"><p class="k-body">' + (p.method === 'offer' ? th('pay.offer.body') : th('pay.card.body', { amount: money(owed) })) + '</p>' +
+          C.button.render({ variant: 'primary', size: 'L', full: true, id: 'cf', attrs: ' data-w="confirm"', label: t(p.method === 'card' ? 'pay.card.confirm' : p.method === 'offer' ? 'pay.offer.confirm' : 'pay.cash.confirm'),
             error: st === 'not-recorded' ? t('pay.not_recorded') : '' }) +
           C.button.render({ label: t('action.back'), full: true, id: 'bk', attrs: ' data-w="back"' }) + '</div>';
       } else if (cmp) {

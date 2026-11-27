@@ -124,7 +124,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=39" defer></script>
+  <script src="assets/pos-sale.js?v=44" defer></script>
   <!-- Garment workflow snapshot and garment product art, shared with the
        pressing owner dashboard (both in pressing-ops.js). -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=6" />
@@ -196,9 +196,9 @@
         js("assets/kit/strings/kit.fr.js?v=2") +
         js("assets/kit/strings/kit.en.js?v=2") +
         js("assets/kit/strings/kit.ar.js?v=2") +
-        js("assets/kit/strings/till.fr.js?v=19") +
-        js("assets/kit/strings/till.en.js?v=19") +
-        js("assets/kit/strings/till.ar.js?v=19") +
+        js("assets/kit/strings/till.fr.js?v=21") +
+        js("assets/kit/strings/till.en.js?v=21") +
+        js("assets/kit/strings/till.ar.js?v=21") +
         js("assets/kit/strings/kds.fr.js?v=3") +
         js("assets/kit/strings/kds.en.js?v=3") +
         js("assets/kit/strings/kds.ar.js?v=3") +
@@ -218,7 +218,7 @@
         js("assets/kit/elements.js?v=4") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=10") +
-        js("assets/kit/till.js?v=46") +
+        js("assets/kit/till.js?v=47") +
         js("assets/kit/till-frame.js?v=16") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=6") +
@@ -231,13 +231,13 @@
   <script src="assets/retail-scan.js?v=14" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=192" defer></script>
+  <script src="assets/caisse-lang.js?v=193" defer></script>
   <script src="assets/menu-i18n.js?v=10" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=564" defer></script>
+  <script src="assets/pos-dispatch.js?v=567" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>

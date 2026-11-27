@@ -1359,7 +1359,7 @@
       freshTicket();
       closeVeil('#ph-pay-veil');
       queueIfOffline(`Vente ${wasNum}`);
-      toast(`${wasNum} encaissé, ${fmtMAD(due)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+      toast(method === 'offert' ? `${wasNum} · ${KiwiPosSale.offer.tr('Ticket offert')}` : `${wasNum} encaissé, ${fmtMAD(due)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       renderTicket(); renderBadges(); renderGrid(); icons();
     };
 
@@ -1394,11 +1394,13 @@
             <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire, paiement sur votre terminal</span></span>
             <span class="amt">${fmtMAD(due)}</span>
           </button>
+          ${!split.mut && window.KiwiPosSale?.offer?.available() ? `<button class="ph-pay-opt" data-ph-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span><span class="amt">0 MAD</span></button>` : ''}
         </div>`;
       icons();
       $$('[data-ph-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ph-pay-veil'); });
       $$('[data-ph-m]', el).forEach((b) => {
-        b.onclick = () => (b.dataset.phM === 'especes' ? stepCash() : stepCard());
+        b.onclick = () => (b.dataset.phM === 'offert' ? KiwiPosSale.offer.ask({ amount: due, focus: b }).then((ok) => ok && finalize('offert', 0))
+          : b.dataset.phM === 'especes' ? stepCash() : stepCard());
       });
     };
 

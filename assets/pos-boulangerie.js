@@ -629,6 +629,7 @@
           <button class="bl-paybtn card" id="bl-pay-card" ${state.ticket.length ? '' : 'disabled'}>
             <span class="row"><i data-lucide="credit-card"></i>Carte</span><small>lecteur partenaire</small>
           </button>
+          ${window.KiwiPosSale?.offer?.available() ? `<button class="bl-paybtn card" id="bl-pay-offer" ${state.ticket.length ? '' : 'disabled'}><span class="row"><i data-icon="redeem"></i>${KiwiPosSale.offer.tr('Offert')}</span><small>${KiwiPosSale.offer.tr('code responsable')}</small></button>` : ''}
         </div>
       </div>`;
     const reset = $('#bl-tk-reset', el);
@@ -651,6 +652,8 @@
         onPaid: () => finalizeSale('carte', 0),
       });
     };
+    const offer = $('#bl-pay-offer', el);
+    if (offer) offer.onclick = () => state.ticket.length && KiwiPosSale.offer.ask({ amount: tkTotal(), focus: offer }).then((ok) => ok && finalizeSale('offert', 0));
     $('#bl-tk-lines', el).onclick = (e) => {
       const minus = e.target.closest('[data-bl-minus]');
       const plus = e.target.closest('[data-bl-plus]');
@@ -707,14 +710,14 @@
       if (p.soldDay !== dayKey()) { if (p.soldDay) p.sold = 0; p.soldDay = dayKey(); }
       p.sold += l.qty;
     });
-    state.day[method === 'carte' ? 'carte' : 'especes'] += total;
+    if (method !== 'offert') state.day[method === 'carte' ? 'carte' : 'especes'] += total;
     state.day.tickets++;
     postDay(total, method, tkLabel(), num, lines);
     state.seq++;
     state.ticket = [];
     closeVeil('#bl-pay-veil');
     queueIfOffline(`Vente ${num}`);
-    toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+    toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
     refreshOps();
   }
 
@@ -809,11 +812,13 @@
           <span class="ic"><i data-lucide="credit-card"></i></span>
           <span class="l"><b>Carte</b><span>Montant envoyé au lecteur partenaire</span></span>
         </button>
+        ${window.KiwiPosSale?.offer?.available() ? `<button class="bl-pay-opt" data-bl-m="offert"><span class="ic"><i data-icon="redeem"></i></span><span class="l"><b>${KiwiPosSale.offer.tr('Offert')}</b><span>${KiwiPosSale.offer.sub()}</span></span></button>` : ''}
       </div>`;
     icons();
     $$('[data-bl-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bl-pay-veil'); });
     $$('[data-bl-m]', el).forEach((b) => {
       b.onclick = () => {
+        if (b.dataset.blM === 'offert') { KiwiPosSale.offer.ask({ amount: o.amount, focus: b }).then((ok) => ok && o.onPaid('offert', 0)); return; }
         const args = { title: `${b.dataset.blM === 'carte' ? 'Carte' : 'Espèces'} · ${fmtMAD(o.amount)}`, sub: o.sub, amount: o.amount, onPaid: o.onPaid };
         b.dataset.blM === 'carte' ? payCard(args) : payCash(args);
       };
@@ -1095,13 +1100,12 @@
       amount: due,
       onPaid: (method, rendu) => {
         c.paid += due;
-        state.day[method === 'carte' ? 'carte' : 'especes'] += due;
-        state.day.gateaux += due;
+        if (method !== 'offert') { state.day[method === 'carte' ? 'carte' : 'especes'] += due; state.day.gateaux += due; }
         postDay(due, method, `Solde gâteau · ${c.name}`, `${c.id}-S`,
           [{ itemId: 'gateau-commande', name: 'Gâteau sur commande', kind: 'service', unit: 'order', qty: 1, total: due }]);
         closeVeil('#bl-pay-veil');
         queueIfOffline(`Solde ${c.id}`);
-        toast(`Solde encaissé, ${fmtMAD(due)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(method === 'offert' ? KiwiPosSale.offer.tr('Ticket offert') : `Solde encaissé, ${fmtMAD(due)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         refreshOps();
         if (typeof after === 'function') after();
       },

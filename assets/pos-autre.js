@@ -95,10 +95,11 @@
   function kitPay(){
     const amount=total();
     if(!(amount>0))return;
-    window.KiwiTillFrame.openPay({bill:'Ticket',due:amount,method:null,tipPct:0,noTip:true});
+    window.KiwiTillFrame.openPay({bill:'Ticket',due:amount,method:null,tipPct:0,noTip:true,offer:!!window.KiwiPosSale?.offer?.available()});
   }
   function kitConfirm(kind,value){
     const F=window.KiwiTillFrame,pay=F.pay(),method=KIT_METHOD[kind],amount=total();
+    if(kind==='offer'&&amount>0){window.KiwiPosSale.offer.ask({amount}).then(ok=>{if(!ok)return;checkout('offert');pay.paid();setTimeout(()=>{F.closePay();render();},1200);});return;}
     if(!method||!(amount>0))return;
     if(kind==='cash'&&roundMoney(+(value&&value.received)||0)<amount)return;
     const change=kind==='cash'?roundMoney((+value.received||0)-amount):0;
@@ -181,7 +182,7 @@
   function checkout(method){const amount=total();if(!(amount>0))return;const ref=window.KiwiPosSale?.stamp?.('A-'+window.KiwiPosSale.nextSeq('autre',1))||('A-'+Date.now());window.KiwiPosSale?.record?.('autre',{total:amount,method,label:cart[0]?.name+(cart.length>1?` +${cart.length-1}`:''),ref,lines:cart.map(x=>({name:x.name,qty:1,total:x.price,itemId:x.productId||undefined}))});
     /* le stock suit la vente, article par article, avec le numéro de ticket */
     cart.forEach(x=>{if(x.productId){try{window.KiwiPosWorkspaces?.catalog?.sell?.(x.productId,1,ref);}catch(_){}}});
-    cart=[];window.KiwiCaisseToast?.('Vente encaissée · '+fmt(amount)+' MAD');render();}
+    cart=[];window.KiwiCaisseToast?.(method==='offert'?window.KiwiPosSale.offer.tr('Ticket offert'):'Vente encaissée · '+fmt(amount)+' MAD');render();}
   function addModal() { catalogDashboardOnly(); return; }
   function renderDay(host){const t=window.KiwiPosSale?.totals?.('autre')||{total:0,cash:0,card:0,count:0};host.innerHTML=`<header class="ot-head"><div><h1>Journée</h1><p>Uniquement les ventes réellement encaissées sur ce terminal.</p></div></header><section class="ot-day"><div class="ot-day-grid"><div class="ot-stat"><span>Ventes</span><strong>${t.count}</strong></div><div class="ot-stat"><span>Recette</span><strong>${fmt(t.total)} MAD</strong></div><div class="ot-stat"><span>Espèces / carte</span><strong>${fmt(t.cash)} / ${fmt(t.card)}</strong></div></div></section>`;}
   /* Le cadre est partagé : au retour sur ce métier, il revient dans sa racine. */
