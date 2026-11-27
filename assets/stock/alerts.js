@@ -240,7 +240,9 @@ window.KiwiStockInternal.install('alerts', (S) => {
       if (!recipes.length) return null; // pas de fiches techniques : rien à affirmer
       const names = [];
       recipes.forEach((r) => {
-        if ((r.ingredients || []).some((line) => { const s = R.stockFor(line); return s && String(s.id) === String(it.id); })) names.push(r.itemName);
+        if (r.kind === 'prep') return;  // une préparation n'est pas un plat ; ses plats sont trouvés à travers elle
+        const uses = R.usesStock ? R.usesStock(r, it.id) : (r.ingredients || []).some((line) => { const s = R.stockFor(line); return s && String(s.id) === String(it.id); });
+        if (uses) names.push(r.itemName);
       });
       return [...new Set(names.filter(Boolean))];
     } catch (_) { return null; }

@@ -2551,7 +2551,7 @@ section('Whole-project regressions');
     'trades-ledger-browser-test.mjs',
     'trades-ledger-retail-browser-test.mjs',
     'trades-ledger-care-browser-test.mjs',
-    'restaurant-recipes-test.js', 'merge-tombstones-test.mjs',
+    'restaurant-recipes-test.js', 'merge-tombstones-test.mjs', 'recipe-prep-test.js',
     'recipe-business-day-test.mjs',
     'wave-p-limits-test.mjs',
     'tickets-draft-test.mjs',

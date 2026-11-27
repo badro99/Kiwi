@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const parts = window.KiwiMenuWorkspaceParts ||= {};
-  parts.recipes = function ({$, $$, esc, ui, venue, cash, cat, t, modal, recipeStyle, toast, S, render, pct1}) {
+  parts.recipes = function ({$, $$, esc, ui, venue, cash, cat, t, modal, recipeStyle, toast, S, render, pct1, confirm}) {
   /* menu-part:recipes */
   /* Unités courtes dans la liste (« g », « kg », « Botte ») : le libellé long
      « Gramme (g) » était tronqué en « Gramme (... » dans une cellule étroite. */
@@ -17,7 +17,7 @@
   const priceOf=(row)=>{const el=$('[data-ing-price]',row);if(!el)return null;const v=String(el.value).trim().replace(',','.');if(v==='')return null;const n=+v;return Number.isFinite(n)&&n>=0?n:null;};
   function recipeIngredientRow(line,idx){
     const name=line?.name||'',hasPrice=line?.price!=null,manual=manualOn()||hasPrice;
-    return `<div class="rmw-rx-row" data-recipe-ing data-stock-id="${esc(line?.stockId||'')}">` +
+    return `<div class="rmw-rx-row" data-recipe-ing data-stock-id="${esc(line?.stockId||'')}" data-recipe-id="${esc(line?.recipeId||'')}">` +
       `<div class="rmw-rx-name">` +
       `<input class="rmw-rx-in" list="rmw-stock-ingredients" data-ing-name value="${esc(name)}" placeholder="${esc(ui('rxIngPh'))}" aria-label="${esc(ui('rxIngredient'))}"/>` +
       `<small data-ing-meta>` +
@@ -42,6 +42,16 @@
     if(!name)return{empty:true};
     const price=priceOf(row);
     if(price!=null)return{name,state:'ok',cost:price,manual:true,meta:ui('rxManualMeta')};
+    if(row.dataset.recipeId){
+      /* Une préparation : son coût par unité rendue, jamais inventé. */
+      const pi=api.ingredientInfo?.({recipeId:row.dataset.recipeId,name,qty,unit},venue())||{};
+      if(!pi.prep)return{name,state:'unlinked',meta:ui('prepMissing')};
+      if(pi.cost==null)return{name,state:'noprice',meta:ui('prepIncomplete')};
+      const pm=ui('prepLine',{price:cash(pi.cost),unit:pi.stockUnit});
+      if(!(qty>0))return{name,state:'noqty',meta:pm};
+      if(pi.quantityInStockUnit==null)return{name,state:'unit',meta:ui('rxUnitMismatch',{unit:pi.stockUnit})};
+      return{name,state:'ok',cost:pi.lineCost,meta:pm};
+    }
     const hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());
     let info=null;
     try{
@@ -100,7 +110,19 @@
   /* Le panneau de droite : ce que la recette coûte et rapporte, par portion,
      sur la même base que l'Analyse du menu (KiwiCost.marginOf : hors TVA
      quand les prix l'incluent). Inconnu : « · », jamais un zéro. */
+  function prepSummary(draft,api,lines){
+    const used=(lines||[]).filter(l=>!l.empty),todo=used.filter(l=>l.state!=='ok'),done=used.length&&!todo.length;
+    const total=used.reduce((n,l)=>n+(l.cost>0?l.cost:0),0),yq=+draft.portions||0,u=draft.yieldUnit||'';
+    const per=done&&yq>0?total/yq:null,n=(api.all?.(venue())||[]).filter(r=>r.ingredients.some(l=>l.recipeId===draft.itemId)).length;
+    return `<div class="rmw-rx-status ${done?'ok':'todo'}">` +
+      `<b>${esc(ui(done?'rxStatusOk':'rxStatusTodo'))}</b>${todo.length?`<span>${esc(ui('rxMissing',{n:todo.length,names:todo.slice(0,4).map(l=>l.name).join(', ')}))}</span>`:''}</div>` +
+      `<div class="rmw-rx-hero${per==null?' partial':''}"><span>${esc(ui('prepCostPer',{unit:u}))}</span><b>${per!=null?cash(per):'·'}</b></div>` +
+      `<dl class="rmw-rx-facts"><div><dt>${esc(ui('prepBatch'))}</dt><dd>${done?cash(total):'·'}</dd></div>` +
+      `<div><dt>${esc(ui('prepYield'))}</dt><dd>${yq>0?esc(ui('prepYieldOf',{qty:String(+(+yq).toFixed(3)),unit:u})):'·'}</dd></div>` +
+      `<div><dt>${esc(ui('prepUsedLabel'))}</dt><dd>${n}</dd></div></dl>`;
+  }
   function recipeSummary(x,draft,api,hide,lines){
+    if(x.kind==='prep')return prepSummary(draft,api,lines);
     const m=api.metrics(x,draft,venue()),price=+x.price||0,C=window.KiwiCost;
     const cost=m.costComplete?m.theoreticalCost:null,mg=cost!=null&&C?.marginOf?C.marginOf(price,cost):null;
     let vatIn=false;
@@ -155,23 +177,25 @@
   function recipeRowLine(row,inv){
     const units=window.KiwiRestaurantUnits,price=priceOf(row);
     if(price!=null)return{stockId:'',name:$('[data-ing-name]',row).value.trim(),qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value,'')||'',price};
+    if(row.dataset.recipeId)return{recipeId:row.dataset.recipeId,stockId:'',name:$('[data-ing-name]',row).value.trim(),qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value,'')||''};
     const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());
     return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};
   }
   const lacksUnit=line=>!!(line.name||line.stockId)&&!line.unit&&line.price==null;
   function recipeDraft(root,x,api){
-    const inv=api.inventory(venue());
-    return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>recipeRowLine(row,inv)).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};
+    const inv=api.inventory(venue()),prep=x.kind==='prep';
+    return{itemId:x.id,itemName:prep?($('[data-prep-name]',root)?.value||'').trim():x.name,...(prep?{kind:'prep',yieldUnit:window.KiwiRestaurantUnits?.normalize?.($('[data-yield-unit]',root)?.value,'')||'kg'}:{}),portions:prep?Math.max(0,+$('[data-portions]',root)?.value||0):Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>recipeRowLine(row,inv)).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};
   }
   function openRecipe(x,seed,from){
     const api=window.KiwiRestaurantRecipes,had=!!api?.get(x.id,x.name,venue()),r=seed||api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];
-    const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}];
+    const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}],prepMode=x.kind==='prep';
+    const preps=(api?.preps?.(venue())||[]).filter(p=>p.itemId!==x.id);
     recipeStyle();
     const catName=cat(x.catId)?.name?t(cat(x.catId).name):'';
-    const m=modal({title:ui('rxTitle',{name:t(x.name)}),desc:esc(ui('rxDesc',{cat:catName,price:cash(x.price)}).replace(/^ · /,'')),width:1080,body:`<div class="rmw-rx">${seed?`<div class="rmw-rx-draft" data-recipe-draft>` +
+    const m=modal({title:ui('rxTitle',{name:t(x.name)}),desc:esc(ui('rxDesc',{cat:catName,price:cash(x.price)}).replace(/^ · /,'')),...(prepMode&&{title:x.name?ui('prepTitleOne',{name:x.name}):ui('prepNew'),desc:esc(ui('prepSub'))}),width:1080,body:`<div class="rmw-rx">${seed?`<div class="rmw-rx-draft" data-recipe-draft>` +
         `<b>${esc(ui('recipeDraftTitle'))}</b>` +
         `<span>${esc(ui('recipeDraftFrom',{name:from?.sheet||''}))}${had?' '+esc(ui('recipeDraftExisting')):''}</span>` +
-        `</div>`:''}<datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}</datalist>` +
+        `</div>`:''}<datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}${prepOptions(preps)}</datalist>` +
         `<div class="rmw-rx-main">` +
         `<section class="rmw-rx-sec">` +
         `<header class="rmw-rx-sec-head">` +
@@ -180,10 +204,11 @@
         `<p>${esc(ui('rxCompositionSub'))}</p>` +
         `</div>` +
         `<div class="rmw-rx-meta">` +
+        (prepMode?`<label><span>${esc(ui('prepYield'))}</span><span class="rmw-rx-yield"><input class="rmw-rx-in" type="number" inputmode="decimal" min="0" step="0.001" data-portions value="${r.portions||1}"/><select class="rmw-rx-unit" data-yield-unit data-kiwi-native-select aria-label="${esc(ui('prepYield'))}">${recipeUnitOptions(r.yieldUnit||'kg')}</select></span></label>`:
         `<label>` +
         `<span>${esc(ui('rxPortions'))}</span>` +
         `<input class="rmw-rx-in" type="number" inputmode="numeric" min="1" step="1" data-portions value="${r.portions||1}"/>` +
-        `</label>` +
+        `</label>`) +
         `<label>` +
         `<span>${esc(ui('rxPrep'))}</span>` +
         `<span class="rmw-rx-suffix">` +
@@ -193,6 +218,7 @@
         `</label>` +
         `</div>` +
         `</header>` +
+        (prepMode?`<label class="rmw-prep-namefield"><span>${esc(ui('prepName'))}</span><input class="rmw-rx-in" data-prep-name value="${esc(r.itemName||x.name||'')}" placeholder="${esc(ui('prepNamePh'))}" autocomplete="off"/></label>`:'') +
         `<div class="rmw-rx-cols" aria-hidden="true">` +
         `<span>${esc(ui('rxIngredient'))}</span>` +
         `<span>${esc(ui('rxQty'))}</span>` +
@@ -227,7 +253,7 @@
         `</div>` +
         `<aside class="rmw-rx-side" data-recipe-summary>` +
         `</aside>` +
-        `</div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button>` +
+        `</div>`,foot:`${prepMode&&had?`<button class="kb ghost rmw-prep-del" data-prep-delete aria-label="${esc(ui('prepDelete'))}"><i data-icon="delete" aria-hidden="true"></i><span>${esc(ui('prepDelete'))}</span></button>`:''}<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button>` +
           `<button data-activation=write class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});
     m.el.classList.add('rmw-recipe-modal');
     let hideDraft=!!x.hideNutrition;
@@ -255,7 +281,7 @@
         hideDraft=!!e.target.checked;
         return;
       }
-      if(e.target.matches('[data-ing-unit]'))refresh();
+      if(e.target.matches('[data-ing-unit],[data-yield-unit]'))refresh();
     });
     m.el.addEventListener('input',e=>{
       if(e.target.matches('[data-hide-nutrition]'))return;
@@ -264,6 +290,11 @@
         const hit=inv.find(s=>String(s.name).trim().toLowerCase()===e.target.value.trim().toLowerCase());
         row.dataset.stockId=hit?.id||'';
         if(hit&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=window.KiwiRestaurantUnits?.normalize?.(hit.unit)||hit.unit||'unité';
+        /* Pas un article du stock ? Peut-être une préparation (« Poulet épicé ») :
+           la ligne la désigne, en grammes quand elle rend des kilos. */
+        const pr=hit?null:preps.find(p=>p.itemName.trim().toLowerCase()===e.target.value.trim().toLowerCase());
+        row.dataset.recipeId=pr?.itemId||'';
+        if(pr&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=({kg:'g',L:'ml'})[pr.yieldUnit]||pr.yieldUnit;
       }
       refresh();
     });
@@ -286,6 +317,14 @@
     $('[data-cancel]',m.el).onclick=m.close;
     $('[data-save]',m.el).onclick=()=>{
       const draft=recipeDraft(m.el,x,api);
+      if(prepMode&&!draft.itemName){
+        toast(ui('prepNeedNameT'),ui('prepNeedName'),'warn');
+        return;
+      }
+      if(prepMode&&!(draft.portions>0)){
+        toast(ui('prepNeedYieldT'),ui('prepNeedYield'),'warn');
+        return;
+      }
       const refusal=!draft.ingredients.some(line=>line.qty>0||line.price!=null)?['rxToastQtyT','rxToastQty']
         :draft.ingredients.some(lacksUnit)?['rxToastUnitT','rxToastUnit']
         :api.tooLong?.(draft)?['rxToastCapT','rxToastCap']:null;
@@ -305,14 +344,63 @@
         }
         return;
       }
+      if(prepMode){
+        api.save(x.id,draft,venue());
+        m.close();
+        render();
+        toast(ui('prepSavedT'),ui('prepSaved'));
+        return;
+      }
       S().updateItem(x.id,{hideNutrition:hideDraft});
       api.save(x.id,draft,venue());
       m.close();
       render();
       toast(ui('rxSavedT'),ui('rxSaved'));
     };
+    $('[data-prep-delete]',m.el)?.addEventListener('click',()=>{
+      m.close();
+      confirm(ui('prepDeleteConfirm',{name:r.itemName||x.name}),()=>{
+        api.remove(x.id,venue());
+        render();
+        toast(ui('prepDeletedT'),ui('prepDeleted'));
+      });
+    });
+  }
+  /* PRÉPARATIONS. Une base faite en cuisine (poulet épicé, sauce) : elle rend
+     une quantité dans une unité et entre dans les plats comme un ingrédient.
+     Son coût suit le prix de ses matières (restaurant-recipes.js). */
+  function prepCost(p){
+    try{
+      return window.KiwiRestaurantRecipes.ingredientInfo({recipeId:p.itemId,name:p.itemName,qty:1,unit:p.yieldUnit},venue()).cost;
+    }catch(_){
+      return null;
+    }
+  }
+  function prepOptions(list){
+    return (list||[]).map(p=>{const c=prepCost(p);return `<option value="${esc(p.itemName)}">${esc(c==null?ui('prepTag')+' · '+ui('prepNotCosted'):ui('prepLine',{price:cash(c),unit:p.yieldUnit}))}</option>`;}).join('');
+  }
+  function prepsSection(){
+    const api=window.KiwiRestaurantRecipes;
+    if(!api?.preps)return'';
+    const all=api.all(venue()),list=api.preps(venue());
+    const card=p=>{
+      const c=prepCost(p),n=all.filter(r=>r.ingredients.some(l=>l.recipeId===p.itemId)).length,q=String(+(+p.portions).toFixed(3));
+      return `<button type="button" data-activation=write class="rmw-prep-card" data-action="rmw-prep-edit" data-arg="${esc(p.itemId)}">` +
+        `<span class="rmw-prep-top"><span class="rmw-prep-name"><i data-icon="skillet" aria-hidden="true"></i>${esc(p.itemName)}</span><i data-icon="chevron_right" aria-hidden="true"></i></span>` +
+        (c==null?`<span class="rmw-prep-pending">${esc(ui('prepNotCosted'))}</span>`:`<span class="rmw-prep-cost"><b>${cash(c)}</b><small>/ ${esc(p.yieldUnit)}</small></span>`) +
+        `<span class="rmw-prep-meta"><span>${esc(ui('prepYieldOf',{qty:q,unit:p.yieldUnit}))}</span><span>${esc(ui('ingredientCount',{n:p.ingredients.length}))}</span><b>${esc(n?ui('prepUsedIn',{n}):ui('prepUsedNone'))}</b></span></button>`;
+    };
+    return `<section class="mi-section rmw-preps" data-preps><div class="rmw-preps-head"><span class="rmw-preps-mark"><i data-icon="skillet" aria-hidden="true"></i></span><div class="rmw-preps-copy"><div class="mi-title">${esc(ui('prepTitle'))}</div><div class="mi-sub">${esc(ui('prepSub'))}</div></div>` +
+      `<button data-activation=write class="btn-slim primary" data-action="rmw-prep-new"><i data-icon="add" aria-hidden="true"></i>${esc(ui('prepNew'))}</button></div>` +
+      (list.length?`<div class="rmw-preps-grid">${list.map(card).join('')}</div>`:`<div class="rmw-empty-note rmw-preps-empty"><i data-icon="skillet" aria-hidden="true"></i><span>${esc(ui('prepEmpty'))}</span></div>`) + `</section>`;
+  }
+  function openPrep(id){
+    const api=window.KiwiRestaurantRecipes;
+    if(!api?.newPrepId)return;
+    const p=id?api.get(id,'',venue()):null;
+    openRecipe({id:p?.itemId||api.newPrepId(),name:p?.itemName||'',price:0,kind:'prep'});
   }
   /* /menu-part:recipes */
-  return {recipeUnitOptions, recipeIngredientRow, recipeLineInfo, recipeNutrition, recipeSummary, recipeDraft, openRecipe};
+  return {recipeUnitOptions, recipeIngredientRow, recipeLineInfo, recipeNutrition, recipeSummary, recipeDraft, openRecipe, prepsSection, openPrep};
   };
 })();

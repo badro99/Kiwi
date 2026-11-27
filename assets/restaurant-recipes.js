@@ -56,17 +56,26 @@
     return Number.isFinite(n) && n >= 0 ? fine(n) : null;
   };
   const isManual = (line) => !!line && line.price != null;
+  /* PRÉPARATIONS. Une recette qui ne se vend pas (« Poulet épicé ») : elle rend
+   * une quantité dans une unité (`portions` 7, `yieldUnit` kg) et entre dans les
+   * plats comme une ligne `recipeId`. Le document `costs` la reçoit en ligne
+   * { sub, qty } dans l'unité rendue : cost.js la chiffre, inventory-consumption
+   * sort ses matières premières du stock à la vente du plat. */
+  const isPrepId = (id) => /^prep:/.test(clean(id));
+  function newPrepId() { return 'prep:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function normalizeIngredient(value) {
     if (typeof value === 'string') return { stockId: '', name: clean(value), qty: 0, unit: '' };
     const v = value || {};
     const price = manualPrice(v.price);
+    const recipeId = price == null ? clean(v.recipeId) : '';
     const out = {
-      stockId: price == null ? clean(v.stockId || v.invId) : '',
+      stockId: price == null && !recipeId ? clean(v.stockId || v.invId) : '',
       name: clean(v.name),
       qty: number(v.qty),
       unit: units()?.normalize?.(v.unit, '') || clean(v.unit),
     };
     if (price != null) out.price = price;
+    if (recipeId) out.recipeId = recipeId;
     return out;
   }
   /* Plafonds d'une fiche. normalizeRecipe lit des données déjà stockées et
@@ -82,10 +91,12 @@
   }
   function normalizeRecipe(value, itemId) {
     if (!value) return null;
+    const prep = value.kind === 'prep' || isPrepId(value.itemId || itemId);
     return {
       itemId: clean(value.itemId || itemId),
+      ...(prep ? { kind: 'prep', yieldUnit: units()?.normalize?.(value.yieldUnit, '') || clean(value.yieldUnit) || 'kg' } : {}),
       itemName: clean(value.itemName),
-      portions: Math.max(1, number(value.portions || value.yield) || 1),
+      portions: prep ? (number(value.portions || value.yield) || 1) : Math.max(1, number(value.portions || value.yield) || 1),
       prepMinutes: number(value.prepMinutes),
       ingredients: (Array.isArray(value.ingredients) ? value.ingredients : []).map(normalizeIngredient).filter((x) => x.name || x.stockId).slice(0, MAX_INGREDIENTS),
       steps: (Array.isArray(value.steps) ? value.steps : []).map(clean).filter(Boolean).slice(0, MAX_STEPS),
@@ -100,9 +111,10 @@
     const map = store.get(venue(id)).items || {};
     if (itemId && map[itemId]) return normalizeRecipe(map[itemId], itemId);
     const name = norm(itemName);
-    const hit = name ? Object.entries(map).find(([, r]) => norm(r.itemName) === name) : null;
+    const hit = name ? Object.entries(map).find(([key, r]) => !isPrepId(key) && r?.kind !== 'prep' && norm(r.itemName) === name) : null;
     return hit ? normalizeRecipe(hit[1], hit[0]) : null;
   }
+  function preps(id) { return all(id).filter((r) => r.kind === 'prep'); }
   function inventory(id) {
     try {
       const bridge = window.KiwiRestaurantStock;
@@ -117,12 +129,52 @@
       || rows.find((x) => ingredient.stockId && String(x.id) === ingredient.stockId)
       || rows.find((x) => norm(x.name) === norm(ingredient.name)) || null;
   }
-  function stockFor(ingredient, id) { return stockForRows(ingredient, inventory(id)); }
-  function ingredientInfo(ingredient, id) {
+  function stockFor(ingredient, id) { return ingredient && clean(ingredient.recipeId) ? null : stockForRows(ingredient, inventory(id)); }
+  /* La recette sort-elle cet article, directement ou par une préparation ? */
+  function usesStock(recipe, stockId, id, seen) {
+    const done = seen || new Set();
+    return (recipe?.ingredients || []).some((line) => {
+      if (line.recipeId) {
+        if (done.has(line.recipeId)) return false;
+        done.add(line.recipeId);
+        const prep = get(line.recipeId, '', id);
+        return !!prep && prep.kind === 'prep' && usesStock(prep, stockId, id, done);
+      }
+      const s = stockFor(line, id);
+      return !!s && String(s.id) === String(stockId);
+    });
+  }
+  /* Coût d'une préparation par unité rendue (MAD/kg). null dès qu'une ligne
+   * manque, comme un plat ; `seen` arrête un cycle (A contient B contient A). */
+  function prepUnitCost(prep, id, seen) {
+    if (!prep || !prep.ingredients.length || seen.has(prep.itemId)) return null;
+    const next = new Set(seen).add(prep.itemId);
+    let sum = 0;
+    for (const line of prep.ingredients) {
+      const info = ingredientInfo(line, id, next);
+      if (!info.manual && !(number(line.qty) > 0)) return null;
+      if (info.lineCost == null) return null;
+      sum += info.lineCost;
+    }
+    return number(prep.portions) > 0 ? fine(sum / number(prep.portions)) : null;
+  }
+  function prepLineInfo(ingredient, id, seen) {
+    const prep = get(ingredient.recipeId, '', id);
+    const live = prep && prep.kind === 'prep' ? prep : null;
+    const cost = live ? prepUnitCost(live, id, seen || new Set()) : null;
+    const stockUnit = live ? live.yieldUnit : '';
+    const recipeUnit = units()?.normalize?.(ingredient.unit || stockUnit, '') || clean(ingredient.unit || stockUnit);
+    const quantityInStockUnit = !live ? null : units()?.convert
+      ? units().convert(number(ingredient.qty), recipeUnit, stockUnit)
+      : (recipeUnit === stockUnit ? number(ingredient.qty) : null);
+    return { stock: null, prep: live, cost, stockUnit, recipeUnit, quantityInStockUnit, lineCost: cost == null || quantityInStockUnit == null ? null : fine(cost * quantityInStockUnit) };
+  }
+  function ingredientInfo(ingredient, id, seen) {
     if (isManual(ingredient)) {
       const u = units()?.normalize?.(ingredient.unit, '') || clean(ingredient.unit);
       return { stock: null, cost: null, stockUnit: '', recipeUnit: u, quantityInStockUnit: null, lineCost: fine(ingredient.price), manual: true };
     }
+    if (ingredient && clean(ingredient.recipeId)) return prepLineInfo(ingredient, id, seen);
     const stock = stockFor(ingredient, id);
     const cost = stock && stock.costPerUnit != null && String(stock.costPerUnit).trim() !== '' && Number.isFinite(Number(stock.costPerUnit)) ? number(stock.costPerUnit) : null;
     const stockUnit = units()?.normalize?.(stock?.unit, '') || clean(stock?.unit);
@@ -234,6 +286,13 @@
           lines.push({ ing: mid, qty: 1, stock: '', stockQty: null, stockUnit: '' });
           return;
         }
+        if (line.recipeId) {
+          /* Une préparation : la quantité dans SON unité rendue. Sans préparation,
+             sans coût ou sans conversion, le plat reste incomplet. */
+          if (!(line.qty > 0) || info.cost == null || info.quantityInStockUnit == null) complete = false;
+          lines.push({ sub: line.recipeId, qty: info.quantityInStockUnit == null ? 0 : fine(info.quantityInStockUnit) });
+          return;
+        }
         /* An ingredient named without an explicit article still resolves to one
          * by name. Carry that article's id, or the stock movement it should
          * produce would land on an identifier no ledger knows. */
@@ -256,17 +315,47 @@
          arrive à la caisse sans identifiant, et c'est le seul crochet qui reste
          pour retrouver quoi décompter du stock. */
       const gone = d.removed && d.removed.recipes && +d.removed.recipes[itemId];
-      d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', name: r.itemName, yield: r.portions, lines, notes: r.note, at: Math.max(Date.now(), gone ? gone + 1 : 0) };
+      d.recipes[itemId] = { status: complete ? 'complete' : 'incomplete', name: r.itemName, yield: r.portions, lines, notes: r.note, at: Math.max(Date.now(), gone ? gone + 1 : 0), ...(r.kind === 'prep' ? { kind: 'prep', yieldUnit: r.yieldUnit } : {}) };
       if (gone) delete d.removed.recipes[itemId];
       return d;
     }, vid);
   }
+  /* Une préparation change (ou disparaît) : chaque recette qui l'utilise, et
+   * celles qui utilisent celles-là, sont recopiées pour que leur état
+   * « complet » suive. `done` arrête un cycle. */
+  function mirrorDependents(prepId, id, done) {
+    const seen = done || new Set([String(prepId)]);
+    all(id).forEach((recipe) => {
+      if (seen.has(recipe.itemId) || !recipe.ingredients.some((l) => l.recipeId === prepId)) return;
+      seen.add(recipe.itemId);
+      mirrorCost(recipe.itemId, recipe, id);
+      publishNutrition(recipe.itemId, recipe, id);
+      if (recipe.kind === 'prep') mirrorDependents(recipe.itemId, id, seen);
+    });
+  }
+  /* Pour la nutrition, une ligne préparation se déplie en ses matières, à sa
+   * part du rendement (150 g d'un lot de 7 kg = 0,15 ÷ 7 de chaque matière). */
+  function flattenPreps(recipe, id, seen) {
+    const out = [];
+    (recipe?.ingredients || []).forEach((line) => {
+      const prep = line.recipeId ? get(line.recipeId, '', id) : null;
+      if (!prep || prep.kind !== 'prep' || seen.has(prep.itemId) || !(number(prep.portions) > 0)) { out.push(line); return; }
+      const from = line.unit || prep.yieldUnit;
+      const inYield = units()?.convert ? units().convert(number(line.qty), from, prep.yieldUnit) : (from === prep.yieldUnit ? number(line.qty) : null);
+      if (inYield == null) { out.push(line); return; }
+      const f = inYield / number(prep.portions);
+      flattenPreps(prep, id, new Set(seen).add(prep.itemId)).forEach((l) => out.push({ ...l, qty: fine(number(l.qty) * f) }));
+    });
+    return out;
+  }
   function nutritionResult(recipe, id) {
     const engine = window.KiwiMenuNutrition;
     if (!engine?.compute) return null;
-    return engine.compute(normalizeRecipe(recipe, recipe?.itemId), inventory(id));
+    const r = normalizeRecipe(recipe, recipe?.itemId);
+    return engine.compute(r ? { ...r, ingredients: flattenPreps(r, id, new Set([r.itemId])) } : r, inventory(id));
   }
   function publishNutrition(itemId, recipe, id) {
+    if (isPrepId(itemId) || recipe?.kind === 'prep') return null;  // une préparation n'est pas sur la carte
     const result = nutritionResult(recipe, id);
     const menu = window.KiwiMenuStore;
     if (!result || !menu?.updateItem) return result;
@@ -295,9 +384,10 @@
     const target = inventory(id).find((row) => String(row.id) === String(stockId));
     let count = 0;
     all(id).forEach((recipe) => {
-      const usesStock = recipe.ingredients.some((line) => String(line.stockId || '') === String(stockId)
-        || (!line.stockId && target && norm(line.name) === norm(target.name)));
-      if (!usesStock) return;
+      const direct = recipe.ingredients.some((line) => !line.recipeId && (String(line.stockId || '') === String(stockId)
+        || (!line.stockId && target && norm(line.name) === norm(target.name))));
+      if (!direct && !usesStock(recipe, stockId, id)) return;
+      if (recipe.kind === 'prep') return;
       publishNutrition(recipe.itemId, recipe, id);
       count += 1;
     });
@@ -322,6 +412,7 @@
       return d;
     }, venue(id));
     mirrorCost(itemId, next, id);
+    if (next.kind === 'prep') mirrorDependents(itemId, id);
     publishNutrition(itemId, next, id);
     return result;
   }
@@ -337,6 +428,7 @@
     }, vid);
     if (window.KiwiCost?.removeRecipe) window.KiwiCost.removeRecipe(itemId, vid);
     else window.KiwiCost?.store?.update?.((d) => { d.recipes = d.recipes || {}; delete d.recipes[itemId]; return d; }, vid);
+    if (isPrepId(itemId)) { mirrorDependents(itemId, vid); return result; }
     window.KiwiMenuStore?.updateItem?.(itemId, { nutrition: null, allergens: [], nutritionComplete: false });
     return result;
   }
@@ -363,6 +455,7 @@
     let healed = 0;
     all(vid).forEach((recipe) => {
       const gap = recipe.ingredients.some((line) => {
+        if (line.recipeId) return false;          // une préparation n'a pas de prix d'article à rattraper
         const info = ingredientInfo(line, vid);
         if (info.cost == null) return false;      // l'inventaire ne connaît pas ce prix : rien à rattraper
         if (lineCosting(line, info).useCost == null) return false;  // réécrire null ne rattrape rien
@@ -390,6 +483,31 @@
     setTimeout(() => { healPending = false; try { heal(id); } catch (_) {} }, 0);
   }
 
+  /* Ajoute à `out` les articles qu'une recette sort, `factor` fois sa ligne ;
+   * une ligne préparation descend dans ses matières, à sa part du rendement. */
+  function expandUsage(recipe, factor, rows, vid, out, seen) {
+    recipe.ingredients.forEach((line) => {
+      if (line.recipeId) {
+        const prep = get(line.recipeId, '', vid);
+        if (!prep || prep.kind !== 'prep' || seen.has(prep.itemId) || !(number(prep.portions) > 0)) return;
+        const inYield = units()?.convert
+          ? units().convert(number(line.qty), line.unit || prep.yieldUnit, prep.yieldUnit)
+          : ((line.unit || prep.yieldUnit) === prep.yieldUnit ? number(line.qty) : null);
+        if (inYield == null) return;
+        expandUsage(prep, factor * inYield / number(prep.portions), rows, vid, out, new Set(seen).add(prep.itemId));
+        return;
+      }
+      const stock = stockForRows(line, rows);
+      if (!stock?.id) return;
+      const from = line.unit || stock.unit;
+      const converted = units()?.convert
+        ? units().convert(number(line.qty), from, stock.unit)
+        : (from === stock.unit ? number(line.qty) : null);
+      if (converted == null) return;
+      const stockId = String(stock.id);
+      out[stockId] = (out[stockId] || 0) + factor * converted;
+    });
+  }
   function theoreticalUsageMap(id, days, sourceRows) {
     const vid = venue(id);
     const rows = Array.isArray(sourceRows) ? sourceRows : inventory(vid);
@@ -397,17 +515,7 @@
     all(vid).forEach((recipe) => {
       const sold = salesFor(recipe.itemId, recipe.itemName, vid, days || 7);
       if (!(sold > 0)) return;
-      recipe.ingredients.forEach((line) => {
-        const stock = stockForRows(line, rows);
-        if (!stock?.id) return;
-        const from = line.unit || stock.unit;
-        const converted = units()?.convert
-          ? units().convert(number(line.qty), from, stock.unit)
-          : (from === stock.unit ? number(line.qty) : null);
-        if (converted == null) return;
-        const stockId = String(stock.id);
-        out[stockId] = (out[stockId] || 0) + sold * converted / Math.max(1, recipe.portions);
-      });
+      expandUsage(recipe, sold / Math.max(1, recipe.portions), rows, vid, out, new Set([recipe.itemId]));
     });
     Object.keys(out).forEach((stockId) => { out[stockId] = round(out[stockId]); });
     return out;
@@ -418,7 +526,7 @@
   }
 
   window.KiwiRestaurantRecipes = {
-    all, get, save, tooLong, remove, inventory, stockFor, ingredientInfo, metrics, nutrition: nutritionResult,
+    all, get, preps, newPrepId, save, tooLong, remove, inventory, stockFor, usesStock, ingredientInfo, metrics, nutrition: nutritionResult,
     recompute, recomputeForStock, recomputeAll, theoreticalUsage, theoreticalUsageMap, heal,
     subscribe: (fn) => store.subscribe(fn), _store: store,
   };

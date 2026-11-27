@@ -2464,7 +2464,7 @@
     'assets/stock/import.js?v=3',
     'assets/stock/movements.js?v=3',
     'assets/stock/overview.js?v=3',
-    'assets/stock/alerts.js?v=6',
+    'assets/stock/alerts.js?v=7',
     'assets/stock/loss.js?v=5',
     'assets/stock/counts.js?v=12',
     'assets/stock/purchasing.js?v=13',

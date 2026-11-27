@@ -101,6 +101,7 @@
     if (!want) return '';
     var ids = Object.keys(d.recipes || {});
     for (var i = 0; i < ids.length; i++) {
+      if (/^prep:/.test(ids[i]) || (d.recipes[ids[i]] && d.recipes[ids[i]].kind === 'prep')) continue;  // une préparation ne se vend pas
       if (norm(d.recipes[ids[i]] && d.recipes[ids[i]].name) === want) return ids[i];
     }
     return '';

@@ -261,6 +261,7 @@
   function recipeNameIndex(d) {
     const by = new Map();
     Object.keys((d && d.recipes) || {}).forEach((id) => {
+      if (/^prep:/.test(id) || (d.recipes[id] && d.recipes[id].kind === 'prep')) return;  // une préparation ne se vend pas
       const n = norm(d.recipes[id] && d.recipes[id].name);
       if (n && !by.has(n)) by.set(n, String(id));
     });

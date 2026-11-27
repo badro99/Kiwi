@@ -302,7 +302,7 @@
   function recipeIdFor(l, d) {
     var id = lineId(l); if (id && d.recipes && d.recipes[id]) return id;
     var want = norm(lineName(l));
-    return Object.keys(d.recipes || {}).find(function (k) { return norm(d.recipes[k] && d.recipes[k].name) === want; }) || '';
+    return Object.keys(d.recipes || {}).find(function (k) { return !/^prep:/.test(k) && norm(d.recipes[k] && d.recipes[k].name) === want; }) || '';
   }
   function materialRows(sales) {
     var d = costDoc(), by = Object.create(null), covered = 0, eligible = 0;

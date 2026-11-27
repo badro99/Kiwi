@@ -58,7 +58,7 @@
     return {
       ...recipe,
       ingredients: (Array.isArray(recipe.ingredients) ? recipe.ingredients : []).map((line) => {
-        if (!line || clean(line.stockId || line.invId)) return line;
+        if (!line || clean(line.stockId || line.invId) || clean(line.recipeId)) return line;
         const stock = resolve(line, rows);
         return stock ? { ...line, stockId: clean(stock.id) } : line;
       }),

@@ -2,7 +2,7 @@
   "files": {
     "assets/stock.js": {
       "fixture": "tools/fixtures/stock-controller/stock.js.gz",
-      "sha256": "5db4cf717e8ff02ded91b41a763f95fb1a952269c36e07a4c9613e4b5c20357e",
+      "sha256": "16d38e88673c68949a7bee23a194a71aeb5f061fa45f56a3b892433930f812a3",
       "stamps": [
         "assets/stock/loss.js?v=1",
         "assets/stock/counts.js?v=3",
@@ -194,7 +194,7 @@
         {
           "name": "dishesUsing",
           "offset": 13959,
-          "length": 567,
+          "length": 749,
           "replacement": "function dishesUsing(...args) { return stockParts.alerts.dishesUsing.apply(this, args); }"
         }
       ],
