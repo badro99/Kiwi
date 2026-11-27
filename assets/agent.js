@@ -232,7 +232,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=18';
+  const partUrl = 'assets/agent/ui.js?v=19';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -1764,7 +1764,7 @@
    *    silently dropped. "j'ai augmenté les prix de 10% le mois dernier,
    *    ça a marché ?" was simulated as a fresh decision. `tendance` is
    *    deliberately absent — that belongs to forecast, which is forward. */
-  const TREND_RX = /(?:^|\s)قارن(?=\s)|\b9aren\b|الفرق\s+بين\s+هاد\s+العام|العام\s+الفايت|\bfar9\s+bin\b.{0,40}\bl3am\b|\bl3am\s+li\s+fat\b|tendance\s+des\s+ventes|tendance.{0,25}\b(?:un|1|6|12|six|douze)\s+(?:ans?|mois)\b|sales\s+trend|trend\s+over|changed\s+over|over\s+(?:a|one|six|twelve|\d+)\s+(?:years?|months?)|six\s+months|\bsur\s+(?:un|1)\s+an\b|تطور|اتجاه\s+المبيعات|قارن.{0,40}(?:العام|السنة|الشهر|يناير|فبراير|الاسبوع|اللي\s+فات|الماضي)|\b9aren\b.{0,40}(?:l3am|chher|janvier|simana|li\s+fat)|\bset\s+chhor\b|ستة\s+(?:اشهر|شهور)|kter\s+mn\s+ch?he?r\s+li\s+fat|mois\s+dernier|mois\s+passe|\bch(?:h|e)?ar\s+(?:li\s+|l)?fa(?:t|yt)\b|الشهر\s+(?:اللي|لي)\s+فات|الشهر\s+الفايت|semaine\s+derniere|annee\s+derniere|an\s+dernier|(?:ete|hiver|printemps|automne|ramadan|aid|saison|noel|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s+dernier(?:e)?|\bevolu\w*\b|\bcroissance\b|depuis\s+l[' ]?ouverture|السنة\s*الماضية|العام\s*الماضي|last\s+(?:summer|winter|ramadan|season)|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)(?!er\b)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|امس/;
+  const TREND_RX = /(?:^|\s)قارن(?=\s)|\b9aren\b|الفرق\s+بين\s+هاد\s+العام|العام\s+الفايت|\bfar9\s+bin\b.{0,40}\bl3am\b|\bl3am\s+li\s+fat\b|tendance\s+des\s+ventes|tendance.{0,25}\b(?:un|1|6|12|six|douze)\s+(?:ans?|mois)\b|sales\s+trend|trend\s+over|changed\s+over|over\s+(?:a|one|six|twelve|\d+)\s+(?:years?|months?)|six\s+months|\bsur\s+(?:un|1)\s+an\b|تطور|اتجاه\s+المبيعات|قارن.{0,40}(?:العام|السنة|الشهر|يناير|فبراير|الاسبوع|اللي\s+فات|الماضي)|\b9aren\b.{0,40}(?:l3am|chher|janvier|simana|li\s+fat)|\bset\s+chhor\b|ستة\s+(?:اشهر|شهور)|kter\s+mn\s+ch?he?r\s+li\s+fat|mois\s+dernier|mois\s+passe|\bch(?:h|e)?ar\s+(?:li\s+|l)?fa(?:t|yt)\b|الشهر\s+(?:اللي|لي)\s+فات|الشهر\s+الفايت|semaine\s+derniere|annee\s+derniere|an\s+dernier|(?:ete|hiver|printemps|automne|ramadan|aid|saison|noel|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s+dernier(?:e)?|\bevolu\w*\b|\bcroissance\b|depuis\s+l[' ]?ouverture|السنة\s*الماضية|العام\s*الماضي|last\s+(?:summer|winter|ramadan|season)|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)(?!er\b)(?!\w*\s+(?:(?:le|les|la|ses|son|sa|leur|leurs|mes|mon|ma|nos|notre)\s+)?(?:prix|cout|tarifs?|loyer|salaires?|charges?)\b)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|امس/;
 
   /* 7. Darija we didn't understand. Measured, not assumed: Qwen3.5-2B was
    *    asked "chhal dayer lyoum f had lqahwa?" and answered with five invented

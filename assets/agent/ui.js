@@ -2467,7 +2467,7 @@ function decideRoute(rawIn, retry) {
      * them as a comparison across periods. */
     const dNear = namedDay(q) || (qf !== q ? namedDay(qf) : null);
     if (dNear) return { kind: 'day', raw, q, day: dNear };
-    if (__state.TREND_RX.test(q)) { const ps = window.KiwiAgentData && window.KiwiAgentData.period && window.KiwiAgentData.period(q, raw, 1); return ps && ps.entity ? { kind: 'lookup', raw, q, spec: Object.assign(ps, { raw }) } : { kind: 'notrend', raw, q }; }
+    if (__state.TREND_RX.test(q)) { const ps = window.KiwiAgentData && window.KiwiAgentData.period && window.KiwiAgentData.period(q, raw, 1); return ps && ps.entity ? { kind: 'lookup', raw, q, spec: Object.assign(ps, { raw }) } : (window.KiwiAgentData && window.KiwiAgentData.trend && !window.KiwiAgentData.trend(q)) ? (__state.DARIJA_RX.test(q) ? { kind: 'unclear', raw, q } : { kind: null, raw, q }) : { kind: 'notrend', raw, q }; }
     /* « effet de Raadan sur mes ventes » répondait par le chiffre d'affaires
        du mois : le mot Ramadan cassé, il ne restait que « ventes ». Une
        saisonnalité mal lue vaut un stock mal commandé. */

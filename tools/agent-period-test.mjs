@@ -108,6 +108,29 @@ ok(/^revenue/.test(ask('bghit résumé dyal caisse had chhar', 'fr').route), 'Da
 ok(/^(?:llm|feature)\b/.test(ask('بغيت نطبع جوج نسخ ديال التيكي', 'ar').route), 'a Darija how-to goes to the guide or the model');
 ok(/^price/.test(ask('بغيت نزيد فالثمن ب ١٠ فالمية', 'ar').route), 'a Darija price rise stays a simulation');
 
+// Round three (27 Nov): a refusal only answers what it refuses. « mon snack »
+// is the merchant's own shop; a supplier's price rise is not a sales trend;
+// one period with no comparison is not « two periods ».
+for (const [q, L, not] of [
+  ['Est-ce que mon snack peut fermer une heure plus tôt sans perdre trop de ventes ?', 'fr', /^othershop/],
+  ['Mon fournisseur a augmenté le prix de la farine de 12%, je change mes prix comment ?', 'fr', /^notrend/],
+  ['Which shift had the highest average bill last week?', 'en', /^notrend/],
+]) { const r = ask(q, L); ok(!not.test(r.route), `« ${q} » is not refused for the wrong reason → {${r.route}} ${r.text.slice(0, 80)}`); }
+for (const [q, L, want] of [
+  ['ch7al ventes dyal cafe simo', 'fr', /^othershop/],
+  ['Combien a fait le Café Atlas hier ?', 'fr', /^othershop/],
+  ['mes ventes ont baissé, pourquoi ?', 'fr', /^notrend/],
+  ['Peux-tu comparer les vendredis de ce mois avec ceux du mois dernier ?', 'fr', /^notrend/],
+]) { const r = ask(q, L); ok(want.test(r.route), `« ${q} » keeps its honest refusal → {${r.route}}`); }
+
+{
+  const r = ask('وريني الملابس الشهر لي فات عفاك', 'ar');
+  ok(/^lookup/.test(r.route) && r.text.includes('الملابس'), `show me clothes last month → the menu has no clothes, said for that month → {${r.route}} ${r.text.slice(0, 100)}`);
+  for (const [q2, L2] of [['wrini lmbi3at chhar li fat', 'fr'], ['وريني المبيعات الشهر لي فات', 'ar'], ['show me the takings last month', 'en'], ['Show me receipts last month please', 'en'], ['Montre-moi les factures du mois dernier', 'fr']]) {
+    const r2 = ask(q2, L2);
+    ok(!/Rien ne s’appelle|Nothing called|ما كاين حتى حاجة سميتها/.test(r2.text), `« ${q2} » asks for the till's own records, not a missing item → ${r2.text.slice(0, 100)}`);
+  }
+}
 // 2. Not a single period: the honest refusal, or the route that owns it.
 for (const [q, L] of [
   ['compare les ventes de cette semaine avec la semaine dernière', 'fr'],
@@ -161,6 +184,7 @@ for (const [q, L] of [
   ['How do I change my opening hours for Ramadan?', 'en'],
   ['شنو خاصني ندير باش نفتح الكاسة الصباح؟', 'ar'],
   ['Je vends à crédit, comment noter un paiement partiel ?', 'fr'],
+  ['فين نلقى الفواتير ديال الشهر لي فات؟', 'ar'],
 ]) {
   const r = ask(q, L);
   ok(/^(?:llm|feature)\b/.test(r.route), `« ${q} » is about using the till → {${r.route}} ${r.text.slice(0, 80)}`);

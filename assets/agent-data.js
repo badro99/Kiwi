@@ -1318,7 +1318,8 @@
     if (!name && /\b(?:chiffre|ventes?|fait|combien|ch7al|chhal|cb|sales|revenue|made|numbers|recette)\b/i.test(txt)) {
       var LOW_STOP = /^(?:dyal|dial|dyali|de|du|des|la|le|les|li|lli|f|fi|mon|ma|my|moi|nous|chez|ajd|lyoum|lyouma|today|aujourd|stp|svp|ce|cette|qui|que|est|a|en|pour|vendu\w*|servi\w*|noir|creme|latte|express|au|aux|lait|frites?|ouvert|ferme|fiha|fih|fihom|kayn|kayna|ach|chno|wach|kamla|kaml\w*|dyalna|dyalek|lyom|ouvr\w*|ferm\w*|sed\w*|fait|est|ouvert|vaut|wach\w*)$/;
       var lows = txt.toLowerCase().matchAll(/(?:^|\s)(?:chez|cafe|café|snack|boulangerie|patisserie|pâtisserie|resto|restaurant|boutique|magasin|epicerie|épicerie|hanout|7anout)\s+([a-zéè]{3,})\b/g);
-      for (var lm of lows) { if (!LOW_STOP.test(lm[1])) { name = lm[1]; break; } }
+      /* « mon snack peut fermer… » is the merchant's own shop (27 Nov 2026). */
+      for (var lm of lows) { if (/(?:^|\s)(?:mon|ma|mes|my|notre|nos|our)\s*$/i.test(txt.slice(0, lm.index + 1))) continue; if (!LOW_STOP.test(lm[1])) { name = lm[1]; break; } }
     }
     if (!name) return false;
     var nm = n(name), mine = n(ownName);
@@ -1678,6 +1679,21 @@
   /* « résumé dyal accessoires téléphone », « analyse les médicaments » : the
      words after « de / dyal / of » when the menu has nothing by that name. */
   var TOPIC_STOP = W("^(?:pendant|durant|during|over|lors|detail\\w*|resume|summary|recap\\w*|analy\\w*|t7ellel|تحلل|تفاصيل|ملخص|la|le|les|l|de|des|du|d|mes|my|ma|mon|the|a|un|une|en|f|fi|had|hadi|hada|this|that|cette|ce|ces|dyali|dyal|dial|ديال|هاد|هذه|هذا|في|ف|من|mn|men|sur|over|in|for|pour|ventes?|sales?|caisse|chiffre|revenue|takings|journee|jour|day|semaine|week|weekend|mois|month|annee|year|today|yesterday|hier|aujourd\\w*|lyoum\\w*|lyom|simana|smana|chhar|chher|نهار|اليوم|الشهر|السيمانة|الاسبوع|lbi3|البيع|المبيعات|tickets?|commandes?|orders?|cash|carte|card|stp|svp|please|3afak|عفاك|dernier\\w*|last|past|derniers?|akher|اخر|sept|seven|\\d+|jours|days|iyam|ايام|depuis|since|novembre|november|نونبر)$");
+  /* « وريني الملابس الشهر لي فات »: show me a thing over one period (27 Nov 2026). */
+  var PER_SHOW = W("(?:^|\\s)(?:وريني|ورينا|عطيني|\\bwrini\\b|\\bwarini\\b|\\b3tini\\b|montre(?:-moi| moi)?|affiche(?:-moi| moi)?|show me|give me)(?=\\s)");
+  function showTopic(q) {
+    var m = /(?:^|\s)(?:وريني|ورينا|عطيني|wrini|warini|3tini|montre(?:-moi| moi)?|affiche(?:-moi| moi)?|show me|give me)\s+(.+)$/.exec(norm(q).replace(/[?؟!.,]/g, ' '));
+    if (!m) return null;
+    var w = [];
+    for (var parts = m[1].split(/\s+/), i = 0; i < parts.length && w.length < 3; i++) {
+      var t = parts[i]; if (!t) continue;
+      if (TOPIC_STOP.test(t) || PER_SHOW_END.test(t)) { if (w.length) break; continue; }
+      w.push(t);
+    }
+    var t2 = w.join(' ');
+    return t2.length >= 3 && !PER_REV.test(t2) && !PER_TICKETS.test(t2) && !PER_REFUND.test(t2) && !PER_CASH.test(t2) && !PER_CARD.test(t2) ? t2 : null;
+  }
+  var PER_SHOW_END = /^(?:الشهر|السيمانة|الاسبوع|الأسبوع|اليوم|البارح|lbar7|lyom|had|هاد|هذا|هذه|ce|cette|this|last|la|le|les|mes|my|chhar|simana|semaine|mois|week|month|today|yesterday|عفاك|3afak|stp|svp|please|lli|li|لي|اللي|فات|الماضي|fat|fayt|lfayt|dernier|derniere|passe|precedent|previous|weekend|week-end|nhar|lyouma|ajd|l?ma?bi3at|l?bi3|lbi3at|المبيعات|مبيعات|البيع|المداخيل|مداخيل|الفلوس|lflous|flous|recettes?|ventes?|sales|takings|revenue|chiffre|ca|dkhl\w*|dakhel|tickets?|tiki|tiket|التيكيات|التيكي|الكاسة|lkasa|caisse|commandes?|orders?|الكوموندات|receipts?|recus?|factures?|invoices?|bills?|payments?|paiements?|refunds?|rembours\w*|discounts?|remises?|tips|pourboires?|clients?|customers?|expenses|depenses|charges|staff|equipe|employes|stock|products?|produits?|items?|articles?|الفواتير|فواتير|الزبناء|الكليان|المصاريف|الستوك|السلعة|المنتوجات)$/;
   function topicOf(q) {
     var m = /(?:^|\s)(?:de la|de l|des|du|de|d|of|on|about|dyal|dial|ديال|les|la|le)\s+(.+)$/.exec(norm(q).replace(/[?؟!.,]/g, ' '));
     if (!m) return null;
@@ -1704,8 +1720,8 @@
     if (what0) return { entity: 'period', what: what0, per: per };
     var p = productKeys(raw || q);
     if (p && p.keys) return { entity: 'period', what: 'product', per: per, keys: p.keys, names: p.names, word: p.word };
-    if (p && p.absent && PER_SELL.test(q) && !PER_VENUE.test(q)) return { entity: 'period', what: 'absent', per: per, topic: p.absent };
-    var topic = PER_TOPIC.test(q) ? topicOf(raw || q) : null;
+    if (p && p.absent && (PER_SELL.test(q) || (late && PER_SHOW.test(q))) && !PER_VENUE.test(q)) return { entity: 'period', what: 'absent', per: per, topic: p.absent };
+    var topic = PER_TOPIC.test(q) ? topicOf(raw || q) : late && PER_SHOW.test(q) ? showTopic(raw || q) : null;
     if (topic && !PER_REFUND.test(q) && !PER_CASH.test(q) && !PER_CARD.test(q) && !PER_TICKETS.test(q)) return { entity: 'period', what: 'absent', per: per, topic: topic };
     var what = PER_REFUND.test(q) ? 'refunds'
       : PER_CASH.test(q) && !PER_CARD.test(q) ? 'cash'
@@ -1864,7 +1880,7 @@
   var SUP_ASK = W("(?:^|[\\s,.;:!?'])(?:comment\\b(?!\\s+(?:vont|va|vas|marche|marchent|se portent|sont|est|etaient|etait)\\b)|how\\b(?!\\s+(?:much|many|long|often|are|is|was|were|did my|do my|does my)\\b))|كيف(?!\\s*(?:داير|دايرة|دايرين|الحال|حالك))|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b|\\bkifax\\b"
     + "|\\b(?:can i|could i|can we|is it possible|est.ce que je peux|est.ce qu.on peut|je peux|je pourrais|on peut|peut.on|possible de|n9d[e]?r|nqd[e]?r|wach momkin|wach imken|wach ymken)\\b|نقدر|واش يمكن|واش ممكن|هل يمكن|هل استطيع|ممكن ن"
     + "|^(?:3afak |عافاك )?(?:bghit|bghina|بغيت|بغينا) n|^(?:3afak |عافاك )?(?:bghit|bghina|بغيت|بغينا) ن|^(?:chno|شنو|ach|اش) (?:khassni|khass|خاصني|خاص) n|^(?:chno|شنو|ach) (?:khassni|خاصني) ن|wach kayn chi tari9a|كاين شي طريقة|\\bkayn chi tari9a\\b");
-  var SUP_WHAT = W("\\bje fais quoi\\b|\\bque faire\\b|\\bquoi faire\\b|\\bqu.est.ce que je (?:fais|dois faire)\\b|\\bwhat (?:do|should|can) i do\\b|\\b(?:chno|ach|achno) ndir\\b|شنو ندير|اش ندير|اشنو ندير|اشمن ندير|\\bfin ndir\\b|فين ندير|\\bou je (?:le |la |les |l')?(?:note|mets|enregistre|saisis|range)\\b|\\bje (?:le |la |les |l')?(?:note|mets|enregistre|saisis) ou\\b|\\bwhere (?:do|should|can) i (?:record|put|enter|note|log)\\b|\\bfin n(?:sjel|sejjel|kteb)\\b|فين نسجل|فين نكتب|فين نحط|(?:نقدر|واش يمكن|هل يمكن) نعرف|\\bn9d[e]?r n3e?r[e]?f\\b|\\bnqd[e]?r n3e?r[e]?f\\b");
+  var SUP_WHAT = W("\\bje fais quoi\\b|\\bque faire\\b|\\bquoi faire\\b|\\bqu.est.ce que je (?:fais|dois faire)\\b|\\bwhat (?:do|should|can) i do\\b|\\b(?:chno|ach|achno) ndir\\b|شنو ندير|اش ندير|اشنو ندير|اشمن ندير|\\bfin ndir\\b|فين ندير|\\bou je (?:le |la |les |l')?(?:note|mets|enregistre|saisis|range)\\b|\\bje (?:le |la |les |l')?(?:note|mets|enregistre|saisis) ou\\b|\\bwhere (?:do|should|can) i (?:record|put|enter|note|log)\\b|\\bfin n(?:sjel|sejjel|kteb)\\b|فين نسجل|فين نكتب|فين نحط|فين نلقى|\\bfin nl9a\\b|\\bfin nlqa\\b|\\bou (?:je )?(?:trouve|vois)\\b|\\bwhere (?:do|can) i (?:find|see)\\b|(?:نقدر|واش يمكن|هل يمكن) نعرف|\\bn9d[e]?r n3e?r[e]?f\\b|\\bnqd[e]?r n3e?r[e]?f\\b");
   var SUP_THEN = W("\\bsi je (?:supprime|efface|retire|ferme|change)\\b|\\bif i (?:delete|remove|close|change)\\b|\\bwhat happens (?:to|if|when)\\b|\\bque se passe|\\bqu.arrive.t.il\\b|\\b(?:ila|ida) (?:msa7t|m7it|7yedt|mse7t)\\b|(?:إلا|ايلا|إذا|اذا) (?:مسحت|حيدت)|واش غادي (?:\\S+ ){0,2}(?:تتمسح|يتمسح|تضيع|يضيع|يتحيد|تتحيد|يبان|تبان)|\\bwach ghadi (?:\\S+ ){0,3}(?:ytms\\w*|tms\\w*|ydi3\\w*|tdi3\\w*)|\\bghadi (?:ydi3|ytmse7|ytmsa7|ytms7)\\w*|غادي (?:يضيع|تضيع|يتمسح|تتمسح|يتحيد)\\S*|\\b(?:will|would) (?:\\w+ ){0,5}(?:be (?:deleted|lost|removed)|disappear)\\b|\\b(?:sera|seront|va|vont) (?:\\w+ ){0,3}(?:supprim|perdu|effac|dispara)\\w*");
   var SUP_VERB = W("\\b(?:record|enter|add|change|edit|modif\\w*|print|reprint|imprim\\w*|cancel|annul\\w*|undo|delete|supprim\\w*|correct\\w*|corrig\\w*|fix|update|set|create|cre\\w*|track|suivre|see|check|view|find|retrouv\\w*|retrieve|export\\w*|send|envoy\\w*|ajout\\w*|enregistr\\w*|saisi\\w*|mettre|remettre|chang\\w*|rembours\\w*|refund|split|partag\\w*|reopen|rouvr\\w*|connect\\w*|login|log in|scan\\w*|vendre|sell|work|travaill\\w*|utilis\\w*|nsjel|nsejjel|nzid|nbdel|ntba3|ntbe3|nlghi|nsle7|nsl7|nchof|nchouf|nsift|n9leb|nqleb|ndir|nbi3|nexporti|n7el\\w*|n7l\\w*)\\b|(?:^|\\s)[وف]?(?:نسجل|نزيد|نضيف|نبدل|نغير|نطبع|نلغي|نحيد|نمسح|نصلح|نشوف|نلقى|نصيفط|نرسل|ندير|نخدم|نتبع|نقلب|نعدل|نقسم|نخرج|نفتح|نسد|نحل|نبيع|نصدر|تصدير|نرجع)(?:و|ه|ها|هم|ش|وه|وها|ليه|ليها)?(?=\\s|$|[?؟!.,،])|\\bn9s?m\\b|\\bn7yed\\b|\\bnkhrej\\b|\\bnft7\\b|\\bnsed\\b|\\bnsdd\\b|\\bntb3\\b|\\bnkhdem\\b");
   var SUP_SLIP = W("par erreur|by mistake|accidentally|\\bmistake\\b|\\bwrong\\b|\\bmauvais\\w*|\\bplant\\w*|\\bcrash\\w*|\\bbloqu\\w*|\\bfreez\\w*|ne marche|marche pas|doesn.?t work|not working|won.?t open|\\bdeux fois\\b|\\btwice\\b|\\bau lieu de\\b|\\binstead of\\b|j.?ai oubli\\w*|\\bi forgot\\b|\\bforgot to\\b|غلطت|بالغلط|غلط|\\bghalat\\b|\\bghlt\\b|ماخدامش|ما خدامش|مكيخدمش|ماكيخدمش|جوج مرات|مرتين|\\bmertin\\b|\\bjouj merrat\\b|بلاصة|بلاصت|نسيت|\\bnsit\\b|\\bmakhdamch\\b|ma khdamch");
@@ -1919,5 +1935,12 @@
     return null;
   }
 
-  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, period: periodSpec, support: supportAsk, math: wordMath, _rank: productRanking, _findClient: findClient };
+  /* « I can't compare two periods » answers a comparison, nothing else
+   * (27 Nov 2026): « which shift had the best bill last week » names one
+   * week and compares nothing. True when the question sets two periods side
+   * by side or asks how something moved. */
+  var TWO_P = W("compar|\\bvs\\.?\\b|versus|\\bthan\\b|par rapport|\\b9aren\\b|قارن|مقارنة|\\bfar9\\b|الفرق|evolu|trend|tendance|chang\\w*|\\btbd+el\\b|تبدل|تغير|baiss|augment|progress|\\bchut|\\bmonte|\\bdrop|\\brose\\b|\\bfell\\b|\\bdown\\b|\\bup\\b|\\bgrow|decline|why|pourquoi|3lach|علاش|لماذا|طلع|هبط|نقص|زاد|\\bt7et\\b|\\btl3\\b|over (?:the )?(?:last |past )?\\w+ (?:months|years)|depuis|since|\\bans?\\b|years?|l3am|العام|chhor|شهور|mois dernier|last (?:month|year)|l\\s?chhar li fat|الشهر الماضي|تطور|اتجاه|سنة|السنة|عام|أشهر|اشهر|الأشهر|كثر من|أكثر من|\\bkter mn\\b|plus que|moins que|more than|less than|\\bmoins\\b|\\bete\\b|summer|ramadan|رمضان|\\beid\\b|عيد|l3id");
+  function twoPeriods(q) { return TWO_P.test(String(q || '')); }
+
+  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, period: periodSpec, support: supportAsk, math: wordMath, trend: twoPeriods, _rank: productRanking, _findClient: findClient };
 }());
