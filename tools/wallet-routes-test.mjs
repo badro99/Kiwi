@@ -152,10 +152,9 @@ await ok('a nameless sign-up is refused before the number is looked up', async (
   assert.equal(known.status, 400); assert.deepEqual(known.body, fresh.body);
 });
 
-await ok('no tables yet (migration not applied): 503, not a crash', async () => {
+await ok('no tables yet (migration not applied): the error surfaces, no silent schema fallback (tools/schema-minimum-test.mjs)', async () => {
   const { DB } = walletDb({ schema: false });
-  const r = await enroll.onRequestPost(ctx({ DB, AUTH_SECRET: 's' }, 'POST', '/api/wallet/enroll', { merchant: 'pasta-corner', name: 'A', phone: '0611111111' }));
-  assert.equal(r.status, 503);
+  await assert.rejects(() => enroll.onRequestPost(ctx({ DB, AUTH_SECRET: 's' }, 'POST', '/api/wallet/enroll', { merchant: 'pasta-corner', name: 'A', phone: '0611111111' })), /no such table/);
 });
 
 const svc = (env, method, path, auth, body, extra = {}) => service.onRequest({

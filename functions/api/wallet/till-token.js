@@ -14,16 +14,11 @@ export async function onRequestPost(context) {
   if (!body) return json({ error: 'bad-json' }, 400);
   const merchant = await tenantFor(request, env, body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
-  try {
-    const m = await loadMerchant(env.DB, merchant);
-    if (!m || !m.on || !cardView({ fidelity: m.fidelity, client: {} })) return json({ error: 'no-card' }, 404);
-    const id = String(body.clientId || '').slice(0, 64);
-    const c = id && await env.DB.prepare('SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0').bind(merchant, id).first();
-    if (!c) return json({ error: 'client-not-found' }, 404);
-    const token = await mintTillToken(env.DB, merchant, id);
-    return json({ ok: true, url: `${new URL(request.url).origin}/carte/${merchant}?t=${token}`, expiresIn: 600 });
-  } catch (error) {
-    if (/no such table/i.test(String(error && error.message))) return json({ error: 'unmigrated' }, 503);
-    throw error;
-  }
+  const m = await loadMerchant(env.DB, merchant);
+  if (!m || !m.on || !cardView({ fidelity: m.fidelity, client: {} })) return json({ error: 'no-card' }, 404);
+  const id = String(body.clientId || '').slice(0, 64);
+  const c = id && await env.DB.prepare('SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0').bind(merchant, id).first();
+  if (!c) return json({ error: 'client-not-found' }, 404);
+  const token = await mintTillToken(env.DB, merchant, id);
+  return json({ ok: true, url: `${new URL(request.url).origin}/carte/${merchant}?t=${token}`, expiresIn: 600 });
 }

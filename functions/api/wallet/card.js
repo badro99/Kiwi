@@ -12,20 +12,15 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const q = new URL(request.url).searchParams;
-  try {
-    const card = await cardBySerial(env.DB, q.get('s'));
-    if (!card || !sameToken(q.get('t'), card.auth_token)) return json({ error: 'unauthorized' }, 401);
-    if (card.revoked) return json({ error: 'revoked' }, 410);
-    const m = await loadMerchant(env.DB, card.merchant);
-    const c = await env.DB.prepare('SELECT id, name, points, stamps FROM clients WHERE merchant = ? AND id = ? AND deleted = 0').bind(card.merchant, card.client_id).first();
-    const view = m && c && cardView({ fidelity: m.fidelity, client: c });
-    if (!view) return json({ error: 'gone' }, 410);
-    return json({
-      merchant: { slug: m.slug, name: m.name, color: m.color, bg: m.bg, address: m.address, phone: m.phone, logo: m.logoUrl ? `/api/wallet/strip/logo-${m.slug}.png` : '' },
-      card: { ...view, strip: stripPath(view, m, 2), qr: 'KIWI-C:' + card.client_id, platform: card.platform },
-    });
-  } catch (error) {
-    if (/no such table/i.test(String(error && error.message))) return json({ error: 'unmigrated' }, 503);
-    throw error;
-  }
+  const card = await cardBySerial(env.DB, q.get('s'));
+  if (!card || !sameToken(q.get('t'), card.auth_token)) return json({ error: 'unauthorized' }, 401);
+  if (card.revoked) return json({ error: 'revoked' }, 410);
+  const m = await loadMerchant(env.DB, card.merchant);
+  const c = await env.DB.prepare('SELECT id, name, points, stamps FROM clients WHERE merchant = ? AND id = ? AND deleted = 0').bind(card.merchant, card.client_id).first();
+  const view = m && c && cardView({ fidelity: m.fidelity, client: c });
+  if (!view) return json({ error: 'gone' }, 410);
+  return json({
+    merchant: { slug: m.slug, name: m.name, color: m.color, bg: m.bg, address: m.address, phone: m.phone, logo: m.logoUrl ? `/api/wallet/strip/logo-${m.slug}.png` : '' },
+    card: { ...view, strip: stripPath(view, m, 2), qr: 'KIWI-C:' + card.client_id, platform: card.platform },
+  });
 }

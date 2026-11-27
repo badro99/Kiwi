@@ -70,20 +70,15 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const q = new URL(request.url).searchParams;
-  try {
-    const m = await loadMerchant(env.DB, q.get('merchant'));
-    const view = m && m.on ? cardView({ fidelity: m.fidelity, client: {} }) : null;
-    if (!view) return json({ error: 'no-card' }, 404);
-    const out = {
-      merchant: { slug: m.slug, name: m.name, color: m.color, bg: m.bg, logo: m.logoUrl ? `/api/wallet/strip/logo-${m.slug}.png` : '' },
-      program: { model: view.model, target: view.target, rewardLabel: view.rewardLabel, item: view.item || '', strip: stripPath(view, m, 2) },
-    };
-    if (q.get('r')) { const u = await usableSale(env, m.slug, str(q.get('r'), 120), Date.now()); out.receipt = u.sale ? 'ok' : u.already ? 'used' : 'unusable'; }
-    return json(out);
-  } catch (error) {
-    if (/no such table|no such column/i.test(String(error && error.message))) return json({ error: 'unmigrated' }, 503);
-    throw error;
-  }
+  const m = await loadMerchant(env.DB, q.get('merchant'));
+  const view = m && m.on ? cardView({ fidelity: m.fidelity, client: {} }) : null;
+  if (!view) return json({ error: 'no-card' }, 404);
+  const out = {
+    merchant: { slug: m.slug, name: m.name, color: m.color, bg: m.bg, logo: m.logoUrl ? `/api/wallet/strip/logo-${m.slug}.png` : '' },
+    program: { model: view.model, target: view.target, rewardLabel: view.rewardLabel, item: view.item || '', strip: stripPath(view, m, 2) },
+  };
+  if (q.get('r')) { const u = await usableSale(env, m.slug, str(q.get('r'), 120), Date.now()); out.receipt = u.sale ? 'ok' : u.already ? 'used' : 'unusable'; }
+  return json(out);
 }
 
 export async function onRequestPost(context) {
@@ -92,58 +87,53 @@ export async function onRequestPost(context) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const now = Date.now(), origin = new URL(request.url).origin;
-  try {
-    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const budget = await spendBudget(env, 'ip:' + ip, 'wallet-enroll', 40, 3600_000, now);
-    if (!budget.ok) return json({ error: 'rate-limited' }, 429, { 'Retry-After': String(budget.retryAfter) });
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const budget = await spendBudget(env, 'ip:' + ip, 'wallet-enroll', 40, 3600_000, now);
+  if (!budget.ok) return json({ error: 'rate-limited' }, 429, { 'Retry-After': String(budget.retryAfter) });
 
-    const m = await loadMerchant(env.DB, body && body.merchant);
-    const probe = m && m.on ? cardView({ fidelity: m.fidelity, client: {} }) : null;
-    if (!probe) return json({ error: 'no-card' }, 404);
-    const issue = async (clientId, extra = {}) => {
-      const c = await clientById(env, m.slug, clientId);
-      const view = cardView({ fidelity: m.fidelity, client: c || {} });
-      return json({ ok: true, ...extra, offers: await offersFor(env, { merchant: m, clientId, view, baseUrl: origin }) });
-    };
+  const m = await loadMerchant(env.DB, body && body.merchant);
+  const probe = m && m.on ? cardView({ fidelity: m.fidelity, client: {} }) : null;
+  if (!probe) return json({ error: 'no-card' }, 404);
+  const issue = async (clientId, extra = {}) => {
+    const c = await clientById(env, m.slug, clientId);
+    const view = cardView({ fidelity: m.fidelity, client: c || {} });
+    return json({ ok: true, ...extra, offers: await offersFor(env, { merchant: m, clientId, view, baseUrl: origin }) });
+  };
 
-    if (body.t) {
-      const tok = await useTillToken(env.DB, str(body.t, 64), now);
-      if (!tok || tok.merchant !== m.slug) return json({ error: 'token-expired' }, 410);
-      return issue(tok.clientId);
-    }
-
-    const phone = normalizePhone(body.phone);
-    if (!phone) return json({ error: 'bad-phone' }, 400);
-    const name = str(body.name, 80);
-    if (!body.r) {
-      /* The counter-stand path answers "this number already has a card" for a
-         known number, so a known and a new number must look the same until the
-         lookup: the name is checked first, and every attempt spends the same
-         sign-up budget (12 an hour per address) before the number is read. */
-      if (!name) return json({ error: 'name-required' }, 400);
-      const signup = await spendBudget(env, 'ip:' + ip, 'wallet-signup', 12, 3600_000, now);
-      if (!signup.ok) return json({ error: 'rate-limited' }, 429, { 'Retry-After': String(signup.retryAfter) });
-    }
-    const twin = (await phoneTwins(env, m.slug, phone, ''))[0] || null;
-
-    if (body.r) {
-      const u = await usableSale(env, m.slug, str(body.r, 120), now);
-      if (u.error) return json({ error: u.error }, 410);
-      if (u.already) return json({ ok: true, already: true });
-      const clientId = twin ? twin.id : await createClient(env, m.slug, { name: name || 'Client', phone, consent: !!body.consent, now });
-      const credited = await creditSale(env, m.slug, u.sale, clientId, now);
-      if (!credited) return json({ ok: true, already: true });
-      if (twin) {
-        if (context.waitUntil) context.waitUntil(notifyClientChanged(env, m.slug, clientId, { baseUrl: origin }).catch(() => {}));
-        return json({ ok: true, credited: true, exists: true });
-      }
-      return issue(clientId, { credited: true });
-    }
-
-    if (twin) return json({ ok: true, exists: true });
-    return issue(await createClient(env, m.slug, { name, phone, consent: !!body.consent, now }));
-  } catch (error) {
-    if (/no such table|no such column/i.test(String(error && error.message))) return json({ error: 'unmigrated' }, 503);
-    throw error;
+  if (body.t) {
+    const tok = await useTillToken(env.DB, str(body.t, 64), now);
+    if (!tok || tok.merchant !== m.slug) return json({ error: 'token-expired' }, 410);
+    return issue(tok.clientId);
   }
+
+  const phone = normalizePhone(body.phone);
+  if (!phone) return json({ error: 'bad-phone' }, 400);
+  const name = str(body.name, 80);
+  if (!body.r) {
+    /* The counter-stand path answers "this number already has a card" for a
+       known number, so a known and a new number must look the same until the
+       lookup: the name is checked first, and every attempt spends the same
+       sign-up budget (12 an hour per address) before the number is read. */
+    if (!name) return json({ error: 'name-required' }, 400);
+    const signup = await spendBudget(env, 'ip:' + ip, 'wallet-signup', 12, 3600_000, now);
+    if (!signup.ok) return json({ error: 'rate-limited' }, 429, { 'Retry-After': String(signup.retryAfter) });
+  }
+  const twin = (await phoneTwins(env, m.slug, phone, ''))[0] || null;
+
+  if (body.r) {
+    const u = await usableSale(env, m.slug, str(body.r, 120), now);
+    if (u.error) return json({ error: u.error }, 410);
+    if (u.already) return json({ ok: true, already: true });
+    const clientId = twin ? twin.id : await createClient(env, m.slug, { name: name || 'Client', phone, consent: !!body.consent, now });
+    const credited = await creditSale(env, m.slug, u.sale, clientId, now);
+    if (!credited) return json({ ok: true, already: true });
+    if (twin) {
+      if (context.waitUntil) context.waitUntil(notifyClientChanged(env, m.slug, clientId, { baseUrl: origin }).catch(() => {}));
+      return json({ ok: true, credited: true, exists: true });
+    }
+    return issue(clientId, { credited: true });
+  }
+
+  if (twin) return json({ ok: true, exists: true });
+  return issue(await createClient(env, m.slug, { name, phone, consent: !!body.consent, now }));
 }
