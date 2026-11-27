@@ -79,8 +79,28 @@ await ok('the owner\'s counts: cards by phone type, Apple cards actually in a Wa
   await S.issueCard(db, { merchant: 'other-shop', clientId: 'z', platform: 'apple', now: T });
   await S.registerDevice(db, { deviceId: 'd1', serial: a1.serial, pushToken: 'p1', now: T });
   await S.registerDevice(db, { deviceId: 'd2', serial: a1.serial, pushToken: 'p2', now: T });
-  assert.deepEqual(await S.walletStats(db, 'santos-store'), { clients: 3, apple: 2, appleInWallet: 1, google: 1, web: 1 });
-  assert.deepEqual(await S.walletStats(db, 'empty-shop'), { clients: 0, apple: 0, appleInWallet: 0, google: 0, web: 0 });
+  const { week: _w1, ...counts } = await S.walletStats(db, 'santos-store');
+  assert.deepEqual(counts, { clients: 3, apple: 2, appleInWallet: 1, google: 1, web: 1 });
+  const { week: _w2, ...none } = await S.walletStats(db, 'empty-shop');
+  assert.deepEqual(none, { clients: 0, apple: 0, appleInWallet: 0, google: 0, web: 0 });
+});
+
+await ok('the week, for the owner: new card holders, receipts claimed, rewards used, and the share of sales made with a card', async () => {
+  const { DB: db, sql: q } = walletDb();
+  const now = Date.now(), old = now - 9 * 86400_000;
+  await S.issueCard(db, { merchant: 'amira-cafe', clientId: 'h1', platform: 'web', now: now - 3600_000 });
+  await S.issueCard(db, { merchant: 'amira-cafe', clientId: 'h1', platform: 'apple', now: now - 3600_000 });
+  await S.issueCard(db, { merchant: 'amira-cafe', clientId: 'h2', platform: 'web', now: old });
+  await S.claimSale(db, 'amira-cafe', 'sale-a', 'h1', now - 7200_000);
+  await S.claimSale(db, 'amira-cafe', 'sale-old', 'h2', old);
+  const sale = q.prepare('INSERT INTO sales (id, merchant, amount, amount_cents, method, ref, ts, void_ts) VALUES (?,?,?,?,?,?,?,?)');
+  for (const [id, ts, v] of [['s1', now - 1000, null], ['s2', now - 2000, null], ['s3', now - 3000, null], ['s4', now - 4000, null], ['s5', now - 5000, now], ['s6', old, null]]) sale.run(id, 'amira-cafe', 10, 1000, 'cash', id, ts, v);
+  const buy = q.prepare("INSERT INTO client_purchase_events (merchant, ref, client_id, created_ts, visits) VALUES ('amira-cafe', ?, ?, ?, ?)");
+  buy.run('s1', 'h1', now - 1000, 1); buy.run('s2', 'h2', now - 2000, 1); buy.run('s3', 'walk-in', now - 3000, 1); buy.run('refund:void:1:x', 'h1', now - 900, 0);
+  const reward = q.prepare("INSERT INTO client_reward_events (merchant, ref, client_id, points_delta, stamps_delta, created_ts) VALUES ('amira-cafe', ?, ?, ?, ?, ?)");
+  reward.run('r1', 'h1', -300, 0, now - 500); reward.run('r2', 'h2', 0, -10, old); reward.run('r3', 'walk-in', -300, 0, now - 400);
+  const { week } = await S.walletStats(db, 'amira-cafe', now);
+  assert.deepEqual(week, { newHolders: 1, receipts: 1, rewards: 1, sales: 4, salesWithCard: 2 });
 });
 
 void sql;

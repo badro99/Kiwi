@@ -50,6 +50,7 @@ import { spendCentsOf, toCents } from './_spend-cents.js';
 import { sessionGuard } from './_permissions.js';
 import { notifyClientChanged, cardsTold } from './wallet/_notify.js';
 import { revokeClientCards } from './wallet/_store.js';
+import { retireGoogleCards } from './wallet/_retire.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
@@ -674,7 +675,7 @@ export async function onRequestDelete(context) {
     ).bind(Date.now(), Date.now(), srv, merchant, id).run();
     try { await erase(true); }
     catch (error) { if (!missingColumn(error)) throw error; await erase(false); }
-    try { await revokeClientCards(env.DB, merchant, id); } catch (_) { /* migration 0040 not applied yet */ }
+    try { await revokeClientCards(env.DB, merchant, id); if (context.waitUntil) context.waitUntil(retireGoogleCards(env, merchant, id).catch(() => {})); } catch (_) { /* migration 0040 not applied yet */ }
   } catch (_) {
     return json({ error: 'unmigrated' }, 503);
   }

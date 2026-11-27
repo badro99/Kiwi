@@ -108,12 +108,30 @@ export async function useTillToken(db, token, now = Date.now()) {
    Apple cards are really in a Wallet (a device registered for push). Google
    and the web card do not tell us when they are saved, so those are cards
    handed out. Revoked cards (client deleted) do not count. */
-export async function walletStats(db, merchant) {
+const WEEK = 7 * 86400_000;
+/* The last seven days, to show the owner the card earns its place: new card
+   holders (first card issued this week), receipts claimed, rewards used by card
+   holders, and how many of the week's live sales carried a card holder. */
+async function walletWeek(db, merchant, now) {
+  const since = now - WEEK;
+  const holders = 'SELECT client_id FROM wallet_cards WHERE merchant = ? AND revoked = 0';
+  const one = async (sqlText, ...args) => Number(((await db.prepare(sqlText).bind(...args).first()) || {}).n || 0);
+  return {
+    newHolders: await one(`SELECT COUNT(*) AS n FROM (SELECT client_id FROM wallet_cards WHERE merchant = ? AND revoked = 0 GROUP BY client_id HAVING MIN(created_ts) > ?)`, merchant, since),
+    receipts: await one('SELECT COUNT(*) AS n FROM wallet_claims WHERE merchant = ? AND claimed_ts > ?', merchant, since),
+    rewards: await one(`SELECT COUNT(*) AS n FROM client_reward_events WHERE merchant = ? AND created_ts > ? AND (points_delta < 0 OR stamps_delta < 0) AND client_id IN (${holders})`, merchant, since, merchant),
+    sales: await one('SELECT COUNT(*) AS n FROM sales WHERE merchant = ? AND ts > ? AND void_ts IS NULL', merchant, since),
+    salesWithCard: await one(`SELECT COUNT(*) AS n FROM client_purchase_events WHERE merchant = ? AND created_ts > ? AND visits > 0 AND client_id IN (${holders})`, merchant, since, merchant),
+  };
+}
+
+export async function walletStats(db, merchant, now = Date.now()) {
   const rows = (await db.prepare(`SELECT platform, COUNT(*) AS n, COUNT(DISTINCT client_id) AS c FROM wallet_cards
     WHERE merchant = ? AND revoked = 0 GROUP BY platform`).bind(merchant).all()).results || [];
   const clients = await db.prepare('SELECT COUNT(DISTINCT client_id) AS n FROM wallet_cards WHERE merchant = ? AND revoked = 0').bind(merchant).first();
   const inWallet = await db.prepare(`SELECT COUNT(DISTINCT c.serial) AS n FROM wallet_cards c JOIN wallet_devices d ON d.serial = c.serial
     WHERE c.merchant = ? AND c.revoked = 0 AND c.platform = 'apple'`).bind(merchant).first();
   const by = (p) => Number((rows.find((r) => r.platform === p) || {}).n || 0);
-  return { clients: Number((clients && clients.n) || 0), apple: by('apple'), appleInWallet: Number((inWallet && inWallet.n) || 0), google: by('google'), web: by('web') };
+  const week = await walletWeek(db, merchant, now);
+  return { clients: Number((clients && clients.n) || 0), apple: by('apple'), appleInWallet: Number((inWallet && inWallet.n) || 0), google: by('google'), web: by('web'), week };
 }
