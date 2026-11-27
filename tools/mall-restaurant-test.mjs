@@ -208,4 +208,11 @@ await ok('the owner sets the bipeur count (1..20), the server refuses anything e
   assert.match(read('assets/till-policy-settings.js'), /data-tps-pagers/);
 });
 
+await ok('kitchen screen: the empty « Nouvelles » column is gone, « En préparation » takes its width', () => {
+  for (const f of ['assets/caisse-kitchen/kds-board.js', 'assets/caisse-kitchen.js']) {
+    assert.match(read(f), /nb\.style\.display = \(typeof mallOn === 'function' && mallOn\(\) && !newList\.length\) \? 'none' : ''/, f);
+  }
+  assert.match(read('assets/caisse-shell.css'), /\.kit-col-cooking \{ flex: 1;/);
+});
+
 console.log(`\n✓ mall restaurants: ${n} checks · off changes nothing, on pays first, hands out bipeurs, prints the kitchen after the receipt`);
