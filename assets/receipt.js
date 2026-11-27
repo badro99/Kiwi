@@ -86,7 +86,7 @@
   function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return o; } }
   function str(v, max) { return String(v == null ? '' : v).trim().slice(0, max || 120); }
   function num(v) { var n = +v; return isFinite(n) ? n : 0; }  var ext = {};   // KiwiReceipt.ext : rendus posés par un autre fichier (doc.gift → receipt-gift.js, doc.prebill → receipt-prebill.js, ce fichier étant à son plafond)
-  function esc(s) {
+  var QR_SVG = /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="\d{1,4}" height="\d{1,4}" viewBox="0 0 \d{1,3} \d{1,3}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="\d{1,3}" height="\d{1,3}" fill="#[0-9a-fA-F]{3,8}"\/><path fill="#[0-9a-fA-F]{3,8}" d="[Mhvz0-9,\-]*"\/><\/svg>$/;   /* le seul dessin admis sur le ticket : celui de qrcode.js, rien d'autre */ function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
@@ -616,7 +616,7 @@
         whatsapp: cfg.msg.whatsapp,
       },
       qr: qrFor(cfg),
-      ticketCode: (!refund && opts.ticketCode && str(sale.ref, 40)) || '', cardUrl: (!refund && str(opts.cardUrl, 300)) || '', cardSvg: (!refund && opts.cardUrl && /^<svg[\s>]/.test(String(opts.cardSvg || '')) && String(opts.cardSvg).slice(0, 60000)) || '', /* N° en Code 128 pour les retours (boutique) ; QR de la carte fidélité Wallet (assets/wallet-till.js › cardUrl) */
+      ticketCode: (!refund && opts.ticketCode && str(sale.ref, 40)) || '', cardUrl: (!refund && str(opts.cardUrl, 300)) || '', cardSvg: (!refund && opts.cardUrl && QR_SVG.test(String(opts.cardSvg || '').slice(0, 60000)) && opts.cardSvg) || '', /* N° en Code 128 pour les retours (boutique) ; QR de la carte fidélité Wallet (assets/wallet-till.js › cardUrl) */
       /* Le mot qui marque une réimpression. `copy: true` demande celui de la
        * langue du ticket — un caissier arabophone imprimait « DUPLICATA » parce
        * que l'appelant écrivait le mot français en dur, sur un reçu par ailleurs
@@ -1206,7 +1206,7 @@
       if (doc.acompte.until && doc.acompte.remaining > 0) R('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { R(T.received, moneyMAD(doc.cash.received, doc)); R(T.change, moneyMAD(doc.cash.change, doc)); }
-    if (doc.ticketCode && window.KiwiBarcode && window.KiwiBarcode.svg) out.push('<div class="kr-c kr-tcode">' + window.KiwiBarcode.svg(doc.ticketCode, { format: 'code128', height: 44 }) + '</div>'); if (doc.cardUrl && doc.cardSvg) out.push('<div class="kr-c kr-card-qr">' + doc.cardSvg + '<div class="kr-xs">' + esc(T.card) + '</div></div>');
+    if (doc.ticketCode && window.KiwiBarcode && window.KiwiBarcode.svg) out.push('<div class="kr-c kr-tcode">' + window.KiwiBarcode.svg(doc.ticketCode, { format: 'code128', height: 44 }) + '</div>'); if (doc.cardUrl && QR_SVG.test(String(doc.cardSvg || ''))) out.push('<div class="kr-c kr-card-qr">' + doc.cardSvg + '<div class="kr-xs">' + esc(T.card) + '</div></div>');
 
     out.push('<div class="kr-rule"></div>');
     P('kr-c kr-thanks', doc.foot.thanks || T.thanks);

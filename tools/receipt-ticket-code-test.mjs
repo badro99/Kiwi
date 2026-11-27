@@ -150,4 +150,16 @@ ok('only a drawn QR is put in the ticket: markup that is not an svg is dropped',
   assert.ok(qrStore(Array.from(R.escpos(doc)), CARD) > 0, 'the printer still prints its own QR');
 });
 
+ok('an svg that is not exactly the QR drawing is refused, at build and again when a stored copy is drawn', () => {
+  for (const bad of ['<svg onload="alert(1)"></svg>', R.__qr(CARD).replace('<path ', '<path onclick="x()" '), R.__qr(CARD).replace('</svg>', '<script>x()</script></svg>'), R.__qr(CARD).replace('<rect ', '<image href="//evil" /><rect ')]) {
+    assert.equal(R.build(SALE, { cardUrl: CARD, cardSvg: bad }).cardSvg, '', bad.slice(0, 40));
+  }
+  const doc = R.build(SALE, { cardUrl: CARD, cardSvg: R.__qr(CARD) });
+  assert.ok(doc.cardSvg.startsWith('<svg'), 'the real drawing is kept');
+  const stored = JSON.parse(JSON.stringify(doc));
+  stored.cardSvg = '<svg onload="alert(1)"></svg>';          /* a snapshot edited in storage */
+  const html = R.html(stored);
+  assert.ok(!html.includes('onload') && !html.includes('kr-card-qr'), 'nothing drawn from a tampered copy');
+});
+
 console.log(`receipt-ticket-code: ${n} checks passed`);

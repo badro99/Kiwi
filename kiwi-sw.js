@@ -428,7 +428,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=41', '/assets/receipt-country.js?v=2', '/assets/receipt-gift.js?v=4',
+  '/assets/receipt.js?v=42', '/assets/receipt-country.js?v=2', '/assets/receipt-gift.js?v=4',
   '/assets/receipt-ui.js?v=3',
   '/assets/invoice.js?v=28',
   '/assets/merchant-config.js?v=301', '/assets/kiwi-country.js?v=5',
