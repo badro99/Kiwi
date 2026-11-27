@@ -104,7 +104,7 @@ try {
   tillTab.on('pageerror', e => errors.push('till: ' + e.message));
   await tillTab.goto(base + '/till.html', { waitUntil: 'networkidle0' });
   await tillTab.evaluate(() => window.openRemise());
-  assert.deepEqual(await tillTab.evaluate(() => window.chips()), ['5 %', '10 %', '15 %', '20 %'], 'till starts on the default percentages');
+  assert.deepEqual(await tillTab.evaluate(() => window.chips()), ['5 %', '10 %', '15 %', '20 %', '50 %', '100 %'], 'till starts on the default percentages (50 % and 100 % since 27 Nov: a meal can be offered)');
   if (SHOTS) await tillTab.screenshot({ path: path.join(SHOTS, 'discount-live-1-till-before.png') });
 
   // The owner removes 10, 15 and 20 % while the till stays open on the remise panel.

@@ -1,13 +1,13 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=315';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=232';
-import { lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=315';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=315';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=319';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=236';
+import { printReceiptNow, lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=319';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=319';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=9'; import { isOddPid, oddInject, mountOddBox } from './pos-boutique/odd-box.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
-import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=7'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=1';
+import { readDayRows } from './pos-boutique/old-sales.js?v=2'; import { mzCashMoveFor, mzMoveTotals, mzReportMoves } from './pos-maison/cash-moves.js?v=7'; import { mzSaleDiscount } from './pos-maison/sale-discount.js?v=3';
 import { prepareNumber, releaseNumber } from './pos-boutique/ticket-number.js?v=8'; import { tillPriceList as tpl } from './pos-boutique/price-list.js?v=3';
-import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=27'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2'; import { giftTicket } from './pos-boutique/gift-ticket.js?v=6';
+import { bqKitRail, bqKitRailPaint, bqKitOpenSheet } from './pos-boutique/kit-2027.js?v=27'; import { mountSellerDay } from './pos-boutique/seller-day.js?v=3'; import { cardCheckHtml, cardCheckWire, cardCheckValue } from './pos-boutique/card-check.js?v=2'; import { mountSellerPick, sellerPickOn } from './pos-boutique/seller-pick.js?v=2'; import { giftTicket } from './pos-boutique/gift-ticket.js?v=6'; import { payOffered, OFFERED_PART } from './pos-boutique/offered.js?v=2';
 import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zDrawerCash, zDrawerMoves, zDrawerRows, zSplitParts, zSalesFor, zSentParts, zTicketOpts, zPair, zPrintPair, zStoreHead, zDeliveryRows, zCloseTotals, zHoldsStock } from './pos-boutique/z-split.js?v=10'; import { bqLivraisons } from './pos-boutique/livraisons.js?v=24'; import { retainDays, outsideWindow } from './pos-boutique/return-window.js?v=11'; import { bqTransfers } from './pos-boutique/transfers.js?v=8';
 
   'use strict';
@@ -1855,7 +1855,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
       }),
     };
     const RS = window.KiwiRepeatSale, repeatSig = RS ? RS.signature(frozen.lines, total) : ''; // même panier qu'il y a < 2 min
-    const beginPay = () => openPay({
+    const beginPay = () => (total > 0 || !(tot.remise > 0) ? openPay : (o) => payOffered(o, { print: printReceiptNow, toast }))({   // tout offert : rien à encaisser (pos-boutique/offered.js)
       amount: total, syncId: frozen.syncId,   // l'avoir consommé porte l'id de la vente à venir (sale/refund.js le relit)
       customerId: c ? c.id : null, priceList: frozen.priceList,
       beforePaid: () => window.KiwiLoyaltyReserve.create({ isDemo: IS_DEMO, ticket: t, ticketOwner, client: c, render: renderTicket, close: () => { state.checkoutBusy = false; closeVeil('#bq-pay-veil'); } }).confirm(),
@@ -1991,14 +1991,14 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               total: lineTotals[i],
               cat: ln.rayon,
               unit: 'piece',
-              kind: 'product', supplierId: (P[ln.pid] && P[ln.pid].supplierId) || '',
+              kind: 'product', supplierId: (P[ln.pid] && P[ln.pid].supplierId) || '', ...(Number(ln.remise) >= 100 ? { offered: ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price } : {}),
             })));
             const payload = {
               id: sale.syncId,
               amount: cashIn,
               method: method,
               paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round((onAccount ? total : receivedNow) * 100),
-              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))], agreedMaxPercent: Math.max(0, ...frozen.lines.filter(ln => ln.agreed > 0).map(ln => { const b = ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price; return b > 0 ? Math.ceil((b - ln.unit) / b * 100 - 1e-9) : 0; })) || undefined,
+              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0 && n < 100))], agreedMaxPercent: Math.max(0, ...frozen.lines.filter(ln => ln.agreed > 0).map(ln => { const b = ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price; return b > 0 ? Math.ceil((b - ln.unit) / b * 100 - 1e-9) : 0; })) || undefined,
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card, stockHeld: sale.stockHeld === true,
               label: onAccount ? 'Compte client · ' + label : isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
@@ -2018,7 +2018,9 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
             };
             if (onAccount) payload.settlementKind = 'receivable';
             else if (cashIn <= 0 && (parts || []).some(x => x.m === 'livraison')) payload.settlementKind = 'receivable';
-            else if (cashIn <= 0 && (parts || []).some(x => x.m === 'avoir')) {
+            else if (cashIn <= 0 && (parts || []).some(x => x.m === OFFERED_PART)) {   // ticket offert : 0 MAD, brut = remise (mzSaleDiscount)
+              Object.assign(payload, { settlementKind: 'complimentary', method: 'complimentary', paymentParts: undefined, ticketAmountCents: undefined });
+            } else if (cashIn <= 0 && (parts || []).some(x => x.m === 'avoir')) {
               payload.settlementKind = 'store-credit';
               payload.creditAmountCents = Math.round((parts || []).filter(x => x.m === 'avoir')
                 .reduce((sum, x) => sum + (+x.amount || 0), 0) * 100);

@@ -43,7 +43,7 @@ export function ticketRemise(d) {
     const apply = (pct, quiet) => {
       if (one === null) ticketOwner.discountAllLines(t, pct); else ticketOwner.discountLine(t, one, pct);
       renderTicket(); renderGrid(); renderBadges(); icons();
-      if (!quiet) toast(pct ? tr('Remise') + ' −' + pct + ' %' : tr('Remise supprimée'));
+      if (!quiet) toast(pct >= 100 ? tr('Article offert') : pct ? tr('Remise') + ' −' + pct + ' %' : tr('Remise supprimée'));
     };
     const el = $('#bq-approvem', root);
     /* Le squelette d'abord, les mots ensuite, chacun par tr() : aucune
@@ -99,11 +99,14 @@ export function ticketRemise(d) {
       if (t.remiseAuth) { agree(); return; }
       openApprove(0, agree, { mode: r.mode, value: r.value, label: tr('Prix convenu') + ' ' + d.fmt(r.res.after), cut: d.fmt(r.res.cut) });
     };
-    [0].concat(pcts).forEach((r) => {
+    /* « Offert » (100 %) : la pièce sort du stock et du journal à 0 MAD, avec
+       sa valeur dans la remise ; un ticket entièrement offert s'enregistre
+       en vente « Offerte » (pos-boutique.js › checkout). Toujours avec l'accord. */
+    [0].concat(pcts.filter((p) => p < 100), [100]).forEach((r) => {
       const b = document.createElement('button');
-      b.className = 'bq-chip' + (cur === r ? ' on' : '');
+      b.className = 'bq-chip' + (cur === r ? ' on' : '') + (r === 100 ? ' bq-chip-offer' : '');
       b.dataset.bqTkrem = String(r);
-      b.textContent = r ? '−' + r + ' %' : tr('Sans');
+      b.textContent = r === 100 ? tr('Offert') : r ? '−' + r + ' %' : tr('Sans');
       $('#bq-tkrem-chips', el).appendChild(b);
     });
     openVeil('#bq-approve-veil');
@@ -114,7 +117,7 @@ export function ticketRemise(d) {
       if (!b) return;
       const pct = parseInt(b.dataset.bqTkrem, 10) || 0;
       /* Retirer la remise n'a jamais demandé d'accord ; l'accorder, si. */
-      if (!pct || t.remiseAuth) { closeVeil('#bq-approve-veil'); apply(pct); return; }
+      if (!pct || (t.remiseAuth && pct < 100)) { closeVeil('#bq-approve-veil'); apply(pct); return; }
       openApprove(pct, () => { closeVeil('#bq-approve-veil'); apply(pct, true); });   // openApprove dit déjà « Remise −n % »
     };
   }

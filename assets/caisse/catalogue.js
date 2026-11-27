@@ -791,7 +791,7 @@
          Les empiler enverrait un seul café en cuisine, et le second client
          attendrait une boisson que personne n'a commencée. */
       const priced = promoPrice(item, item.price + extra);
-      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && !c.kind && (c.optSig || '') === sig
+      const line = cart.find(c => c.id === item.id && !(c.note || '').trim() && !c.kind && !c.offered && (c.optSig || '') === sig
         && promoKey(c.promo) === promoKey(priced.promo));
       if (line) currentOrder().patchLine(line, { qty: +line.qty + 1 });
       else currentOrder().append(cart, Object.assign({ uid: newLineUid(), id: item.id, name: item.name, price: priced.price,
@@ -1237,10 +1237,10 @@
           ${l.kind === 'formula-part' ? `<span class="rp-sent-qty">${l.qty}×</span>` : `<div class="qty-control">
             <button class="qty-btn" data-cart-action="dec" aria-label="Moins">−</button>
             <span class="qty-num mono">${l.qty}</span>
-            <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
+            <button class="qty-btn" data-cart-action="inc" aria-label="Plus"${+l.offered > 0 ? ' hidden' : ''}>+</button>
           </div>`}
           <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
-          <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
+          ${offerPrice(l)}
           <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
             value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
             aria-label="Note cuisine, ${kdsEsc(l.name)}" />

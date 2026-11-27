@@ -14,7 +14,7 @@ export function mzSaleDiscount({ amountCents, totalCents, remiseCents = 0, rewar
   const amount = Math.round(+amountCents || 0), total = Math.round(+totalCents || 0);
   const remise = Math.max(0, Math.round(+remiseCents || 0)), reward = Math.max(0, Math.round(+rewardCents || 0));
   const discount = remise + reward;
-  if (!(discount > 0) || !(amount > 0) || amount !== total) return null;
+  if (!(discount > 0) || amount < 0 || amount !== total) return null;   // 0 = ticket entièrement offert : brut = remise
   const actor = String(actorId || '');
   return {
     grossAmountCents: amount + discount,

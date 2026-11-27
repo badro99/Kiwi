@@ -707,6 +707,9 @@ function postSale(entry) {
             o.pm = { i: String(l.promo.id).slice(0, 40), n: String(l.promo.name || '').slice(0, 60),
               f: Math.round(Math.max(0, +l.promo.full || 0) * 100) / 100 };
           }
+          /* « Offert » : la ligne vaut 0, `of` garde son prix unitaire d'origine
+           * pour que le rapport sache ce qui a été donné. */
+          if (+l.offered > 0) o.of = Math.round(+l.offered * 100) / 100;
           return o;
         });
       }

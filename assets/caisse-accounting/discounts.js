@@ -39,9 +39,9 @@
     }
     function activeSaleDiscount(amount, lines, settlementTable) {
       const tId = settlementTable || selectedId;
-      const d = mode === 'vrap' ? vrapDiscount : (tId && tables[tId] && tables[tId].discount);
+      const d = (typeof offerDiscount === 'function' ? offerDiscount : (x) => x)(mode === 'vrap' ? vrapDiscount : (tId && tables[tId] && tables[tId].discount), lines);
       if (!d || !Array.isArray(lines) || !lines.length) return null;
-      const gross = money(lines.reduce((sum, line) => sum + (Number(line && (line.total != null ? line.total : ((line.price || 0) * (line.qty || 0)))) || 0), 0));
+      const gross = money(lines.reduce((sum, line) => sum + (Number(line && (line.total != null ? line.total : ((line.price || 0) * (line.qty || 0)))) || 0), 0) + (typeof offeredValue === 'function' ? offeredValue(lines) : 0));
       const discount = money(Math.max(0, gross - money(amount)));
       if (!(gross > 0) || !(discount > 0) || discount > gross) return null;
       return {

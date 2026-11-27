@@ -143,7 +143,7 @@ async function fixture(t, opts = {}) {
     vm.createContext(context);
     vm.runInContext(caisseTestSource.withSettlement(live), context, { filename: 'assets/live-link.js' });
     vm.runInContext(caisseTestSource.withSettlement(['tableSaleLabel', 'paidReceiptForCurrentTable', 'resetTableTimer',
-      'activeSaleDiscount', 'recordSale', 'persistShift', 'reviveJournalEntry', 'restoreShift',
+      'offeredValue', 'offerDiscount', 'activeSaleDiscount', 'recordSale', 'persistShift', 'reviveJournalEntry', 'restoreShift',
       'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n') + '\n' + heldBlock), context, { filename: 'kiwi-caisse-payment-functions.js' });
     // The real caisse installs this listener on window; document would miss
     // KiwiLive's acknowledgement entirely.
@@ -381,6 +381,34 @@ test('restore keeps complimentary settlement proof so a reload can finish synchr
   const row = f.db.prepare("SELECT amount_cents, method FROM sales WHERE method='complimentary'").get();
   assert.equal(row?.amount_cents, 0);
   assert.equal(row?.method, 'complimentary');
+});
+
+/* « Offert » : un article donné au client reste une ligne de vente. Seul, il
+   fait une vente « Offerte » à 0 MAD (brut = remise = sa valeur) ; avec des
+   articles payés, il entre dans la remise de la vente. Les deux passent par le
+   vrai /api/sale et la ligne garde sa valeur (`of`) dans le panier stocké. */
+test('an offered item alone books a complimentary sale that keeps its value on the line', async t => {
+  const f = await fixture(t);
+  const entry = f.ctx.recordSale(0, 'complimentary', 'À emporter', 0,
+    [{ name: 'Cookie', qty: 1, total: 0, offered: 15, offeredBy: 'manager-1' }], '', null, null);
+  assert.equal(entry?.kind, 'complimentary', 'the free cookie is a complimentary sale, not a refused 0 MAD');
+  assert.equal(entry.grossAmountCents, 1500); assert.equal(entry.discountAmountCents, 1500);
+  assert.equal(entry.lines[0].offered, 15, 'the journal line keeps what the cookie was worth');
+  await drain();
+  const row = f.db.prepare("SELECT amount_cents, method, lines FROM sales WHERE method='complimentary'").get();
+  assert.equal(row?.amount_cents, 0, 'the server books 0 MAD of revenue');
+  assert.equal(JSON.parse(row.lines)[0].of, 15, 'and the stored basket says the line was offered at 15 MAD');
+});
+test('an offered item beside paid items lands in the sale discount', async t => {
+  const f = await fixture(t);
+  const entry = f.ctx.recordSale(30, 'cash', 'À emporter', 0,
+    [{ name: 'Pasta', qty: 1, price: 30, total: 30 }, { name: 'Cookie', qty: 1, total: 0, offered: 15, offeredBy: 'manager-1' }], '', null, null);
+  assert.equal(entry?.amount, 30); assert.equal(entry.grossAmountCents, 4500); assert.equal(entry.discountAmountCents, 1500);
+  assert.equal(entry.discountReason, 'commercial');
+  await drain();
+  const row = f.db.prepare("SELECT amount_cents, gross_amount_cents, discount_amount_cents, lines FROM sales WHERE method='cash'").get();
+  assert.equal(row?.amount_cents, 3000); assert.equal(row.gross_amount_cents, 4500); assert.equal(row.discount_amount_cents, 1500);
+  assert.deepEqual(JSON.parse(row.lines).map(l => [l.n, l.t, l.of]), [['Pasta', 30, undefined], ['Cookie', 0, 15]]);
 });
 
 test('synchronous enqueue exception remains durable in the journal and provisional recovery retries', async t => {

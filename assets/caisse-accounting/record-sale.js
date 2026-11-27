@@ -7,7 +7,7 @@
          Inconnu : rien n'est écrit, jamais 0. */
       function frozenUnitCost(l) {
         try {
-          if (!l || !l.itemId || l.kind === 'formula' || l.kind === 'formula-part' || !(+l.total > 0)) return null;
+          if (!l || !l.itemId || l.kind === 'formula' || l.kind === 'formula-part' || !(+l.total > 0 || +l.offered > 0)) return null;
           const C = window.KiwiCost;
           if (!C || typeof C.of !== 'function') return null;
           const hit = C.of({ kind: l.kind || '', id: String(l.itemId), name: l.baseName || l.name || '' });
@@ -100,7 +100,7 @@
               cat: l.cat || '',
             },
             l.itemId ? { itemId: l.itemId } : null,
-            l.kind ? { kind: l.kind } : null,
+            l.kind ? { kind: l.kind } : null, +l.offered > 0 ? { offered: money(+l.offered) } : null,
             l.shareDen > 1 ? { shareDen: Number(l.shareDen) } : null,
             /* La promotion de la carte qui a fixé ce prix : son id, son nom et
                ce que la ligne aurait coûté sans elle (le rapport compte la

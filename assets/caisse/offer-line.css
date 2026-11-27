@@ -1,0 +1,23 @@
+/* « Offert » sur une ligne de l'addition : le bouton cadeau à côté du prix
+   (assets/caisse/discounts.js, offerPrice). Icône Material « redeem »,
+   peinte en currentColor par masque. */
+.rp-item-price:has(.rp-offer) { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.rp-offer {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  background: var(--paper-mute); color: var(--ink-3);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.rp-offer::before {
+  content: ''; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: url(../icons/material/redeem.svg) center / contain no-repeat;
+  mask: url(../icons/material/redeem.svg) center / contain no-repeat;
+}
+.rp-offer:hover { background: var(--mint-tint); color: var(--forest); }
+.rp-offer.is-on { background: var(--atlas); color: var(--paper); }
+.rp-offer:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
+.rp-item-price.is-offered { color: var(--atlas); }
+.rp-offer-was { color: var(--ink-3); font-weight: 500; }
+.rp-offer-was, .rp-item-price.is-offered { white-space: nowrap; }
+/* Une ligne offerte ne grossit pas au « + » : un deuxième cadeau se demande. */
+.qty-control .qty-btn[hidden] { display: none; }

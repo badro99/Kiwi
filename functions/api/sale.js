@@ -511,6 +511,10 @@ export async function onRequestPost({ request, env, waitUntil, quarantineSettlem
           const full = Math.round(Math.max(0, Math.min(100000000, Number(rawPromo.f ?? rawPromo.full) || 0)) * 100) / 100;
           if (pi && full >= o.t) o.pm = { i: pi, n: String(rawPromo.n ?? rawPromo.name ?? '').slice(0, 60), f: full };
         }
+        /* « Offert » : article donné au client, total 0, `of` = son prix
+         * unitaire d'origine (MAD). Reporting seulement, comme `pm`. */
+        const offered = Math.round(Math.max(0, Math.min(100000000, Number(l && (l.of ?? l.offered)) || 0)) * 100) / 100;
+        if (offered > 0 && o.t === 0) o.of = offered;
         return o;
       }).filter((l) => l.q > 0);
       if (clean.length) {

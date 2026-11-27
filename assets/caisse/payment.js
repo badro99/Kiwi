@@ -273,6 +273,30 @@
       try { window.dispatchEvent(new CustomEvent('kiwi:sale-paid', { detail: { total: tenderBase + tenderTip, method: method, haptic: false } })); } catch (_) {}
       return 'complete';
     }
+    /* Une addition à 0 MAD parce qu'un responsable a approuvé une remise de
+       100 % n'est ni espèces ni carte, mais c'est une vente : la cuisine reçoit
+       ses bons, le stock sort, le journal la marque « Offerte » et le coût
+       matière reste compté. Un total nul sans cette remise reste refusé. */
+    function billFullyOffered() {
+      if (currentTotal() > 0) return false;
+      const lines = currentSaleLines();
+      const d = activeSaleDiscount(0, lines, mode !== 'vrap' ? selectedId : '');
+      return !!(d && d.grossAmountCents > 0 && d.grossAmountCents === d.discountAmountCents);
+    }
+    async function settleOfferedBill() {
+      const tr = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr;
+      if (tenderInFlight) return false;
+      if (!billFullyOffered()) { toast(tr('Addition vide')); return false; }
+      tenderInFlight = true;
+      let settled;
+      try { settled = await finalizeTender('complimentary'); }
+      catch (_) { tenderInFlight = false; toast(tr('Encaissement à vérifier dans le journal avant de réessayer')); return false; }
+      tenderInFlight = false;
+      if (settled !== 'complete') return false;
+      toast(tr('Addition offerte enregistrée'));
+      printSaleTicket(lastSaleEntry());
+      return true;
+    }
     function updateRendu() {
       // The customer pays base + pourboire; rendu is computed off that.
       /* In cents: a percentage remise leaves 44.700000000000003 as the due,

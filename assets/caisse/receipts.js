@@ -101,7 +101,7 @@
           total, cat: lineCat(line.id || line.itemId, line.name),
           kind: line.kind || '', formulaUid: line.formulaUid || '',
           promo: line.promo || null,
-        };
+        }; if (+line.offered > 0) Object.assign(out, { offered: +line.offered, offeredBy: String(line.offeredBy || '') });
         /* Les options choisies suivent la ligne jusqu'au stock : par leur
            identifiant quand la caisse les a posées, sinon par le texte
            « Groupe : Choix » d'une commande venue du serveur ou d'OrderPro. */

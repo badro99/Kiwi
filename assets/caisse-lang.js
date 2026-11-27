@@ -1500,7 +1500,7 @@
       'Module facture non disponible': ['Invoice module unavailable', 'وحدة الفواتير غير متاحة'],
       'mode inconnu': ['unknown method', 'طريقة غير معروفة'],
       'identifiant indisponible': ['id unavailable', 'المعرّف غير متاح'],
-      'Addition offerte enregistrée': ['Complimentary bill recorded', 'تم تسجيل الحساب المجاني'],
+      'Addition offerte enregistrée': ['Complimentary bill recorded', 'تم تسجيل الحساب المجاني'], 'Offert': ['Free', 'مجاني'], 'Offrir cet article': ['Give this item free', 'قدّم هذا المنتج مجانًا'], 'Remettre au prix': ['Charge it again', 'أرجعه بثمنه'], 'Offrir un article': ['Give an item free', 'تقديم منتج مجانًا'], 'Article offert': ['Item given free', 'المنتج مقدَّم مجانًا'], 'Article remis au prix': ['Item charged again', 'المنتج رجع بثمنه'], 'Ticket offert enregistré': ['Free ticket recorded', 'تسجّلت التذكرة مجانًا'],
       'table clôturée': ['table closed', 'تم إغلاق الطاولة'],
       'Montant nul non justifié': ['Zero amount without a reason', 'مبلغ صفر بدون مبرر'],
       'appliquez une remise de 100 % approuvée': ['apply an approved 100 % discount', 'طبّق خصمًا معتمدًا بنسبة 100 %'],

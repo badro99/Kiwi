@@ -28,6 +28,10 @@
     }
 
     
+    /* Sans réglage du propriétaire, la caisse restaurant propose aussi 50 % et
+       100 % : une addition offerte passe par la remise approuvée, puis
+       « Encaisser » l'enregistre en vente offerte (caisse/payment.js). */
+    const REMISE_PCTS = Object.freeze([5, 10, 15, 20, 50, 100]);
     function renderRemiseChips() {
       /* Remises nommées du propriétaire (« Étudiant · 10 % ») : la caisse ne
          propose qu'elles, ni montant ni motif à choisir, le nom est le motif. */
@@ -42,7 +46,7 @@
         $('#rm-pct-chips').innerHTML = presets.map(p => `<button class="rm-pct-chip" data-rm-pct="${p.pct}" data-rm-name="${kdsEsc(p.name)}">${kdsEsc(p.name)} · ${p.pct} %</button>`).join('');
         return;
       }
-      const values = window.KiwiDiscountPolicy?.percentages() || [5, 10, 15, 20];
+      const values = window.KiwiDiscountPolicy?.percentages(undefined, REMISE_PCTS) || REMISE_PCTS;
       $('#rm-pct-chips').innerHTML = values.map(n => `<button class="rm-pct-chip" data-rm-pct="${n}">${n} %</button>`).join('');
     }
     
@@ -206,3 +210,67 @@
     }
 
     
+    /* ===========================================================
+       OFFERT · un article donné au client (le cookie du fidèle)
+       -----------------------------------------------------------
+       L'article reste une vraie ligne de vente : la cuisine le reçoit, le
+       stock le sort, son coût matière est figé comme pour un plat payé. Seul
+       son prix passe à 0 et la ligne garde ce qu'il valait :
+         line.price     = 0
+         line.offered   = prix unitaire d'origine (MAD)
+         line.offeredBy = le responsable qui l'a approuvé
+       À l'encaissement, la valeur offerte entre dans le brut et dans la remise
+       de la vente (activeSaleDiscount), donc une addition entièrement offerte
+       devient une vente « Offerte » à 0 MAD, et une addition mixte dit au
+       tableau de bord combien a été donné. Une quantité > 1 n'offre qu'une
+       unité : elle part sur sa propre ligne.
+       =========================================================== */
+    function offeredValue(lines) {
+      return money((lines || []).reduce((s, l) => s + (+(l && l.offered) > 0 ? +l.offered * (+l.qty || 0) : 0), 0));
+    }
+    function offerDiscount(d, lines) {
+      if (d || !(offeredValue(lines) > 0)) return d;
+      const by = (lines || []).find(l => l && +l.offered > 0 && l.offeredBy);
+      return { kind: 'amount', value: 0, reason: 'Geste commercial', actorId: by ? by.offeredBy : '' };
+    }
+    function offerPrice(l) {
+      const tr = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr;
+      const off = +l.offered > 0;
+      const can = l.uid && l.kind !== 'formula-part' && (off || +l.price > 0);
+      const label = off ? tr('Remettre au prix') : tr('Offrir cet article');
+      return `<span class="rp-item-price mono${off ? ' is-offered' : ''}">`
+        + (off ? `<s class="rp-offer-was">${fmtMAD(l.offered * l.qty)}</s> ${kdsEsc(tr('Offert'))}` : fmtMAD(l.price * l.qty))
+        + (can ? `<button type="button" class="rp-offer${off ? ' is-on' : ''}" data-offer-uid="${kdsEsc(l.uid)}" aria-pressed="${off}" title="${kdsEsc(label)}" aria-label="${kdsEsc(label + ', ' + (l.name || ''))}"></button>` : '')
+        + '</span>';
+    }
+    function toggleLineOffer(uid) {
+      const tr = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr;
+      const isVrap = mode === 'vrap';
+      const tableId = isVrap ? '' : (selectedId && tableOrders[selectedId] ? selectedId : '');
+      if (!isVrap && !tableId) return;
+      if (tableId && typeof tableSplits !== 'undefined' && tableSplits.has(tableId)) { toast(tr("Termine le split d'abord")); return; }
+      const list = () => (isVrap ? cart : (tableOrders[tableId] || []));
+      const repaint = () => { if (isVrap) renderCart(); else if (mode === 'order') { renderMenu(); renderOrderPanel(tableId); } else renderRightPanel(tableId); };
+      const line = list().find(l => l.uid === uid);
+      if (!line || line.kind === 'formula-part') return;
+      if (+line.offered > 0) {
+        currentOrder().patchLine(line, { price: money(+line.offered) }, ['offered', 'offeredBy']);
+        repaint();
+        toast(tr('Article remis au prix'));
+        return;
+      }
+      if (!(+line.price > 0)) return;
+      requireManager(tr('Offrir un article'), () => {
+        const live = list().find(l => l.uid === uid);
+        if (!live || +live.offered > 0 || !(+live.price > 0)) return;
+        const gift = { price: 0, offered: money(+live.price),
+          offeredBy: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96) };
+        if (+live.qty > 1 && !live.formulaUid) {
+          const one = Object.assign(JSON.parse(JSON.stringify(live)), gift, { uid: newLineUid(), qty: 1 });
+          currentOrder().patchLine(live, { qty: +live.qty - 1 });
+          currentOrder().append(isVrap ? cart : tableOrders[tableId], one);
+        } else currentOrder().patchLine(live, gift);
+        repaint();
+        toast(tr('Article offert') + ' · ' + (live.name || ''));
+      });
+    }

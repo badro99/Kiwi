@@ -504,9 +504,9 @@
     }
     function activeSaleDiscount(amount, lines, settlementTable) {
       const tId = settlementTable || selectedId;
-      const d = mode === 'vrap' ? vrapDiscount : (tId && tables[tId] && tables[tId].discount);
+      const d = (typeof offerDiscount === 'function' ? offerDiscount : (x) => x)(mode === 'vrap' ? vrapDiscount : (tId && tables[tId] && tables[tId].discount), lines);
       if (!d || !Array.isArray(lines) || !lines.length) return null;
-      const gross = money(lines.reduce((sum, line) => sum + (Number(line && (line.total != null ? line.total : ((line.price || 0) * (line.qty || 0)))) || 0), 0));
+      const gross = money(lines.reduce((sum, line) => sum + (Number(line && (line.total != null ? line.total : ((line.price || 0) * (line.qty || 0)))) || 0), 0) + (typeof offeredValue === 'function' ? offeredValue(lines) : 0));
       const discount = money(Math.max(0, gross - money(amount)));
       if (!(gross > 0) || !(discount > 0) || discount > gross) return null;
       return {
@@ -664,7 +664,7 @@
          Inconnu : rien n'est écrit, jamais 0. */
       function frozenUnitCost(l) {
         try {
-          if (!l || !l.itemId || l.kind === 'formula' || l.kind === 'formula-part' || !(+l.total > 0)) return null;
+          if (!l || !l.itemId || l.kind === 'formula' || l.kind === 'formula-part' || !(+l.total > 0 || +l.offered > 0)) return null;
           const C = window.KiwiCost;
           if (!C || typeof C.of !== 'function') return null;
           const hit = C.of({ kind: l.kind || '', id: String(l.itemId), name: l.baseName || l.name || '' });
@@ -757,7 +757,7 @@
               cat: l.cat || '',
             },
             l.itemId ? { itemId: l.itemId } : null,
-            l.kind ? { kind: l.kind } : null,
+            l.kind ? { kind: l.kind } : null, +l.offered > 0 ? { offered: money(+l.offered) } : null,
             l.shareDen > 1 ? { shareDen: Number(l.shareDen) } : null,
             /* La promotion de la carte qui a fixé ce prix : son id, son nom et
                ce que la ligne aurait coûté sans elle (le rapport compte la
@@ -1396,7 +1396,7 @@
         ts: entry.time instanceof Date ? entry.time.getTime() : new Date(entry.time).getTime(),
         label: entry.label, pager: entry.pager || 0,   /* bipeur d'un restaurant de centre commercial (counter-flow.js) */
         cashier: entry.cashier || (currentCashier && currentCashier.name) || '',
-        lines: Array.isArray(entry.lines) ? entry.lines : [],
+        lines: Array.isArray(entry.lines) ? entry.lines.map(l => (l && +l.offered > 0 ? Object.assign({}, l, { name: l.name + ' · ' + (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Offert') }) : l)) : [],
         total: Math.abs(entry.amount),
         tip: isRefund ? 0 : (entry.tip || 0),
         method: entry.method,

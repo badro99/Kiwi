@@ -16,7 +16,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
 
 console.log('A. ligne du reçu boutique');
 const pos = fs.readFileSync(path.join(root, 'assets/pos-boutique.js'), 'utf8');
-const at = pos.indexOf('const beginPay = () => openPay(');
+const at = pos.indexOf('const beginPay = () =>'); /* openPay, ou payOffered pour un ticket offert */
 const block = at >= 0 ? pos.slice(at, pos.indexOf('subtotal:', at)) : '';
 ok(block.length > 0, 'beginPay est trouvé');
 ok(/name:[^\n]*ln\.size[^\n]*colorLabel\(ln\.color\)/.test(block), 'le nom de ligne porte la taille puis la teinte (colorLabel)');

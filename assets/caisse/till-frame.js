@@ -112,7 +112,15 @@
       const sent = !!l.sent;
       return { id: String(l.uid || 'l' + i), qty: l.qty, name: lineName(l), mods,
         price: l.total != null ? l.total : l.price * l.qty, sent, sentAt: '', sentQty: sent ? l.qty : 0,
-        editOptions: !sent && tillKitCanEditOptions(l) };
+        editOptions: !sent && tillKitCanEditOptions(l), offer: tillKitOffer(l) };
+    }
+    /* « Offert » sur la ligne (caisse/discounts.js, toggleLineOffer) : les mots
+       viennent d'ici, comme le commentaire de commande. */
+    function tillKitOffer(l) {
+      const on = +l.offered > 0;
+      if (!l.uid || l.kind === 'formula-part' || !(on || +l.price > 0)) return null;
+      const tr = (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr;
+      return { on, label: tr(on ? 'Remettre au prix' : 'Offrir cet article'), tag: tr('Offert'), was: on ? money(l.offered * l.qty) : 0 };
     }
     /* « Modifier les options » ne s'offre que sur un plat qui a des options :
        sur les autres le bouton ne faisait rien (Jon's Burgers, 25 nov.). */
@@ -243,7 +251,7 @@
     }
     
     function tillKitOpenPay() {
-      if (!(currentTotal() > 0)) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Addition vide')); return; }
+      if (!(currentTotal() > 0)) { settleOfferedBill(); return; }
       if (tillKitSplitStarted() && tillKitLockedSplit()) return;   /* the open split takes the rest, share by share */
       if (mode === 'order' && selectedId && orderInProgressCount() > 0) validateOrder(selectedId);
       resetPayTip();
@@ -523,7 +531,7 @@
       try { if (P && P.refresh) P.refresh(true); } catch (_) {}
       const pane = window.KiwiTillFrame.openPane('discount', { bill: { total: money(tg.gross) }, policy: {
         configured: !!(P && P.configured && P.configured()),
-        percentages: (P && P.percentages && P.percentages()) || [5, 10, 15, 20],
+        percentages: (P && P.percentages && P.percentages(undefined, REMISE_PCTS)) || REMISE_PCTS,
         presets: (P && P.presets && P.presets()) || [],   /* remises nommées : seules proposées */
       } });
       const cur = tg.target === 'vrap' ? vrapDiscount : tables[tg.tableId].discount;
@@ -1061,8 +1069,8 @@
         case 'step':
         case 'remove': {
           if (!line) return;
-          const delta = verb === 'remove' ? (value.anchor ? -line.qty : -1) : (value.dir > 0 ? 1 : -1);
-          if (mode === 'vrap') changeCartLineQty(line.uid, delta);
+          const delta = verb === 'remove' ? (value.anchor ? -line.qty : -1) : (value.dir > 0 ? 1 : -1); if (delta > 0 && +line.offered > 0) { if (mode === 'vrap') addToCart(line.id); else if (mode === 'order' && selectedId) addToTableOrder(selectedId, line.id); } /* + sur un article offert : une unité payante, jamais un second cadeau sans accord */
+          else if (mode === 'vrap') changeCartLineQty(line.uid, delta);
           else if (mode === 'order' && selectedId) changeTableOrderLineQty(selectedId, line.uid, delta);
           return;
         }
@@ -1087,6 +1095,7 @@
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
         case 'overflow': tillKitOpenOverflow(value && value.anchor); return;
+        case 'offer': if (line) toggleLineOffer(line.uid); return;
         case 'edit-options': {
           /* Le bouton du kit n'avait pas de destination : rien ne s'ouvrait. La
              feuille revient sur les choix de la ligne, et Valider réécrit cette

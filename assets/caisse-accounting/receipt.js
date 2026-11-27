@@ -43,7 +43,7 @@
         ts: entry.time instanceof Date ? entry.time.getTime() : new Date(entry.time).getTime(),
         label: entry.label, pager: entry.pager || 0,   /* bipeur d'un restaurant de centre commercial (counter-flow.js) */
         cashier: entry.cashier || (currentCashier && currentCashier.name) || '',
-        lines: Array.isArray(entry.lines) ? entry.lines : [],
+        lines: Array.isArray(entry.lines) ? entry.lines.map(l => (l && +l.offered > 0 ? Object.assign({}, l, { name: l.name + ' · ' + (globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Offert') }) : l)) : [],
         total: Math.abs(entry.amount),
         tip: isRefund ? 0 : (entry.tip || 0),
         method: entry.method,

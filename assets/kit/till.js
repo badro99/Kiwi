@@ -232,6 +232,10 @@
           if (open) {
             ex = '<div class="ex"><div class="acts">' +
               (b.plain || !l.editOptions ? '' : C.button.render({ label: t('bill.edit_options'), size: 'S', id: 'eo-' + l.id, attrs: ' data-w="edit-options"' })) +
+              /* « Offert » (27 nov. 2026) : la page donne le mot et l'état
+                 (.offer {on, label, tag, was}) ; l'article reste une ligne de
+                 vente à 0, le stock et le journal suivent côté page. */
+              (b.plain || !l.offer ? '' : C.button.render({ label: l.offer.label || '', size: 'S', id: 'of-' + l.id, attrs: ' data-w="offer" aria-pressed="' + (l.offer.on ? 'true' : 'false') + '"' })) +
               C.button.render({ label: t(l.sent ? 'bill.void' : 'bill.remove'), variant: 'tonal-danger', size: 'S', id: 'rm-' + l.id, attrs: ' data-w="' + (l.sent ? 'void' : 'remove') + '"' }) +
               '</div></div>';
           }
@@ -246,7 +250,9 @@
                 '<button type="button" class="qb" data-st-dir="1" aria-label="' + esc(t('stepper.increase', { label: l.name })) + '">' + icon('add', 20) + '</button></span>') +
             '<span class="nm"><span class="k-body">' + esc(l.name) + '</span>' +
             (l.mods || []).map(function (m) { return '<span class="k-foot k-ink2 md">' + esc(m) + '</span>'; }).join('') + '</span>' +
-            '<span class="k-body k-num pr" data-k-part>' + numHtml(money(l.price)) + '</span></div>' + ex + '</li>';
+            (l.offer && l.offer.on
+              ? '<span class="k-body k-num pr of" data-k-part><s>' + numHtml(money(l.offer.was || 0)) + '</s> ' + esc(l.offer.tag || '') + '</span>'
+              : '<span class="k-body k-num pr" data-k-part>' + numHtml(money(l.price)) + '</span>') + '</div>' + ex + '</li>';
         };
         body = b.plain ? '<ul class="ls">' + lines.map(row).join('') + '</ul>' : (unsent.length ? '<p class="k-foot gh ns">' + th('bill.not_sent', { n: unsent.length }) + '</p><ul class="ls">' + unsent.map(row).join('') + '</ul>' : '') +
           (sent.length ? '<p class="k-foot k-ink2 gh">' + th('bill.sent_at', { time: (sent[0] && sent[0].sentAt) || '' }) + '</p><ul class="ls">' + sent.map(row).join('') + '</ul>' : '');
@@ -292,7 +298,7 @@
       '.ln.on{background-color:var(--k-select)}' +
       '.ln:focus-visible{box-shadow:inset 0 0 0 var(--k-focus-w) var(--k-focus)}' +
       '.r{display:flex;align-items:flex-start;gap:8px}.qt{width:32px;flex:none;font-weight:var(--k-fw-callout-strong)}' +
-      '.nm{flex:1;min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}.pr{flex:none}' +
+      '.nm{flex:1;min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}.pr{flex:none}.pr.of{color:var(--k-accent-ink);white-space:nowrap}.pr.of s{color:var(--k-ink-3)}' +
       '.ex{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0 4px}.acts{display:flex;gap:8px;flex-wrap:wrap}' +
       '.qs{display:inline-flex;align-items:center;gap:2px;flex:none;margin-block:-6px}' +
       '.qs .qn{width:auto;min-width:26px;text-align:center}' +

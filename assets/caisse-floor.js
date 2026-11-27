@@ -1959,7 +1959,7 @@
          ne doit jamais se confondre avec sans salade + sauce blanche. */
       const priced = promoPrice(item, item.price + extra);
       const line = tableOrders[tableId].find(l => l.id === item.id && !l.sent
-        && !l.hold && !l.committed && !l.kind
+        && !l.hold && !l.committed && !l.kind && !l.offered
         && !(l.note || '').trim() && (l.optSig || '') === sig && promoKey(l.promo) === promoKey(priced.promo));
       if (line) currentOrder().patchLine(line, { qty: +line.qty + 1 });
       else currentOrder().append(tableOrders[tableId], Object.assign({ uid: newLineUid(), id: item.id, name: item.name,
@@ -2081,7 +2081,7 @@
               <span class="qty-num mono">${l.qty}</span>
             </div>`}
             <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
-            <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
+            ${offerPrice(l)}
             <span class="rp-sent-mark">${KDS_SVG.check}${l.orderProPending ? 'OrderPro · à accepter' : 'En cuisine'}</span>
             ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
           </div>` : `
@@ -2089,10 +2089,10 @@
             ${l.kind === 'formula-part' ? `<span class="rp-sent-qty">${l.qty}×</span>` : `<div class="qty-control">
               <button class="qty-btn" data-cart-action="dec" aria-label="Moins">−</button>
               <span class="qty-num mono">${l.qty}</span>
-              <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
+              <button class="qty-btn" data-cart-action="inc" aria-label="Plus"${+l.offered > 0 ? ' hidden' : ''}>+</button>
             </div>`}
             <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}${promoTag(l)}</span>
-            <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
+            ${offerPrice(l)}
             <div class="rp-item-noterow">
               <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
                 value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"

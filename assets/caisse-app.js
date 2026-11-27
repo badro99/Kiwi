@@ -915,7 +915,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
         return;
       }
 
-      const holdBtn = e.target.closest('[data-hold-uid]');
+      const holdBtn = e.target.closest('[data-hold-uid]'), offerBtn = e.target.closest('[data-offer-uid]'); if (offerBtn) { toggleLineOffer(offerBtn.dataset.offerUid); return; }
       if (holdBtn) {
         if (mode === 'order' && selectedId) toggleLineHold(selectedId, holdBtn.dataset.holdUid);
         return;
@@ -1327,7 +1327,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
        le flux espèces ; en prise de commande il envoie d'abord les lignes en
        cuisine, puis ouvre le même flux. */
     $('#pay-charge').addEventListener('click', () => {
-      if (!(currentTotal() > 0)) { toast(tr('Addition vide')); return; }
+      if (!(currentTotal() > 0)) { settleOfferedBill(); return; }
       openCashModal();
     });
     $('#pay-charge-order').addEventListener('click', () => {
@@ -1335,7 +1335,7 @@ const tr = (s) => (typeof s === 'string' && window.KiwiCaisseLang ? window.KiwiC
       if (tableHasOpenSplit(selectedId)) { toast(tr('Un split est en cours sur cette table : reprenez-le depuis l\'addition')); return; }
       if (orderInProgressCount() > 0) validateOrder(selectedId);
       if (currentTotal() > 0) openCashModal();
-      else toast(tr('Addition vide'));
+      else settleOfferedBill();
     });
     /* Le total vit dans #rp-total ; on le recopie sur les deux boutons
        Encaisser (observer, pas de deuxième source de vérité). */
