@@ -190,6 +190,18 @@ await ok('the kitchen queue and the kitchen screens carry the bipeur', () => {
   assert.equal((cuisine.match(/'chip\.pager':/g) || []).length, 3, 'fr, en, ar');
   assert.equal((cuisine.match(/T\('chip\.pager'\)/g) || []).length, 2, 'classic card and 2027 ticket');
 });
+await ok('kitchen tablet: on, a paid order skips « Nouvelles » and cooks from the start', () => {
+  const src = read('kiwi-cuisine.html');
+  const fn = (name) => { const i = src.indexOf('  function ' + name + '('); const j = src.indexOf('\n  }\n', i); return src.slice(i, j + 4); };
+  const S = { station: 'all', cooking: {}, mall: false };
+  const env = new Function('S', fn('stationIsReady') + fn('stationIsAccepted') + fn('bucket') + '; return bucket;')(S);
+  const order = { id: 'a', status: 'accepted', created_ts: 1, lines: [{ station: 'cuisine' }] };
+  assert.equal(env(order), 'new', 'off: the chef still takes it');
+  S.mall = true;
+  assert.equal(env(order), 'cook', 'on: straight to En préparation');
+  assert.equal(env({ ...order, status: 'ready' }), 'pass', 'ready stays ready');
+  assert.match(src, /var mall = cfg\.features\.mallRestaurant === true;\n\s+if \(mall !== S\.mall\) \{ S\.mall = mall; paint\(\); \}/, 'the tablet reads the switch from /api/config');
+});
 await ok('the owner sets the bipeur count (1..20), the server refuses anything else', () => {
   assert.match(read('functions/api/store.js'), /counterflow: \{ keys: \['direct', 'payToKitchen', 'typeAtPay', 'pagers'\]/);
   assert.match(read('functions/api/store.js'), /k === 'pagers' \? !\(Number\.isInteger\(v\) && v >= 1 && v <= 20\) : typeof v !== 'boolean'/);
