@@ -114,13 +114,23 @@ export async function onRequestPost(context) {
 
     const phone = normalizePhone(body.phone);
     if (!phone) return json({ error: 'bad-phone' }, 400);
+    const name = str(body.name, 80);
+    if (!body.r) {
+      /* The counter-stand path answers "this number already has a card" for a
+         known number, so a known and a new number must look the same until the
+         lookup: the name is checked first, and every attempt spends the same
+         sign-up budget (12 an hour per address) before the number is read. */
+      if (!name) return json({ error: 'name-required' }, 400);
+      const signup = await spendBudget(env, 'ip:' + ip, 'wallet-signup', 12, 3600_000, now);
+      if (!signup.ok) return json({ error: 'rate-limited' }, 429, { 'Retry-After': String(signup.retryAfter) });
+    }
     const twin = (await phoneTwins(env, m.slug, phone, ''))[0] || null;
 
     if (body.r) {
       const u = await usableSale(env, m.slug, str(body.r, 120), now);
       if (u.error) return json({ error: u.error }, 410);
       if (u.already) return json({ ok: true, already: true });
-      const clientId = twin ? twin.id : await createClient(env, m.slug, { name: str(body.name, 80), phone, consent: !!body.consent, now });
+      const clientId = twin ? twin.id : await createClient(env, m.slug, { name: name || 'Client', phone, consent: !!body.consent, now });
       const credited = await creditSale(env, m.slug, u.sale, clientId, now);
       if (!credited) return json({ ok: true, already: true });
       if (twin) {
@@ -130,14 +140,7 @@ export async function onRequestPost(context) {
       return issue(clientId, { credited: true });
     }
 
-    if (twin) {
-      /* "This number already has a card" says the number is a customer here: a
-         tight budget of its own keeps anyone from sweeping a list of numbers. */
-      const probe = await spendBudget(env, 'ip:' + ip, 'wallet-exists', 6, 3600_000, now);
-      return probe.ok ? json({ ok: true, exists: true }) : json({ error: 'rate-limited' }, 429, { 'Retry-After': String(probe.retryAfter) });
-    }
-    const name = str(body.name, 80);
-    if (!name) return json({ error: 'name-required' }, 400);
+    if (twin) return json({ ok: true, exists: true });
     return issue(await createClient(env, m.slug, { name, phone, consent: !!body.consent, now }));
   } catch (error) {
     if (/no such table|no such column/i.test(String(error && error.message))) return json({ error: 'unmigrated' }, 503);

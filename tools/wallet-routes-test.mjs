@@ -133,18 +133,23 @@ await ok('with the Apple certificate configured, the offer includes the .pkpass 
   assert.match(r.body.offers.apple, /^https:\/\/kiwi-os\.com\/api\/wallet\/v1\/download\/[a-z0-9]+\.pkpass\?t=[a-z0-9]{32}$/);
 });
 
-await ok('forty sign-ups an hour per address (a café shares one Wi-Fi), then 429', async () => {
-  const w = world();
-  for (let i = 0; i < 40; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '06' + String(10000000 + i), consent: true }, { ip: '10.9.9.9' })).status, 200);
-  assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '0699999999', consent: true }, { ip: '10.9.9.9' })).status, 429);
-});
-
-await ok('probing known numbers stops after six "already has a card" answers an hour', async () => {
+await ok('twelve sign-ups an hour per address, known number or not, then 429', async () => {
   const w = world();
   await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true }, { ip: '10.1.1.1' });
-  for (let i = 0; i < 6; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.7.7.7' })).body.exists, true);
-  const r = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.7.7.7' });
-  assert.equal(r.status, 429); assert.equal(r.body.exists, undefined);
+  for (let i = 0; i < 11; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '06' + String(10000000 + i), consent: true }, { ip: '10.9.9.9' })).status, 200);
+  assert.equal((await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.9.9.9' })).body.exists, true);
+  const known = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.9.9.9' });
+  const fresh = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0698989898' }, { ip: '10.9.9.9' });
+  assert.equal(known.status, 429); assert.equal(fresh.status, 429, 'a new number is stopped at the same point');
+  assert.deepEqual(known.body, fresh.body);
+});
+
+await ok('a nameless sign-up is refused before the number is looked up', async () => {
+  const w = world();
+  await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true });
+  const known = await post(w, { merchant: 'pasta-corner', name: '', phone: '0612345678' }, { ip: '10.4.4.4' });
+  const fresh = await post(w, { merchant: 'pasta-corner', name: '', phone: '0698989898' }, { ip: '10.4.4.4' });
+  assert.equal(known.status, 400); assert.deepEqual(known.body, fresh.body);
 });
 
 await ok('no tables yet (migration not applied): 503, not a crash', async () => {
