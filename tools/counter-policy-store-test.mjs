@@ -71,16 +71,20 @@ ok('a named discount without a name is refused', r.status === 400);
 r = await post(owner, 'discountpolicy', { percentages: [10, 20] }, 1);
 ok('a policy without presets (an older till or dashboard) still saves', r.status === 200, String(r.status) + ' ' + await r.clone().text());
 
-r = await post(owner, 'counterflow', { direct: true, payToKitchen: true, typeAtPay: false });
-ok('the owner saves the three counter switches', r.status === 200, String(r.status));
+r = await post(owner, 'counterflow', { direct: true, payToKitchen: true, typeAtPay: false, pagers: 12 });
+ok('the owner saves the three counter switches and the bipeur count', r.status === 200, String(r.status));
 r = await post(owner, 'counterflow', { direct: 'yes' });
 ok('a switch that is not a boolean is refused', r.status === 400 && /bad-counter-flow/.test(await r.text()));
 r = await post(owner, 'counterflow', { direct: true, sneaky: true });
 ok('an unknown key is refused', r.status === 400);
+for (const bad of [0, 21, '12', 2.5]) {
+  r = await post(owner, 'counterflow', { direct: true, pagers: bad });
+  ok(`a bipeur count of ${JSON.stringify(bad)} is refused (mall restaurants, 1 to 20)`, r.status === 400 && /bad-counter-flow/.test(await r.text()));
+}
 
 r = await read(till, 'counterflow');
 const body = r.status === 200 ? await r.json() : null;
-ok('a paired till reads the counter switches', !!body && body.data && body.data.direct === true && body.data.payToKitchen === true, JSON.stringify(body));
+ok('a paired till reads the counter switches', !!body && body.data && body.data.direct === true && body.data.payToKitchen === true && body.data.pagers === 12, JSON.stringify(body));
 r = await post(till, 'counterflow', { direct: false, payToKitchen: false, typeAtPay: false });
 ok('a paired till cannot write them', r.status === 403 || r.status === 401, String(r.status));
 r = await post(till, 'discountpolicy', { percentages: [50], presets: [{ name: 'Moi', pct: 50 }] });

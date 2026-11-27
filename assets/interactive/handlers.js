@@ -925,8 +925,8 @@
     },
 
     /* Paramètres › Caisse & Reçu : remises nommées, commande au comptoir (assets/till-policy-settings.js, chargé au premier usage). */
-    'settings-discount-presets': () => import('../till-policy-settings.js?v=2').then((m) => m.openPresets()).catch(() => toast(tr({ fr: 'Réglage indisponible, rechargez la page', en: 'Setting unavailable, reload the page', ar: 'الإعداد غير متاح، عاود حمّل الصفحة' }), { type: 'warn' })),
-    'settings-counter-flow': () => import('../till-policy-settings.js?v=2').then((m) => m.openCounterFlow()).catch(() => toast(tr({ fr: 'Réglage indisponible, rechargez la page', en: 'Setting unavailable, reload the page', ar: 'الإعداد غير متاح، عاود حمّل الصفحة' }), { type: 'warn' })),
+    'settings-discount-presets': () => import('../till-policy-settings.js?v=3').then((m) => m.openPresets()).catch(() => toast(tr({ fr: 'Réglage indisponible, rechargez la page', en: 'Setting unavailable, reload the page', ar: 'الإعداد غير متاح، عاود حمّل الصفحة' }), { type: 'warn' })),
+    'settings-counter-flow': () => import('../till-policy-settings.js?v=3').then((m) => m.openCounterFlow()).catch(() => toast(tr({ fr: 'Réglage indisponible, rechargez la page', en: 'Setting unavailable, reload the page', ar: 'الإعداد غير متاح، عاود حمّل الصفحة' }), { type: 'warn' })),
     'settings-discounts': () => {
       const policy = window.KiwiDiscountPolicy;
       if (!policy) { toast('Réglage indisponible, rechargez la page', { type: 'warn' }); return; }

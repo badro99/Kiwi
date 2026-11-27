@@ -3,7 +3,9 @@
  *     exists, the tills offer exactly these, nothing typed (Jon's Burgers,
  *     26 Nov 2026: « enlever le pourcentage libre »).
  *   · « Commande au comptoir » : three switches for a counter restaurant
- *     (assets/discount-policy.js › KiwiCounterFlow).
+ *     (assets/discount-policy.js › KiwiCounterFlow). For a mall restaurant
+ *     (God mode › mallRestaurant) the three are on by force and the owner sets
+ *     how many bipeurs the till hands out, 1 to 20.
  * Loaded on first use by assets/discount-policy.js, dashboard only. */
 const lang = () => (window.KiwiI18n?.getLang?.() || document.documentElement.lang || 'fr').slice(0, 2);
 const tr = (o) => o[lang()] || o.fr;
@@ -87,7 +89,10 @@ export function openCounterFlow() {
   const F = window.KiwiCounterFlow;
   if (!F?.get) { toast(tr({ fr: 'Réglage indisponible, rechargez la page', en: 'Setting unavailable, reload the page', ar: 'الإعداد غير متاح، عاود حمّل الصفحة' }), 'warn'); return; }
   const cur = F.get(venueId());
-  const sw = (key, title, sub) => `<label class="tps-sw"><input type="checkbox" data-tps-flow="${key}"${cur[key] ? ' checked' : ''}><span><b>${esc(tr(title))}</b><small>${esc(tr(sub))}</small></span></label>`;
+  const mall = window.KiwiConfig?.features?.mallRestaurant === true;
+  const sw = (key, title, sub) => `<label class="tps-sw"><input type="checkbox" data-tps-flow="${key}"${cur[key] || mall ? ' checked' : ''}${mall ? ' disabled' : ''}><span><b>${esc(tr(title))}</b><small>${esc(tr(sub))}</small></span></label>`;
+  const pagers = mall ? `<p class="tps-lead">${esc(tr({ fr: 'Restaurant de centre commercial : ces trois réglages sont toujours actifs. Chaque commande sur place ou à emporter reçoit le premier bipeur libre, libéré à la remise au client.', en: 'Mall restaurant: these three settings are always on. Each eat-in or takeaway order gets the first free pager, freed when the order is handed over.', ar: 'مطعم فالمول: هاد الإعدادات الثلاثة ديما خدامين. كل طلب فالمحل أو للدار كياخد أول جهاز نداء خاوي، وكيتحرر ملي كيتسلم الطلب.' }))}</p>
+      <label class="tps-sw"><span><b>${esc(tr({ fr: 'Nombre de bipeurs', en: 'Number of pagers', ar: 'عدد أجهزة النداء' }))}</b><small>${esc(tr({ fr: 'De 1 à 20, numérotés à partir de 1.', en: 'From 1 to 20, numbered from 1.', ar: 'من 1 حتى 20، مرقمين من 1.' }))}</small></span><input type="number" inputmode="numeric" min="1" max="20" step="1" data-tps-pagers value="${Number.isInteger(cur.pagers) ? cur.pagers : 10}" style="width:88px;height:44px;margin:0 0 0 auto;box-sizing:border-box;border:1px solid var(--n-200);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;text-align:right;background:var(--surface);color:var(--ink)"></label>` : '';
   const rows = [
     ['payToKitchen', { fr: 'Encaisser envoie en cuisine', en: 'Paying sends to the kitchen', ar: 'الدفع يرسل للمطبخ' }, { fr: 'Au comptoir, plus de bouton « Envoyer en cuisine » avant « Encaisser » : le paiement envoie la commande.', en: 'At the counter, no « Send to kitchen » button before « Charge »: the payment sends the order.', ar: 'فالكونتوار، ما بقاش زر « صيفط للمطبخ » قبل « خلّص »: الدفع هو اللي كيصيفط الطلب.' }],
     ['typeAtPay', { fr: 'Sur place ou à emporter au paiement', en: 'Eat in or take away at payment', ar: 'فالمحل أو للدار عند الدفع' }, { fr: 'La caisse le demande en fin de commande, au moment d\'encaisser, et l\'imprime en gros sur le bon de cuisine.', en: 'The till asks at the end of the order, when charging, and prints it large on the kitchen ticket.', ar: 'الصندوق كيسول فاللخر، ملي كتخلّص، وكيطبعو كبير فورقة المطبخ.' }],
@@ -98,6 +103,7 @@ export function openCounterFlow() {
     body: `${STYLE}<div class="tps" data-tps-flowform>
       <p class="tps-lead">${esc(tr({ fr: 'Pour un comptoir où le client commande, paie, puis attend sa commande. Chaque caisse applique ces réglages en quelques secondes.', en: 'For a counter where the customer orders, pays, then waits for the order. Every till applies these settings within seconds.', ar: 'لكونتوار فين الكليان كيطلب، كيخلّص، ومن بعد كيتسنى الطلب ديالو. كل صندوق كيطبق هاد الإعدادات فثواني.' }))}</p>
       ${rows.map((r) => sw(...r)).join('')}
+      ${pagers}
       <p class="tps-err" data-tps-err role="status"></p>
     </div>`,
     foot: `<button type="button" class="kb" data-tps-cancel>${esc(tr({ fr: 'Annuler', en: 'Cancel', ar: 'إلغاء' }))}</button><button type="button" class="kb atlas" data-activation="write" data-tps-save>${esc(tr({ fr: 'Enregistrer', en: 'Save', ar: 'سجّل' }))}</button>`,
@@ -108,7 +114,13 @@ export function openCounterFlow() {
     if (t.hasAttribute('data-tps-cancel')) { m.close(); return; }
     if (!t.hasAttribute('data-tps-save')) return;
     const patch = {};
-    m.el.querySelectorAll('[data-tps-flow]').forEach((el) => { patch[el.getAttribute('data-tps-flow')] = el.checked; });
+    m.el.querySelectorAll('[data-tps-flow]:not(:disabled)').forEach((el) => { patch[el.getAttribute('data-tps-flow')] = el.checked; });
+    const pg = m.el.querySelector('[data-tps-pagers]');
+    if (pg) {
+      const n = Number(pg.value);
+      if (!Number.isInteger(n) || n < 1 || n > 20) { m.el.querySelector('[data-tps-err]').textContent = tr({ fr: 'Le nombre de bipeurs va de 1 à 20.', en: 'The number of pagers goes from 1 to 20.', ar: 'عدد أجهزة النداء من 1 حتى 20.' }); return; }
+      patch.pagers = n;
+    }
     t.disabled = true;
     try {
       await F.save(patch, venueId());

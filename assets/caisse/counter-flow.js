@@ -15,11 +15,84 @@
  *  · Paying sends (payToKitchen): the counter's « Envoyer en cuisine » is
  *    hidden, « Encaisser » already sends (dispatchUnsentKitchenBeforePayment).
  *  · Kitchen starts at once (direct): read by kdsViewStatus.
+ *
+ * Mall restaurants (God mode › mallRestaurant, 27 Nov 2026), off by default.
+ * A food-court counter: the customer orders, pays, takes a bipeur and sits in
+ * the shared food court, so the restaurant has no tables of its own. On:
+ *  · no Salle and no « Annuler une vente » (merchant-config.js featureOff):
+ *    a paid order is never cancelled, only refunded (manager code, returns.js);
+ *  · the three switches above are on whatever Paramètres says (counterFlow);
+ *  · each sur place / à emporter order takes the lowest free bipeur of 1..N
+ *    (Paramètres › Commande au comptoir), printed large on the receipt and the
+ *    kitchen ticket, shown on the board and the kitchen screen, free again at
+ *    « Remettre au client »;
+ *  · the kitchen ticket prints after the customer's receipt (mallKitchenHolds);
+ *  · the board keeps every paid order until it is handed over (vrapIsCounterSale).
+ * Off, none of this runs and the till is the one it was.
  */
+function mallOn() {
+  try { const f = window.KiwiConfig && window.KiwiConfig.features; return !!f && f.mallRestaurant === true; } catch (_) { return false; }
+}
 function counterFlow() {
   /* Through KiwiDiscountPolicy.counterFlow (discount-policy.js, the same reader as
      KiwiCounterFlow.get): the till already reads that global, so no new link. */
-  try { const P = window.KiwiDiscountPolicy; return (P && P.counterFlow && P.counterFlow()) || {}; } catch (_) { return {}; }
+  let f = {};
+  try { const P = window.KiwiDiscountPolicy; f = (P && P.counterFlow && P.counterFlow()) || {}; } catch (_) { f = {}; }
+  return mallOn() ? Object.assign({}, f, { direct: true, payToKitchen: true, typeAtPay: true }) : f;
+}
+/* ── Bipeurs (mall) ── The pool is 1..N; a bipeur is busy while an order of
+   the last twelve hours carries it and has not been handed over. */
+const MALL = { tenderAt: 0, held: [] };
+function mallPagerCount() {
+  let n = 10;
+  try { const F = window.KiwiCounterFlow, v = F && F.get && F.get().pagers; if (Number.isInteger(v)) n = v; } catch (_) {}
+  return Math.max(1, Math.min(20, n));
+}
+function mallPagersBusy() {
+  const busy = new Set(), since = Date.now() - 12 * 3600000;
+  (typeof kdsOrders !== 'undefined' && Array.isArray(kdsOrders) ? kdsOrders : []).forEach((o) => {
+    const at = o && (o.sentAt instanceof Date ? o.sentAt.getTime() : new Date(o && o.sentAt).getTime());
+    if (o && o.pager && !o.pickedUp && !(at < since)) busy.add(+o.pager);
+  });
+  return busy;
+}
+function mallTakePager() {
+  const busy = mallPagersBusy();
+  for (let n = 1; n <= mallPagerCount(); n++) if (!busy.has(n)) return n;
+  return 0;
+}
+function mallPagerLabel(n) { return counterTr('Bipeur') + ' ' + n; }
+/* The board card: the bipeur, large, and where the order is eaten. */
+function mallCardTag(o) {
+  if (!mallOn() || !o || o.delivery) return '';
+  const pill = 'display:inline-flex;align-items:center;margin-inline-start:8px;padding:2px 10px;border-radius:999px;font-weight:700;';
+  return (o.pager ? '<span class="vrap-pager" style="' + pill + 'font-size:1.15em;background:#053B2C;color:#7DF2B0">' + mallPagerLabel(+o.pager) + '</span>' : '')
+    + (o.service ? '<span class="vrap-service" style="' + pill + 'font-size:.85em;background:rgba(11,110,79,.12);color:#053B2C">' + counterTr(o.service === 'surplace' ? 'Sur place' : 'À emporter') + '</span>' : '');
+}
+/* The kitchen ticket waits for the customer's receipt: it is released just
+   after the sale is paid (the receipt prints in the same breath), or after a
+   few seconds if no receipt comes (a split share, an error), never lost. */
+/* true: held, it prints later · false: the caller prints it now. */
+function mallKitchenHolds(order, items) {
+  if (!mallOn() || !(Date.now() - MALL.tenderAt < 60000)) return false;
+  const job = { done: false };
+  job.go = () => {
+    if (job.done) return;
+    job.done = true;
+    const i = MALL.held.indexOf(job);
+    if (i >= 0) MALL.held.splice(i, 1);
+    try { printKitchenTickets(order, items); } catch (_) {}
+  };
+  MALL.held.push(job);
+  setTimeout(job.go, 8000);
+  return true;
+}
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('kiwi:sale-paid', () => {
+    MALL.tenderAt = 0;
+    const jobs = MALL.held.slice();
+    if (jobs.length) setTimeout(() => jobs.forEach((j) => j.go()), 300);
+  });
 }
 /* The two small sheets of this file, styled once (no stylesheet to grow). */
 function counterStyle() {
@@ -58,7 +131,7 @@ function counterCommentGet() {
   const S = counterState();
   if (mode === 'vrap') {
     /* A new counter order starts blank: nothing on the bill, nothing kept. */
-    if (!cart.length && vrapEditingNum == null) { S.comment = ''; S.type = ''; }
+    if (!cart.length && vrapEditingNum == null) { S.comment = ''; S.type = ''; S.pager = 0; }
     if (vrapEditingNum != null) {
       const o = kdsOrders.find((x) => x && x.num === vrapEditingNum);
       if (o && o.comment && !S.comment) S.comment = o.comment;
@@ -159,12 +232,14 @@ function counterStampOrder(order) {
   if (order.type === 'takeaway' && !order.delivery) {
     if (S.comment) order.comment = S.comment;
     if (S.type) { order.service = S.type; S.type = ''; }
+    if (S.pager) { order.pager = S.pager; S.pager = 0; }
   } else if (order.type === 'dineIn' && order.table) {
     const c = S.tables[order.table];
     if (c && c.text && c.visit === counterTableVisit(order.table)) order.comment = c.text;
   }
   if (order.comment && Array.isArray(order.relayLines) && order.relayLines[0]) order.relayLines[0].orderNote = order.comment;
   if (order.service && Array.isArray(order.relayLines) && order.relayLines[0]) order.relayLines[0].service = order.service;
+  if (order.pager && Array.isArray(order.relayLines) && order.relayLines[0]) order.relayLines[0].pager = order.pager;
   return order;
 }
 /* The ticket's head: SUR PLACE / À EMPORTER, and the comment. */
@@ -172,17 +247,20 @@ function counterTicketFields(order) {
   const out = {};
   if (order && order.service) out.service = order.service === 'surplace' ? 'SUR PLACE' : 'À EMPORTER';
   if (order && order.comment) out.comment = String(order.comment);
+  if (order && order.pager) out.table = 'BIPEUR ' + order.pager;   /* à la place de la table, en grand */
   return out;
 }
 /* The other screens learn the comment and the answer from the queue. */
 function counterFromQueue(target, lines) {
-  const first = Array.isArray(lines) ? lines.find((l) => l && (l.orderNote || l.service)) : null;
+  const first = Array.isArray(lines) ? lines.find((l) => l && (l.orderNote || l.service || l.pager)) : null;
   if (!first || !target) return;
+  if (Number.isInteger(+first.pager) && +first.pager >= 1 && +first.pager <= 20 && !target.pager) target.pager = +first.pager;
   if (first.orderNote && !target.comment) target.comment = String(first.orderNote).slice(0, 200);
   if ((first.service === 'surplace' || first.service === 'emporter') && !target.service) target.service = first.service;
 }
 /* The sale is filed where it was eaten. */
 function counterSaleTag(entry, order) {
+  if (entry && order && order.pager && !order.delivery) entry.pager = +order.pager;   /* le reçu l'imprime en grand */
   if (!entry || !order || order.service !== 'surplace' || order.delivery) return;
   entry.channel = 'surplace';
   if (/^à emporter\b/i.test(String(entry.label || ''))) entry.label = String(entry.label).replace(/^à emporter/i, 'Sur place');
@@ -230,10 +308,16 @@ async function counterTenderGate(method) {
     const o = kdsOrders.find((x) => x && x.num === vrapEditingNum);
     if (o && (o.service || (o.status !== 'held' && o.sentAt && o.kitchenDispatchedAt))) return true;   /* déjà en cuisine : on ne redemande pas */
   }
-  if (S.type) return true;
-  const answer = await counterAskType();
-  if (!answer) return false;
-  S.type = answer;
+  if (!S.type) {
+    const answer = await counterAskType();
+    if (!answer) return false;
+    S.type = answer;
+  }
+  if (mallOn()) {
+    MALL.tenderAt = Date.now();
+    if (!S.pager) S.pager = mallTakePager();
+    if (!S.pager) toast(counterTr('Aucun bipeur libre · commande sans bipeur'), 5200, 'warn');
+  }
   return true;
 }
 if (typeof document !== 'undefined' && document.addEventListener) {

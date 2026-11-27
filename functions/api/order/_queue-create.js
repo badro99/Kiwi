@@ -271,6 +271,7 @@ function cleanLines(raw) {
        sa première ligne (assets/caisse/counter-flow.js) : sans nouvelle colonne. */
     if (l.orderNote) line.orderNote = String(l.orderNote).slice(0, 200);
     if (l.service === 'surplace' || l.service === 'emporter') line.service = l.service;
+    if (Number.isInteger(l.pager) && l.pager >= 1 && l.pager <= 20) line.pager = l.pager;   /* bipeur d'un restaurant de centre commercial */
     out.push(line);
   }
   return out;

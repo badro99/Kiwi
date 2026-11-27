@@ -114,7 +114,7 @@ const FEATURES = {
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
   attendance:   { keys: ['entries'],                               max: 600000 },
     fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 120000 }, // 2 000 linked ids (~40 bytes each) fit
-  wallet: { keys: ['on', 'name', 'color', 'bg', 'lat', 'lng', 'address', 'phone'], max: 2000 }, /* carte Wallet (functions/api/wallet/_merchant.js), le propriétaire écrit */ discountpolicy: { keys: ['percentages'], max: 4000 }, counterflow: { keys: ['direct', 'payToKitchen', 'typeAtPay'], max: 500 }, policies: { keys: ['returnWindowDays', 'pressingB2bPercent'], max: 2000 }, colorchart: { keys: ['list'], max: 60000 }, // policies : fenêtre de retour + remise B2B pressing, le propriétaire écrit ; colorchart : le nuancier exact d'une boutique (boutique-size-colors.js)
+  wallet: { keys: ['on', 'name', 'color', 'bg', 'lat', 'lng', 'address', 'phone'], max: 2000 }, /* carte Wallet (functions/api/wallet/_merchant.js), le propriétaire écrit */ discountpolicy: { keys: ['percentages'], max: 4000 }, counterflow: { keys: ['direct', 'payToKitchen', 'typeAtPay', 'pagers'], max: 500 }, policies: { keys: ['returnWindowDays', 'pressingB2bPercent'], max: 2000 }, colorchart: { keys: ['list'], max: 60000 }, // policies : fenêtre de retour + remise B2B pressing, le propriétaire écrit ; colorchart : le nuancier exact d'une boutique (boutique-size-colors.js)
   /* Les réglages de CAISSE des métiers de bouche autres que le restaurant
    * (pizzeria, traiteur, boulangerie) : frais de livraison par zone, supplément
    * moitié-moitié, tarif des extras d'un devis, échéancier par défaut, prix des
@@ -883,7 +883,7 @@ export async function onRequestPost(context) {
     if (!Array.isArray(p) || p.length < 1 || p.length > 8 || p.some(n => !Number.isInteger(n) || n < 1 || n > 100) || new Set(p).size !== p.length) return json({ error: 'bad-discount-policy' }, 400);
     if (named !== undefined && (!Array.isArray(named) || named.length > 12 || named.some(x => !x || typeof x.name !== 'string' || !x.name.trim() || x.name.length > 40 || !Number.isInteger(x.pct) || !p.includes(x.pct)) || new Set(named.map(x => x.name.trim().toLowerCase())).size !== named.length)) return json({ error: 'bad-discount-policy' }, 400);
   }
-  if (feature === 'counterflow' && Object.entries(raw).some(([k, v]) => !FEATURES.counterflow.keys.includes(k) || typeof v !== 'boolean')) return json({ error: 'bad-counter-flow' }, 400);
+  if (feature === 'counterflow' && Object.entries(raw).some(([k, v]) => !FEATURES.counterflow.keys.includes(k) || (k === 'pagers' ? !(Number.isInteger(v) && v >= 1 && v <= 20) : typeof v !== 'boolean'))) return json({ error: 'bad-counter-flow' }, 400);   /* pagers : bipeurs d'un restaurant de centre commercial, 1 à 20 */
 
   /* Le plan de salle s'écrit aussi depuis une caisse appairée et se lit en HTML
    * chez le propriétaire : ids et couleurs ramenés à ce qu'un attribut peut

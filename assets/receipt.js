@@ -770,9 +770,7 @@
       ts: at.getTime(),
       label: shown,
     };
-    /* Prénom seul : le ticket part avec le client, le nom de famille de
-       l'équipe n'a pas à y figurer (vie privée). La vente garde le nom entier. */
-    if (cfg.show.cashier && sale.cashier) m.cashier = str(String(sale.cashier).trim().split(/\s+/)[0], 40);
+    if (cfg.show.cashier && sale.cashier) m.cashier = str(String(sale.cashier).trim().split(/\s+/)[0], 40); if (num(sale.pager) >= 1 && num(sale.pager) <= 20) m.pager = Math.round(num(sale.pager));   /* prénom seul : le ticket part avec le client, la vente garde le nom entier (vie privée) · bipeur (restaurant de centre commercial) */
     if (cfg.show.terminal) {
       var t = str(sale.terminal, 24) || opts.terminal || deviceTag();
       if (t) m.terminal = t;
@@ -819,9 +817,9 @@
 
   /* ═══════════════════ les mots ═══════════════════ */
   var DICT = {
-    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', owed: 'Total dû', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.', share: 'part', takeaway: 'À emporter', card: 'Votre carte fidélité : scannez' },
-    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', owed: 'Balance due', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway', card: 'Your loyalty card: scan me' },
-    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', owed: 'المبلغ المستحق', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ', card: 'بطاقة الوفاء ديالك: سكاني' },
+    fr: { __lang: 'fr', pager: 'BIPEUR', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', owed: 'Total dû', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.', share: 'part', takeaway: 'À emporter', card: 'Votre carte fidélité : scannez' },
+    en: { __lang: 'en', pager: 'PAGER', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', owed: 'Balance due', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway', card: 'Your loyalty card: scan me' },
+    ar: { __lang: 'ar', pager: 'جهاز النداء', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', owed: 'المبلغ المستحق', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ', card: 'بطاقة الوفاء ديالك: سكاني' },
   };
   function dict(l) { return DICT[l] || (ext.country && ext.country.dict(l)) || DICT.fr; }
 
@@ -965,7 +963,7 @@
     b.align('left'); rule();
     if (doc.meta.ref) row(T.no, doc.meta.ref);
     row(doc.summary ? T.period : T.date, doc.meta.date + '  ' + doc.meta.time);
-    if (doc.meta.label) row('', doc.meta.label);
+    if (doc.meta.label) row('', doc.meta.label); if (doc.meta.pager) b.align('center').size(2, 2).line((T.pager || 'BIPEUR') + ' ' + doc.meta.pager).size(1, 1).align('left');   /* lu de loin, comme le nom du commerce */
     if (doc.meta.cashier) row(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) row(T.terminal, doc.meta.terminal);
     if (doc.customer) {
@@ -1142,7 +1140,7 @@
     out.push('<div class="kr-rule"></div>');
     if (doc.meta.ref) Rh(T.no, code(doc.meta.ref));
     Rh(doc.summary ? T.period : T.date, code(doc.meta.date + '  ' + doc.meta.time));
-    if (doc.meta.label) R('', doc.meta.label);
+    if (doc.meta.label) R('', doc.meta.label); if (doc.meta.pager) R(T.pager || 'BIPEUR', String(doc.meta.pager));
     if (doc.meta.cashier) R(T.cashier, doc.meta.cashier);
     if (doc.meta.terminal) R(T.terminal, doc.meta.terminal);
     if (doc.customer) {

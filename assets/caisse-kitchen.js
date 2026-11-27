@@ -949,7 +949,7 @@
         source = { kind: 'table', label: kkt('kds.source.table', { table: String(o.table == null ? '' : o.table) }) };
         if (o.course === 'suite') chips.push(kkt('kds.suite'));
         if (o.server) chips.push(String(o.server));
-      } if (o.service) chips.unshift(o.service === 'surplace' ? 'Sur place' : 'À emporter'); /* demandé à l'encaissement (counter-flow.js) */
+      } if (o.service) chips.unshift(o.service === 'surplace' ? 'Sur place' : 'À emporter'); if (o.pager && typeof mallPagerLabel === 'function') chips.unshift(mallPagerLabel(o.pager)); /* demandé à l'encaissement, bipeur (counter-flow.js) */
       const tk = { id: String(o.num), number: ticketNo(o), minutes: Math.floor(kdsElapsed(o) / 60), source, chips, items }; if (o.comment) tk.note = String(o.comment); /* allergies, demandes */
       if (lane === 'pass') { tk.doneAt = o.readyAt || ''; tk.serve = false; tk.recall = !o.pickedUp; }
       else if (Array.isArray(o.following) && o.following.length) {
@@ -1377,14 +1377,14 @@
       if (typeof counterStampOrder === 'function') counterStampOrder(order); kdsOrders.push(order); /* commentaire, sur place / à emporter */
       /* The client on the note follows it onto the board (sale-client.js). */
       try { if (window.KiwiCaisseSaleClient && window.KiwiCaisseSaleClient.carry) window.KiwiCaisseSaleClient.carry(order); } catch (_) {}
-      /* Print only after the permanent queue number has had its first chance
-         to land on the same object used by Caisse, KDS and the receipt. */
+      /* Print only after the permanent queue number has had its first chance to land on the same object used by Caisse, KDS and the receipt. */
       /* Keep the allocation promise on the order. finalizeTender() awaits this
          exact field before freezing the sale, receipt and report row. The old
          fire-and-forget call let local sequence #25 reach accounting while the
          same order became permanent #86 moments later. */
       order.canonicalNumberPromise = relayToKitchen(order);
-      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items), () => printKitchenTickets(order, items));   /* un numéro qui échoue n'efface pas le bon */
+      const paper = () => (typeof mallKitchenHolds === 'function' && mallKitchenHolds(order, items)) || printKitchenTickets(order, items);   /* centre commercial : le bon sort après le reçu (counter-flow.js) */
+      order.canonicalNumberPromise.then(paper, paper);   /* un numéro qui échoue n'efface pas le bon */
       try { persistShift(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte'), 6500); }
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -1484,7 +1484,7 @@
      * reste = ce comptoir. Une commande purement locale (pas encore de numéro
      * de file) est forcément du comptoir elle aussi. */
     function vrapIsCounterSale(o) {
-      if (!o) return false; if (o.delivery) return false;   /* livraison : elle attend son livreur */
+      if (!o) return false; if (o.delivery) return false; if (typeof mallOn === 'function' && mallOn()) return false;   /* centre commercial : le client attend son bipeur, la carte reste jusqu'à la remise */   /* livraison : elle attend son livreur */
       if (o.opChannel) return o.opChannel !== 'kiwi';
       return o.opNum == null;
     }
@@ -1529,7 +1529,7 @@
             ${o.pickedUp ? 'Remise au client.' : 'En attente de remise. « Retirer du suivi » ne modifie ni le paiement ni les ventes.'}</div>` : '';
       return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? ' is-paid' : ' is-open'}" data-vrap-num="${o.num}">
         <div class="vrap-order-head">
-          <span class="vrap-order-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}</span>
+          <span class="vrap-order-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}${typeof mallCardTag === 'function' ? mallCardTag(o) : ''}</span>
           <span class="vrap-order-time"><i data-lucide="clock"></i> ${vrapElapsed(o)}</span>
         </div>
         <div class="vrap-order-badges">
@@ -1933,7 +1933,7 @@
       // Le client apprend que sa commande est prête sur son téléphone (OrderPro)
       opPush(o, 'ready');
       try { persistShift(); } catch (_) {}
-      toast(`Commande ${ticketNo(o)} prête · client notifié`);
+      toast(o.pager && typeof mallPagerLabel === 'function' ? `Commande ${ticketNo(o)} prête · ${mallPagerLabel(o.pager)}` : `Commande ${ticketNo(o)} prête · client notifié`);
     }
 
     function vrapHandover(num) {

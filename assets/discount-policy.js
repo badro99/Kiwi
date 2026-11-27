@@ -85,16 +85,20 @@
    *   typeAtPay    · « Sur place » or « À emporter » is asked when the order is
    *                  paid, and printed on the kitchen ticket.
    * All off by default: a restaurant that sends first and is paid later keeps
-   * exactly the till it has. Owner writes, the paired till only reads. */
+   * exactly the till it has. Owner writes, the paired till only reads.
+   *   pagers       · how many bipeurs a mall restaurant hands out (1..20),
+   *                  read only when God mode's mallRestaurant is on. */
   const FLOW_KEYS = ['direct', 'payToKitchen', 'typeAtPay'];
   const flowStore = window.KiwiStore.define('counterflow', {
     blank: () => ({}), cloud: true,
-    isEmpty: data => !data || !FLOW_KEYS.some(k => typeof data[k] === 'boolean'),
+    isEmpty: data => !data || (!FLOW_KEYS.some(k => typeof data[k] === 'boolean') && !Number.isInteger(data.pagers)),
     merge: (_local, server) => server,
   });
   function flow(id) {
     const d = flowStore.get(venue(id)) || {};
-    return { direct: d.direct === true, payToKitchen: d.payToKitchen === true, typeAtPay: d.typeAtPay === true };
+    const out = { direct: d.direct === true, payToKitchen: d.payToKitchen === true, typeAtPay: d.typeAtPay === true };
+    if (Number.isInteger(d.pagers) && d.pagers >= 1 && d.pagers <= 20) out.pagers = d.pagers;
+    return out;
   }
   async function saveFlow(patch, id) {
     const target = venue(id);
@@ -105,6 +109,7 @@
     if (real) await cloud.pull(true);
     const next = flow(target);
     FLOW_KEYS.forEach((k) => { if (patch && typeof patch[k] === 'boolean') next[k] = patch[k]; });
+    if (patch && Number.isInteger(patch.pagers) && patch.pagers >= 1 && patch.pagers <= 20) next.pagers = patch.pagers;
     flowStore.set(next, target);
     if (!real) return { ok: true, localOnly: true, flow: next };
     return { ...(await cloud.save(next)), flow: next };

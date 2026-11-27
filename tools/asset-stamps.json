@@ -32,8 +32,8 @@
     "sha": "fddb9eb286e8dc9a"
   },
   "assets/admin-legacy.js": {
-    "v": "21",
-    "sha": "96a0009502c5b103"
+    "v": "22",
+    "sha": "015900556a12eb82"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -224,8 +224,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "49",
-    "sha": "af9300d80a51a2c5"
+    "v": "50",
+    "sha": "1c35bdf325f29c42"
   },
   "assets/caisse-app.js": {
     "v": "61",
@@ -260,12 +260,12 @@
     "sha": "690e7d77e134c697"
   },
   "assets/caisse-kitchen.js": {
-    "v": "45",
-    "sha": "70d570b6bdc44755"
+    "v": "46",
+    "sha": "9c535082fbf9e5f7"
   },
   "assets/caisse-lang.js": {
-    "v": "187",
-    "sha": "0b57fb4c8f4d1b4e"
+    "v": "188",
+    "sha": "93ca0cdf77bdfe90"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -340,8 +340,8 @@
     "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/counter-flow.js": {
-    "v": "4",
-    "sha": "a9bbfc0cec73aa0a"
+    "v": "5",
+    "sha": "211160cd5f8c3dea"
   },
   "assets/caisse/delivery.js": {
     "v": "16",
@@ -660,8 +660,8 @@
     "sha": "13f86c2a92de3f2b"
   },
   "assets/discount-policy.js": {
-    "v": "6",
-    "sha": "7a8cade086eefcb0"
+    "v": "7",
+    "sha": "66740f6f271e92d8"
   },
   "assets/employee-live.js": {
     "v": "656",
@@ -960,8 +960,8 @@
     "sha": "9dc65de4388af6b0"
   },
   "assets/interactive/handlers.js": {
-    "v": "13",
-    "sha": "0755283dce7034f8"
+    "v": "14",
+    "sha": "bc5db8c0859ab4b4"
   },
   "assets/interactive/helpers.js": {
     "v": "3",
@@ -1428,8 +1428,8 @@
     "sha": "723108537bee278a"
   },
   "assets/merchant-config.js": {
-    "v": "301",
-    "sha": "13fbf08d8b0e1456"
+    "v": "302",
+    "sha": "d2fc084f27cc6f36"
   },
   "assets/merchant-health.css": {
     "v": "3",
@@ -2388,8 +2388,8 @@
     "sha": "1f4a2677c0859a8f"
   },
   "assets/receipt.js": {
-    "v": "44",
-    "sha": "0151858d0fbb982b"
+    "v": "45",
+    "sha": "3cbe0529a804ff3a"
   },
   "assets/reception-view.js": {
     "v": "3",
@@ -2720,8 +2720,8 @@
     "sha": "6145873b12f5e69b"
   },
   "assets/till-policy-settings.js": {
-    "v": "2",
-    "sha": "7ed9229d8261221b"
+    "v": "3",
+    "sha": "8bc7fcb6124f88dd"
   },
   "assets/till-price-list.js": {
     "v": "4",

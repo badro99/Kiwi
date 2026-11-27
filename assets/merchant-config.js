@@ -168,6 +168,8 @@
     var c = cfg.countryProfile && cfg.countryProfile.code;
     return key === 'cheques' && !!c && c !== 'MA';
   }
+  /* mallRestaurant (God mode, restaurant de centre commercial) : pas de salle,
+     et une vente payée ne s'annule pas, elle se rembourse (counter-flow.js). */
   function featureOff(key) {
     if (key === 'reservations' || key === 'payroll') return false;
     if (foreignOff(key)) return true;
@@ -179,6 +181,7 @@
         if (cfg.features[aliases[i]] === false) return true;
       }
     }
+    if (cfg.features && cfg.features.mallRestaurant === true && (key === 'salle' || key === 'cancelSale')) return true;
     return false;
   }
 

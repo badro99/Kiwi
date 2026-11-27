@@ -185,14 +185,14 @@
       if (typeof counterStampOrder === 'function') counterStampOrder(order); kdsOrders.push(order); /* commentaire, sur place / à emporter */
       /* The client on the note follows it onto the board (sale-client.js). */
       try { if (window.KiwiCaisseSaleClient && window.KiwiCaisseSaleClient.carry) window.KiwiCaisseSaleClient.carry(order); } catch (_) {}
-      /* Print only after the permanent queue number has had its first chance
-         to land on the same object used by Caisse, KDS and the receipt. */
+      /* Print only after the permanent queue number has had its first chance to land on the same object used by Caisse, KDS and the receipt. */
       /* Keep the allocation promise on the order. finalizeTender() awaits this
          exact field before freezing the sale, receipt and report row. The old
          fire-and-forget call let local sequence #25 reach accounting while the
          same order became permanent #86 moments later. */
       order.canonicalNumberPromise = relayToKitchen(order);
-      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items), () => printKitchenTickets(order, items));   /* un numéro qui échoue n'efface pas le bon */
+      const paper = () => (typeof mallKitchenHolds === 'function' && mallKitchenHolds(order, items)) || printKitchenTickets(order, items);   /* centre commercial : le bon sort après le reçu (counter-flow.js) */
+      order.canonicalNumberPromise.then(paper, paper);   /* un numéro qui échoue n'efface pas le bon */
       try { persistShift(); } catch (_) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte'), 6500); }
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();

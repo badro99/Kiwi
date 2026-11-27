@@ -1950,7 +1950,7 @@ section('Whole-project regressions');
     'entitlement-held-gesture-test.mjs',
     'entitlement-panel-language-test.mjs',
     'discount-policy-test.mjs', 'return-window-till-test.mjs', 'r20-retail-till-test.mjs', 'returns-keyset-pagination-test.mjs', 'money-format-lang-test.mjs', 'retail-balances-status-test.mjs', 'ret-window-test.mjs', 'return-day-inflight-test.mjs', 'return-window-server-test.mjs', 'policy-editors-test.mjs', 'pressing-b2b-rate-test.mjs', 'spa-cure-grandfather-test.mjs',
-    'discount-policy-api-test.mjs', 'counter-policy-store-test.mjs',
+    'discount-policy-api-test.mjs', 'counter-policy-store-test.mjs', 'mall-restaurant-test.mjs',
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',
     'sale-server-truth-test.mjs',

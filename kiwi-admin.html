@@ -992,7 +992,7 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/admin-legacy.js?v=21"></script>
+  <script src="assets/admin-legacy.js?v=22"></script>
   <script src="assets/staff-roles.js?v=4"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
@@ -1241,6 +1241,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Éteint par défaut. Ajoute « Dépenses » au tableau de bord du propriétaire : l’argent entré, l’argent sorti (dépenses saisies, tickets scannés et retraits de la caisse classés automatiquement) et ce qui reste ce mois-ci. Réservé au propriétaire : ni la caisse ni les employés ne le voient. Éteint après usage : rien n’est effacé.' },
       { key:'serveurValidation', label:'Commandes des serveurs validées à la caisse', off:true,
         hint:'Éteint par défaut. Allumé, une commande envoyée depuis le téléphone d’un serveur sonne à la caisse et y attend : la caisse la valide (elle part alors en cuisine et au bar) ou la refuse. Le serveur ne peut pas la valider lui-même, et elle n’expire jamais toute seule. Appliqué à la prochaine commande.' },
+      { key:'mallRestaurant', label:'Mall restaurants', off:true,
+        hint:'Éteint par défaut. Pour un restaurant de food court, sans salle à lui : le client commande, paie, reçoit un bipeur et attend. Allumé, la caisse n’a plus de Salle ni de bouton « Envoyer en cuisine » ; « Sur place ou à emporter » est demandé à la fin, au paiement ; le bon de cuisine sort après le reçu du client ; chaque commande reçoit le premier bipeur libre (imprimé en grand sur le reçu et le bon, affiché sur le suivi À emporter et l’écran cuisine), libéré à « Remettre au client ». Les livraisons (Glovo, maison…) restent sur le même suivi. Une commande payée ne s’annule plus (« Annuler une vente » disparaît), elle se rembourse avec le code d’un responsable. Le nombre de bipeurs (1 à 20) se règle dans Paramètres › Commande au comptoir. Appliqué au prochain chargement de la caisse.' },
       { key:'simple_food_cost', label:'Coût simple (fiches de coût)', off:true,
         hint:'Éteint par défaut. Ajoute l’onglet « Coût simple » dans Analyse du menu : une calculatrice de coût par plat (prix d’achat, rendement, emballages, portions), réservée au propriétaire. Ne touche pas au stock. Éteint après usage : les fiches restent lisibles, rien n’est effacé.' },
     ],

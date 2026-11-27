@@ -1034,7 +1034,7 @@
       'empty.new': 'Rien de neuf. Les bons du comptoir arrivent ici.',
       'empty.cook': 'Aucun plat en cours.',
       'empty.pass': 'Le passe est vide.',
-      'chip.table': 'Table',
+      'chip.table': 'Table', 'chip.pager': 'Bipeur',
       'chip.delivery': 'Livraison',
       'chip.takeout': 'À emporter',
       'chip.suite': 'Suite',
@@ -1098,7 +1098,7 @@
       'empty.new': 'Nothing new. Counter tickets land here.',
       'empty.cook': 'Nothing cooking.',
       'empty.pass': 'The pass is clear.',
-      'chip.table': 'Table',
+      'chip.table': 'Table', 'chip.pager': 'Pager',
       'chip.delivery': 'Delivery',
       'chip.takeout': 'Takeaway',
       'chip.suite': 'Next course',
@@ -1160,7 +1160,7 @@
       'empty.new': 'لا جديد. طلبات الكاشير تصل هنا.',
       'empty.cook': 'لا يوجد طبق قيد التحضير.',
       'empty.pass': 'لا شيء في انتظار التقديم.',
-      'chip.table': 'طاولة',
+      'chip.table': 'طاولة', 'chip.pager': 'جهاز النداء',
       'chip.delivery': 'توصيل',
       'chip.takeout': 'للأخذ',
       'chip.suite': 'الطبق التالي',
@@ -1909,6 +1909,7 @@
   }
 
   function whereChip(o) {
+    var pg = Array.isArray(o.lines) && o.lines[0] ? Number(o.lines[0].pager) : 0; if (pg >= 1 && pg <= 20) return '<span class="chip table">' + T('chip.pager') + ' ' + pg + '</span>';   /* restaurant de centre commercial : le bipeur à la place de la table */
     if (o.mode === 'table' && o.table) return '<span class="chip table">' + T('chip.table') + ' ' + esc(o.table) + '</span>';
     if (o.mode === 'delivery') return '<span class="chip away">' + T('chip.delivery') + '</span>';
     return '<span class="chip away">' + T('chip.takeout') + '</span>';
@@ -2091,7 +2092,7 @@
       : o.mode === 'table' && o.table ? { kind: 'table', label: kt('kds.source.table', { table: String(o.table) }) }
       : o.mode === 'delivery' ? { kind: 'delivery', label: kt('kds.source.delivery') }
         : { kind: 'takeaway', label: kt('kds.source.takeaway') };
-    var chips = [];
+    var chips = [], pg = Array.isArray(o.lines) && o.lines[0] ? Number(o.lines[0].pager) : 0; if (pg >= 1 && pg <= 20) chips.push(T('chip.pager') + ' ' + pg);   /* bipeur (centre commercial) */
     if ((o.lines || []).some(function (l) { return l && l.course === 'suite'; })) chips.push(kt('kds.suite'));
     if (o.server) chips.push(String(o.server));
     var items = (o.lines || []).map(function (l) {

@@ -35,7 +35,7 @@
      * reste = ce comptoir. Une commande purement locale (pas encore de numéro
      * de file) est forcément du comptoir elle aussi. */
     function vrapIsCounterSale(o) {
-      if (!o) return false; if (o.delivery) return false;   /* livraison : elle attend son livreur */
+      if (!o) return false; if (o.delivery) return false; if (typeof mallOn === 'function' && mallOn()) return false;   /* centre commercial : le client attend son bipeur, la carte reste jusqu'à la remise */   /* livraison : elle attend son livreur */
       if (o.opChannel) return o.opChannel !== 'kiwi';
       return o.opNum == null;
     }
@@ -80,7 +80,7 @@
             ${o.pickedUp ? 'Remise au client.' : 'En attente de remise. « Retirer du suivi » ne modifie ni le paiement ni les ventes.'}</div>` : '';
       return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? ' is-paid' : ' is-open'}" data-vrap-num="${o.num}">
         <div class="vrap-order-head">
-          <span class="vrap-order-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}</span>
+          <span class="vrap-order-num">${ticketNo(o)}${o.delivery && typeof dlvBadge === 'function' ? dlvBadge(o) : ''}${typeof mallCardTag === 'function' ? mallCardTag(o) : ''}</span>
           <span class="vrap-order-time"><i data-lucide="clock"></i> ${vrapElapsed(o)}</span>
         </div>
         <div class="vrap-order-badges">
@@ -484,7 +484,7 @@
       // Le client apprend que sa commande est prête sur son téléphone (OrderPro)
       opPush(o, 'ready');
       try { persistShift(); } catch (_) {}
-      toast(`Commande ${ticketNo(o)} prête · client notifié`);
+      toast(o.pager && typeof mallPagerLabel === 'function' ? `Commande ${ticketNo(o)} prête · ${mallPagerLabel(o.pager)}` : `Commande ${ticketNo(o)} prête · client notifié`);
     }
 
     function vrapHandover(num) {

@@ -41,7 +41,7 @@
       return {
         ref: entry.ref,
         ts: entry.time instanceof Date ? entry.time.getTime() : new Date(entry.time).getTime(),
-        label: entry.label,
+        label: entry.label, pager: entry.pager || 0,   /* bipeur d'un restaurant de centre commercial (counter-flow.js) */
         cashier: entry.cashier || (currentCashier && currentCashier.name) || '',
         lines: Array.isArray(entry.lines) ? entry.lines : [],
         total: Math.abs(entry.amount),
