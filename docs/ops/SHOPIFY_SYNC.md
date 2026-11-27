@@ -7,8 +7,12 @@ is a standalone/API-only Shopify app, not a second merchant dashboard.
 
 - Kiwi is the source of truth for `available` inventory.
 - Version one synchronizes one Shopify location per Kiwi merchant.
-- Exact unique barcode wins; exact unique SKU is the fallback. Names never
-  create a link.
+- Exact unique barcode wins; exact unique SKU is the fallback. A Kiwi code
+  equal to a unique Shopify SKU also counts as a SKU match: a catalogue taken
+  from Shopify keeps each SKU as an imported code. Names never create a link.
+- Orders taken between a catalogue import and the link lowered Shopify, not
+  Kiwi. A named operator can replay them with `replay-orders` and a `since`
+  before the connection (dry run first); owners stay bounded by the connection.
 - A Kiwi sale succeeds locally even if Shopify is unavailable. The target
   quantity enters `shopify_sync_outbox`, is attempted with `waitUntil()`, and is
   retried by the minute Worker.

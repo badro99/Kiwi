@@ -491,6 +491,21 @@ export function buildExactVariantMapping(catalog, shopifyVariants) {
       if (left.length === 1 && right.length === 1) { hit = right[0]; method = 'sku'; }
       else if (left.length && right.length) hasAmbiguousIdentifier = true;
     }
+    /* Un catalogue repris de Shopify range la SKU de chaque variante comme code
+     * importé (CHICTRATEC, 27 nov. 2026 : 607 variantes, aucune SKU Kiwi, aucun
+     * code-barres Shopify). Un code Kiwi égal à une SKU Shopify, unique des deux
+     * côtés, est un identifiant exact comme les deux autres : jamais un nom. */
+    if (!hit) {
+      const skuCandidates = new Set();
+      for (const code of v.barcodes) {
+        const key = code.toLowerCase();
+        const left = kb.get(key) || [], right = ss.get(key) || [];
+        if (left.length === 1 && right.length === 1) skuCandidates.add(right[0]);
+        else if (left.length && right.length) hasAmbiguousIdentifier = true;
+      }
+      if (skuCandidates.size === 1) { hit = [...skuCandidates][0]; method = 'sku'; }
+      else if (skuCandidates.size > 1) hasAmbiguousIdentifier = true;
+    }
     if (hit && !used.has(hit.id)) {
       used.add(hit.id);
       matches.push({ kiwi: v, shopify: hit, method });

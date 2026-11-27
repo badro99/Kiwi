@@ -15,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { makeSession, SESS_COOKIE } from '../functions/auth/_lib.js';
+import { makeSession, SESS_COOKIE, OP_COOKIE, operatorToken, operatorIdToken } from '../functions/auth/_lib.js';
 import { onRequestPost as connectDirect } from '../functions/api/shopify/connect-direct.js';
 import { onRequestPost as status, onRequestGet as getStatus } from '../functions/api/shopify/status.js';
 import { planReplay } from '../functions/api/shopify/_replay-orders.js';
@@ -166,6 +166,27 @@ try {
     body: JSON.stringify({ merchant: 'maison-test', action: 'replay-orders' }),
   }) });
   ok('sans session du commerce, rien n\'est lu ni écrit', outsider.status === 401 && orderCalls === before);
+
+  /* Avant la connexion : le propriétaire reste borné à la connexion ; seul un
+   * opérateur NOMMÉ (présent dans la table) remonte plus tôt (CHICTRATEC, 27 nov.). */
+  const connectedTs = T0 - 86400000, early = T0 - 10 * 86400000;
+  const ownerEarly = await call({ since: early, dryRun: true });
+  ok('le propriétaire ne remonte pas avant la connexion', ownerEarly.status === 200 && ownerEarly.body.result.since === connectedTs, JSON.stringify(ownerEarly.body.result && ownerEarly.body.result.since));
+  sql.prepare("INSERT INTO operators (id,label,salt,hash,created_ts) VALUES ('op-test','Test','00','00',?)").run(Date.now());
+  const asOp = async (opId, extra) => {
+    const c = `${cookie}; ${OP_COOKIE}=${await operatorToken(env.AUTH_SECRET)}; kiwi_op_id=${await operatorIdToken(env.AUTH_SECRET, opId)}`;
+    const r2 = await status({ env, request: new Request('https://kiwi.test/api/shopify/status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', cookie: c },
+      body: JSON.stringify(Object.assign({ merchant: 'maison-test', action: 'replay-orders' }, extra)),
+    }) });
+    return { status: r2.status, body: await r2.json() };
+  };
+  const opEarly = await asOp('op-test', { since: early, dryRun: true });
+  ok('un opérateur nommé remonte avant la connexion', opEarly.status === 200 && opEarly.body.result.since === early, JSON.stringify(opEarly.body.result && opEarly.body.result.since));
+  const ghostEarly = await asOp('op-retire', { since: early, dryRun: true });
+  ok('un opérateur retiré de la table reste borné à la connexion', ghostEarly.status === 200 && ghostEarly.body.result.since === connectedTs, JSON.stringify(ghostEarly.body.result && ghostEarly.body.result.since));
+  const opDefault = await asOp('op-test', { dryRun: true });
+  ok('sans date, même l\'opérateur part de la connexion', opDefault.status === 200 && opDefault.body.result.since === connectedTs, JSON.stringify(opDefault.body.result && opDefault.body.result.since));
 
   /* Le même identifiant que le webhook : une commande reçue par webhook puis rejouée ne compte qu'une fois. */
   const plan = planReplay({ variants: [{ id: 'v-a', baseAt: 0 }], moves: [{ id: 'so-5001-9001', vid: 'v-a', d: -2, at: T0 }] },

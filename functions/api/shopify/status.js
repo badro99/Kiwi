@@ -437,7 +437,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
     if (action === 'replay-orders') {
       const connection = await connectionFor(env, merchant);
       if (!connection) throw new Error('shopify-not-connected');
-      const sinceTs = Math.max(Number(connection.connected_ts) || 0, Number(body && body.since) || 0);
+      /* Un opérateur nommé peut remonter avant la connexion : les commandes
+       * reçues entre une reprise de catalogue et la liaison (CHICTRATEC, 26-27
+       * nov. 2026) ont baissé Shopify, pas Kiwi, et l'activation pousserait
+       * l'ancien chiffre. La règle « variante comptée après la commande » de
+       * _replay-orders.js empêche toujours de retirer deux fois. */
+      const askedSince = Number(body && body.since) || 0;
+      const opSince = askedSince > 0 && (await namedOperatorId(request, env).catch(() => null));
+      const sinceTs = opSince ? askedSince : Math.max(Number(connection.connected_ts) || 0, askedSince);
       const result = await replayShopifyOrders(env, merchant, { sinceTs, dryRun: !!(body && body.dryRun) });
       return json({ ok: true, action, result, ...(await health(env, merchant)) });
     }

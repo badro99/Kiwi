@@ -99,6 +99,25 @@ ok('same product name alone never matches', mapping.unmatched.some((x) => x.id =
 ok('duplicate SKU is reported ambiguous', mapping.ambiguous.filter((x) => x.id.startsWith('k-dup')).length === 2);
 ok('stock snapshot keeps exact variant ids', stockSnapshot(catalog).get('k-bar') === 2);
 
+// A catalogue taken from Shopify keeps each Shopify SKU as an imported Kiwi
+// code (CHICTRATEC, 27 Nov 2026). Code = SKU, unique on both sides, links.
+const skuCodeMapping = buildExactVariantMapping({ products: [{ id: 'p', name: 'Toner' }], variants: [
+  { id: 'k-code', productId: 'p', stock: 5, sku: '', barcodes: [{ code: 'ST-HP-203A', type: 'imported' }] },
+  { id: 'k-code-dup-a', productId: 'p', stock: 1, sku: '', barcodes: [{ code: 'ST-DUP-KIWI' }] },
+  { id: 'k-code-dup-b', productId: 'p', stock: 1, sku: '', barcodes: [{ code: 'ST-DUP-KIWI' }] },
+  { id: 'k-code-shopdup', productId: 'p', stock: 1, sku: '', barcodes: [{ code: 'ST-DUP-SHOP' }] },
+  { id: 'k-code-none', productId: 'p', stock: 1, sku: '', barcodes: [{ code: 'ST-NOWHERE' }] },
+] }, [
+  { id: 's-code', inventoryItemId: 'i-code', title: 'HP 203A', barcode: '', sku: 'st-hp-203a', tracked: true, quantity: 5 },
+  { id: 's-code-dup', inventoryItemId: 'i-cd', title: 'Dup', barcode: '', sku: 'ST-DUP-KIWI', tracked: true, quantity: 1 },
+  { id: 's-shopdup-1', inventoryItemId: 'i-sd1', title: 'S1', barcode: '', sku: 'ST-DUP-SHOP', tracked: true, quantity: 1 },
+  { id: 's-shopdup-2', inventoryItemId: 'i-sd2', title: 'S2', barcode: '', sku: 'ST-DUP-SHOP', tracked: true, quantity: 1 },
+]);
+ok('a Kiwi code equal to a unique Shopify SKU links as SKU', skuCodeMapping.matches.some((x) => x.kiwi.id === 'k-code' && x.shopify.id === 's-code' && x.method === 'sku'));
+ok('a code shared by two Kiwi variants is ambiguous, never linked', skuCodeMapping.ambiguous.filter((x) => x.id.startsWith('k-code-dup')).length === 2);
+ok('a code equal to two Shopify SKUs is ambiguous, never linked', skuCodeMapping.ambiguous.some((x) => x.id === 'k-code-shopdup'));
+ok('a code Shopify does not know stays unmatched', skuCodeMapping.unmatched.some((x) => x.id === 'k-code-none'));
+
 const importRemote = [
   { id: 'gid://shopify/ProductVariant/101', productId: 'gid://shopify/Product/10', productTitle: 'Toner A', variantTitle: 'Default Title', inventoryItemId: 'i-101', title: 'Toner A · Default Title', barcode: '99001', sku: '', tracked: true, quantity: 6 },
   { id: 'gid://shopify/ProductVariant/102', productId: 'gid://shopify/Product/10', productTitle: 'Toner A', variantTitle: 'XL', inventoryItemId: 'i-102', title: 'Toner A · XL', barcode: '', sku: 'TONER-A-XL', tracked: true, quantity: 4 },
