@@ -1745,6 +1745,8 @@ function parseDays(q) {
     for (const k in __state.DAY_WORD) if (q.indexOf(k) >= 0) return __state.DAY_WORD[k];
     if (new RegExp('\\ble\\s+(?:' + __state.WEEKDAY + ')\\b').test(q)) return 1;
     if (/\bon\s+(?:sunday|monday|saturday)\b/.test(q)) return 1;
+    if (/\bjouj\s+(?:iyam|ayam)\b|جوج\s+ايام|يومين/.test(q)) return 2;
+    if (/\bnhar\s+l7ed\b|نهار\s+(?:الحد|الاحد)|يوم\s+الاحد/.test(q)) return 1;
     return null;
   }
 
@@ -2415,12 +2417,23 @@ function decideRoute(rawIn, retry) {
     if (anyQ(__state.INJECT_RX)) return { kind: 'inject', raw, q };
     if (anyQ(__state.ILLICIT_RX)) return { kind: 'illicit', raw, q };
     if (anyQ(__state.SECRET_RX)) return { kind: 'secret', raw, q };
+    /* « rédige une réponse à un avis qui parle de vol »: a writing job, not the topic. */
+    if (__state.COMPOSE_RX.test(q) && /message|post|repons|avis|annonce|e-?mail|lettre|texte|instagram|facebook|caption|review|reply|anglais|english|arab|رسالة|الرسالة|رد|جواب|منشور|بوست|اعلان|تعليق|كومونتير|الانجليزية|بالانجليزية/.test(q)) return { kind: null, raw, q, compose: true };
     if (__state.MARKET_RX.test(q)) return { kind: 'market', raw, q };
     if (anyQ(__state.THEFT_RX)) return { kind: 'theft', raw, q };
+    if (window.KiwiAgentData && window.KiwiAgentData.otherShop && window.KiwiAgentData.otherShop(raw, __state.B && __state.B.name, __state.norm)) return { kind: 'othershop', raw, q };
     /* A question about the merchant's own figures, in any of the ways it gets
      * typed (agent-data.js, ownIntent): answered from the data, ahead of every
      * route that could hand it to the model as a free guess. */
-    const mine = window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null;
+    /* « je veux gagner 15 000 par mois », « évolution sur 6 mois »: a plan or a
+     * comparison across periods, never today's total. */
+    if (__state.GOAL_RX.test(q) && parseAllAmounts(String(raw).replace(/(\d)[,\s](\d{3})\b/g, '$1$2')).some((v) => v >= 500)) return { kind: 'goal', raw, q };
+    if (__state.EXPANSION_RX.test(q)) return { kind: 'expansion', raw, q };
+    const longTrend = __state.TREND_RX.test(q) && !namedDay(q);
+    /* « aide-moi à augmenter les ventes » names the sales but asks for advice. */
+    const growAsk = /(?:augment|boost|increase|grow|amelior)\w*.{0,18}(?:vente|chiffre|sales|revenue)|sell\s+more|vendre\s+plus|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\s+(?:ventes|lmbi3at|lbi3)|\bretain\b|fidelis|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+الزبناء|\bnjib\s+zb|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين/.test(q);
+    const books = /\btva\b|\bvat\b|\bcnss\b|fiches?.?de.?paie|payslip|payroll|\btax(?:es)?\b|\bbilan\b|comptab|ضريب|الضمان\s*الاجتماعي|فيش\s*دو|البيلان|كومبتابل/.test(q) || __state.BREAKEVEN_ASK.test(q);
+    const mine = !longTrend && !growAsk && !books && window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null;
     if (mine && mine.entity) return { kind: 'lookup', raw, q, spec: Object.assign(mine, { raw, period: periodWindow(q) }) };
     if (mine) return mine.route === 'day' ? { kind: 'day', raw, q, day: { offset: 0 } } : { kind: mine.route, raw, q, run: mine.route === 'charges' ? () => sCharges() : () => sRevenue() };
     /* A dated closure is a holiday, not a bankruptcy — and STRAIN_RX owns
@@ -2434,7 +2447,7 @@ function decideRoute(rawIn, retry) {
     /* Write me / translate this / tell me a joke. These are the one thing the
      * model is genuinely better at, and a deterministic answer would be the
      * worse failure: "write a thank you note" was answered "avec plaisir". */
-    if (__state.COMPOSE_RX.test(q)) return { kind: null, raw, q };
+    if (__state.COMPOSE_RX.test(q)) return { kind: null, raw, q, compose: true };
     /* Avant matchAction : « valide la commande 12 » nomme une destination
        (les commandes) autant qu'un ordre, et ouvrir la page serait une réponse
        à côté. Le verbe d'état tranche. */
@@ -2576,9 +2589,15 @@ function decideRoute(rawIn, retry) {
 function featureCanTake(raw, decided) {
     try {
       const guide = window.KiwiFeatureGuide;
-      if (!guide || !guide.canHandle(raw)) return false;
-      if (guide.isPlans && guide.isPlans(raw)) return !decided || !/^(?:illicit|charges)$/.test(decided.kind);
-      if (guide.isHowTo && guide.isHowTo(raw)) return !decided || !decided.kind || /^(?:help|greet|price|stock|clients|advice|hire|lookup|llm|unclear|day|revenue|meta)$/.test(decided.kind);
+      if (!guide || !guide.canHandle(raw) || (decided && decided.compose)) return false;
+      if (guide.isPlans && guide.isPlans(raw)) {
+        /* « combien coûte mon abonnement » is this merchant's cost; a named plan or « quel abonnement » is the catalogue. */
+        const q = __state.norm(raw);
+        const ownCost = decided && decided.kind === 'charges' && !/\b(?:basic|plus|pro|ultra|ultimate)\b|بلس|برو|الترا/.test(q) && /combien|cout|cost|\bch7al\b|شحال|كم|prix|price/.test(q) && !/\bquel|which|what\b|شنو|اش من|\bach men\b/.test(q);
+        return !decided || (decided.kind !== 'illicit' && !ownCost);
+      }
+      if (guide.isHowTo && guide.isHowTo(raw) && /\bcnss\b|fiches?.?de.?paie|\btva\b|\bvat\b|ضريب|الضمان\s*الاجتماعي|فيش\s*دو|payslip|payroll/.test(__state.norm(raw))) return false;
+      if (guide.isHowTo && guide.isHowTo(raw)) return !decided || !decided.kind || /^(?:help|greet|price|stock|clients|advice|hire|lookup|llm|unclear|day|revenue|meta|afford|nodata|notrend|scoped|charges)$/.test(decided.kind);
       if (guide.isPending && guide.isPending()) {
         /* The setup's next answer, unless the merchant asked something else. */
         const asks = /[?؟]\s*$/.test(String(raw)) || /^(?:combien|cb|kom|how many|how much|qui|who|quel|quelle|what|which|شحال|كم|من|chkon|ch7al|chhal|wach|واش|est.ce)/.test(__state.norm(raw));

@@ -1084,7 +1084,7 @@
     avg: W("مويان|\\bmoyen\\b|\\bmoyen\\w*|\\baverage\\b|\\bavg\\b|\\bmean\\b|\\bper (?:ticket|order|sale|customer)\\b|\\bpar (?:ticket|commande|vente|client|achat)\\b|معدل|متوسط|المتوسط|المعدل|موايان|البانيي|\\bmo3adal\\b|\\blmo3adal\\b|\\bmoyenne\\b"),
     menu: W("قايمتي|قايمة الطعام|قايمة|مدرج|\\bentries\\b|كتالوج|\\bmenu\\b|\\bcarte\\b|\\bcatalogu?e?\\b|\\bcatalog\\b|المنيو|المينيو|الكارط|القائمة|الكاتالوغ|كاطالوغ|الكاطالوغ|منيو|\\bmenu\\b|\\bcarte\\b|\\bcatalogue\\b|\\bdans ma boutique\\b|\\bau magasin\\b|\\benregistres?\\b|\\blistes?\\b|مسجل|\\bmsajel\\b|\\bchoix\\b|اختيار|\\bin stock\\b|\\bje propose\\b"),
     menuItem: W("طبق|ماكلة|ماكلات|برودوي|\\bmakla\\b|\\bentries\\b|عناصر|\\bplats?\\b|\\bproduits?\\b|\\barticles?\\b|\\breferences?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\bchoix\\b|\\boptions?\\b|بلات|بلاتوات|منتوج|منتج|منتجات|اطباق|الاطباق|صنف|اصناف|آرتيكل|ارتيكل|حاجة|اختيار|\\bplat\\b|\\bsenf\\b|\\barticle\\b|\\bproduit\\b"),
-    notStaffCount: W("راتب|ساعات|\\bheures\\b|\\bhours\\b|\\bworked\\b|licenci|layoff|lay off|\\bvirer\\b|\\bfire\\b|renvoy|econom|\\bsave\\b|kankhelles|nkhelles|كنخلص|نخلص|\\bcoute\\w*|\\bcout\\b|\\bcost\\w*|\\bembauch\\w*|\\brecrut\\w*|\\bhir(?:e|ing)\\b|\\bsalaires?\\b|\\brawatib\\b|رواتب|يكلف|توظيف|\\bpay(?:roll)?\\b|\\bpaie\\b"),
+    notStaffCount: W("diminuer|reduire|reduc|تقليص|تقليل|ننقص|نحيد|\\bn9es\\b|راتب|ساعات|\\bheures\\b|\\bhours\\b|\\bworked\\b|licenci|layoff|lay off|\\bvirer\\b|\\bfire\\b|renvoy|econom|\\bsave\\b|kankhelles|nkhelles|كنخلص|نخلص|\\bcoute\\w*|\\bcout\\b|\\bcost\\w*|\\bembauch\\w*|\\brecrut\\w*|\\bhir(?:e|ing)\\b|\\bsalaires?\\b|\\brawatib\\b|رواتب|يكلف|توظيف|\\bpay(?:roll)?\\b|\\bpaie\\b"),
   };
   /* The order is the precedence: the most specific question wins. */
   var STRONG_SHIFT = W("\\bshift\\b|\\bon duty\\b|de service|en poste|(?:a|ont) pointe\\b|\\bclocked\\b|\\bscheduled\\b|\\bplanning\\b|المناوبة|المناوبون|وردية|السيرفيس|الشيفت|البيرمانونس|مبرمج|\\bmprogrammi\\b");
@@ -1102,7 +1102,7 @@
   var PAID_OUT = W("دفعت|دفعنا|خلصت|خلصنا|\\bkhlle?st\\b|\\bpaye\\b|\\bpaid\\b|\\bdecaiss\\w*|\\bspent on\\b|\\bsorti de (?:la )?caisse\\b");
   var LATER = W("\\bdemain\\b|\\btomorrow\\b|غدا|غدوة|\\bghda\\b|\\bghedda\\b|apres[- ]demain|la semaine prochaine|next week");
   var HOWTO = W("^(?:comment (?!va\\b|ca va)|how (?:do|to|can|does|should)\\b|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b)|\\bwach kayn\\b|est.ce qu'?il y a");
-  var FUTURE = W("\\bvais\\b|\\bva (?:faire|gagner|vendre)\\b|\\bwill\\b|غادي ن|\\bghadi n|prevision|forecast|\\bprevoir\\b");
+  var FUTURE = W("\\bprevoi\\w*|\\bestim\\w*|\\bproject\\w*|next month|mois prochain|month end|end of (?:the )?month|fin du mois|\\bfinirai\\b|\\bjay\\b|الجاي|القادم|بنهاية|نهاية الشهر|لاخر الشهر|\\bakher chh?er\\b|\\btwa9e3\\b|توقع|قدر ليا|ستبلغ|ستكون|\\bghansel\\b|غنبيع|\\bgh ?nbi3\\b|a ce rythme|at this pace|الوتيرة|بهذا المعدل|end up this month|\\bvais\\b|\\bva (?:faire|gagner|vendre)\\b|\\bwill\\b|غادي ن|\\bghadi n|prevision|forecast|\\bprevoir\\b");
   var MONEY_TALK = W("\\bmarges?\\b|\\bmargin\\b|benefice|\\bprofit|rentab|break.?even|\\bseuil\\b|\\bgagn\\w*|\\bearn\\w*|\\bincome\\b|\\bnet\\b|ربح|ارباح|\\brba7\\b|\\bargent\\b|\\bcash\\b|tresorerie|\\bmoney\\b|\\bflous\\b|فلوس|\\bcouter\\b|\\bcoute\\b|\\bcost\\b|\\bbaiss\\w*|\\bhausse\\b|augment\\w*|\\bdrop\\w*|\\bcompar\\w*");
   var SEASON = W("\\bramadan\\b|\\bramdan\\b|\\baid\\b|\\beid\\b|\\bete\\b|\\bsummer\\b|\\bhiver\\b|\\bwinter\\b|\\bsaison\\w*|\\bseason\\w*|رمضان|العيد|الصيف|الشتاء|موسم");
   var OTHER_DAY = W("\\bhier\\b|\\byesterday\\b|avant[- ]hier|البارح|البارحة|(?:^|\\s)امس|\\blbare7\\b|\\blundi\\b|\\bmardi\\b|\\bmercredi\\b|\\bjeudi\\b|\\bvendredi\\b|\\bsamedi\\b|\\bdimanche\\b|\\bjanvier\\b|\\bfevrier\\b|\\bmars\\b|\\bavril\\b|\\bmai\\b|\\bjuin\\b|\\bjuillet\\b|\\baout\\b|\\bseptembre\\b|\\boctobre\\b|\\bnovembre\\b|\\bdecembre\\b|\\bsemaine\\b|\\bweek\\b|\\blast\\b|dernier|derniere|passee?\\b|الماضي|الاسبوع");
@@ -1188,6 +1188,12 @@
     if (LAST_MONTH.test(q)) return null;
     var howMuch = /combien|\bcb\b|how much|how many|كم|شحال|\bch7al\b|\bchhal\b|\bwhat'?s in\b/.test(q);
     if (!PAID_OUT.test(q) && h('now') && CASH_PAY.test(q) && (howMuch || h('count') || /montant|total|show me|give me|value|اعطني|عطيني|قيمة|المبلغ|مجموع|اجمالي/.test(q))) return { entity: 'cash', agg: 'today' };
+    /* « solde espèces du tiroir », « current cash in the register », « شحال
+     * كاين دابا فالكيسا »: what the drawer holds now, without « combien ». */
+    if (!PAID_OUT.test(q) && /\b(?:register|drawer|tiroir|till)\b|\bf(?:e|i)? ?caisse\b|\ben caisse\b|\bdans (?:la )?caisse\b|الكيسا|الصندوق|الدرج/.test(q)
+      && /\b(?:actuel\w*|current\w*|daba|disponible|balance|solde|montant|show|donne|kayn|maintenant)\b|دابا|الحالي|بقي|كاين|كم|شحال/.test(q)
+      && /\bcash\b|\bespeces\b|\bliquide\b|\bna9d\b|نقد|فلوس|\bflous\b|كاش|\bkayn\b|كاين/.test(q)
+      && !/combien de temps|how long|\btenir\b|survi|شحال من وقت|كم من الوقت|تنفد|نبقي/.test(q)) return { entity: 'cash', agg: 'today' };
     if (howMuch && CASH_BOX.test(q) && !/combien de temps|how long|\btien[st]?\b|\btenir\b|survi|\bdure\b|شحال من وقت|كم من الوقت/.test(q)) return { entity: 'cash', agg: 'today' };
     if (DAYS_W.test(q) && OPENISH.test(q) && WEEK_W.test(q) && (!h('client') || /نستقبل|كنستقبلو|\bkansta9blo\b|\breceive\b|accueill/.test(q)) && !h('sell')) return { entity: 'hours', agg: 'week' };
     if (WEEK_DAYS.test(q) && /semaine|\bweek\b|سيمانة|السيمانة|الاسبوع|اسبوع|\bsimana\b|\bsmana\b|\bssimana\b/.test(q)) return { entity: 'hours', agg: 'week' };
@@ -1211,7 +1217,7 @@
     if (h('gone') && (h('client') || (PERSON.test(q) && /revien|vient|venu|come|visit|رجع|يجي|كيجي|كيدوز|يزور|rje3|kayjiw|\bjaw/.test(q)))) return { entity: 'client', agg: 'dormant' };
     /* The average ticket, before anything that reads "spend" as a client. */
     /* « معدل الفلوس » is money as a unit, not a profit question. */
-    var cashWord = money && !MONEY_TALK.test(q.replace(/فلوس|\bflous\b/g, ' '));
+    var cashWord = money && !FUTURE.test(q) && !MONEY_TALK.test(q.replace(/فلوس|\bflous\b/g, ' '));
     if ((!money || cashWord) && !season && !past && h('avg') && (h('orders') || /panier|basket|ticket|الباني|السلة|سلة|عملية|مبلغ|قيمة|تذاكر|commande|achat|شراء|البيعة|الفواتير|الفاتورة|vente|\bsale\b|order|depense|spend|كيصرف|ينفق|kayserf|kaykhelles/.test(q))) return { route: h('now') ? 'day' : 'revenue' };
     /* A product the customers take most, even when the sentence names them. */
     if (!season && h('top') && h('sell') && h('item') && !h('spend') && !h('staff')) return { entity: 'product', agg: 'top' };
@@ -1262,5 +1268,35 @@
 
   /* The headcount the model may state: the Équipe roster (27 Nov, a restaurant got a made-up figure). */
   function staffCount() { var n = teamRoster().length; return n || null; }
-  window.KiwiAgentData = { reply: reply, intent: ownIntent, staffCount: staffCount, _rank: productRanking, _findClient: findClient };
+  /* « combien vend le Café Atlas », « مبيعات مطعم البركة »: another business
+   * named, not this one. Its figures are not in Kiwi; the router says so
+   * instead of answering with this merchant's own numbers. */
+  function otherShop(raw, ownName, nrm) {
+    var txt = String(raw || '');
+    if (txt === txt.toUpperCase() && /[A-Z]{3}/.test(txt)) return false;
+    var n = function (x) { return nrm(String(x || '')).replace(/[’']s\b/g, '').replace(/[^a-z0-9؀-ۿ ]+/g, ' ').trim(); };
+    var name = null;
+    var nouns = 'cafe|café|resto|restaurant|boutique|magasin|snack|shop|store|salon|patisserie|pâtisserie|epicerie|épicerie|superette|hotel|hôtel'
+      .replace(/[a-zéâô]/g, function (c) { return '[' + c + c.toUpperCase() + ']'; });
+    var lat = txt.match(new RegExp('(?:^|[^\\p{L}])(?:' + nouns + ')\\s+((?:\\p{Lu}[\\p{L}\'’-]+)(?:\\s+\\p{Lu}[\\p{L}\'’-]+)?)', 'u'));
+    if (lat && !/^(?:mon|ma|my|notre|our)$/i.test((txt.slice(0, lat.index + 1).trim().split(/\s+/).pop() || ''))) name = lat[1];
+    if (!name) {
+      var ar = txt.match(/(?:^|\s)(?:مطعم|مقهى|مقهي|كافيه|كافي|بوتيك|متجر|حانوت|سناك)\s+([^\s؟?،.!]{2,})/);
+      var STOP = /^(?:ديال\S*|اليوم|البارح|امس|أمس|هذا|هاد|هادا|في|ف|على|كامل|عندي|الشهر|اللي|لي|جديد\S*|آخر|اخر|ثاني|ثان|تاني|كبير|صغير|واحد|وحدة|اخرى|أخرى|ديالي|ديالنا|ديالك|ديالو|ب|بلا|مع|كيبيع|كتبيع|شحال)$/;
+      if (ar && !STOP.test(ar[1].replace(/[\u064b-\u065f]/g, ''))) name = ar[1];
+    }
+    if (!name) return false;
+    var nm = n(name), mine = n(ownName);
+    if (!nm || nm.length < 2) return false;
+    if (mine && nm.split(' ').some(function (w) { return w.length > 2 && mine.indexOf(w) !== -1; })) return false;
+    /* « Café Noir » on the menu is a product, not a café. */
+    var items = [];
+    try { items = items.concat((window.KiwiMenuStore && window.KiwiMenuStore.items ? window.KiwiMenuStore.items(venueId()) : []) || []); } catch (_) {}
+    try { items = items.concat((window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.listProducts ? window.KiwiBoutiqueCatalog.listProducts() : []) || []); } catch (_) {}
+    var full = n(txt);
+    if (items.some(function (it) { var k = n(it && it.name); return k && k.indexOf(nm) !== -1 && full.indexOf(k.split(' ')[0]) !== -1; })) return false;
+    return true;
+  }
+
+  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, staffCount: staffCount, _rank: productRanking, _findClient: findClient };
 }());

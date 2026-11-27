@@ -166,6 +166,8 @@
     STOCK_RX: { get: () => STOCK_RX },
     BUY_RX: { get: () => BUY_RX },
     VALUATION_RX: { get: () => VALUATION_RX },
+    RX_ACCT: { get: () => RX_ACCT },
+    BREAKEVEN_ASK: { get: () => BREAKEVEN_ASK },
     WORKER_RX: { get: () => WORKER_RX },
     EXPANSION_RX: { get: () => EXPANSION_RX },
     GOAL_RX: { get: () => GOAL_RX },
@@ -230,7 +232,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=11';
+  const partUrl = 'assets/agent/ui.js?v=13';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -796,7 +798,8 @@
     ar: { open: 'افتح محاسبتي', tva: 'الضريبة والـTVA', paie: 'الأجور', etats: 'القوائم المالية', livre: 'دفتر الأستاذ' },
   };
   const acctLabel = (k) => (ACCT_LBL[L] || ACCT_LBL.fr)[k];
-  const RX_ACCT = /(comptab|grand.?livre|ecritur|\btva\b|impot|fiscal|declarat|cnss|\bla\s+paie\b|\bpaie\s+du\s+mois\b|fiche.?de.?paie|bulletin.?de.?paie|bilan|cloture|amortiss|\bdgi\b|etats financiers|account|bookkeep|ledger|\bvat\b|payroll|payslip|\btax(?:es?)?\b|balance.?sheet|financial.?statement|social\s+security|contributions?\s+sociales|journal\s+(?:des\s+)?(?:ventes|achats|comptable)|\bdariba\b|\bdaribat\b|محاسب|دفتر|ضريب|رواتب|كشوف|الضمان\s*الاجتماعي|فواتير|فاتورة)/;
+  const BREAKEVEN_ASK = /couvr\w*\s+(?:mes\s+|my\s+|all\s+my\s+)?(?:couts|frais|charges)|rentrer\s+dans\s+mes\s+frais|ne\s+plus\s+perdre|covers?\s+(?:all\s+)?my\s+costs|نغطي|لتغطية|يغطي|\bnghatti\b|\bno9tat\s+ta3adol\b|\bta3adol\b/;
+  const RX_ACCT = /(فيش\s*دو|كومبتابل|البيلان|comptab|grand.?livre|ecritur|\btva\b|impot|fiscal|declarat|cnss|\bla\s+paie\b|\bpaie\s+du\s+mois\b|fiche.?de.?paie|bulletin.?de.?paie|bilan|cloture|amortiss|\bdgi\b|etats financiers|account|bookkeep|ledger|\bvat\b|payroll|payslip|\btax(?:es?)?\b|balance.?sheet|financial.?statement|social\s+security|contributions?\s+sociales|journal\s+(?:des\s+)?(?:ventes|achats|comptable)|\bdariba\b|\bdaribat\b|محاسب|دفتر|ضريب|رواتب|كشوف|الضمان\s*الاجتماعي|فواتير|فاتورة)/;
 
   /* ─── Empty-state hero — the assistant's first screen ─── */
   const HERO_L = {
@@ -1514,10 +1517,11 @@
    * dashboard handler (the same Kiwi.handlers the sidebar fires), surfaced as a
    * one-tap button. Targets are disjoint from the finance intents, so this
    * never steals "show my margin" — that has no navigable target. */
-  const ACTION_VERB = /ouvr|montr|affich|afich|open|show|go to|display|navigate|\bva\s+(?:dans|a|sur|au|aux)\b|\ballez\s+(?:dans|a)\b|cr[ée]er?|create|gener|nouvelle|new |\bhell\b|\bhal\b|\bftah\b|\bwri\b|\bwerri\b|اعرض|اظهر|افتح|انتقل|انشي|حل|وري/;
+  const ACTION_VERB = /\b7ell?\b|\bsir\b|\bwerini\b|\bwarini\b|سير|اذهب|ارني|اريني|\bpage\b|صفحة|ouvr|montr|affich|afich|open|show|go to|display|navigate|\bva\s+(?:dans|a|sur|au|aux)\b|\ballez\s+(?:dans|a)\b|cr[ée]er?|create|gener|nouvelle|new |\bhell\b|\bhal\b|\bftah\b|\bwri\b|\bwerri\b|اعرض|اظهر|افتح|انتقل|انشي|حل|وري/;
   const NAV_TARGETS = [
-    { rx: /\bl?menu\b|\bcarte\b|modificateur|قايمة/, h: 'nav-menu', key: 'menu' },
-    { rx: /transaction|commande|orders?\b|طلبات|معاملات/, h: 'nav-transactions', key: 'transactions' },
+    { rx: /\bl?menu\b|\bcarte\b|modificateur|قايمة|منيو|مينيو/, h: 'nav-menu', key: 'menu' },
+    { rx: /transaction|commande|orders?\b|طلبات|معاملات|ترانزاكسيون|\bpage\s+(?:des\s+)?ventes\b|sales\s+page|\brapports?\b|\breports?\b|تقارير|التقارير|الرابورات|رابور/, h: 'nav-transactions', key: 'transactions' },
+    { rx: /\bclients?\b|\bcustomers?\b|كليان|الكليون|كليون|زبائن|زباين|زبناء|الزبناء/, h: 'clients-directory', key: 'clients' },
     { rx: /terminaux|terminal|\btpe\b|lecteur|اجهزة|جهاز/, h: 'nav-terminaux', key: 'terminaux' },
     { rx: /reglement|settlement|versement|تسوي/, h: 'nav-reglements', key: 'reglements' },
     { rx: /conformit|compliance|\bkyc\b|امتثال/, h: 'nav-conformite', key: 'conformite' },
@@ -1527,7 +1531,7 @@
     /* Avant l'entrée générique « stock », sinon elle ne gagne jamais. `noun` :
      * « ma facture fournisseur » nomme la chose à faire, pas besoin d'impératif. */
     { rx: /factures?\s+fournisseur|(?:lire|lis|scanner?|scanne|read|scan)\s+(?:une|ma|la|cette|a|my|the)?\s*facture|supplier\s+invoice|فاتورة\s+(?:مورد|الممون|المورد)/, h: 'stock-scan-invoice', key: 'stock', label: 'supplierInvoice', noun: true },
-    { rx: /stock|inventaire|inventory|ingredient|مخزون/, h: 'nav-stock', key: 'stock' },
+    { rx: /stock|inventaire|inventory|ingredient|مخزون|ستوك/, h: 'nav-stock', key: 'stock' },
     { rx: /reservation|booking|\brdv\b|حجز|حجوزات/, h: 'nav-reservations', key: 'reservations' },
     { rx: /nouvelle vente|new sale|بيع جديد/, h: 'new-sale', key: 'newSale' },
   ];
@@ -1557,15 +1561,15 @@
     fr: { lead: (x) => `J’ouvre ${x}.`, btn: (x) => `Ouvrir ${x}`,
       menu: 'la carte', transactions: 'les commandes', terminaux: 'les terminaux', reglements: 'les règlements',
       conformite: 'la conformité', equipe: 'l’équipe', tables: 'les tables', kds: 'l’écran cuisine', stock: 'le stock',
-      reservations: 'les réservations', paymentLink: 'un lien de paiement', newSale: 'une nouvelle vente', supplierInvoice: 'la lecture d’une facture fournisseur' },
+      reservations: 'les réservations', clients: 'les clients', paymentLink: 'un lien de paiement', newSale: 'une nouvelle vente', supplierInvoice: 'la lecture d’une facture fournisseur' },
     en: { lead: (x) => `Opening ${x}.`, btn: (x) => `Open ${x}`,
       menu: 'the menu', transactions: 'orders', terminaux: 'the terminals', reglements: 'settlements',
       conformite: 'compliance', equipe: 'the team', tables: 'the tables', kds: 'the kitchen screen', stock: 'stock',
-      reservations: 'reservations', paymentLink: 'a payment link', newSale: 'a new sale', supplierInvoice: 'the supplier-invoice reader' },
+      reservations: 'reservations', clients: 'customers', paymentLink: 'a payment link', newSale: 'a new sale', supplierInvoice: 'the supplier-invoice reader' },
     ar: { lead: (x) => `أفتح ${x}.`, btn: (x) => `افتح ${x}`,
       menu: 'القائمة', transactions: 'الطلبات', terminaux: 'الأجهزة', reglements: 'التسويات',
       conformite: 'الامتثال', equipe: 'الفريق', tables: 'الطاولات', kds: 'شاشة المطبخ', stock: 'المخزون',
-      reservations: 'الحجوزات', paymentLink: 'رابط دفع', newSale: 'عملية بيع جديدة', supplierInvoice: 'قراءة فاتورة مورد' },
+      reservations: 'الحجوزات', clients: 'الزبناء', paymentLink: 'رابط دفع', newSale: 'عملية بيع جديدة', supplierInvoice: 'قراءة فاتورة مورد' },
   };
   function sAction(target) {
     const a = ACT[L] || ACT.fr;
@@ -1704,28 +1708,28 @@
    * burn, the biggest cost line. This is the moment the assistant matters most,
    * so it must not be the moment it goes quiet. Checked BEFORE NEG_RX so a
    * hardship sentence is never mistaken for a refusal. */
-  const STRAIN_RX = /\b(?:je\s+)?(?:vais|veux|dois)\s+fermer\b|\bferm\w*\b[^?]{0,25}\bdefinitivement\b|\bbaisse\s+le\s+rideau\b|\bfaillite\b|\bdepose\s+le\s+bilan\b|\bmettre\s+la\s+cle\b|combien\s+de\s+temps\s+je\s+(?:tiens|peux\s+tenir)|\bje\s+tiens\s+combien\b|\brunway\b|\bpas\s+les\s+moyens\b|\bpas\s+de\s+quoi\s+payer\b|(?:peux|peut)\s+plus\s+payer|n?[e']?\s*arrive\s+plus\s+a\s+payer|plus\s+de\s+(?:tresorerie|cash|liquidites?)|(?:cash|tresorerie)\s+s[' ]?epuise|droit\s+dans\s+le\s+mur|\bje\s+coule\b|\bgoing\s+(?:under|bankrupt)\b|\bshut(?:ting)?\s+down\b|close\s+down|running\s+out\s+of\s+(?:cash|money)|how\s+long\s+can\s+i\s+(?:last|survive)|\bma\s*b9atch\b|\bbaqi\s+liya\b|مفلس|ساغلق|نسد\s*المحل|الصمود|سيولة/;
+  const STRAIN_RX = /burn\s+rate|run\s+out\s+of\s+(?:cash|money)|how\s+long\s+can\s+i\s+keep\s+going|\bje\s+vais\s+couler\b|combien\s+de\s+mois\s+il\s+me\s+reste|tenir\s+combien|tresorerie\s+va\s+tenir|manque(?:r)?\s+de\s+(?:cash|tresorerie)|je\s+perds?\s+de\s+l.?argent[^?]{0,30}(?:tenir|combien)|\bghadi\s+nfe?ll?es\b|\bnfe?ll?es\b|\bghaysaliw\b|\bghatk\S*ini\b|\bliquidite\b|نفلس|صمودي|اصمد|نصبر|الاستمرار|ستنفد|تنفد|غيساليو|نبقي\s+بهاد\s+الفلوس|بهاد\s+الفلوس|الانهيار|\b(?:je\s+)?(?:vais|veux|dois)\s+fermer\b|\bferm\w*\b[^?]{0,25}\bdefinitivement\b|\bbaisse\s+le\s+rideau\b|\bfaillite\b|\bdepose\s+le\s+bilan\b|\bmettre\s+la\s+cle\b|combien\s+de\s+temps\s+je\s+(?:tiens|peux\s+tenir)|\bje\s+tiens\s+combien\b|\brunway\b|\bpas\s+les\s+moyens\b|\bpas\s+de\s+quoi\s+payer\b|(?:peux|peut)\s+plus\s+payer|n?[e']?\s*arrive\s+plus\s+a\s+payer|plus\s+de\s+(?:tresorerie|cash|liquidites?)|(?:cash|tresorerie)\s+s[' ]?epuise|droit\s+dans\s+le\s+mur|\bje\s+coule\b|\bgoing\s+(?:under|bankrupt)\b|\bshut(?:ting)?\s+down\b|close\s+down|running\s+out\s+of\s+(?:cash|money)|how\s+long\s+can\s+i\s+(?:last|survive)|\bma\s*b9atch\b|\bbaqi\s+liya\b|مفلس|ساغلق|نسد\s*المحل|الصمود|سيولة/;
 
   /* Markets. The LLM prompt already forbids investment advice, but the scored
    * router got there first: "quel est le meilleur investissement en bourse"
    * scored on `investir` and answered "indiquez le montant de l'investissement"
    * — i.e. it offered to help. Refuse before the classifier can. */
-  const MARKET_RX = /\bbourse\b|\bactions?\s+(?:cotees|en\s+bourse)\b|\bcrypto|\bbitcoin\b|\betf\b|\btrading\b|placement\s+boursier|\bstock\s+market\b|\bconcurrent\w*\b|\bcompetitors?\b|\bbenchmark\b|\bsecteur\b|marche\s+d[ue]\b|market\s+size|industry\s+average|average\s+margin\s+(?:in|for)|marge\s+moyenne\s+(?:du|de\s+la|dans)|combien\s+gagne\s+(?:un|le)\s+(?:cafe|restaurant|commerce)|combien\s+de\s+cafes?\b|بورصة|اسهم|متوسط[^؟?]{0,20}(?:القطاع|السوق|المطاعم|المقاهي|المحلات)|السوق|المنافس/;
+  const MARKET_RX = /(?:(?:moyen\w*|average)\b|معدل).{0,40}(?:\bau maroc\b|morocc\w*|المغرب|\blmghrib\b|\brestos\b|\brestaurants\b|\bcafes\b|المطاعم|القهاوي|industry|secteur|مجال)|\bcompeti(?:ng|tors?)\b|concurren\w*|منافس|نافسين|\bindustry\b|\bbourse\b|\bactions?\s+(?:cotees|en\s+bourse)\b|\bcrypto|\bbitcoin\b|\betf\b|\btrading\b|placement\s+boursier|\bstock\s+market\b|\bconcurrent\w*\b|\bcompetitors?\b|\bbenchmark\b|\bsecteur\b|marche\s+d[ue]\b|market\s+size|industry\s+average|average\s+margin\s+(?:in|for)|marge\s+moyenne\s+(?:du|de\s+la|dans)|combien\s+gagne\s+(?:un|le)\s+(?:cafe|restaurant|commerce)|combien\s+de\s+cafes?\s+(?:a|au|en|dans|il\s+y\s+a|y\s+a|existent)\b|بورصة|اسهم|متوسط[^؟?]{0,20}(?:القطاع|السوق|المطاعم|المقاهي|المحلات)|السوق|المنافس/;
 
   /* Credentials and other tenants' data — never a question this surface should
    * entertain, and both used to fall through to the model. */
-  const SECRET_RX = /\bcodes?\s+(?:des|de\s+mes|de\s+la|du|de|d[' ])\s*(?:serveu\w*|employ\w*|caissi\w*|vendeu\w*|staff|equipe|personnel)|\b(?:staff|employee|waiter|cashier)s?['’]?\s*(?:codes?|pins?)\b|\bcodes?\s+(?:of|for)\s+(?:the\s+|my\s+)?(?:staff|employees|waiters|cashiers|team)|(?:كود|كودات|الكود|الكودات|رمز|الرمز|رموز)\s+(?:ديال\s+|د\s*|تاع\s+)?(?:ال)?(?:خدام|موظف|سرفور|سرفورات|كيسي|عمال)|\bcod(?:at|e|es)\s+(?:dyal|d)\s*l?(?:khddam\w*|serveur\w*)|\b(?:code\s+)?pin\b|mot\s+de\s+passe|\bpassword\b|\bmdp\b|liste\s+des\s+comptes|\bl[' ]?autre\s+(?:boutique|magasin|client|commercant)\b|autres?\s+(?:clients?|commercants?|boutiques?)\b|another\s+(?:shop|store|merchant)|other\s+(?:shops|stores|merchants)|\bprompt\b|\b(?:tes|ton|ta)\s+(?:instructions|consignes|code|configuration|regles)\b|\byour\s+(?:instructions|rules|prompt|config)\b|code\s+source|\bsource\s+code\b|cle\s+api|\bapi\s+key\b|تعليماتك|كلمة\s*السر/;
+  const SECRET_RX = /hidden\s+instructions|internal\s+instructions|instructions?\s+(?:cachees|internes|secretes)|البرومبت|برومبت|التوجيه\s+الخاص|التعليمات\s+(?:المخبية|المخفية|الداخلية)|تعليمات\s+النظام|القوانين\s+الداخلية|الكود\s+سورس|شفرتك|الشفرة\s+المصدرية|\bmkhebyin\b|\bdakhiliya\b|\bcodes?\s+(?:des|de\s+mes|de\s+la|du|de|d[' ])\s*(?:serveu\w*|employ\w*|caissi\w*|vendeu\w*|staff|equipe|personnel)|\b(?:staff|employee|waiter|cashier)s?['’]?\s*(?:codes?|pins?)\b|\bcodes?\s+(?:of|for)\s+(?:the\s+|my\s+)?(?:staff|employees|waiters|cashiers|team)|(?:كود|كودات|الكود|الكودات|رمز|الرمز|رموز)\s+(?:ديال\s+|د\s*|تاع\s+)?(?:ال)?(?:خدام|موظف|سرفور|سرفورات|كيسي|عمال)|\bcod(?:at|e|es)\s+(?:dyal|d)\s*l?(?:khddam\w*|serveur\w*)|\b(?:code\s+)?pin\b|mot\s+de\s+passe|\bpassword\b|\bmdp\b|liste\s+des\s+comptes|\bl[' ]?autre\s+(?:boutique|magasin|client|commercant)\b|autres?\s+(?:clients?|commercants?|boutiques?)\b|another\s+(?:shop|store|merchant)|other\s+(?:shops|stores|merchants)|\bprompt\b|\b(?:tes|ton|ta)\s+(?:instructions|consignes|code|configuration|regles)\b|\byour\s+(?:instructions|rules|prompt|config)\b|code\s+source|\bsource\s+code\b|cle\s+api|\bapi\s+key\b|تعليماتك|كلمة\s*السر/;
 
   const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|pense)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\bje\s+refuse\b|\bno\s+(?:hiring|more)\b|\bn[e']?\s*(?:augmente|baisse|ferme|embauche|prends|prend|licencie)\w*\s+(?:pas|plus)\b|\b(?:don'?\s?t|do\s+not|won'?\s?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*اريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
 
   /* 2. Meta / challenge. "t'es sûr de ce chiffre ?" scored +3 on `chiffre`
    *    and returned an unrelated revenue dump. Challenging a number is the
    *    single most likely follow-up, so it gets a real answer instead. */
-  const META_RX = /\b(?:t[' ]?es|tu\s+es|es[- ]?tu)\s+s[uû]r|\bare\s+you\s+sure|d[' ]?ou\s+(?:sort|vient|viennent|sortent)|comment\s+(?:tu\s+)?(?:calcul|fais|obtiens|arrives)|comment\s+(?:est|sont)\s+calcul|explique.{0,24}(?:calcul|chiffre|nombre|resultat|comment)|explique[- ]?moi\s+comment|sur\s+quoi\s+(?:tu\s+te\s+bases|te\s+bases)|c[' ]?est\s+quoi\s+ce\s+chiffre|pourquoi\s+ce\s+chiffre|ce\s+chiffre\s+est\s+(?:faux|bizarre)|tu\s+inventes|you'?re\s+making\s+(?:it|this)\s+up|je\s+ne\s+te\s+crois\s+pas|don'?t\s+believe|where\s+does\s+(?:that|it|this)\s+(?:number\s+)?come\s+from|(?:that|this)\s+(?:seems|looks)\s+wrong|how\s+do\s+you\s+calculate|من\s*اين|كيف\s*حسبت|الرقم\s*خاطي/;
+  const META_RX = /where\s+did\s+(?:that|this|the)\s+(?:number|figure)|why\s+did\s+you\s+say|how\s+did\s+you\s+(?:calculate|get|compute)|check\s+your\s+(?:result|answer|math)|verifie\s+ton\s+(?:resultat|calcul)|comment\s+tu\s+as\s+calcule|(?:ce|le)\s+(?:nombre|chiffre)\s+vient\s+d|pourquoi\s+tu\s+(?:dis|as\s+dit)|منين\s+جبتي|علاش\s+قلتي|كيفاش\s+حسبتي|واش\s+متاكد|هل\s+انت\s+متاكد|تحقق\s+من\s+نتيجتك|راجع\s+ليا\s+هاد|لماذا\s+قلت|\bmnin\s+jbti\b|\b3lach\s+glti\b|\bkifach\s+7sebti\b|\bm2?a?ked\s+mn\b|\bmet2aked\b|\b(?:t[' ]?es|tu\s+es|es[- ]?tu)\s+s[uû]r|\bare\s+you\s+sure|d[' ]?ou\s+(?:sort|vient|viennent|sortent)|comment\s+(?:tu\s+)?(?:calcul(?!er\b)|fais|obtiens|arrives)|comment\s+(?:est|sont)\s+calcul|explique.{0,24}(?:calcul|chiffre|nombre|resultat|comment)|explique[- ]?moi\s+comment|sur\s+quoi\s+(?:tu\s+te\s+bases|te\s+bases)|c[' ]?est\s+quoi\s+ce\s+chiffre|pourquoi\s+ce\s+chiffre|ce\s+chiffre\s+est\s+(?:faux|bizarre)|tu\s+inventes|you'?re\s+making\s+(?:it|this)\s+up|je\s+ne\s+te\s+crois\s+pas|don'?t\s+believe|where\s+does\s+(?:that|it|this)\s+(?:number\s+)?come\s+from|(?:that|this)\s+(?:seems|looks)\s+wrong|how\s+do\s+you\s+calculate|من\s*اين|كيف\s*حسبت|الرقم\s*خاطي/;
 
   /* 3. Layoff. "je veux licencier 3 serveurs, combien j'économise" matched
    *    `serveur` and returned a HIRING simulation verdicted "Favorable". */
-  const LAYOFF_RX = /licenci|\bvirer\b|renvoyer|degraisser|reduire\s+l[' ]?(?:effectif|equipe)|(?:se|me)\s+separe\w*\s+de|supprimer\s+un\s+poste|\bfire\s+(?:someone|a|an|my|the)|let\s+(?:one\s+)?(?:an?\s+)?(?:employee|worker|him|her)\s+go|cut(?:ting)?\s+staff|reduce\s+staff|\blay[- ]?off|\bsack\b|\bntsedd\s+3la\b|طرد|تسريح|اسرح/;
+  const LAYOFF_RX = /diminuer\s+(?:les\s+|mes\s+)?effectifs?|reduire\s+(?:mon|le|les|mes)\s+(?:personnel|effectifs?|equipe|staff)|\bfiring\b|reducing\s+staff|reduce\s+(?:my\s+)?(?:staff|team|headcount)|نحيد\s+(?:شي\s+)?(?:سيرفور|خدام|موظف)|نطلق\s+(?:شي\s+)?(?:خدام|موظف)|\bn7yed\s+(?:chi\s+)?(?:serveur|khddam)|\bntla9\s+chi\b|استغن|تقليص|تقليل\s+عدد\s+(?:ال)?موظفين|ننقص\s+(?:عدد\s+)?(?:ال)?خدامة|\bn9es\s+(?:l)?khddama\b|licenci|\bvirer\b|renvoyer|degraisser|reduire\s+l[' ]?(?:effectif|equipe)|(?:se|me)\s+separe\w*\s+de|supprimer\s+un\s+poste|\bfire\s+(?:someone|a|an|my|the)|let\s+(?:one\s+)?(?:an?\s+)?(?:employee|worker|him|her)\s+go|cut(?:ting)?\s+staff|reduce\s+staff|\blay[- ]?off|\bsack\b|\bntsedd\s+3la\b|طرد|تسريح|اسرح/;
 
   /* 4. Scope narrower than the data. "ma marge sur le thé à la menthe"
    *    returned the GLOBAL 69% as if it were the mint tea margin — the
@@ -1758,7 +1762,7 @@
    *    silently dropped. "j'ai augmenté les prix de 10% le mois dernier,
    *    ça a marché ?" was simulated as a fresh decision. `tendance` is
    *    deliberately absent — that belongs to forecast, which is forward. */
-  const TREND_RX = /mois\s+dernier|mois\s+passe|\bch(?:h|e)?ar\s+(?:li\s+|l)?fa(?:t|yt)\b|الشهر\s+(?:اللي|لي)\s+فات|الشهر\s+الفايت|semaine\s+derniere|annee\s+derniere|an\s+dernier|(?:ete|hiver|printemps|automne|ramadan|aid|saison|noel|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s+dernier(?:e)?|\bevolu\w*\b|\bcroissance\b|depuis\s+l[' ]?ouverture|السنة\s*الماضية|العام\s*الماضي|last\s+(?:summer|winter|ramadan|season)|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|امس/;
+  const TREND_RX = /tendance\s+des\s+ventes|tendance.{0,25}\b(?:un|1|6|12|six|douze)\s+(?:ans?|mois)\b|sales\s+trend|trend\s+over|changed\s+over|over\s+(?:a|one|six|twelve|\d+)\s+(?:years?|months?)|six\s+months|\bsur\s+(?:un|1)\s+an\b|تطور|اتجاه\s+المبيعات|قارن.{0,40}(?:العام|السنة|الشهر|يناير|فبراير|الاسبوع|اللي\s+فات|الماضي)|\b9aren\b.{0,40}(?:l3am|chher|janvier|simana|li\s+fat)|\bset\s+chhor\b|ستة\s+(?:اشهر|شهور)|kter\s+mn\s+ch?he?r\s+li\s+fat|mois\s+dernier|mois\s+passe|\bch(?:h|e)?ar\s+(?:li\s+|l)?fa(?:t|yt)\b|الشهر\s+(?:اللي|لي)\s+فات|الشهر\s+الفايت|semaine\s+derniere|annee\s+derniere|an\s+dernier|(?:ete|hiver|printemps|automne|ramadan|aid|saison|noel|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s+dernier(?:e)?|\bevolu\w*\b|\bcroissance\b|depuis\s+l[' ]?ouverture|السنة\s*الماضية|العام\s*الماضي|last\s+(?:summer|winter|ramadan|season)|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)(?!er\b)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|امس/;
 
   /* 7. Darija we didn't understand. Measured, not assumed: Qwen3.5-2B was
    *    asked "chhal dayer lyoum f had lqahwa?" and answered with five invented
@@ -1788,13 +1792,13 @@
    * vais fermer une semaine pour l'Aïd" is a holiday, not a bankruptcy — and
    * the strain guard owns "je vais fermer". The duration is what separates
    * them, so both a closure verb and a parsable duration are required. */
-  const CLOSE_RX = /\bferm(?:e|er|ee|ons|erai|eture)\b|\bfermer\b|\bje\s+ferme\b|\bclos(?:e|ed|ing)\b|\bshut(?:ting)?\s+(?:for|down)\b|\bnsedd\b|\bsedd\b|\btsedd\b|مغلق|نغلق|اغلاق|اغلق|نسد/;
+  const CLOSE_RX = /\bsdit\b|سديت|الاغلاق|\bferm(?:e|er|ee|ons|erai|eture)\b|\bfermer\b|\bje\s+ferme\b|\bclos(?:e|ed|ing)\b|\bshut(?:ting)?\s+(?:for|down)\b|\bnsedd\b|\bsedd\b|\btsedd\b|مغلق|نغلق|اغلاق|اغلق|نسد/;
   const EXTRA_DAY_RX = new RegExp('\\bouvr(?:ir|e|es|ons)\\b[^?]{0,20}\\ble\\s+(?:' + WEEKDAY + ')\\b|\\bouvr(?:ir|e)\\s+(?:un\\s+)?jour\\s+de\\s+plus|jour\\s+(?:d[e\']\\s*)?ouverture\\s+en\\s+plus|\\bajoute\\w*\\s+un\\s+jour\\b|\\bopen(?:ing)?\\b[^?]{0,20}\\bon\\s+(?:sundays?|mondays?|saturdays?)\\b|\\bopen\\s+an\\s+extra\\s+day|\\b(?:adding|add)\\s+(?:one\\s+)?(?:more\\s+)?opening\\s+day|\\bextra\\s+opening\\s+day\\b|\\bnhell\\s+nhar\\b');
   const SEASON_RX = /\bramadan\b|رمضان|\b[la]?[' ]?a[iï]d\b|\baid\s+al\b|\beid\b|عيد\s*(?:الاضحي|الفطر)|\bachoura\b|\bete\b\s|\bl[' ]?ete\b|\bsummer\b|\bhiver\b|\bwinter\b|\bsaison\b|\bseasonal\b|\bhaute\s+saison\b|\btouristes?\b|\btourists?\b|سياح|موسم|jours?\s+ferie|\bvacances\b|\bholidays?\b|\bmois\s+creux\b|\bbasse\s+saison\b|\bsaison\s+creuse\b|\bsif\b|الصيف|(?:mes\s+)?ventes\s+(?:baissent|chutent)|sales\s+(?:drop|fall)|انخفضت\s*المبيعات/;
 
   /* A profit target, worked backwards. Deliberately anchored on an explicit
    * "I want to earn" — a bare amount is an investment question, not a goal. */
-  const GOAL_RX = /je\s+veux\s+(?:gagner|faire|toucher|atteindre|arriver\s+a|degager|sortir|doubler)|j[' ]?aimerais\s+(?:gagner|faire|atteindre)|objectif[^?]{0,15}\d|mon\s+but[^?]{0,12}\d|je\s+vise\s+\d|il\s+me\s+faut\s+\d|pour\s+(?:gagner|atteindre)\s+\d|comment\s+(?:gagner|faire)\s+\d|(?:atteindre|arriver\s+a)\s+\d|i\s+want\s+to\s+(?:make|earn|hit|clear)|target\s+of\s+\d|goal\s+(?:is\s+)?\d|i\s+need\s+\d|reach\s+\d|bghit\s+n?rbe7|bghit\s+nwsel|\bhadaf\b[^?]{0,14}\d|\bnwsel\b[^?]{0,8}\d|بغيت\s*نربح|هدفي|اريد\s*ربح\s*\d|اصل\s*(?:الي|ل)?\s*\d|نوصل\s*ل?\s*\d/;
+  const GOAL_RX = /(?:نربح|لاربح|اربح|nrbe7)\s*[\d٠-٩]|bach\s+nrbe7|ربحا?\s+شهريا?\s+قدره|مبيعات\s+شهرية\s+قدرها|[\d]\s*(?:dh|mad|درهم)\s+(?:safi|صافي|net)|\bearn\s+[\d]|must\s+i\s+sell\s+to|how\s+(?:can|do)\s+i\s+(?:earn|reach|make)\s+[\d]|نوصل\s+ل?ربح|احقق\s+ربح|je\s+veux\s+(?:gagner|faire|toucher|atteindre|arriver\s+a|degager|sortir|doubler)|j[' ]?aimerais\s+(?:gagner|faire|atteindre)|objectif[^?]{0,15}\d|mon\s+but[^?]{0,12}\d|je\s+vise\s+\d|il\s+me\s+faut\s+\d|pour\s+(?:gagner|atteindre)\s+\d|comment\s+(?:gagner|faire)\s+\d|(?:atteindre|arriver\s+a)\s+\d|i\s+want\s+to\s+(?:make|earn|hit|clear)|target\s+of\s+\d|goal\s+(?:is\s+)?\d|i\s+need\s+\d|reach\s+\d|bghit\s+n?rbe7|bghit\s+nwsel|\bhadaf\b[^?]{0,14}\d|\bnwsel\b[^?]{0,8}\d|بغيت\s*نربح|هدفي|اريد\s*ربح\s*\d|اصل\s*(?:الي|ل)?\s*\d|نوصل\s*ل?\s*\d/;
 
   /* Deliberately broad. "what's our stock right now" matched none of the
    * value-shaped patterns this used to hold, fell through to the model, and a
@@ -1946,25 +1950,25 @@
   /* A bank refusal is answerable: the four figures a bank actually reads are
    * all figures we hold. Silence here was the assistant at its least useful. */
   const FINANCE_RX = /\bbanque\b|\bbank\b|\bprets?\b|\bcredits?\b|\bemprunt\w*\b|\bfinanc(?:er|ement|ing|e)\b|\bdecouvert\b|\bleasing\b|\bfunding\b|\bloans?\b|\binvestisseur\b|\binvestor\b|\blevee\s+de\s+fonds\b|\bnsallef\b|\bsallef\b|\blbanka\b|قرض|تمويل|سلفة|البنك/;
-  const THEFT_RX = /\bvol(?:e|ent|er|s)?\b[^?]{0,25}(?:employe|serveur|caiss|equipe|personnel)|(?:employe|serveur|caissi|equipe|personnel)\w*[^?]{0,25}\b(?:vol(?:e|ent)?|se\s+sert|se\s+servent)\b|vol\s+(?:en\s+|dans\s+la\s+)?caisse|\becart\s+de\s+caisse\b|difference\w*\s+de\s+caisse|manque\s+de\s+l[' ]?argent|caisse\s+ne\s+tombe\s+(?:pas|jamais)|\bsoupconne\b|\bstealing\b|staff\s+steal|(?:cash|money)\s+(?:is\s+)?(?:going\s+)?missing|till\s+(?:never\s+)?balances?|\bkaysreq\b|\bsreq\b|يسرق|سرقة|نقص\s*في\s*الصندوق/;
-  const EXPANSION_RX = /(?:ouvrir|ouverture|open(?:ing)?)[^?]{0,25}(?:2\s*eme|2e\b|deuxieme|second|autre|nouveau|nouvelle)\s*(?:cafe|magasin|boutique|local|etablissement|point\s+de\s+vente|restaurant|shop|store|branch)|deuxieme\s+(?:cafe|boutique|magasin|local|etablissement|restaurant|point\s+de\s+vente)|(?:un\s+)?autre\s+(?:local|magasin|boutique|cafe|etablissement|point\s+de\s+vente)|second\s+(?:shop|store|location|venue)|another\s+(?:branch|shop|store|location)|\bfranchis\w*\b|\bagrandir\b|\bagrandissement\b|developper\s+sur|s[' ]?implanter|\bsuccursale\b|\bexpand\b|\bexpansion\b|scal(?:e|ing)\s+to|ma7al\s+(?:akhor|tani|jdid)|nhell\s+ma7al|محل\s*(?:ثاني|اخر|جديد)|فتح\s*محل|التوسع|فرع\s*(?:ثاني|جديد)/;
-  const VALUATION_RX = /combien\s+vaut\s+(?:mon|le|ma)\b|valeur\s+(?:de\s+)?(?:mon|ma|le|la)\s+(?:commerce|fonds|cafe|business|affaire|boite|boutique|magasin)|vend(?:re|s)\s+(?:mon|le|la)\s+(?:commerce|cafe|fonds|affaire|business|restaurant|boutique)|\bceder\b|fonds\s+de\s+commerce|associe\w*[^?]{0,35}(?:parts?|racheter|rachat|sortir|partir|quitter)|(?:rachat|racheter)\s+(?:les\s+)?parts?|what\s+is\s+my\s+business\s+worth|\bvaluation\b|sell\s+my\s+(?:business|shop|cafe)|how\s+much\s+(?:could|can)\s+i\s+sell|\bbuy(?:ing)?\s*out\b|\bkayswa\b|\bkatswa\b|كم\s*يساوي|تساوي|تسوي|قيمة\s*(?:المحل|التجارة)/;
+  const THEFT_RX = /\bkayser9\b|\bser9a\b|\bser9\b|\btheft\b|discrepanc\w*|ecarts?\s+de\s+caisse|on\s+me\s+vole|\bme\s+vole\b|na9s(?:in)?\s+flous|كيسرق|\bvol(?:e|ent|er|s)?\b[^?]{0,25}(?:employe|serveur|caiss|equipe|personnel)|(?:employe|serveur|caissi|equipe|personnel)\w*[^?]{0,25}\b(?:vol(?:e|ent)?|se\s+sert|se\s+servent)\b|vol\s+(?:en\s+|dans\s+la\s+)?caisse|\becart\s+de\s+caisse\b|difference\w*\s+de\s+caisse|manque\s+de\s+l[' ]?argent|caisse\s+ne\s+tombe\s+(?:pas|jamais)|\bsoupconne\b|\bstealing\b|staff\s+steal|(?:cash|money)\s+(?:is\s+)?(?:going\s+)?missing|till\s+(?:never\s+)?balances?|\bkaysreq\b|\bsreq\b|يسرق|سرقة|نقص\s*في\s*الصندوق/;
+  const EXPANSION_RX = /second\s+(?:shop|store|location|venue|restaurant|cafe|branch)|deuxieme\s+adresse|autre\s+resto|ouvrir\s+un\s+autre|\bfar3\s+(?:tani|akhor|jdid)|\bn7ell\s+(?:far3|resto|ma7al|l9ahwa)\b|نحل\s+(?:مطعم|محل|قهوة|فرع)|(?:مطعم|متجر|مقهي|فرع)\s+(?:ثان|اخر|جديد)(?!\s*مرة)|محل\s+(?:ثان|جديد)|فرانشيز|امتياز|\bfranchise|(?:ouvrir|ouverture|open(?:ing)?)[^?]{0,25}(?:2\s*eme|2e\b|deuxieme|second|autre|nouveau|nouvelle)\s*(?:cafe|magasin|boutique|local|etablissement|point\s+de\s+vente|restaurant|shop|store|branch)|deuxieme\s+(?:cafe|boutique|magasin|local|etablissement|restaurant|point\s+de\s+vente)|(?:un\s+)?autre\s+(?:local|magasin|boutique|cafe|etablissement|point\s+de\s+vente)|second\s+(?:shop|store|location|venue)|another\s+(?:branch|shop|store|location)|\bfranchis\w*\b|\bagrandir\b|\bagrandissement\b|developper\s+sur|s[' ]?implanter|\bsuccursale\b|\bexpand\b|\bexpansion\b|scal(?:e|ing)\s+to|ma7al\s+(?:akhor|tani|jdid)|nhell\s+ma7al|محل\s*(?:ثاني|اخر|جديد)(?!\s*مرة)|فتح\s*محل|التوسع|فرع\s*(?:ثاني|جديد)/;
+  const VALUATION_RX = /valorisation|valeur\s+de\s+(?:mon|ma)\s+\w+|(?:business|shop|cafe|restaurant|store|company)\s+(?:is\s+)?worth|value\s+(?:of\s+)?my\s+(?:business|shop|cafe|restaurant|store)|value\s+my\s+business|my\s+\w+\s+sell\s+for|estimat\w*\s+my\s+\w+.{0,3}s?\s+value|\b9imat\b|\bta9yim\b|\bytsba3\b|\bb3t\s+(?:l9ahwa|lma7al|l7anout|resto)\b|تقييم\s+(?:مشروع|المطعم|مطعم|الحانوت|متجر|المحل|محل)|قيمة\s+(?:مشروع|مطعم|المطعم|متجر|الحانوت|المحل|محل)|يتباع\s+المحل|بعت\s+(?:القهوة|المقهي|المحل|الحانوت|المطعم)|ابيع\s+(?:مقهاي|مطعمي|محلي|متجري)|combien\s+vaut\s+(?:mon|le|ma)\b|valeur\s+(?:de\s+)?(?:mon|ma|le|la)\s+(?:commerce|fonds|cafe|business|affaire|boite|boutique|magasin)|vend(?:re|s)\s+(?:mon|le|la)\s+(?:commerce|cafe|fonds|affaire|business|restaurant|boutique)|\bceder\b|fonds\s+de\s+commerce|associe\w*[^?]{0,35}(?:parts?|racheter|rachat|sortir|partir|quitter)|(?:rachat|racheter)\s+(?:les\s+)?parts?|what\s+is\s+my\s+business\s+worth|\bvaluation\b|sell\s+my\s+(?:business|shop|cafe)|how\s+much\s+(?:could|can)\s+i\s+sell|\bbuy(?:ing)?\s*out\b|\bkayswa\b|\bkatswa\b|كم\s*يساوي|تساوي|تسوي|قيمة\s*(?:المحل|التجارة)/;
 
   /* Prompt injection and role-play. The right answer is never to play along,
    * and never to quote back a number the merchant supplied as if it were theirs. */
-  const INJECT_RX = /ignore\s+(?:tes|les|toutes\s+tes)\s+(?:instructions|consignes|regles)|oublie\s+(?:tout\s+)?(?:ce\s+qui\s+precede|tes\s+instructions|tout)|tu\s+es\s+(?:maintenant|desormais)\b|\bnouveau\s+role\b|\bsystem\s+prompt\b|repete\s+apres\s+moi|dis[- ]?moi\s+que\s+je\s+gagne\s+\d|ignore\s+(?:all\s+)?previous\s+instructions|forget\s+everything|you\s+are\s+now\b|\bjailbreak\b|\bdan\s+mode\b/;
+  const INJECT_RX = /fais\s+semblant|mode\s+(?:admin\w*|administrateur|developpeur|sans\s+limites?)|sans\s+limites?\b|nouvelle\s+instruction|instruction\s+systeme|reponds?\s+toujours|\bobeis\b|oublie\s+tes\s+regles|pretend\s+(?:you|to\s+be)|\bunrestricted\b|admin\s+mode|developer\s+mode|system\s+instruction|always\s+answer|obey\s+this|forget\s+your\s+(?:rules|instructions)|ignore\s+(?:your\s+)?instructions|nsa\s+9awanin|bla\s+9awanin|bla\s+hodod|instruction\s+system|jawb\s+dima|تجاهل|انس\s+(?:قواعدك|تعليماتك|القوانين)|نسا\s+القوانين|بلا\s+(?:قوانين|حدود|قيود|قواعد)|دون\s+قيود|تظاهر|تصور\s+راسك|تعليمة\s+(?:نظام|جديدة)|السيستيم\s+جاوب|اجب\s+داي?ما|جاوب\s+ديما|مساعد\s+اخر|وضع\s+مدير|ignore\s+(?:tes|les|toutes\s+tes)\s+(?:instructions|consignes|regles)|oublie\s+(?:tout\s+)?(?:ce\s+qui\s+precede|tes\s+instructions|tout)|tu\s+es\s+(?:maintenant|desormais)\b|\bnouveau\s+role\b|\bsystem\s+prompt\b|repete\s+apres\s+moi|dis[- ]?moi\s+que\s+je\s+gagne\s+\d|ignore\s+(?:all\s+)?previous\s+instructions|forget\s+everything|you\s+are\s+now\b|\bjailbreak\b|\bdan\s+mode\b/;
 
   /* Someone, or something, that isn't finance. Answering these approximately
    * is worse than saying plainly that it isn't what this surface does. */
-  const OUTSIDE_RX = /\bmal\s+au\s+(?:dos|ventre|tete|genou)\b|\bje\s+suis\s+malade\b|\bmedecin\b|\bdocteur\b|\bhopital\b|\bordonnance\b|\bma\s+femme\b|\bmon\s+mari\b|\bdivorce\b|\bmariage\b|\bme\s+marie\b|\bmes\s+enfants\b[^?]{0,20}\becole\b|quel\s+temps\s+(?:fait|il\s+fait)|\bmeteo\b|\bil\s+pleut\b|\bweather\b|\bfootball\b|\bmatch\s+de\b|\belections?\b|\bpolitique\b|\bhoroscope\b|\bback\s+pain\b|\bmy\s+wife\b|\bmy\s+husband\b/;
-  const IDENTITY_RX = /\b(?:tu\s+es|t[' ]?es|es[- ]?tu|vous\s+etes)\s+(?:un\s+|une\s+)?(?:humain|humaine|robot|machine|ia\b|bot\b|vrai|reel|chatgpt|gpt)|\bare\s+you\s+(?:a\s+)?(?:human|real|a\s+robot|an\s+ai|chatgpt|gpt)|\btu\s+es\s+quoi\b|\bc[' ]?est\s+quoi\s+ton\s+(?:modele|mod[eè]le)\b|quel\s+(?:modele|mod[eè]le)\s+(?:tu\s+es|(?:tu\s+)?utilises)|هل\s*انت\s*(?:انسان|روبوت|بشر)/;
+  const OUTSIDE_RX = /mal\s+a\s+la\s+tete|headache|راسي\s+كيضرني|\brassi\s+kaydorni\b|\bcadeau\b|\bgift\b|\bhdya\b|هدية|\bmontakhab\b|المنتخب|\bmal\s+au\s+(?:dos|ventre|tete|genou)\b|\bje\s+suis\s+malade\b|\bmedecin\b|\bdocteur\b|\bhopital\b|\bordonnance\b|\bma\s+femme\b|\bmon\s+mari\b|\bdivorce\b|\bmariage\b|\bme\s+marie\b|\bmes\s+enfants\b[^?]{0,20}\becole\b|quel\s+temps\s+(?:fait|il\s+fait)|\bmeteo\b|\bil\s+pleut\b|\bweather\b|\bfootball\b|\bmatch\s+de\b|\belections?\b|\bpolitique\b|\bhoroscope\b|\bback\s+pain\b|\bmy\s+wife\b|\bmy\s+husband\b/;
+  const IDENTITY_RX = /vraie\s+personne|real\s+person|\bbnadem\b|بنادم|شخص\s+حقيقي|\brobot\b|روبو|chat\s?gpt|شات\s*جي\s*بي\s*تي|quelle\s+intelligence\s+artificielle|what\s+kind\s+of\s+ai|نوع\s+الذكاء\s+الاصطناعي|qui\s+me\s+repond|who\s+is\s+answering|شكون\s+كيجاوبني|من\s+يجيبني|\bchkon\s+kayjawbni\b|\bkayjawbni\b|كيجاوبني|\b(?:tu\s+es|t[' ]?es|es[- ]?tu|vous\s+etes)\s+(?:un\s+|une\s+)?(?:humain|humaine|robot|machine|ia\b|bot\b|vrai|reel|chatgpt|gpt)|\bare\s+you\s+(?:a\s+)?(?:human|real|a\s+robot|an\s+ai|chatgpt|gpt)|\btu\s+es\s+quoi\b|\bc[' ]?est\s+quoi\s+ton\s+(?:modele|mod[eè]le)\b|quel\s+(?:modele|mod[eè]le)\s+(?:tu\s+es|(?:tu\s+)?utilises)|هل\s*انت\s*(?:انسان|روبوت|بشر)/;
   const CANTDO_RX = /tu\s+peux\s+(?:appeler|telephoner|contacter|envoyer\s+(?:un\s+)?(?:mail|email|sms|message|whatsapp)|commander|reserver\s+chez|ecrire\s+a)|peux[- ]?tu\s+(?:appeler|contacter|envoyer)|\bappelle\s+(?:mon|le|la|mes)\b|\benvoie\s+(?:un\s+)?(?:mail|sms|message|whatsapp)\b|can\s+you\s+(?:call|email|text|message|order)\b/;
   const THANKS_RX = /\bmerci\b|\bthanks?\b|\bthank\s+you\b|\bchoukran\b|\bchokran\b|\bshukran\b|شكرا|بارك\s*الله|\btbarkallah\b|\btbarklah\b/;
 
   /* "Combien coûte un café chez moi" is a per-item cost, which the agent does
    * not hold — but "combien coûte un serveur" is a hiring question, so the
    * worker nouns are excluded rather than the whole pattern dropped. */
-  const COMPOSE_RX = /\b(?:traduis|traduire|translate)\b|\b(?:ecris|ecrire|redige|rediger|invente|imagine)\b|write\s+(?:me\s+)?(?:a|an|the)\b|comment\s+on\s+dit\b|how\s+do\s+you\s+say\b|tell\s+me\s+a\s+(?:joke|story)\b|raconte[- ]?moi\b/;
+  const COMPOSE_RX = /(?:^|\s)(?:ترجم|اكتب|كتب|حرر)(?:\s|$)|\b(?:kteb|ktebli|trjem|tarjem)\b|\bwrite\s+(?:an?|the|me|my)\b|\bredige\w*|\b(?:traduis|traduire|translate)\b|\b(?:ecris|ecrire|redige|rediger|invente|imagine)\b|write\s+(?:me\s+)?(?:a|an|the)\b|comment\s+on\s+dit\b|how\s+do\s+you\s+say\b|tell\s+me\s+a\s+(?:joke|story)\b|raconte[- ]?moi\b/;
   const SCOPE_ITEM_RX = /\bprix\s+de\s+revient\b|\bcombien\s+(?:me\s+)?(?:coute|revient)\b|\bquel\s+est\s+le\s+(?:prix|cout)\s+d|\bcost\s+of\s+(?:a|one)\b|\bmarge\s+sur\s+(?:le|la|un|une)\b/;
   /* …and "combien me coûte mon loyer" is not a per-item question at all — it
    * names a line the agent holds in full. Those go to the cost breakdown. */
@@ -2065,7 +2069,7 @@
     return !/\s/.test(q) && s.length <= 2 && !/\d/.test(s);
   }
 
-  const ILLICIT_RX = /sans\s+que\s+ca\s+se\s+(?:voie|voit|remarque)|non\s+declar|ne\s+pas\s+declarer|pas\s+declarer|sous[- ]?declarer|\bau\s+noir\b|dissimul|frauder|\bfraude\b|evasion|eviter\s+(?:la\s+|le\s+|les\s+)?(?:tva|cnss|impot|taxe)|echapper\s+a\s+(?:la\s+|l[' ])?(?:tva|cnss|impot)|contourner\s+(?:la\s+)?(?:tva|cnss)|en\s+dessous\s+du\s+smig|moins\s+que\s+le\s+smig|sans\s+(?:cnss|contrat|declaration)|undeclared|off\s+the\s+books|tax\s+evasion|\bcacher\b[^?]{0,25}(?:chiffre|argent|vente|recette|benefice)|hide\s+(?:revenue|sales|income|money)|\bfalsifi\w*\b|fake\s+(?:invoices?|receipts?)|fausses?\s+factures?|\bnkhebbi\b|\bkhebbi\b|غير\s*مصرح|التهرب|اخفي[^?]{0,20}الضراي?ب/;
+  const ILLICIT_RX = /ma\s+nsarre?7ch|bla\s+tasri7|\bf\s+noir\b|\bnz?ww?er\b|\bnzewwer\b|ما\s+نصرحش|بلا\s+تصريح|دون\s+التصريح|نخبي[^?]{0,30}(?:ضريب|البيع|المداخيل)|(?:ن|ا)زو+ر\s+(?:ال)?(?:بيع|مبيعات)|تزوير|نحيد\s+(?:ال)?مداخيل|احذف\s+ايرادات|falsify|omit\s+revenue|hide\s+(?:some\s+)?(?:sales|revenue)|avoid\s+declaring|retirer\s+des\s+recettes|غير\s+قانوني|\billegal\w*|فالنو+ار|sans\s+que\s+ca\s+se\s+(?:voie|voit|remarque)|non\s+declar|ne\s+pas\s+declarer|pas\s+declarer|sous[- ]?declarer|\bau\s+noir\b|dissimul|frauder|\bfraude\b|evasion|eviter\s+(?:la\s+|le\s+|les\s+)?(?:tva|cnss|impot|taxe)|echapper\s+a\s+(?:la\s+|l[' ])?(?:tva|cnss|impot)|contourner\s+(?:la\s+)?(?:tva|cnss)|en\s+dessous\s+du\s+smig|moins\s+que\s+le\s+smig|sans\s+(?:cnss|contrat|declaration)|undeclared|off\s+the\s+books|tax\s+evasion|\bcacher\b[^?]{0,25}(?:chiffre|argent|vente|recette|benefice)|hide\s+(?:revenue|sales|income|money)|\bfalsifi\w*\b|fake\s+(?:invoices?|receipts?)|fausses?\s+factures?|\bnkhebbi\b|\bkhebbi\b|غير\s*مصرح|التهرب|اخفي[^?]{0,20}الضراي?ب/;
   /* One-slot conversational memory: the last amount-driven scenario, so a
    * follow-up correction can refine it instead of being mis-routed. */
   let lastScenario = null;
@@ -2094,6 +2098,7 @@
       [/recommand|conseil|sugg[eé]r|suggestion|astuce|\btips?\b|\badvice\b|recommend|نصيحة|نصايح|توصية|اقتراح|\bkifach\b|\bkifash\b|كيفاش|\bnasiha\b|\bnsiha\b|\btawsiya\b/, 3],
       [/(augment|boost|d[eé]velopp|am[eé]lior|grow|increase|booster).{0,18}(vente|chiffre|\bca\b|marge|business|revenue|sales)|vendre plus|gagner plus|comment.*plus/, 3],
       [/\bid[eé]es?\b|\bideas?\b|opportunit|\bfikra\b|\bfikar\b|افكار|تقترح/, 2],
+      [/sell\s+more|\bretain\b|fidelis|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+الزبناء|\bnjib\s+zb|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\b|\bafkar\b/, 3],
       [/faire\s+mieux|do\s+better|\bimprove\b[^?]{0,20}\b(?:business|shop|sales|margin)\b|chnu\s+ndir\s+bach|كيف\s*(?:ازيد|اطور)/, 3],
       /* "j'ai 465 000 en caisse, je fais quoi avec" is a real question with a
        * real answer; it used to reach the model. Weight 2 so any explicit
@@ -2124,6 +2129,9 @@
     ], boost: (q, x) => (x.pct != null && PRICE_VERB.test(q)) ? 3 : 0 },
     { id: 'forecast', run: () => sForecast(), sig: [
       [/prevision|projection|prevoir|previs|forecast|predict|توقع|تنبو/, 3],
+      [/\bestimat\w*|\bestime\b/, 2],
+      [/next\s+month|mois\s+prochain|الشهر\s+(?:القادم|الجاي)|\bchh?er\s+jay\b/, 2],
+      [/\btwa9e3\b|قدر\s+ليا|قدّر|ستبلغ|ستكون|at\s+this\s+pace|by\s+month\s+end|month\s+end|end\s+up\s+this\s+month|بهاد\s+الوتيرة|بهذا\s+المعدل|\bb\s+had\s+rythme\b|\blakher\s+chh?er\b|\bakher\s+chh?er\b|\bfinirai\b|بنهاية\s+الشهر|لاخر\s+الشهر|حتى\s+لاخر/, 3],
       [/fin du mois|fin d.?annee|run.?rate|tendance|end of month|trend|outlook|اخر الشهر|نهاية الشهر|اتجاه/, 2],
       [/combien.*(vais|gagner|ferai)/, 2],
       [/finir\s+le\s+mois|finis\s+a\s+combien|a\s+ce\s+rythme|\bestimation\b|where\s+will\s+i\s+(?:land|end)|\bprevoi\w*\b|\bproject\b|on\s+va\s+faire\s+combien|ساحقق|\bghadi\s+n(?:dir|wsel|sali)\w*\b|\bghansali\b|غادي\s*ندير|غادي\s*نوصل/, 3],
@@ -2131,7 +2139,7 @@
     { id: 'breakeven', run: () => sBreakEven(), sig: [
       /* "nkhrej rasi" (lit. get my head out) is how a Moroccan owner says
        * break-even; "pour pas couler" is the French equivalent. */
-      [/seuil|rentab|equilibre|break.?even|point mort|breakeven|threshold|نقطة التعادل|عتبة|التعادل|nkhrej rasi|khrej rasi|نخرج راسي|pour\s+couvrir\s+(?:mes\s+)?(?:charges|frais|couts)|couvre\s+mes\s+(?:frais|charges)|to\s+cover\s+(?:my\s+)?costs|when\s+do\s+i\s+start\s+(?:making|earning)|nkhsserch|لاغطي|اغطي\s*تكاليف|pour (ne )?pas couler|sans couler|\bt?tawazon\b|\bt?tawazun\b|التوازن/, 3],
+      [/seuil|rentab|equilibre|break.?even|point mort|breakeven|threshold|نقطة التعادل|عتبة|التعادل|nkhrej rasi|khrej rasi|نخرج راسي|pour\s+couvrir\s+(?:mes\s+)?(?:charges|frais|couts)|couvre\s+mes\s+(?:frais|charges)|to\s+cover\s+(?:my\s+)?costs|when\s+do\s+i\s+start\s+(?:making|earning)|nkhsserch|لاغطي|اغطي\s*تكاليف|pour (ne )?pas couler|sans couler|couvr\w*\s+(?:mes\s+|my\s+|all\s+my\s+)?(?:couts|frais|charges)|rentrer\s+dans\s+mes\s+frais|ne\s+plus\s+perdre|covers?\s+(?:all\s+)?my\s+costs|نغطي|لتغطية|يغطي|\bnghatti\b|\bta3adol\b|\bt?tawazon\b|\bt?tawazun\b|التوازن/, 3],
     ] },
     { id: 'margin', run: () => sMargin(), sig: [[/marge|margin|هامش|مارج/, 3]] },
     { id: 'charges', run: () => sCharges(), sig: [
@@ -2163,6 +2171,7 @@
     ] },
     { id: 'accounting', run: (raw, q) => sAccounting(q), sig: [
       [RX_ACCT, 3],
+      [RX_ACCT, 1],
       [/journal\s+(?:des\s+)?(?:ventes|achats)|grand.?livre|bulletins?\s+de\s+paie|\bl\s+is\s+je\b|impot\s+sur\s+les\s+societes/, 2],
     ] },
   ];
