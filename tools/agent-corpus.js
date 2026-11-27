@@ -384,7 +384,7 @@ var CORPUS = [
   ['la valeur de mon inventaire', 'stock'],
   ['mon stock est à combien', 'stock'],
   ["combien de références j'ai", 'stock'],
-  ["qu'est-ce qui manque en stock", 'stock'],
+  ["qu'est-ce qui manque en stock", 'lookup'], // names the items out of stock (27 Nov)
   ['état de mon inventaire', 'stock'],
   ["j'ai combien d'articles", 'stock'],
   ['mes stocks bas', 'stock'],
@@ -396,17 +396,17 @@ var CORPUS = [
   ['what is out of stock', 'lookup'],
   ['inventory value', 'stock'],
   ['how many items do we hold', 'stock'],
-  ['low stock items', 'stock'],
+  ['low stock items', 'lookup'], // names the items out of stock (27 Nov)
   ['stock on hand right now', 'stock'],
   ['value of goods in the shop', 'stock'],
   ['ما هي قيمة مخزوني', 'stock'],
   ['كم لدي في المخزون', 'stock'],
-  ['ما نفد من المخزون', 'stock'],
+  ['ما نفد من المخزون', 'lookup'], // names the items out of stock (27 Nov)
   ['حالة المخزون', 'stock'],
-  ['المنتجات الناقصة', 'stock'],
+  ['المنتجات الناقصة', 'lookup'], // names the items out of stock (27 Nov)
   ['جرد البضاعة', 'stock'],
   ['chhal baqi f stock', 'stock'],
-  ['chnu sala f stock', 'stock'],
+  ['chnu sala f stock', 'lookup'], // names the items out of stock (27 Nov)
   ['stock dyali chhal kayswa', 'stock'],
   ['شحال باقي فالستوك', 'stock'],
   ['wach 3ndi stock kafi', 'stock'],
@@ -688,10 +688,10 @@ var CORPUS = [
   ['recent settlements', 'nodata'],
   ['كم جهازا لدي', 'nodata'],
   ['كم حجزا غدا', 'nodata'],
-  ['من يعمل اليوم', 'nodata'],
+  ['من يعمل اليوم', 'lookup'], // answered from the Équipe roster (27 Nov)
   ['حالة الامتثال', 'nodata'],
   ['chhal 3ndi mn tpe', 'nodata'],
-  ['chkon khddam lyoum', 'nodata'],
+  ['chkon khddam lyoum', 'lookup'], // answered from the Équipe roster (27 Nov)
   ['شحال ديال الحجوزات غدا', 'nodata'],
 
   /* ═══════════════════════════════════════════════════════════════════════

@@ -230,7 +230,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=7';
+  const partUrl = 'assets/agent/ui.js?v=9';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -1710,7 +1710,7 @@
    * router got there first: "quel est le meilleur investissement en bourse"
    * scored on `investir` and answered "indiquez le montant de l'investissement"
    * — i.e. it offered to help. Refuse before the classifier can. */
-  const MARKET_RX = /\bbourse\b|\bactions?\s+(?:cotees|en\s+bourse)\b|\bcrypto|\bbitcoin\b|\betf\b|\btrading\b|placement\s+boursier|\bstock\s+market\b|\bconcurrent\w*\b|\bcompetitors?\b|\bbenchmark\b|\bsecteur\b|marche\s+d[ue]\b|market\s+size|industry\s+average|average\s+margin\s+(?:in|for)|marge\s+moyenne\s+(?:du|de\s+la|dans)|combien\s+gagne\s+(?:un|le)\s+(?:cafe|restaurant|commerce)|combien\s+de\s+cafes?\b|بورصة|اسهم|متوسط|السوق|المنافس/;
+  const MARKET_RX = /\bbourse\b|\bactions?\s+(?:cotees|en\s+bourse)\b|\bcrypto|\bbitcoin\b|\betf\b|\btrading\b|placement\s+boursier|\bstock\s+market\b|\bconcurrent\w*\b|\bcompetitors?\b|\bbenchmark\b|\bsecteur\b|marche\s+d[ue]\b|market\s+size|industry\s+average|average\s+margin\s+(?:in|for)|marge\s+moyenne\s+(?:du|de\s+la|dans)|combien\s+gagne\s+(?:un|le)\s+(?:cafe|restaurant|commerce)|combien\s+de\s+cafes?\b|بورصة|اسهم|متوسط[^؟?]{0,20}(?:القطاع|السوق|المطاعم|المقاهي|المحلات)|السوق|المنافس/;
 
   /* Credentials and other tenants' data — never a question this surface should
    * entertain, and both used to fall through to the model. */

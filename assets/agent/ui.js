@@ -2284,7 +2284,7 @@ function matchLookupKind(q, raw) {
     }
     /* "combien coûte un serveur" is what a hire would cost, not how many I
      * have — the hiring simulation owns it. */
-    if (__state.STAFF_RX.test(q) && !/\bcoute\w*|\bcout\b|\bcost\w*|\bembauch\w*|\brecrut\w*|\bhir(?:e|ing)\b|\bsalaire\b|يكلف|توظيف/.test(q)) {
+    if (__state.STAFF_RX.test(q) && !/\bcoute\w*|\bcout\b|\bcost\w*|\bembauch\w*|\brecrut\w*|\bhir(?:e|ing)\b|\bsalaire\b|\bheures\b|\bhours\b|يكلف|توظيف|ساعات/.test(q)) {
       /* "qui est mon meilleur serveur" — no per-employee sales reach this
        * screen, so the module says so rather than let the hiring simulation
        * answer a question about people who already work here. */
@@ -2417,6 +2417,12 @@ function decideRoute(rawIn, retry) {
     if (anyQ(__state.SECRET_RX)) return { kind: 'secret', raw, q };
     if (__state.MARKET_RX.test(q)) return { kind: 'market', raw, q };
     if (anyQ(__state.THEFT_RX)) return { kind: 'theft', raw, q };
+    /* A question about the merchant's own figures, in any of the ways it gets
+     * typed (agent-data.js, ownIntent): answered from the data, ahead of every
+     * route that could hand it to the model as a free guess. */
+    const mine = window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null;
+    if (mine && mine.entity) return { kind: 'lookup', raw, q, spec: Object.assign(mine, { raw, period: periodWindow(q) }) };
+    if (mine) return mine.route === 'day' ? { kind: 'day', raw, q, day: { offset: 0 } } : { kind: mine.route, raw, q, run: mine.route === 'charges' ? () => sCharges() : () => sRevenue() };
     /* A dated closure is a holiday, not a bankruptcy — and STRAIN_RX owns
      * "je vais fermer". The duration is what tells them apart. */
     if (__state.CLOSE_RX.test(q) && parseDays(q) != null) return { kind: 'season', raw, q };
