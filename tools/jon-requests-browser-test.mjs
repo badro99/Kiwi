@@ -15,7 +15,8 @@
  *   · the 2027 till (Jon's): the bill's comment row and the discount sheet
  *     offering only the named discounts;
  *   · Menu & modificateurs: a group moves up and every dish follows, a choice
- *     moves up in the group editor;
+ *     moves up or down in the group editor, and « Réordonner les options »
+ *     moves a group (dish and tabs follow) and a group's choices;
  *   · Livraison: the price grid lists the products, a typed price is saved.
  */
 import assert from 'node:assert/strict';
@@ -296,6 +297,29 @@ try {
     await page.click('[data-save]');
     await page.waitForFunction((g2) => { const g = window.KiwiMenuStore.data().opts.find((x) => x.id === g2); return g && g.choices[0] && g.choices[0].name === 'Algérienne'; }, { timeout: 10000 }, setup.g2);
     check(true, 'the choice order is saved as arranged');
+
+    tr.step('« Réordonner les options »: groups tab, then one group\'s choices');
+    await page.waitForSelector('[data-action="rmw-opts-reorder"]', { visible: true, timeout: 10000 });
+    await page.click('[data-action="rmw-opts-reorder"]');
+    await page.waitForSelector(`.rmw-ro-list [data-reorder-id="${setup.g2}"] [data-ro-step="1"]`, { visible: true, timeout: 10000 });
+    await page.click(`.rmw-ro-list [data-reorder-id="${setup.g2}"] [data-ro-step="1"]`);
+    await page.waitForFunction((g2, g1) => { const ids = window.KiwiMenuStore.data().opts.map((g) => g.id); return ids.indexOf(g1) < ids.indexOf(g2); }, { timeout: 10000 }, setup.g2, setup.g1);
+    const sheet = await page.evaluate((id) => ({ item: window.KiwiMenuStore.data().items.find((x) => x.id === id).opts, tabs: [...document.querySelectorAll('.rmw-ro-tabs [data-ro-cat]')].map((b) => b.dataset.roCat) }), setup.item);
+    check(sheet.item[0] === setup.g1 && sheet.tabs[1] === setup.g1 && sheet.tabs[2] === setup.g2, 'a group moved down in the sheet: the dish and the tabs follow', JSON.stringify(sheet));
+    await page.click(`.rmw-ro-tabs [data-ro-cat="${setup.g2}"]`);
+    await page.waitForSelector('.rmw-ro-list [data-reorder-id]:first-child [data-ro-step="1"]', { visible: true, timeout: 10000 });
+    await page.click('.rmw-ro-list [data-reorder-id]:first-child [data-ro-step="1"]');
+    await page.waitForFunction((g2) => window.KiwiMenuStore.data().opts.find((x) => x.id === g2).choices[0].name === 'Ketchup', { timeout: 10000 }, setup.g2);
+    check(true, 'a choice moved down in its group\'s tab');
+    await page.click('[data-catalog-done]');
+    tr.step('group editor: the down arrow');
+    await page.waitForSelector(`[data-action="rmw-group-edit"][data-arg="${setup.g2}"]`, { visible: true, timeout: 10000 });
+    await page.click(`[data-action="rmw-group-edit"][data-arg="${setup.g2}"]`);
+    await page.waitForSelector('[data-choice]:first-child [data-choice-down]', { visible: true, timeout: 10000 });
+    await page.click('[data-choice]:first-child [data-choice-down]');
+    await page.click('[data-save]');
+    await page.waitForFunction((g2) => window.KiwiMenuStore.data().opts.find((x) => x.id === g2).choices[0].name === 'Algérienne', { timeout: 10000 }, setup.g2);
+    check(true, 'a choice moved down in the group editor is saved');
 
     tr.step('Livraison: Glovo on, a product price typed');
     await page.evaluate(() => window.KiwiDelivery.openSettings());
