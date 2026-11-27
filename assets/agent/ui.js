@@ -2420,7 +2420,7 @@ function decideRoute(rawIn, retry) {
     if (anyQ(__state.SECRET_RX)) return { kind: 'secret', raw, q };
     /* « rédige une réponse à un avis qui parle de vol »: a writing job, not the topic. */
     if (__state.COMPOSE_RX.test(q) && /message|post|repons|avis|annonce|e-?mail|lettre|texte|instagram|facebook|caption|review|reply|anglais|english|arab|رسالة|الرسالة|رد|جواب|منشور|بوست|اعلان|تعليق|كومونتير|الانجليزية|بالانجليزية/.test(q)) return { kind: null, raw, q, compose: true };
-    if (__state.MARKET_RX.test(q)) return { kind: 'market', raw, q };
+    if (__state.MARKET_RX.test(q)) return { kind: 'market', raw, q }; if (__state.OUTSIDE_EARLY_RX && __state.OUTSIDE_EARLY_RX.test(q)) return { kind: 'outside', raw, q };
     if (anyQ(__state.THEFT_RX)) return { kind: 'theft', raw, q };
     if (window.KiwiAgentData && window.KiwiAgentData.otherShop && window.KiwiAgentData.otherShop(raw, __state.B && __state.B.name, __state.norm)) return { kind: 'othershop', raw, q };
     /* A question about the merchant's own figures, in any of the ways it gets
@@ -2430,10 +2430,10 @@ function decideRoute(rawIn, retry) {
      * comparison across periods, never today's total. */
     if (/^(?:(?:merci|thanks?|thank\s+you|pour|ton|ta|votre|for|your|aide|help|beaucoup|bcp|a\s+lot|so\s+much|lah|yjazik|bikhir|y3tik|sa7a|الله|يجازيك|بخير|يعطيك|الصحة|شكرا|بزاف|على|المساعدة|choukran|chokran|bzaf)[\s!.,]*)+$/.test(q)) return { kind: 'thanks', raw, q };
     if (__state.GOAL_RX.test(q) && parseAllAmounts(String(raw).replace(/(\d)[,\s](\d{3})\b/g, '$1$2')).some((v) => v >= 500)) return { kind: 'goal', raw, q };
-    if (__state.EXPANSION_RX.test(q)) return { kind: 'expansion', raw, q };
+    if (__state.EXPANSION_RX.test(q)) return { kind: 'expansion', raw, q }; if (window.KiwiAgentData && window.KiwiAgentData.support && window.KiwiAgentData.support(q)) return { kind: null, raw, q };
     const longTrend = __state.TREND_RX.test(q) && !namedDay(q);
     /* « aide-moi à augmenter les ventes » names the sales but asks for advice. */
-    const growAsk = /(?:augment|boost|increase|grow|amelior)\w*.{0,18}(?:vente|chiffre|sales|revenue)|sell\s+more|vendre\s+plus|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\s+(?:ventes|lmbi3at|lbi3)|\bretain\b|fidelis(?:er|e|ez)\b|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+الزبناء|\bnjib\s+zb|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين/.test(q);
+    const growAsk = /(?:augment|boost|increase|grow|amelior)\w*.{0,18}(?:vente|chiffre|sales|revenue)|sell\s+more|vendre\s+plus|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\s+(?:ventes|lmbi3at|lbi3)|\bretain\b|fidelis(?:er|e|ez)\b|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+(?:ال)?زبنا|\bnjib\s+zb|\bnjib\s+(?:ال)?زبنا|\bnjib\s+clients|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين/.test(q);
     const books = /توقع|الشهر\s+(?:القادم|الجاي)|next\s+month|mois\s+prochain|left\s+after|reste\b.{0,30}\bapres|صافي\s+دخل|بعد\s+المصاريف|\bkayb9a\b|\btva\b|\bvat\b|\bcnss\b|fiches?.?de.?paie|payslip|payroll|\btax(?:es)?\b|\bbilan\b|comptab|ضريب|الضمان\s*الاجتماعي|فيش\s*دو|البيلان|كومبتابل/.test(q) || __state.BREAKEVEN_ASK.test(q);
     const mine = !longTrend && !growAsk && !books && window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null;
     if (mine && mine.entity) return { kind: 'lookup', raw, q, spec: Object.assign(mine, { raw, period: periodWindow(q) }) };
@@ -2467,7 +2467,7 @@ function decideRoute(rawIn, retry) {
      * them as a comparison across periods. */
     const dNear = namedDay(q) || (qf !== q ? namedDay(qf) : null);
     if (dNear) return { kind: 'day', raw, q, day: dNear };
-    if (__state.TREND_RX.test(q)) return { kind: 'notrend', raw, q };
+    if (__state.TREND_RX.test(q)) { const ps = window.KiwiAgentData && window.KiwiAgentData.period && window.KiwiAgentData.period(q, raw, 1); return ps ? { kind: 'lookup', raw, q, spec: Object.assign(ps, { raw }) } : { kind: 'notrend', raw, q }; }
     /* « effet de Raadan sur mes ventes » répondait par le chiffre d'affaires
        du mois : le mot Ramadan cassé, il ne restait que « ventes ». Une
        saisonnalité mal lue vaut un stock mal commandé. */

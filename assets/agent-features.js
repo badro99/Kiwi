@@ -14,7 +14,10 @@
   var state = { trade: '', pending: null };
   var aliases = { boulangerie: 'bakery', gym: 'sport' };
   var pick = function (o, l) { return o == null ? '' : (typeof o === 'string' ? o : (o[l] != null ? o[l] : (o.fr != null ? o.fr : ''))); };
-  var norm = function (s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f\u064b-\u065f\u0670]/g, '').replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').trim(); };
+  var MIXMAP = { b: 'ب', t: 'ت', j: 'ج', d: 'د', r: 'ر', z: 'ز', s: 'س', f: 'ف', q: 'ق', k: 'ك', l: 'ل', m: 'م', n: 'ن', h: 'ه', w: 'و', y: 'ي', g: 'ك', 3: 'ع', 7: 'ح', 9: 'ق', 2: 'ء', 5: 'خ', 8: 'غ' };
+  /* « kifach nخرج »: an arabizi prefix on an Arabic stem reads as one Arabic word. */
+  var unmix = function (s) { return s.replace(/(^|\s)([a-z0-9]{1,5})(?=[\u0621-\u064a])/gi, function (m, sp, p) { return sp + p.toLowerCase().replace(/ch/g, 'ش').replace(/kh/g, 'خ').replace(/gh/g, 'غ').replace(/[aeiou]/g, '').replace(/[a-z0-9]/g, function (c) { return MIXMAP[c] || ''; }); }); };
+  var norm = function (s) { return unmix(String(s == null ? '' : s)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f\u064b-\u065f\u0670]/g, '').replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').trim(); };
   var L = function (fr, en, ar) { return { fr: fr, en: en, ar: ar }; };
 
   function lang(raw) {
@@ -286,7 +289,7 @@
 
   var LIST_RX = /(?:quelles?|what|which|ما|شنو).{0,24}(?:fonction|feature|outil|module|kiwi)|(?:tout|all).{0,12}(?:fonction|feature)|que (?:peut|sait) faire kiwi|what can kiwi do|fonctionnalites/;
   var SETUP_RX = /configur|parametr|integr|mise en place|mettre en place|onboard|setup|set up|ضبط|اعداد|تهيئ/;
-  var HOWTO_VERB = /اضيف|اضبط|اربط|امسح|اطبع|استخدم|اغير|افعل|اقسم|نسكاني|نمسح|نخدم|نكونيكتي|نبدل|\bnscani\b|\bnkonekti\b|\bnbdel\b|\b(?:ajout\w*|cre(?:e|er)|modifi\w*|supprim\w*|imprim\w*|connect\w*|activ\w*|configur\w*|scann?\w*|export\w*|install\w*|jumel\w*|appair\w*|divis\w*|separ\w*|pai\w*|pay|use|utilis\w*|ger(?:er|e)|set ?up|setup|parametr\w*|mettre en place|add|create|edit|delete|print|connect|enable|export|install|pair|split|nzid|nzidou|ndir|ntb3|nrbet|nfa3el|n9sem)\b|نزيد|نضيف|نطبع|نربط|نفعل|نقسم|نصاوب|ندير/;
+  var HOWTO_VERB = /تقسيم|\bnscann?\w*|\b(?:referenc\w*|sortir|sors|link|close|clotur\w*|enter|saisi\w*|enregistr\w*|record|refund|rembours\w*|remise|discount)\b|اضيف|اضبط|اربط|امسح|اطبع|استخدم|اغير|افعل|اقسم|نسكاني|نمسح|نخدم|نكونيكتي|نبدل|\bnscani\b|\bnkonekti\b|\bnbdel\b|\b(?:ajout\w*|cre(?:e|er)|modifi\w*|supprim\w*|imprim\w*|connect\w*|activ\w*|configur\w*|scann?\w*|export\w*|install\w*|jumel\w*|appair\w*|divis\w*|separ\w*|pai\w*|pay|use|utilis\w*|ger(?:er|e)|set ?up|setup|parametr\w*|mettre en place|add|create|edit|delete|print|connect|enable|export|install|pair|split|nzid|nzidou|ndir|ntb3|nrbet|nfa3el|n9sem)\b|نزيد|نضيف|نطبع|نربط|نفعل|نقسم|نصاوب|ندير/;
   var GUIDE_RX = /^(?:comment|how|ou |where|كيفاش|كيفاه|كيف |\bkifa?c?h\b|\bkifash\b|wach n9der|واش نقدر|est.ce que je peux|peut.?on|puis.?je|can (?:i|we)|explique|tell me|a quoi|what is|comment fonctionne|كيف|اين|هل يمكن|kifa?c?h|كيفاش)|\b(?:activer|utiliser|imprimer|scanner|connecter|configurer|integrer)\b/;
   var CANCEL_RX = /annul|arrete|stop|cancel|إلغاء|توقف/;
 
@@ -468,7 +471,7 @@
   }
 
   /* Kiwi's own offers: public prices from the landing (CLAUDE.md §7). */
-  var PLAN_RX = /الابوني|لابوني|ابوني|\babonnement\b|\bplans?\b.{0,20}\bkiwi\b|\bkiwi\b.{0,20}\bplans?\b|offres?\s+kiwi|عروض\s+كيوي|باقات\s+كيوي|باقتي|\bengagement\b.{0,20}kiwi|kiwi.{0,20}\bengagement\b|\bcommitment\b|\bupgrade\b.{0,20}\b(?:plan|pro|plus|ultra)\b|كيوي\s+(?:برو|بلس|بيزيك|الترا)|\bplan\s+dyali\b|\blfar9\s+bin\s+plans\b|\bkiwi\s+(?:basic|plus|pro|ultra|ultimate)\b|\b(?:basic|plus|pro|ultra|ultimate)\b.{0,25}\b(?:plan|offre|abonnement|formule|forfait|coute|cost|price|prix)\b|\b(?:mon|ma|my|quel|quelle|which|what)\s+(?:plan|offre|forfait|abonnement|formule|subscription)\b|\babonnement\b|\bsubscription\b|\bforfait\b|(?:prix|tarifs?|price|pricing|cout)\s+(?:de\s+|of\s+)?kiwi\b|\bkiwi\b.{0,12}\b(?:coute|cost|price|prix|tarif)|اشتراك|الاشتراك|الباقة|باقة|\babonnma\b|عرض كيوي|ثمن كيوي|بشحال كيوي/;
+  var PLAN_RX = /\b(?:pro|plus|basic|ultra)\s+(?:wla|ou|or|vs|wela)\s+(?:pro|plus|basic|ultra)\b|\bforfaits?\s+(?:kiwi|dispo|disponibles?)\b|(?:برو|بلس)\s+مزايا|مزايا\s+(?:برو|بلس)|الابوني|لابوني|ابوني|\babonnement\b|\bplans?\b.{0,20}\bkiwi\b|\bkiwi\b.{0,20}\bplans?\b|offres?\s+kiwi|عروض\s+كيوي|باقات\s+كيوي|باقتي|\bengagement\b.{0,20}kiwi|kiwi.{0,20}\bengagement\b|\bcommitment\b|\bupgrade\b.{0,20}\b(?:plan|pro|plus|ultra)\b|كيوي\s+(?:برو|بلس|بيزيك|الترا)|\bplan\s+dyali\b|\blfar9\s+bin\s+plans\b|\bkiwi\s+(?:basic|plus|pro|ultra|ultimate)\b|\b(?:basic|plus|pro|ultra|ultimate)\b.{0,25}\b(?:plan|offre|abonnement|formule|forfait|coute|cost|price|prix)\b|\b(?:mon|ma|my|quel|quelle|which|what)\s+(?:plan|offre|forfait|abonnement|formule|subscription)\b|\babonnement\b|\bsubscription\b|\bforfait\b|(?:prix|tarifs?|price|pricing|cout)\s+(?:de\s+|of\s+)?kiwi\b|\bkiwi\b.{0,12}\b(?:coute|cost|price|prix|tarif)|اشتراك|الاشتراك|الباقة|باقة|\babonnma\b|عرض كيوي|ثمن كيوي|بشحال كيوي/;
   var PLANS = [
     { id: 'basic', name: 'Kiwi Basic', m: 150, y: 99, fr: 'caisse simple : codes-barres, stock, reçus, carnet de crédit, rapport du jour, caisse hors ligne, un établissement', en: 'simple till: barcodes, stock, receipts, credit book, daily report, offline till, one location', ar: 'صندوق بسيط: الباركود، المخزون، الوصولات، دفتر الكريدي، تقرير اليوم، العمل بلا انترنت، محل واحد' },
     { id: 'plus', name: 'Kiwi Plus', m: 300, y: 249, fr: 'Basic + boutique : tailles et couleurs, retours et avoirs, promotions, fidélité, fiches clients, marges', en: 'Basic + shop: sizes and colours, returns and credit notes, promotions, loyalty, customer records, margins', ar: 'Basic + المحل: المقاسات والألوان، الإرجاع، العروض، الوفاء، ملفات الزبناء، الهوامش' },
@@ -505,7 +508,8 @@
     var q = norm(raw);
     /* « can I add a worker » is a hiring question; only an explicit « how »,
      * « is there » or a question naming Kiwi is about the product. */
-    var how = /^(?:comment\b|how\b(?! (?:much|many|long|often)\b)|كيف\s|كيفاش|كيفاه|كيف\b|kifa?c?h\b|kifash\b)/.test(q) || EXISTS_RX.test(q) || /kiwi|كيوي/.test(q);
+    var how = /^(?:comment\b|how\b(?! (?:much|many|long|often)\b)|كيف\s|كيفاش|كيفاه|كيف\b|kifa?c?h\b|kifash\b)/.test(q) || EXISTS_RX.test(q) || /kiwi|كيوي/.test(q)
+      || /\b(?:je fais comment|on fait comment|comment (?:faire|on fait)|(?:ca )?se trouve ou|marche (?:a )?suivre|les etapes|how do i|how to|how can i|kif|kifach|montre moi kifach)\b|طريقة|تشرح ليا|كيفاش|(?:^|\s)كيف(?=\s)/.test(q);
     /* « l'imprimante n'imprime pas », « الطابعة ما خدامةش », « export my sales
      * to excel », « imprime le rapport z »: a fault or a product task. */
     var task = TROUBLE_RX.test(q) || /^(?:exporte?\w*|export|imprime\w*|print|telecharge\w*|download|fais(?: moi)? le z|sors? le z)\b/.test(q);

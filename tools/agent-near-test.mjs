@@ -7,6 +7,14 @@
 // went 574 → 600 on the bench and 409 → 415 on the wide set, with no loss on
 // the 1 807 bench phrasings, the 43 look-alike traps or the 1 065 wide lines.
 //
+// The same day, a thousand random questions from someone who had never seen
+// the assistant showed the other side: out of its domain the snap was mostly
+// wrong (« my butcher scale is not connecting » got today's cash). It now
+// refuses a question carrying a word the index has never seen, and takes
+// only a close neighbour (cosine ≥ 0.55): on those 1 100 questions it fires
+// once, rightly, and on 14 934 unseen variants of known questions it answers
+// 1 279, 97 % like the original.
+//
 // This suite holds three things:
 //   1. questions from that unseen set that the rules miss and the snap answers
 //      exactly like a known phrasing (each is checked to miss WITHOUT the index,
@@ -47,20 +55,18 @@ const lang = (q) => /[؀-ۿ]/.test(q) ? 'ar' : /\b(the|my|how|what|is|do|i|can|y
 
 // 1. Unseen phrasing → the known phrasing whose answer it must give.
 const SNAPS = [
-  ['Produit moins vendu ?', 'je veux voir le produit le moins vendu'],
-  ['Client plus depensier ?', 'quel client dépense le plus'],
-  ['Liquide en caisse ?', 'combien de cash dans la caisse'],
-  ['Unites vendues ajd ?', "On a vendu combien d'unites ajd stp ?"],
-  ['Ma liste de clientele contient combien de personnes', 'ma liste clients contient combien de personnes'],
-  ['Qui ne passe plus au cafe parmi ma clientele', 'qui parmi mes clients ne revient plus'],
-  ['Count the cash in the till now', 'How much cash is in the drawer now?'],
-  ['Take me to transactions.', 'Go to transactions'],
-  ['ch7al mn wa7ed kaykhdem 3andi f total', 'ch7al men wa7ed kheddam 3andi f total'],
-  ['fach kanseddou lma7al lyoum?', 'fach kanseddo lyouma'],
-  ['3adad l9ta3 li tb3at lyoum ch7al', 'ch7al b3na dial l9ta3 lyoum b l3adad?'],
-  ['chkoun kan kayji lma7al w ma b9ach kayji', 'chkon li kan kayjina w ma b9ach rje3 l resto'],
-  ['كم مادة مدرجة في الكتالوج؟', 'كم عدد عناصر كتالوج المحل'],
-  ['اعرض العملاء الذين لم يزوروا متجري منذ مدة', 'من هم الزبائن الذين توقفوا عن المجيء'],
+  ['werini lbi3 had chhar stp', '3tini ventes had chhar'],
+  ['total pour la journee ?', 'total encaisse pour la journee ?'],
+  ['y a dans le tiroir caisse maintenant ?', 'Combien y a dans le tiroir caisse maintenant ?'],
+  ['Show me my total', 'Show me my total sales'],
+  ['does my shop close tonight', 'when does my shop close tonight'],
+  ['How many did my shop record today?', 'How many sales did my shop record today?'],
+  ['ch7al daba f caisse?', 'ch7al kayn daba f caisse?'],
+  ['daba ch7al kayn mn lflous f cash', 'daba ch7al kayn mn lflous f caisse cash'],
+  ['dyal nas kaykhdmo m3aya', 'chhal dyal nas kaykhdmo m3aya'],
+  ['شنو أسوأ منتوج عندي', 'شنو أسوأ منتوج عندي فالبيع'],
+  ['المستخدمين كاملين فالمحل عافاك', 'عدد المستخدمين كاملين فالمحل عافاك'],
+  ['كم بلغت هذا الشهر؟', 'كم بلغت إيرادات هذا الشهر؟'],
 ];
 let n = 0;
 for (const [q, known] of SNAPS) {
@@ -75,8 +81,8 @@ for (const [q, known] of SNAPS) {
 
 // 2. Guards: these must not take a neighbour's answer.
 const differs = (q, notLike) => { const L = lang(q); assert.notEqual(ask(snap, L, q, true), ask(snap, L, notLike, true), `« ${q} » borrowed the answer of « ${notLike} »`); n++; };
-differs('Produit moins vendu en 2025 ?', 'je veux voir le produit le moins vendu');          // an amount or a year
-differs('Client plus depensier Karim ?', 'quel client dépense le plus');                     // a name
+differs('total pour la journee de 2025 ?', 'total encaisse pour la journee ?');              // an amount or a year
+differs('Show me my total for Karim', 'Show me my total sales');                           // a name
 differs('supprime le produit moins vendu', 'je veux voir le produit le moins vendu');        // an edit command
 differs('le resto chez ali a fait combien', 'le panier moyen au resto il est a combien');     // another shop
 differs('Produit plus vendu ?', 'je veux voir le produit le moins vendu');                   // most, not least
@@ -84,7 +90,10 @@ differs('fach kanft7ou lma7al lyoum?', 'fach kanseddo lyouma');                 
 differs('Liquide en caisse hier ?', 'combien de cash dans la caisse');                       // another day
 
 // Nothing close: the model or "not understood" keeps it, and the snap does not loop.
-for (const q of ['qwerty asdf zxcv', 'ما رأيك في الطقس غدا', 'raconte moi une blague']) {
+// The last three snapped to today's cash, the closing time and the menu page
+// before the unknown-word guard (27 Nov, random questions).
+for (const q of ['qwerty asdf zxcv', 'ما رأيك في الطقس غدا', 'raconte moi une blague',
+  'My butcher scale is not connecting to the till', 'ch7al dyal remises lyom?', 'Montre-moi les achats depuis lundi stp']) {
   assert.ok(/^(llm|unclear|outside) /.test(ask(snap, lang(q), q, true)), `« ${q} » was snapped`); n++;
 }
 console.log(`✓ agent near: ${n} checks, ${index.items.length} known questions, v=${rev}`);

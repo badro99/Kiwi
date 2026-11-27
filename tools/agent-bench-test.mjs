@@ -176,7 +176,7 @@ const TRAPS = [
   { q: 'change closing time to 11', lang: 'en', not: /23:00/, why: 'an order to change data, not a reading of it' },
   { q: 'annule la commande 12', lang: 'fr', route: 'operation', why: 'an order number belongs to the operation lane' },
   { q: 'ما هي ساعات العمل', lang: 'ar', not: /\b8 h\b/, why: 'opening hours, not hours worked' },
-  { q: 'ch7al kan CA chhar li fat', lang: 'fr', route: 'notrend', why: 'last month is not this month' },
+  { q: 'ch7al kan CA chhar li fat', lang: 'fr', not: /420/, must: /mois dernier/, why: 'last month is read as last month, never as this month' },
   { q: 'combien de clients sont venus aujourd’hui', lang: 'fr', not: /Kenza Lahlou/, why: 'walk-ins are not in the book; the count is not the book' },
   { q: 'how do I add an employee', lang: 'en', route: 'feature', why: 'a how-to, not a hiring simulation' },
   { q: 'واش نقدر نزيد خدام', lang: 'ar', route: 'hire', why: 'can I afford a worker is a simulation' },

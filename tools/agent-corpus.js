@@ -809,7 +809,7 @@ var CORPUS = [
 
   /* NOTREND · 10 — history Kiwi does not hold. Inventing last year's figure
    * is worse than saying the window is 30 days. */
-  ["compare avec l'an dernier", 'notrend'], ['mes ventes de janvier dernier', 'notrend'],
+  ["compare avec l'an dernier", 'notrend'], ['mes ventes de janvier dernier', 'lookup'],
   ["l'été dernier j'ai fait combien", 'notrend'], ['évolution sur 6 mois', 'notrend'],
   ['compared to last year', 'notrend'], ['last ramadan sales', 'notrend'],
   ["ma croissance depuis l'ouverture", 'notrend'], ['المبيعات السنة الماضية', 'notrend'],
@@ -1009,7 +1009,7 @@ var CORPUS = [
   ['est-ce que je dois ouvrir le samedi', 'season'],
   ['ouvrir le dimanche ça vaut le coup', 'season'],
   ['compare hier au mois dernier', 'notrend'],
-  ['mes ventes de janvier dernier', 'notrend'],
+  ['mes ventes de janvier dernier', 'lookup'],
   ['évolution sur 6 mois', 'notrend'],
   ['compare ce mois au mois dernier', 'notrend'],
   ['combien je vais faire aujourd’hui', 'forecast'],
