@@ -731,7 +731,7 @@ var SHELL = [
   '/assets/pos-reprint.js?v=28',
   '/assets/pressing-caisse.js?v=135',
   '/assets/pressing-caisse.css?v=135',
-  '/assets/material-icons.js?v=7',
+  '/assets/material-icons.js?v=8',
   /* La déclaration de l'arabe de la caisse et du tableau de bord : IBM Plex Sans
      Arabic en auto-hébergé (étape 1 du design 2027, §6.1). Les trois fichiers
      woff2 qu'elle nomme ne sont pas listés ici : un fichier à ?v= du SHELL doit
