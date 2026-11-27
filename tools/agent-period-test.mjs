@@ -131,6 +131,27 @@ for (const [q, L, want] of [
     ok(!/Rien ne s’appelle|Nothing called|ما كاين حتى حاجة سميتها/.test(r2.text), `« ${q2} » asks for the till's own records, not a missing item → ${r2.text.slice(0, 100)}`);
   }
 }
+// Round three (27 Nov): takings net of refunds, the day's cash and card, and
+// questions about how the till counts, which are not a figure to fetch.
+{
+  const lastWeekNet = sum(mon - 7 * DAY, mon, (x) => x.amount);          // 370 - 50
+  const r = ask('combien j’ai encaissé la semaine dernière moins les remboursements', 'fr');
+  ok(has(r.text, lastWeekNet) && has(r.text, 50) && has(r.text, lastWeek), `net of refunds last week → ${lastWeek} - 50 = ${lastWeekNet} → ${r.text.slice(0, 160)}`);
+  const d = ask('Chhal dkhlt lyom ila 7yedt les retours ?', 'fr');
+  ok(has(d.text, sum(t0, t0 + DAY)) && !/^Aucun remboursement/.test(d.text), `today net of returns gives today's takings → ${d.text.slice(0, 120)}`);
+  ok(/^day/.test(ask("Can I see yesterday's card payments separately from cash?", 'en').route), 'yesterday cash and card → the day card');
+  const t = ask('Aide moi à comprendre les pourboires cette semaine', 'fr');
+  ok(/10 MAD/.test(t.text), `« comprendre » is not « comprend » (includes) → ${t.text.slice(0, 100)}`);
+  const rc = ask('Show me receipts last week please', 'en');
+  ok(/^lookup/.test(rc.route) && has(rc.text, lastWeek), `receipts are the tickets → ${rc.text.slice(0, 100)}`);
+}
+for (const [q, L] of [
+  ['Le total du rapport inclut-il les pourboires des serveurs ?', 'fr'],
+  ['عندي زبون بغا الفاتورة باسم الشركة ديالو', 'ar'],
+  ["Kayna chi différence bin chiffre d'affaires w bénéfice ?", 'fr'],
+  ['What is the difference between revenue and profit?', 'en'],
+]) { const r = ask(q, L); ok(/^(?:llm|feature)\b/.test(r.route), `« ${q} » asks how things work → {${r.route}} ${r.text.slice(0, 80)}`); }
+
 // 2. Not a single period: the honest refusal, or the route that owns it.
 for (const [q, L] of [
   ['compare les ventes de cette semaine avec la semaine dernière', 'fr'],

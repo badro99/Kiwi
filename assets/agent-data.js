@@ -1563,7 +1563,7 @@
   var PER_OTHER = W("\\bchra\\b|\\bchrit\\w*|\\bachat\\w*|السلعة لي شريت|depense|\\bcharges?\\b|expens\\w*|masarif|مصاريف|مصروف|\\bmarge|margin|benefice|profit|\\brbe7\\b|ربح|\\btva\\b|\\bvat\\b|dette|debt|ديون|\\bdin\\b|fournisseur|supplier|مورد|heure|hours|ساعات|\\bsa3at\\b|achat|purchase|مشتريات|stock|annul|cancel|ملغ|salair|salary|اجور|loyer|\\brent\\b|\\bprix\\b|\\bprice\\b|ثمن|\\btaman\\b|client|customer|زبون|زبناء|زباين|employ|staff|personnel|خدام|موظف|correct|صحيح|\\bs7i7\\b|\\bsa7i7\\b|\\bremember\\b|\\bfactur|فواتير|فاتورة|\\bhow do i\\b|\\bcomment (?:je|on|faire)\\b|كيفاش|\\bkifach\\b");
   /* A rate (« par mois »), a span of months, a closure, a cost: not one period read back. */
   var PER_SPAN = W("par mois|per month|a month\\b|monthly|mensuel|chaque mois|every month|kol chh?ar|فالشهر|في الشهر|كل شهر|\\b(?:\\d+|deux|trois|six|douze|two|three|six|twelve)\\s+(?:mois|months)\\b|ستة|اشهر|شهور|\\bferm|\\bclos|نسد|\\bnsed\\b|\\bcout\\w*|\\bcost|يكلف|كيكلف|\\bwill\\b|\\bpace\\b|\\brythme\\b");
-  var PER_TICKETS = W("\\btickets?\\b|\\bcommandes?\\b|\\borders?\\b|\\bkomand\\w*|التذاكر|تذاكر|التيكي\\w*|الطلبات|طلبات|كوموند\\w*|nombre de ventes|how many sales|number of sales|عدد المبيعات|\\bbons?\\b");
+  var PER_TICKETS = W("\\btickets?\\b|\\breceipts?\\b|\\brecus?\\b|\\bcommandes?\\b|\\borders?\\b|\\bkomand\\w*|التذاكر|تذاكر|التيكي\\w*|الطلبات|طلبات|كوموند\\w*|nombre de ventes|how many sales|number of sales|عدد المبيعات|\\bbons?\\b");
   var PER_TIPS = W("pourboire\\w*|\\btips?\\b|بقشيش|البقشيش|\\bbo9chich\\b|\\bbakchich\\b|\\btbrri\\w*");
   var PER_DISC = W("\\bremises?\\b|\\bdiscounts?\\b|\\breductions?\\b|تخفيض\\w*|التخفيضات|\\bتخفيضات|\\btakhfid\\w*|\\bpromos?\\b");
   var PER_DELIV = W("livraison\\w*|deliver\\w*|توصيل|التوصيل|\\bglovo\\b|\\bjumia\\b|\\byassir\\b|\\btawsil\\b|\\bliv(?:raison)?\\b");
@@ -1694,6 +1694,9 @@
     return t2.length >= 3 && !PER_REV.test(t2) && !PER_TICKETS.test(t2) && !PER_REFUND.test(t2) && !PER_CASH.test(t2) && !PER_CARD.test(t2) ? t2 : null;
   }
   var PER_SHOW_END = /^(?:الشهر|السيمانة|الاسبوع|الأسبوع|اليوم|البارح|lbar7|lyom|had|هاد|هذا|هذه|ce|cette|this|last|la|le|les|mes|my|chhar|simana|semaine|mois|week|month|today|yesterday|عفاك|3afak|stp|svp|please|lli|li|لي|اللي|فات|الماضي|fat|fayt|lfayt|dernier|derniere|passe|precedent|previous|weekend|week-end|nhar|lyouma|ajd|l?ma?bi3at|l?bi3|lbi3at|المبيعات|مبيعات|البيع|المداخيل|مداخيل|الفلوس|lflous|flous|recettes?|ventes?|sales|takings|revenue|chiffre|ca|dkhl\w*|dakhel|tickets?|tiki|tiket|التيكيات|التيكي|الكاسة|lkasa|caisse|commandes?|orders?|الكوموندات|receipts?|recus?|factures?|invoices?|bills?|payments?|paiements?|refunds?|rembours\w*|discounts?|remises?|tips|pourboires?|clients?|customers?|expenses|depenses|charges|staff|equipe|employes|stock|products?|produits?|items?|articles?|الفواتير|فواتير|الزبناء|الكليان|المصاريف|الستوك|السلعة|المنتوجات)$/;
+  /* « combien j'ai encaissé moins les remboursements », « chhal dkhlt ila 7yedt les retours » (27 Nov 2026). */
+  var PER_NET = W("\\bila (?:7yedt|n9est|nqest|7ydt)\\b|\\bminus\\b|\\bmoins\\b|\\bsans\\b|\\bhors\\b|\\bnet\\b|\\bapres\\b|\\bafter\\b|deduct|dedui\\w*|enlev\\w*|retir\\w*|\\bexcluding\\b|(?:^|\\s)(?:بلا|ناقص|الصافي)(?=\\s|$)|من غير|(?:إلا|ايلا|اذا|إذا) حيدت");
+  var PER_TOOK = W("encaiss\\w*|\\bfait\\b|\\bdkhl\\w*|\\bdkhel\\w*|\\btook\\b|\\btake\\b|\\bmade\\b|\\bmake\\b|takings|revenue|chiffre|recette|ventes?|sales|دخل|قبضت|المداخيل|المبيعات");
   function topicOf(q) {
     var m = /(?:^|\s)(?:de la|de l|des|du|de|d|of|on|about|dyal|dial|ديال|les|la|le)\s+(.+)$/.exec(norm(q).replace(/[?؟!.,]/g, ' '));
     if (!m) return null;
@@ -1723,7 +1726,8 @@
     if (p && p.absent && (PER_SELL.test(q) || (late && PER_SHOW.test(q))) && !PER_VENUE.test(q)) return { entity: 'period', what: 'absent', per: per, topic: p.absent };
     var topic = PER_TOPIC.test(q) ? topicOf(raw || q) : late && PER_SHOW.test(q) ? showTopic(raw || q) : null;
     if (topic && !PER_REFUND.test(q) && !PER_CASH.test(q) && !PER_CARD.test(q) && !PER_TICKETS.test(q)) return { entity: 'period', what: 'absent', per: per, topic: topic };
-    var what = PER_REFUND.test(q) ? 'refunds'
+    var what = PER_REFUND.test(q) && PER_NET.test(q) && PER_TOOK.test(q) ? 'net'
+      : PER_REFUND.test(q) ? 'refunds'
       : PER_CASH.test(q) && !PER_CARD.test(q) ? 'cash'
       : PER_CARD.test(q) && !PER_CASH.test(q) ? 'card'
       : PER_TICKETS.test(q) ? 'tickets'
@@ -1758,7 +1762,8 @@
       prodMany: function (p, w, u, m, n) { return 'Sur ' + p + ', ' + w + ' : <b>' + fmt(u) + ' unité' + (u > 1 ? 's' : '') + '</b> vendue' + (u > 1 ? 's' : '') + ', pour ' + m + ', dans ' + n + ' vente' + (n > 1 ? 's' : '') + '.'; },
       colTips: 'Pourboires', colDisc: 'Remises', colDeliv: 'Livraison',
       other: function (p) { return 'Ce chiffre-là, je ne le lis pas par période. Ce que je lis sur ' + p + ' : les ventes, les tickets, espèces et carte, les remboursements et chaque produit.'; },
-      colRev: 'Encaissé', colTix: 'Tickets', colBasket: 'Panier moyen', colCash: 'Espèces', colCard: 'Carte', colUnits: 'Unités', colRef: 'Remboursé',
+      net: function (p, m, r, x) { return 'Sur ' + p + ', vous avez encaissé ' + m + ' et remboursé ' + r + ' : <b>' + x + ' net</b>.'; },
+      colRev: 'Encaissé', colTix: 'Tickets', colBasket: 'Panier moyen', colCash: 'Espèces', colCard: 'Carte', colUnits: 'Unités', colRef: 'Remboursé', colNet: 'Net',
     },
     en: {
       name: { week: 'this week', lastweek: 'last week', weekend: 'the weekend', month: 'this month', lastmonth: 'last month', today: 'today', yesterday: 'yesterday' },
@@ -1781,7 +1786,8 @@
       prodMany: function (p, w, u, m, n) { return 'For ' + p + ', ' + w + ': <b>' + fmt(u) + ' unit' + (u > 1 ? 's' : '') + '</b> sold, worth ' + m + ', across ' + n + ' sale' + (n > 1 ? 's' : '') + '.'; },
       colTips: 'Tips', colDisc: 'Discounts', colDeliv: 'Delivery',
       other: function (p) { return 'That figure is not one I read by period. What I read for ' + p + ': sales, tickets, cash and card, refunds and each product.'; },
-      colRev: 'Taken', colTix: 'Tickets', colBasket: 'Average basket', colCash: 'Cash', colCard: 'Card', colUnits: 'Units', colRef: 'Refunded',
+      net: function (p, m, r, x) { return 'For ' + p + ' you took ' + m + ' and refunded ' + r + ': <b>' + x + ' net</b>.'; },
+      colRev: 'Taken', colTix: 'Tickets', colBasket: 'Average basket', colCash: 'Cash', colCard: 'Card', colUnits: 'Units', colRef: 'Refunded', colNet: 'Net',
     },
     ar: {
       name: { week: 'هذا الأسبوع', lastweek: 'الأسبوع الماضي', weekend: 'نهاية الأسبوع', month: 'هذا الشهر', lastmonth: 'الشهر الماضي', today: 'اليوم', yesterday: 'أمس' },
@@ -1804,7 +1810,8 @@
       ref: function (p, n, m) { return n ? '<b>' + n + ' استرجاع</b> في ' + p + '، بقيمة ' + m + '.' : 'لا استرجاع مسجل في ' + p + '.'; },
       prod: function (p, w, u, m, n) { return 'في ' + p + ': <b>' + u + ' × ' + w + '</b>، بقيمة ' + m + '، في ' + n + ' عملية بيع.'; },
       prodNone: function (p, w) { return 'لم يبع أي ' + w + ' في ' + p + ' حسب مبيعاتك المسجلة.'; },
-      colRev: 'المحصّل', colTix: 'التذاكر', colBasket: 'متوسط السلة', colCash: 'نقدا', colCard: 'بالبطاقة', colUnits: 'الوحدات', colRef: 'المسترجع',
+      net: function (p, m, r, x) { return 'في ' + p + ' دخل لك ' + m + ' ورجعت ' + r + '، الصافي <b>' + x + '</b>.'; },
+      colRev: 'المحصّل', colTix: 'التذاكر', colBasket: 'متوسط السلة', colCash: 'نقدا', colCard: 'بالبطاقة', colUnits: 'الوحدات', colRef: 'المسترجع', colNet: 'الصافي',
     },
   };
   function sPeriod(spec, L) {
@@ -1849,6 +1856,7 @@
       }
       return { text: P.prod(plab, w, fmt(units), fmtMad(urev), un), stats: [{ l: P.colUnits, v: fmt(units), h: w }, { l: P.colRev, v: fmtMad(urev), h: '' }], note: note, prov: prov };
     }
+    if (spec.what === 'net') return { text: P.net(plab, fmtMad(rev), fmtMad(rsum), fmtMad(rev - rsum)), stats: [{ l: P.colRev, v: fmtMad(rev), h: fmt(n) }, { l: P.colRef, v: fmtMad(rsum), h: fmt(rn) }, { l: P.colNet, v: fmtMad(rev - rsum), h: '' }], note: note, prov: prov };
     if (spec.what === 'refunds') return { text: P.ref(plab, rn, fmtMad(rsum)), stats: rn ? [{ l: P.colRef, v: fmtMad(rsum), h: '' }] : [], note: note, prov: { mod: 'sales', count: rn, unit: 'entries' }, open: CMD_ORDERS_OPEN(L) };
     if (spec.what === 'other') return { text: P.other(plab), stats: base, note: note, prov: prov };
     if (spec.what === 'absent') return { text: P.absent(esc(spec.topic)), stats: base, note: note, prov: prov, open: open1(L, 'pMenu', 'nav-menu') };
@@ -1897,8 +1905,12 @@
   /* A season with nothing to do in the till is a season question
    * (« ramadan arrive je fais quoi »); « change my hours for Ramadan » is not. */
   var SUP_SEASON = W("ramadan|رمضان|\\beid\\b|عيد|saison|season");
+  var SUP_KNOW = W("\\b(?:inclu\\w*|include\\w*|comprend(?:s|ent)?|contient|count\\w* in)\\b.{0,40}\\b(?:pourboires?|tips?|remises?|discounts?|tva|vat|taxes?|rembours\\w*|refunds?|frais|fees|livraisons?|delivery)\\b"
+    + "|(?:facture|invoice|فاتورة|الفاتورة|recu|ticket)\\S* .{0,25}(?:au nom|in (?:the|his|her|their|a) (?:company )?name|باسم|\\bb ?smit\\b|\\bb ?smiya\\b)"
+    + "|(?:difference|far9|الفرق|فرق) (?:\\S+ ){0,2}(?:bin|entre|between|بين) (?:le |la |l |the )?(?:chiffre|ca\\b|benefice|marge|profit|revenue|turnover|ربح|الربح|رقم|الهامش|tresorerie|cash|ebitda|net\\b|brut|gross)");
   function supportAsk(q) {
     q = String(q || '');
+    if (SUP_KNOW.test(q)) return true;
     if (SUP_NOT.test(q.replace(SUP_TAB, ' carnet '))) return false;
     if (SUP_SEASON.test(q) && !(SUP_ASK.test(q) && SUP_VERB.test(q))) return false;
     return (SUP_ASK.test(q) && SUP_VERB.test(q)) || SUP_WHAT.test(q) || SUP_THEN.test(q) || SUP_SLIP.test(q) || (SUP_FAIL.test(q) && SUP_BROKE.test(q));
