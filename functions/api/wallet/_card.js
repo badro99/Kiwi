@@ -49,7 +49,7 @@ export function passJson({ view, card, merchant, env, baseUrl }) {
   const shop = String(merchant.name || 'Kiwi').slice(0, 60);
   const unit = view.model === 'amount' ? 'points' : 'tampons';
   const balance = {
-    key: 'balance', label: view.model === 'amount' ? 'POINTS' : 'TAMPONS', value: view.text,
+    key: 'balance', label: view.model === 'amount' ? 'POINTS' : 'TAMPONS', value: view.model === 'amount' ? `${view.balance} / ${view.target}` : view.text,
     /* Apple shows a change message only when it carries %@ (the new value), and
        only for a field whose value moved: the balance is the one that always
        moves, so it carries the "reward ready" news too. A literal % in the
@@ -67,14 +67,17 @@ export function passJson({ view, card, merchant, env, baseUrl }) {
     webServiceURL: `${baseUrl}/api/wallet`,
     organizationName: shop,
     description: `Carte fidélité ${shop}`,
-    logoText: '× ' + shop, // beside the Kiwi wordmark: « kiwi × Santos Store »
+    logoText: shop, // beside the Kiwi wordmark when the shop has no logo; cleared when the lockup image carries it
     backgroundColor: pal.css.bg, foregroundColor: pal.css.fg, labelColor: pal.css.label,
     sharingProhibited: true,
     barcodes: [{ format: 'PKBarcodeFormatQR', message: 'KIWI-C:' + card.clientId, messageEncoding: 'iso-8859-1', altText: 'Carte fidélité' }],
     storeCard: {
       headerFields: view.firstName ? [{ key: 'name', label: 'CLIENT', value: view.firstName }] : [],
-      primaryFields: [balance],
-      secondaryFields: [next, left],
+      /* Apple paints the primary field over the strip's top. A points card keeps
+         its number there (the bar runs underneath it); a stamp card gives the
+         whole strip to its discs and carries the count in the row below. */
+      primaryFields: view.model === 'amount' ? [balance] : [],
+      secondaryFields: view.model === 'amount' ? [next, left] : [balance, next],
       backFields: [
         { key: 'how', label: 'Comment ça marche', value: view.model === 'amount'
           ? `Chaque dirham dépensé chez ${shop} vous donne des points. À ${view.target} points : ${view.rewardLabel || 'une récompense'}.`

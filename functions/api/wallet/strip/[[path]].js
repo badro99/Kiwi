@@ -1,12 +1,12 @@
 // GET /api/wallet/strip/<n>-<target>-<ink>-<bg>@<scale>.png   the stamp strip
-// GET /api/wallet/strip/p<n>-<threshold>-<ink>-<bg>@<scale>.png  the points bar
+// GET /api/wallet/strip/b<n>-<threshold>-<ink>-<bg>@<scale>.png  the points bar
 // GET /api/wallet/strip/logo-<shop>.png                         the shop's tile on the web card
 // The strip URL carries everything it draws, so it is stateless and immutable:
 // the web card and Google's hero image point at it and every CDN may keep it.
 import { stripPng, shopTile } from '../_images.js';
 import { loadMerchant } from '../_merchant.js';
 
-const RE = /^(p?)(\d{1,7})-(\d{1,7})-([0-9a-f]{6})-([0-9a-f]{6})@([123])\.png$/;
+const RE = /^([pb]?)(\d{1,7})-(\d{1,7})-([0-9a-f]{6})-([0-9a-f]{6})@([123])\.png$/;
 const png = (bytes, maxAge) => new Response(bytes, { headers: { 'Content-Type': 'image/png', 'Cache-Control': `public, max-age=${maxAge}${maxAge > 86400 ? ', immutable' : ''}` } });
 
 export async function onRequestGet(context) {

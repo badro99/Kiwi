@@ -35,7 +35,7 @@ export function stripColors(merchant) {
 }
 
 export function stripPng({ view, colors, scale }) {
-  const k = `strip/${view.model === 'amount' ? 'p' + Math.min(view.balance, view.target) : view.balance}-${view.target}-${colors.key}@${scale}`;
+  const k = `strip/${view.model === 'amount' ? 'b' + Math.min(view.balance, view.target) : view.balance}-${view.target}-${colors.key}@${scale}`;
   return cached(k, () => view.model === 'amount'
     ? pointsBar({ value: view.balance, threshold: view.target, color: colors.color, bg: colors.bg, scale })
     : stampStrip({ filled: view.balance, target: view.target, color: colors.color, bg: colors.bg, scale }));

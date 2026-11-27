@@ -117,7 +117,7 @@ try {
     const names = fs.readdirSync(out);
     for (const n of ['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'strip@3x.png', 'pass.json', 'manifest.json', 'signature']) assert.ok(names.includes(n), n);
     const p = JSON.parse(fs.readFileSync(path.join(out, 'pass.json'), 'utf8'));
-    assert.equal(p.storeCard.primaryFields[0].value, '7 / 10');
+    assert.equal([...p.storeCard.primaryFields, ...p.storeCard.secondaryFields].find((f) => f.key === 'balance').value, '7 / 10');
     assert.equal(p.serialNumber, card.serial);
     assert.equal(p.locations[0].latitude, 33.59);
     assert.equal(verify('live/signature', 'live/manifest.json').status, 0);

@@ -12,6 +12,8 @@ const merchant = { slug: 'pasta-corner', name: 'Pasta Corner', color: '#B3261E',
 const env = { WALLET_APPLE_PASS_TYPE_ID: 'pass.com.kiwios.loyalty', APNS_TEAM_ID: 'TEAM123456' };
 const card = { serial: 's3r1al', authToken: 'a'.repeat(32), clientId: 'cl-42' };
 
+const fieldsOf = (p) => ['headerFields', 'primaryFields', 'secondaryFields', 'auxiliaryFields'].flatMap((k) => p.storeCard[k] || []);
+
 ok('7 visits of 10: "7 / 10", 3 to go, not ready', () => {
   const v = cardView({ fidelity: PASTA, client: { stamps: 7, points: 0, name: 'Salma Idrissi' } });
   assert.equal(v.model, 'visit'); assert.equal(v.balance, 7); assert.equal(v.target, 10);
@@ -54,17 +56,31 @@ ok('pass.json: storeCard, ids, web service, colours, QR with the till id', () =>
   assert.equal(p.foregroundColor, 'rgb(247, 245, 240)');
   assert.equal(p.labelColor, 'rgb(125, 242, 176)');
   assert.deepEqual(p.barcodes[0], { format: 'PKBarcodeFormatQR', message: 'KIWI-C:cl-42', messageEncoding: 'iso-8859-1', altText: 'Carte fidélité' });
-  const bal = p.storeCard.primaryFields[0];
+  /* Apple paints the primary field over the strip: a stamp card leaves the strip to its discs. */
+  assert.deepEqual(p.storeCard.primaryFields, []);
+  const bal = fieldsOf(p).find((f) => f.key === 'balance');
   assert.equal(bal.value, '7 / 10');
   assert.match(bal.changeMessage, /%@/);
   assert.ok(p.storeCard.secondaryFields.some((f) => /1 offert/.test(f.value)));
   assert.ok(!('locations' in p));
 });
 
+ok('a points card keeps its number as the headline, read against the target', () => {
+  const v = cardView({ fidelity: { enabled: true, model: 'amount', amount: { perMad: 1, threshold: 300, reward: '−10 %' } }, client: { points: 240 } });
+  const p = passJson({ view: v, card, merchant, env, baseUrl: 'https://kiwi-os.com' });
+  assert.equal(p.storeCard.primaryFields[0].key, 'balance');
+  assert.equal(p.storeCard.primaryFields[0].value, '240 / 300');
+});
+
+ok('a shop with no logo is named plainly beside the Kiwi wordmark', () => {
+  const v = cardView({ fidelity: PASTA, client: { stamps: 1 } });
+  assert.equal(passJson({ view: v, card, merchant, env, baseUrl: 'https://kiwi-os.com' }).logoText, 'Pasta Corner');
+});
+
 ok('a ready card says so on the lock screen', () => {
   const v = cardView({ fidelity: PASTA, client: { stamps: 10 } });
   const p = passJson({ view: v, card, merchant, env, baseUrl: 'https://kiwi-os.com' });
-  const msgs = [...p.storeCard.primaryFields, ...p.storeCard.secondaryFields].map((f) => f.changeMessage || '').join(' ');
+  const msgs = fieldsOf(p).map((f) => f.changeMessage || '').join(' ');
   assert.match(msgs, /récompense prête/i);
 });
 
@@ -87,9 +103,9 @@ ok('every change message carries %@, and "reward ready" rides on the balance tha
   for (const client of [{ stamps: 7 }, { stamps: 10 }]) {
     const v = cardView({ fidelity: PASTA, client });
     const p = passJson({ view: v, card, merchant: { ...merchant, name: 'Café 100% Pasta' }, env, baseUrl: 'https://kiwi-os.com' });
-    const fields = [...p.storeCard.primaryFields, ...p.storeCard.secondaryFields];
+    const fields = fieldsOf(p);
     for (const f of fields) if (f.changeMessage) assert.ok(fmt(f.changeMessage), `${f.key}: ${f.changeMessage}`);
-    if (v.ready) assert.match(p.storeCard.primaryFields[0].changeMessage, /Récompense prête/);
+    if (v.ready) assert.match(fields.find((f) => f.key === 'balance').changeMessage, /Récompense prête/);
   }
 });
 
@@ -99,3 +115,9 @@ const { loyaltyClass } = await import('../functions/api/wallet/_google.js');
 const google = loyaltyClass({ WALLET_GOOGLE_ISSUER_ID: '123' }, { merchant, baseUrl: 'https://kiwi-os.com' });
 assert.equal(google.hexBackgroundColor, '#031A13');
 assert.equal(google.programLogo.sourceUri.uri, 'https://kiwi-os.com/assets/wallet/kiwi-icon@3x.png');
+
+/* The points bar moved under the number (27 Nov): a new URL, since the old one is cached as immutable for a year. */
+const { stripPath } = await import('../functions/api/wallet/_offers.js');
+const ptsView = cardView({ fidelity: { enabled: true, model: 'amount', amount: { perMad: 1, threshold: 300, reward: '−10 %' } }, client: { points: 240 } });
+assert.match(stripPath(ptsView, merchant, 2), /^\/api\/wallet\/strip\/b240-300-7df2b0-031a13@2\.png$/);
+console.log('wallet-card: points strip url ok');

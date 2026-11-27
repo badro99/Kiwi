@@ -26,7 +26,7 @@ function decode(png) {
   return { w, h, px, rowFilters: Array.from({ length: h }, (_, y) => raw[y * (w * 4 + 1)]) };
 }
 
-const GREEN = '#0B6E4F', BONE = '#F7F5F0';
+const GREEN = '#0B6E4F', BONE = '#F7F5F0', BONE_RGB = [0xF7, 0xF5, 0xF0];
 
 await ok('3x strip is 1125 × 369 RGBA with filter 0 rows', async () => {
   const img = decode(await stampStrip({ filled: 3, target: 10, color: GREEN, bg: BONE, scale: 3 }));
@@ -65,9 +65,13 @@ await ok('a full card fills every disc', async () => {
 
 await ok('points bar fills to the ratio', async () => {
   const img = decode(await pointsBar({ value: 50, threshold: 100, color: GREEN, bg: BONE, scale: 1 }));
-  const y = Math.round(img.h / 2);
-  assert.deepEqual(img.px(Math.round(img.w * 0.3), y).slice(0, 3), [0x0B, 0x6E, 0x4F]);
-  assert.notDeepEqual(img.px(Math.round(img.w * 0.75), y).slice(0, 3), [0x0B, 0x6E, 0x4F]);
+  /* The bar runs in the band under the points number, which Apple paints over the strip's top. */
+  const y = Math.round(img.h * 107 / 123);
+  assert.notDeepEqual(img.px(Math.round(img.w * 0.3), y).slice(0, 3), BONE_RGB, 'filled part painted');
+  assert.deepEqual(img.px(Math.round(img.w * 0.75), y).slice(0, 3), img.px(Math.round(img.w * 0.9), y).slice(0, 3), 'past the fill, one even track');
+  assert.notDeepEqual(img.px(Math.round(img.w * 0.3), y).slice(0, 3), img.px(Math.round(img.w * 0.75), y).slice(0, 3));
+  for (const yy of [0.2, 0.5, 0.7]) for (const xx of [0.1, 0.3, 0.6]) assert.deepEqual(img.px(Math.round(img.w * xx), Math.round(img.h * yy)).slice(0, 3), BONE_RGB, 'the number\'s area stays clear');
+  assert.deepEqual(img.px(2, y).slice(0, 3), BONE_RGB, 'side margin');
 });
 
 console.log(`wallet-strip: ${pass} passed`);

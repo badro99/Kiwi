@@ -107,19 +107,33 @@ export async function stampStrip({ filled = 0, target = 10, color, bg, scale = 1
 }
 
 export async function pointsBar({ value = 0, threshold = 100, color, bg, scale = 1 }) {
-  const w = W * scale, h = H * scale, c = rgb(color), b = rgb(bg);
+  /* Apple paints the points number and its label over the top of the strip, so
+     the bar runs in the free band under them (y 103 to 111 of 123 points), inset
+     like the fields, atlas to the brand colour, with a lit head. */
+  const w = W * scale, h = H * scale, c = rgb(color), b = rgb(bg), atlas = [0x0B, 0x6E, 0x4F];
   const cv = canvas(w, h, b);
-  const pad = 22 * scale, bh = h * 0.22, y0 = (h - bh) / 2, rad = bh / 2;
+  const pad = 16 * scale, bh = 8 * scale, y0 = 103 * scale, rad = bh / 2, cy = y0 + rad;
   const ratio = Math.max(0, Math.min(1, (Number(value) || 0) / Math.max(1, Number(threshold) || 1)));
-  const fillEnd = pad + (w - 2 * pad) * ratio, tint = mix(b, c, 0.14);
+  const fillEnd = pad + (w - 2 * pad) * ratio, tint = mix(b, [247, 245, 240], 0.10);
   for (let y = Math.floor(y0 - 1); y <= Math.ceil(y0 + bh + 1); y++) {
     for (let x = Math.floor(pad - 1); x <= Math.ceil(w - pad + 1); x++) {
       const px = x + 0.5, py = y + 0.5;
       const cx = Math.max(pad + rad, Math.min(w - pad - rad, px));
-      const a = cover(rad - Math.hypot(px - cx, py - (y0 + rad)));
+      const a = cover(rad - Math.hypot(px - cx, py - cy));
       if (!a) continue;
       cv.blend(x, y, tint, a);
-      if (px <= fillEnd) cv.blend(x, y, c, a);
+      if (ratio > 0 && px <= fillEnd) cv.blend(x, y, mix(atlas, c, Math.min(1, (px - pad) / Math.max(1, fillEnd - pad))), a);
+    }
+  }
+  if (ratio > 0) {   /* the head: a brighter dot with a soft halo, where the fill stops */
+    const hx = Math.max(pad + rad, fillEnd - rad), hr = 7 * scale, halo = 12 * scale, head = mix(c, [247, 245, 240], 0.45);
+    for (let y = Math.floor(cy - halo); y <= Math.ceil(cy + halo); y++) {
+      for (let x = Math.floor(hx - halo); x <= Math.ceil(hx + halo); x++) {
+        const d = Math.hypot(x + 0.5 - hx, y + 0.5 - cy);
+        if (d < halo) cv.blend(x, y, c, 0.22 * (1 - d / halo) ** 2);
+        const a = cover(hr - d);
+        if (a) cv.blend(x, y, head, a);
+      }
     }
   }
   return encodePng(cv.w, cv.h, cv.px);
