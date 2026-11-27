@@ -230,7 +230,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=10';
+  const partUrl = 'assets/agent/ui.js?v=11';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -1714,7 +1714,7 @@
 
   /* Credentials and other tenants' data — never a question this surface should
    * entertain, and both used to fall through to the model. */
-  const SECRET_RX = /\b(?:code\s+)?pin\b|mot\s+de\s+passe|\bpassword\b|\bmdp\b|liste\s+des\s+comptes|\bl[' ]?autre\s+(?:boutique|magasin|client|commercant)\b|autres?\s+(?:clients?|commercants?|boutiques?)\b|another\s+(?:shop|store|merchant)|other\s+(?:shops|stores|merchants)|\bprompt\b|\b(?:tes|ton|ta)\s+(?:instructions|consignes|code|configuration|regles)\b|\byour\s+(?:instructions|rules|prompt|config)\b|code\s+source|\bsource\s+code\b|cle\s+api|\bapi\s+key\b|تعليماتك|كلمة\s*السر/;
+  const SECRET_RX = /\bcodes?\s+(?:des|de\s+mes|de\s+la|du|de|d[' ])\s*(?:serveu\w*|employ\w*|caissi\w*|vendeu\w*|staff|equipe|personnel)|\b(?:staff|employee|waiter|cashier)s?['’]?\s*(?:codes?|pins?)\b|\bcodes?\s+(?:of|for)\s+(?:the\s+|my\s+)?(?:staff|employees|waiters|cashiers|team)|(?:كود|كودات|الكود|الكودات|رمز|الرمز|رموز)\s+(?:ديال\s+|د\s*|تاع\s+)?(?:ال)?(?:خدام|موظف|سرفور|سرفورات|كيسي|عمال)|\bcod(?:at|e|es)\s+(?:dyal|d)\s*l?(?:khddam\w*|serveur\w*)|\b(?:code\s+)?pin\b|mot\s+de\s+passe|\bpassword\b|\bmdp\b|liste\s+des\s+comptes|\bl[' ]?autre\s+(?:boutique|magasin|client|commercant)\b|autres?\s+(?:clients?|commercants?|boutiques?)\b|another\s+(?:shop|store|merchant)|other\s+(?:shops|stores|merchants)|\bprompt\b|\b(?:tes|ton|ta)\s+(?:instructions|consignes|code|configuration|regles)\b|\byour\s+(?:instructions|rules|prompt|config)\b|code\s+source|\bsource\s+code\b|cle\s+api|\bapi\s+key\b|تعليماتك|كلمة\s*السر/;
 
   const NEG_RX = /\b(?:je\s+)?n[e']?\s*(?:veux|voudrais|vais|compte|souhaite|pense)(?:\s+\w+){0,2}\s+(?:pas|plus|jamais)\b|\bpas\s+(?:besoin|question|envie|interesse)\b|\bne\s+me\s+parle\s+(?:pas|plus)\b|\bsurtout\s+pas\b|\bje\s+refuse\b|\bno\s+(?:hiring|more)\b|\bn[e']?\s*(?:augmente|baisse|ferme|embauche|prends|prend|licencie)\w*\s+(?:pas|plus)\b|\b(?:don'?\s?t|do\s+not|won'?\s?t|not\s+going\s+to|no\s+need)\b|ما\s*بغيت|لا\s*اريد|ماباغيش|ما\s*نقدرش|\bma\s*bghit(?:ch)?\b|\bmabghitch\b|\bma\s*n9dersh\b|\bmakan\w*ch\b/;
 

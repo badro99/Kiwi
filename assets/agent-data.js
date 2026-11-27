@@ -524,13 +524,33 @@
       if (!parts.length || parts.join('').length < 4) return;
       if (parts.every(function (p) { return words.indexOf(p) >= 0; }) && (!best || parts.length > best.n)) best = { c: c, n: parts.length };
     });
-    return best && best.c;
+    if (best) return best.c;
+    /* One name alone (« سلمى », « لبناني ») when a single client carries it,
+     * and no foreign name-like word stands next to it (« أحمد بناني »). */
+    var raw = String(q).split(/[\s،,.?!؟]+/).filter(Boolean);
+    var hits = [];
+    book.forEach(function (c) {
+      norm(c.name).split(' ').map(skel).filter(function (x) { return x.length >= 2; }).forEach(function (p) {
+        raw.forEach(function (w, i) {
+          var bare = w.replace(/^(?:ال|لل|ل|ب)(?=.{3})/, '');
+          if (!/[\u0600-\u06ff]/.test(w) || bare.length < 4 || (skel(w) !== p && skel(bare) !== p)) return;
+          var near = [raw[i - 1], raw[i + 1]].filter(function (x) {
+            return x && x.length >= 3 && /[\u0600-\u06ff]/.test(x) && !NAME_GLUE_AR.test(arBare(x));
+          });
+          if (!near.length && hits.indexOf(c) < 0) hits.push(c);
+        });
+      });
+    });
+    return hits.length === 1 ? hits[0] : null;
   }
-  var NAME_GLUE = /^(?:des?|du|la|le|les|pour|par|chez|avec|client\w*|madame|mme|monsieur|mr|mlle|sidi|lalla|points?|pts|stamps?|tampons?|fidelite|solde|combien|cb|has|have|does|for|of|the|customer|how|many|much|what|is|a|3nd|3and|dyal|dial|ch7al|chhal|kam|wach|f|fi|balance|rewards?|visite\w*|visits?|depense\w*|spent|ses|son|sa|il|elle|has|est|y|t|kaml?a?|3ndha|3ndo|bezaf|kter|dans|en|au|aux|ont|a-t-elle|a-t-il)$/;
+  var arBare = function (x) { return String(x).normalize('NFD').replace(/[\u064b-\u0655\u0670]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/[؟?]/g, ''); };
+  var NAME_GLUE_AR = /^(?:متي|كيف|اتواصل|زار|جاءت|جات|جا|اخر|مرة|اخر|رقم|هاتف|الهاتف|نمرة|شنو|ديال|بيانات|التواصل|معلومات|الاتصال|دازت|فوقاش|زيارة|تاريخ|شحال|هادي|ما|للمحل|المحل|ب|كيفاش|نتاصل|اتواصل|كيف|مع|الخاصة|ب?سلمى)$/;
+  var NAME_GLUE = /^(?:des?|du|la|le|les|pour|par|chez|avec|client\w*|madame|mme|monsieur|mr|mlle|sidi|lalla|points?|pts|stamps?|tampons?|fidelite|solde|combien|cb|has|have|does|for|of|the|customer|how|many|much|what|is|a|3nd|3and|dyal|dial|ch7al|chhal|kam|wach|f|fi|balance|rewards?|visite\w*|visits?|depense\w*|spent|ses|son|sa|il|elle|has|est|y|t|kaml?a?|3ndha|3ndo|bezaf|kter|dans|en|au|aux|ont|a-t-elle|a-t-il|when|was|were|did|last|here|date|came|come|in|phone|number|contact|email|can|i|with|whats|what's|s|akher|akhir|merra|mra|dazat|daz|jat|ja|imta|fo9ach|telephone|nemro|nemra|numero|chno|achno|quand|derniere|fois|venue?|passee?|tel|appeler|joindre|ntasel|b|l|ma|hadi|lma7al|ch7al)$/;
   function findClient(q) {
     var book = clientBook();
     if (!book.length) return { book: book, hit: null };
-    var nq = ' ' + norm(q) + ' ';
+    /* « Bennani? », « Salma's »: punctuation is not part of the name. */
+    var nq = ' ' + norm(q).replace(/[?؟!.,;:'’"()]+/g, ' ').replace(/\s+/g, ' ') + ' ';
     var best = null;
     book.forEach(function (c) {
       var full = norm(c.name);
@@ -545,7 +565,7 @@
          * different person. Grammar words around a name don't count. */
         var words = nq.trim().split(' '), i = words.indexOf(part);
         var near = [words[i - 1], words[i + 1]].filter(function (w) {
-          return w && w.length >= 3 && parts.indexOf(w) === -1 && !NAME_GLUE.test(w);
+          return w && w.length >= 3 && parts.indexOf(w) === -1 && !NAME_GLUE.test(w) && !NAME_GLUE_AR.test(w);
         });
         if (!near.length) best = c;
       });
@@ -935,6 +955,61 @@
       prov: { mod: 'sales', count: n, unit: 'entries' },
     };
   }
+  var RB_T = {
+    fr: {
+      lead: function (n, m) { return n ? '<b>' + fmt(n) + ' remboursement' + (n > 1 ? 's' : '') + '</b> enregistré' + (n > 1 ? 's' : '') + ' aujourd’hui, pour ' + m + '.' : 'Aucun remboursement enregistré aujourd’hui.'; },
+      note: 'Une commande annulée avant paiement n’est pas une vente et n’apparaît pas ici ; le détail, avec qui l’a fait, est dans les commandes.',
+      best: function (d, m) { return 'Votre meilleure journée : <b>' + d + '</b>, avec ' + m + '.'; },
+      worst: function (d, m) { return 'Votre journée la plus faible : <b>' + d + '</b>, avec ' + m + '.'; },
+      none: 'Pas encore assez de ventes enregistrées pour comparer des journées.',
+      span: function (n) { return 'Sur ' + fmt(n) + ' journée' + (n > 1 ? 's' : '') + ' de ventes enregistrées.'; },
+    },
+    en: {
+      lead: function (n, m) { return n ? '<b>' + fmt(n) + ' refund' + (n > 1 ? 's' : '') + '</b> recorded today, for ' + m + '.' : 'No refund recorded today.'; },
+      note: 'An order cancelled before payment is not a sale and does not show here; the detail, with who did it, is in orders.',
+      best: function (d, m) { return 'Your best day: <b>' + d + '</b>, with ' + m + '.'; },
+      worst: function (d, m) { return 'Your weakest day: <b>' + d + '</b>, with ' + m + '.'; },
+      none: 'Not enough recorded sales yet to compare days.',
+      span: function (n) { return 'Across ' + fmt(n) + ' day' + (n > 1 ? 's' : '') + ' of recorded sales.'; },
+    },
+    ar: {
+      lead: function (n, m) { return n ? 'تسجّلو <b>' + fmt(n) + ' استرجاع</b> اليوم، بمبلغ ' + m + '.' : 'حتى استرجاع ما تسجّل اليوم.'; },
+      note: 'الطلب اللي تلغى قبل الخلاص ماشي بيعة وما كيبانش هنا؛ التفاصيل، مع شكون دارو، كاينين فالطلبات.',
+      best: function (d, m) { return 'أحسن نهار عندك: <b>' + d + '</b>، ب' + m + '.'; },
+      worst: function (d, m) { return 'أضعف نهار عندك: <b>' + d + '</b>، ب' + m + '.'; },
+      none: 'مازال ما كاينينش مبيعات كافية باش نقارن بين الأيام.',
+      span: function (n) { return 'على ' + fmt(n) + ' أيام ديال المبيعات المسجّلة.'; },
+    },
+  };
+  var CMD_ORDERS_OPEN = function (L) { return [{ label: tr(L).openBtn(({ fr: 'les commandes', en: 'orders', ar: 'الطلبات' })[L] || 'les commandes'), handler: 'nav-transactions' }]; };
+  function sRefundsToday(L) {
+    var g = RB_T[L] || RB_T.fr, win = todayWin(), n = 0, sum = 0;
+    salesRows().forEach(function (e) {
+      if (!e || !inWin(+e.ts || 0, win) || !(+e.amount < 0)) return;
+      n++; sum += Math.abs(+e.amount);
+    });
+    return { text: g.lead(n, fmtMad(sum)), note: g.note, prov: { mod: 'sales', count: n, unit: 'entries' }, open: CMD_ORDERS_OPEN(L) };
+  }
+  function sDayRank(spec, L) {
+    var g = RB_T[L] || RB_T.fr, days = {}, from = spec.week ? startOfDay() - 6 * DAY : -Infinity;
+    salesRows().forEach(function (e) {
+      if (!e || !(+e.ts >= from)) return;
+      var d = new Date(+e.ts); d.setHours(0, 0, 0, 0);
+      var k = d.getTime(); days[k] = (days[k] || 0) + (+e.amount || 0);
+    });
+    var list = Object.keys(days).map(function (k) { return { ts: +k, v: days[k] }; }).sort(function (a, b) { return b.v - a.v; });
+    if (!list.length || (spec.agg === 'worst' && list.length < 2)) return { text: g.none };
+    var loc = L === 'ar' ? 'ar-MA' : L === 'en' ? 'en-GB' : 'fr-FR';
+    var label = function (ts) { try { return new Date(ts).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }); } catch (_) { return new Date(ts).toDateString(); } };
+    var pick = spec.agg === 'worst' ? list[list.length - 1] : list[0];
+    var shown = spec.agg === 'worst' ? list.slice().reverse() : list;
+    return {
+      text: (spec.agg === 'worst' ? g.worst : g.best)(esc(label(pick.ts)), fmtMad(pick.v)),
+      stats: shown.slice(0, 3).map(function (x) { return { l: esc(label(x.ts)), v: fmtMad(x.v), h: '' }; }),
+      note: g.span(list.length),
+      prov: { mod: 'sales', count: list.length, unit: 'days' },
+    };
+  }
   function sHoursWeek(L) {
     var t = tr(L), KH = window.KiwiHours;
     var openBtn = [{ label: t.openBtn(t.pHours), handler: 'settings-hours' }];
@@ -954,6 +1029,8 @@
       if (spec.entity === 'staff' && spec.agg === 'hours') return sStaffHours(L);
       if (spec.entity === 'product' && spec.agg === 'units') return sUnitsToday(L);
       if (spec.entity === 'cash') return sCashToday(L);
+      if (spec.entity === 'refunds') return sRefundsToday(L);
+      if (spec.entity === 'dayrank') return sDayRank(spec, L);
       if (spec.entity === 'hours' && spec.agg === 'week') return sHoursWeek(L);
       if (spec.entity === 'product') return sProduct(spec, L);
       if (spec.entity === 'client') {
@@ -981,32 +1058,32 @@
    * Input is agent.js's norm(): lower case, no accents, hamza folded. */
   var W = function (src) { return new RegExp(src.normalize('NFD').replace(/[\u064b-\u0655\u0670]/g, '').replace(/\u0649/g, '\u064a')); };
   var LX = {
-    count: W("\\bcombien\\b|\\btaille\\b|how big|\\bheadcount\\b|\\bsize of\\b|اجمالي|مجموع|\\bcb\\b|\\bcbn\\b|\\bkombien\\b|\\bnombre\\b|\\bnbr?e?\\b|\\btotal\\b|how many|number of|\\bcount\\b|(?:^|\\s)كم(?=\\s|$)|شحال|قداش|عدد|\\b(?:a?ch|sh)(?:7|h)h?al\\b|\\b3adad\\b|\\ba3dad\\b|\\bchhal\\b"),
-    who: W("\\bqui\\b|شنو هما|\\bki\\b|\\bwho\\b|\\blequel\\b|\\blaquelle\\b|\\blesquels\\b|\\bquels?\\b|\\bquelles?\\b|\\bkel\\b|\\bwhich\\b|شكون|اشكون|(?:^|\\s)من(?=\\s)|\\bchk(?:o|ou|u)n\\b|\\bachmen\\b|اشمن|\\bmontre\\b|\\bshow\\b|\\bliste?\\b|وريني|\\bwarini\\b|لائحة|اظهر|ما اسماء"),
-    staff: W("\\bheadcount\\b|\\bsalesperson\\b|\\bl?kh?d+ama\\b|\\blmowadaf\\w*|شخص يعمل|اشخاص يعملون|فريق العمل|عن العمل|الناس اللي|\\bemploy(?:e|es|ee|ees)\\b|\\bsalari(?:e|es)\\b|\\bpersonnel\\b|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|\\beffectif\\b|\\bserveurs?\\b|\\bservers?\\b|\\bwaiters?\\b|\\bcuisiniers?\\b|\\bworkers?\\b|\\bcrew\\b|\\bvendeurs?\\b|\\bsalesperson\\b|\\bbossent\\b|\\btravaillent\\b|work(?:s|ing)? (?:for|with) me|people (?:who )?work|gens (?:qui )?(?:bossent|travaillent)|موظف|خدام|خدامة|(?:^|\\s)(?:ال)?عمال(?=\\s|$)|(?:^|\\s)(?:ال)?عامل(?=\\s|$)|العاملين|فريق|طاقم|تيم|الستاف|سيرفور|نادل|بياع|بائع|\\bkh?d+am\\b|\\bkhdama\\b|\\bkhadama\\b|\\blkhadama\\b|\\bmowadaf\\w*|\\bmwadaf\\w*|\\b3o?mmal\\b|\\btim\\b|\\bekip\\b|kaykhdmo|كيخدمو|ناس.{0,8}كيخدم|\\bnas kaykhdmo"),
-    shift: W("\\btravaill?e?\\b|\\bbosse\\b|\\bde service\\b|\\ben service\\b|\\ben poste\\b|\\bpointe\\b|\\bpresents?\\b|\\bshift\\b|\\bon duty\\b|\\bworking\\b|\\bclocked\\b|\\bscheduled\\b|\\bplanning\\b|\\bassure le service\\b|\\bcovering\\b|\\bprevu\\b|خدام(?!ة)|خدامين|كاين|فالخدمة|الخدمة|السيرفيس|الشيفت|البيرمانونس|يعمل|يعملون|المناوبة|المناوبون|وردية|مبرمج|\\bkh?d+am(?:in)?\\b|\\bservice\\b|\\bmprogrammi\\b"),
+    count: W("\\b7seb\\b|\\b7sb\\b|حسب ليا|احسب|\\bcompte (?:les|mes|tous)\\b|\\btotal des\\b|العدد الكلي|\\bf total\\b|\\bnombre total\\b|\\bcombien\\b|\\btaille\\b|how big|\\bheadcount\\b|\\bsize of\\b|اجمالي|مجموع|\\bcb\\b|\\bcbn\\b|\\bkombien\\b|\\bnombre\\b|\\bnbr?e?\\b|\\btotal\\b|how many|number of|\\bcount\\b|(?:^|\\s)كم(?=\\s|$)|شحال|قداش|عدد|\\b(?:a?ch|sh)(?:7|h)h?al\\b|\\b3adad\\b|\\ba3dad\\b|\\bchhal\\b"),
+    who: W("\\bchkoun\\b|\\bachkoun\\b|\\bachkon\\b|\\bj'?ai qui\\b|\\bwerini\\b|اعرض|سميات|\\bsmiyat\\b|\\bsmit\\b|\\bqui\\b|شنو هما|\\bki\\b|\\bwho\\b|\\blequel\\b|\\blaquelle\\b|\\blesquels\\b|\\bquels?\\b|\\bquelles?\\b|\\bkel\\b|\\bwhich\\b|شكون|اشكون|(?:^|\\s)من(?=\\s)|\\bchk(?:o|ou|u)n\\b|\\bachmen\\b|اشمن|\\bmontre\\b|\\bshow\\b|\\bliste?\\b|وريني|\\bwarini\\b|لائحة|اظهر|ما اسماء"),
+    staff: W("العاملون|عاملون|\\bl3ommal\\b|\\bstaff time\\b|عاملين|موظفين|\\bkheddam\\w*|\\blkheddam\\w*|\\bkhddamin\\b|\\bgens que j'?emploie\\b|\\bj'?emploie\\b|الطاكام|طاكم|موظفي|\\bheadcount\\b|\\bsalesperson\\b|\\bl?kh?d+ama\\b|\\blmowadaf\\w*|شخص يعمل|اشخاص يعملون|فريق العمل|عن العمل|الناس اللي|\\bemploy(?:e|es|ee|ees)\\b|\\bsalari(?:e|es)\\b|\\bpersonnel\\b|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|\\beffectif\\b|\\bserveurs?\\b|\\bservers?\\b|\\bwaiters?\\b|\\bcuisiniers?\\b|\\bworkers?\\b|\\bcrew\\b|\\bvendeurs?\\b|\\bsalesperson\\b|\\bbossent\\b|\\btravaillent\\b|work(?:s|ing)? (?:for|with) me|people (?:who )?work|gens (?:qui )?(?:bossent|travaillent)|موظف|خدام|خدامة|(?:^|\\s)(?:ال)?عمال(?=\\s|$)|(?:^|\\s)(?:ال)?عامل(?=\\s|$)|العاملين|فريق|طاقم|تيم|الستاف|سيرفور|نادل|بياع|بائع|\\bkh?d+am\\b|\\bkhdama\\b|\\bkhadama\\b|\\blkhadama\\b|\\bmowadaf\\w*|\\bmwadaf\\w*|\\b3o?mmal\\b|\\btim\\b|\\bekip\\b|kaykhdmo|كيخدمو|ناس.{0,8}كيخدم|\\bnas kaykhdmo"),
+    shift: W("\\bau boulot\\b|\\bau travail\\b|\\bkheddam\\b|\\bkhddamin\\b|\\bkheddamin\\b|\\btravaill?e?\\b|\\bbosse\\b|\\bde service\\b|\\ben service\\b|\\ben poste\\b|\\bpointe\\b|\\bpresents?\\b|\\bshift\\b|\\bon duty\\b|\\bworking\\b|\\bclocked\\b|\\bscheduled\\b|\\bplanning\\b|\\bassure le service\\b|\\bcovering\\b|\\bprevu\\b|خدام(?!ة)|خدامين|كاين|فالخدمة|الخدمة|السيرفيس|الشيفت|البيرمانونس|يعمل|يعملون|المناوبة|المناوبون|وردية|مبرمج|\\bkh?d+am(?:in)?\\b|\\bservice\\b|\\bmprogrammi\\b"),
     now: W("aujourd'?\\s?hui|\\bajd\\b|\\bauj\\b|\\btoday\\b|\\btonight\\b|\\bce soir\\b|\\bce matin\\b|\\bce jour\\b|\\bmaintenant\\b|\\bmnt\\b|\\bnow\\b|\\bactuellement\\b|en ce moment|\\bcurrently\\b|\\bthis evening\\b|اليوم|دابا|الليلة|هاد النهار|هاد العشية|الان|حاليا|هذا المساء|\\bly?ou?ma?\\b|\\bdaba\\b|\\blila\\b|\\bl3chiya\\b"),
-    top: W("\\bbiggest\\b|\\bgros\\b|en tete|متصدر|\\bbest-?selling\\b|\\bbestselling\\b|\\ble plus\\b|\\bla plus\\b|\\bles plus\\b|\\bmeilleur\\w*|\\bbest\\b|\\btop\\b|\\bmost\\b|\\ble mieux\\b|\\bnumero (?:un|1)\\b|\\bnumber one\\b|\\bpremier\\b|\\bhighest\\b|\\bstar\\b|\\bcartonne\\b|بزاف|اكثر|كثر|افضل|احسن|اعلى|اكبر|نمرة واحد|الاول|يتصدر|\\bbe?zaf\\b|\\bkt[ea]?r\\b|\\ba7san\\b|\\bafdal\\b|\\bakbar\\b|\\blowel\\b"),
-    low: W("\\ble moins\\b|\\bla moins\\b|\\bles moins\\b|\\bpire\\b|\\bworst\\b|\\bleast\\b|\\blowest\\b|\\bslowest\\b|\\bfewest\\b|\\bbottom\\b|\\ben bas\\b|\\ben dernier\\b|dernier (?:du|au|en) classement|\\ble dernier (?:produit|plat|article)|\\bmarche (?:le )?moins\\b|ne se vend pas|ne part pas|اقل|اسوا|اخر ترتيب|اخر منتوج|ما كيتباعش|ما كتتباعش|\\bma ?kaytba3ch\\b|\\bma ?kaymchich\\b|\\ba9al\\b|\\b9ell\\b|\\b9lil\\b|\\bakher\\b"),
-    sell: W("\\bbestselling\\b|best-selling|كياخدو|ياخدو|\\bkaykhodo\\b|\\bvend\\w*|\\bvente\\w*|\\bsell\\w*|\\bsold\\b|\\bseller\\b|\\bcommande\\w*|\\bordered\\b|\\bpart\\b|\\bmarche\\b|\\bpopular\\b|\\bclassement\\b|\\branking\\b|\\bchiffre\\b|\\brevenue\\b|\\bsales\\b|كيتباع|كتتباع|بعنا|\\bb3na\\b|تباع|تباعت|يباع|كيبيع|كنبيع|بيع|ابيع|باع|بعت|مبيع|مطلوب|كيمشي|ترتيب|شيفر|\\bkaytba3\\b|\\btba3t?\\b|\\bkaybi3\\b|\\bkanbi3\\b|\\bbi3\\b|\\bba3\\b|\\bventes?\\b|\\bkaymchi\\b"),
-    item: W("\\bqu'?\\s?est[- ]ce\\b|ما الذي|ماذا|اصناف|الاصناف|منتجات|المنتجات|عناصر|\\bentries\\b|\\bproduits?\\b|\\barticles?\\b|\\bplats?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\breferences?\\b|\\bboissons?\\b|\\bmeal\\b|\\bthing\\b|\\bce qui\\b|\\bwhat\\b|منتج|منتوج|صنف|طبق|وجبة|حاجة|بلات|سلعة|\\bproduit\\b|\\bplat\\b|\\barticle\\b|\\bsenf\\b|\\b7aja\\b|شنو|اشنو|\\bchno\\b|\\bachno\\b|\\bqu'?est[- ]ce\\b|\\bc'?est quoi\\b|\\bc quoi\\b"),
-    client: W("عميل|عميلا|العميل|عملايي|\\bclients?\\b|\\bclientes?\\b|\\bcustomers?\\b|\\bhabitues?\\b|\\bregulars?\\b|\\bacheteurs?\\b|زبون|زبناء|زبائن|زبائني|عملاء|عملائي|العملاء|كليان|الكليان|\\bk?l[iy]an\\b|\\bzbo?un\\b|\\bzbana\\b|\\blclients\\b"),
+    top: W("(?:^|\\s)حسن(?=\\s)|\\bhsen\\b|\\baktar\\b|\\bakthar\\b|اللول|\\blargest\\b|\\blkber\\b|لكبر|الكبر|\\bbiggest\\b|\\bgros\\b|en tete|متصدر|\\bbest-?selling\\b|\\bbestselling\\b|\\ble plus\\b|\\bla plus\\b|\\bles plus\\b|\\bmeilleur\\w*|\\bbest\\b|\\btop\\b|\\bmost\\b|\\ble mieux\\b|\\bnumero (?:un|1)\\b|\\bnumber one\\b|\\bpremier\\b|\\bhighest\\b|\\bstar\\b|\\bcartonne\\b|بزاف|اكثر|كثر|افضل|احسن|اعلى|اكبر|نمرة واحد|الاول|يتصدر|\\bbe?zaf\\b|\\bkt[ea]?r\\b|\\ba7san\\b|\\bafdal\\b|\\bakbar\\b|\\blowel\\b"),
+    low: W("\\blekher\\b|اللخر|\\bvery little\\b|\\ble moins\\b|\\bla moins\\b|\\bles moins\\b|\\bpire\\b|\\bworst\\b|\\bleast\\b|\\blowest\\b|\\bslowest\\b|\\bfewest\\b|\\bbottom\\b|\\ben bas\\b|\\ben dernier\\b|dernier (?:du|au|en) classement|\\ble dernier (?:produit|plat|article)|\\bmarche (?:le )?moins\\b|ne se vend pas|ne part pas|اقل|اسوا|اخر ترتيب|اخر منتوج|ما كيتباعش|ما كتتباعش|\\bma ?kaytba3ch\\b|\\bma ?kaymchich\\b|\\ba9al\\b|\\b9ell\\b|\\b9lil\\b|\\bakher\\b"),
+    sell: W("\\bpartis?\\b|بيعت|المباعة|بيعها|تباعت|تباعو|\\btba3at\\b|\\btba3o\\b|\\bvendues?\\b|خرجت|خرجات|\\bkanbi3ou\\b|كنبيعو|\\bkatba3\\b|\\bkatmchi\\b|كتمشي|\\bkaychri\\w*|كيشريو\\w*|يشتري\\w*|\\bbuys?\\b|\\bbought\\b|\\bbestselling\\b|best-selling|كياخدو|ياخدو|\\bkaykhodo\\b|\\bvend(?!redi)\\w*|\\bvente\\w*|\\bsell\\w*|\\bsold\\b|\\bseller\\b|\\bcommande\\w*|\\bordered\\b|\\bpart\\b|\\bmarche\\b|\\bpopular\\b|\\bclassement\\b|\\branking\\b|\\bchiffre\\b|\\brevenue\\b|\\bsales\\b|كيتباع|كتتباع|بعنا|\\bb3na\\b|تباع|تباعت|يباع|كيبيع|كنبيع|بيع|ابيع|باع|بعت|مبيع|مطلوب|كيمشي|ترتيب|شيفر|\\bkaytba3\\b|\\btba3t?\\b|\\bkaybi3\\b|\\bkanbi3\\b|\\bbi3\\b|\\bba3\\b|\\bventes?\\b|\\bkaymchi\\b"),
+    item: W("\\bmakla\\b|ماكلة|\\bmenu item\\b|\\bqu'?\\s?est[- ]ce\\b|ما الذي|ماذا|اصناف|الاصناف|منتجات|المنتجات|عناصر|\\bentries\\b|\\bproduits?\\b|\\barticles?\\b|\\bplats?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\breferences?\\b|\\bboissons?\\b|\\bmeal\\b|\\bthing\\b|\\bce qui\\b|\\bwhat\\b|منتج|منتوج|صنف|طبق|وجبة|حاجة|بلات|سلعة|\\bproduit\\b|\\bplat\\b|\\barticle\\b|\\bsenf\\b|\\b7aja\\b|شنو|اشنو|\\bchno\\b|\\bachno\\b|\\bqu'?est[- ]ce\\b|\\bc'?est quoi\\b|\\bc quoi\\b"),
+    client: W("عملاينا|عملاين|\\bvisitors?\\b|عميل|عميلا|العميل|عملايي|\\bclients?\\b|\\bclientes?\\b|\\bcustomers?\\b|\\bhabitues?\\b|\\bregulars?\\b|\\bacheteurs?\\b|زبون|زبناء|زبائن|زبائني|عملاء|عملائي|العملاء|كليان|الكليان|\\bk?l[iy]an\\b|\\bzbo?u?n\\b|\\bzbana\\b|\\blclients\\b"),
     spend: W("\\bachats?\\b|\\bpurchases?\\b|\\btotal spend\\b|ينفق|الانفاق|مشتريات|المشتريات|الشريات|فلوس|\\bflous\\b|\\bkaykhelli\\b|depense\\w*|\\bspends?\\b|\\bspent\\b|\\bfidele\\b|\\bloyal\\b|\\bbig spender\\b|\\bachete le plus\\b|\\bpaie le plus\\b|كيصرف|يصرف|انفق|\\bkayserf\\b|كيخلص|\\bkaykhelles\\b"),
     points: W("\\brewards?\\b|رصيد|الوفاء|الولاء|\\bpoints?\\b|\\bpts\\b|\\bstamps?\\b|\\btampons?\\b|\\bfidelite\\b|\\bloyalty\\b|(?:^|\\s)[بل]?(?:ال)?(?:نقاط|نقطة|نقط)(?=\\s|$)|بوان|\\bpwan?\\b|\\bno9at\\b|\\bnu9at\\b"),
     notPoints: W("points? de vente|\\bpoint mort\\b|break[- ]?even|seuil de rentab|نقطة التعادل|fais le point|faire le point"),
-    gone: W("hasn'?t (?:come|been) back|has not come back|didn'?t come back|rje3|(?:pas|plus) (?:re)?venus?\\b|ne revien\\w* plus|\\breviennent plus\\b|ne vient plus|arrete de venir|cesse de venir|remis les pieds|\\bdisparu\\b|\\bperdus?\\b|\\binactifs?\\b|\\bdormants?\\b|\\babsents?\\b|\\bchurn\\b|\\blost\\b|\\blapsed\\b|\\binactive\\b|stopped (?:coming|visiting)|no longer come|haven'?t (?:come back|returned|visited)|not come back|haven'?t seen|لم يعود|لم يعد|لم يرجع|توقفوا|انقطعوا|غير النشطين|الغائبين|ما بقاو|ما بقا|ما بقاش|ما رجع|ما جاو|ما كيجيش|حبسو|غبرو|قطعو|\\bma ?b9aw?c?h?\\b|\\bma ?rje3c?h\\b|\\bma ?jawch\\b|\\bghber\\b|\\b9te3\\b|\\b7ebso\\b"),
-    out: W("presque plus|\\bbientot\\b.{0,12}(?:manquer|reapprovision)|اوشكت|قاربت|غير (?:ال)?متوفر|\\brupture\\w*|\\bepuise\\w*|out of stock|\\bsold out\\b|\\brun(?:ning)? (?:out|low)\\b|\\bran out\\b|\\balmost out\\b|\\blow stock\\b|\\bstock faible\\b|\\bhors stock\\b|\\bindisponibles?\\b|\\bmanque\\w*|\\bpresque (?:finis|plus|epuise)|\\bnearly finished\\b|\\breapprovision\\w*|\\breplenish\\w*|نفد|نافد|النفاد|سالا|سالاو|تسالي|يسالي|ما بقاش|ما بقاوش|ناقص|غير متوفر|منخفض|اعادة تخزين|نعاود نجيب|\\bsala\\b|\\bsalaw\\b|\\bysali\\b|\\bna9es\\b|\\bmab9aw?ch\\b|\\bma b9aw?ch\\b|\\bchwiya\\b|شوية"),
+    gone: W("\\bne viennent plus\\b|\\bcesse\\w*|\\bno longer\\b|\\bused to\\b|مقاطع|\\bm9ate3\\b|\\bma rj3o?u?ch\\b|ما رجعوش|hasn'?t (?:come|been) back|has not come back|didn'?t come back|rje3|(?:pas|plus) (?:re)?venus?\\b|ne revien\\w* plus|\\breviennent plus\\b|ne vient plus|arrete de venir|cesse de venir|remis les pieds|\\bdisparu\\b|\\bperdus?\\b|\\binactifs?\\b|\\bdormants?\\b|\\babsents?\\b|\\bchurn\\b|\\blost\\b|\\blapsed\\b|\\binactive\\b|stopped (?:coming|visiting)|no longer come|haven'?t (?:come back|returned|visited)|not come back|haven'?t seen|لم يعود|لم يعد|لم يرجع|توقفوا|انقطعوا|غير النشطين|الغائبين|ما بقاو|ما بقا|ما بقاش|ما رجع|ما جاو|ما كيجيش|حبسو|غبرو|قطعو|\\bma ?b9aw?c?h?\\b|\\bma ?rje3c?h\\b|\\bma ?jawch\\b|\\bghber\\b|\\b9te3\\b|\\b7ebso\\b"),
+    out: W("en train de finir|\\bleft very little\\b|انتهى|انتهت|\\byenfed\\b|\\b9reb\\b|قرب يسالي|قربات تسالي|presque plus|\\bbientot\\b.{0,12}(?:manquer|reapprovision)|اوشكت|قاربت|غير (?:ال)?متوفر|\\brupture\\w*|\\bepuise\\w*|out of stock|\\bsold out\\b|\\brun(?:ning)? (?:out|low)\\b|\\bran out\\b|\\balmost out\\b|\\blow stock\\b|\\bstock faible\\b|\\bhors stock\\b|\\bindisponibles?\\b|\\bmanque\\w*|\\bpresque (?:finis|plus|epuise)|\\bnearly finished\\b|\\breapprovision\\w*|\\breplenish\\w*|نفد|نافد|النفاد|سالا|سالاو|تسالي|يسالي|ما بقاش|ما بقاوش|ناقص|غير متوفر|منخفض|اعادة تخزين|نعاود نجيب|\\bsala\\b|\\bsalaw\\b|\\bysali\\b|\\bna9es\\b|\\bmab9aw?ch\\b|\\bma b9aw?ch\\b|\\bchwiya\\b|شوية"),
     stock: W("\\bstocks?\\b|\\bstok\\b|\\binventaire\\b|\\binventory\\b|\\bstockage\\b|\\bingredients?\\b|\\bmagasin\\b|ستوك|مخزون|المخزون|الخزين|سلعة|مواد|المكونات|\\bstock\\b"),
     close: W("\\bferm\\w*|\\bclos\\w*|\\bshut\\b|baisse le rideau|termine le service|\\bfermeture\\b|نغلق|يغلق|اغلاق|الاغلاق|كنسدو|نسدو|غنسدو|كيسد|غيتسد|السد|كنساليو|\\b(?:kan|ghan|n)se?dd?o\\b|\\bkaysed\\b|\\bsedd?\\b|\\bkantsaliw\\b|\\bfermeture\\b"),
-    open: W("(?:المحل|الحانوت|القهوة|الريسطو|المطعم)(?: ديالي)? خدام|\\bstart business\\b|افتتاح|يفتح|فتح|مفتوحون|\\bouvert\\w*|\\bouvr\\w*|\\bouverture\\b|\\bopen\\w*|\\bcommence\\b|محلول|محلولة|محلولين|كنحلو|نحلو|يتحل|كيتحل|نفتح|كنفتحو|مفتوح|الفتح|\\bma7lou?l\\w*|\\bkan7ell?o\\b|\\bn7ell?o\\b|\\bkayt7el\\b|\\bt7el\\b|\\bkanfet7o\\b|\\blfe\\S*7\\b|\\bfet7\\b"),
-    when: W("\\bsavoir si\\b|\\best ouvert\\b|\\bsommes ouverts?\\b|\\bc ouvert\\b|هل|quelle heure|kel heure|\\bquand\\b|\\bwhen\\b|what time|\\bheure\\b|\\bhoraires?\\b|\\btime\\b|\\bhours?\\b|\\ba cb\\b|\\ba combien\\b|\\bvers\\b|est[- ]ce qu|\\bare we\\b|\\bis (?:the|my|it|our)\\b|\\bwach\\b|واش|فوقاش|وقتاش|فاش|امتى|متى|موعد|وقت|ساعة|فالساعة|حتى لشحال|مع شحال|في كم|\\bfo9ach\\b|\\bfach\\b|\\bwa9tach\\b|\\bwe9t\\b|\\bsa3a\\b|\\bimta\\b|\\b7ta\\b"),
+    open: W("\\bm7ell\\w*|\\bkay7ell\\b|كيحل|الحلان|\\bl7ell\\b|\\bkan7ellou\\b|(?:المحل|الحانوت|القهوة|الريسطو|المطعم)(?: ديالي)? خدام|\\bstart business\\b|افتتاح|يفتح|فتح|مفتوحون|\\bouvert\\w*|\\bouvr\\w*|\\bouverture\\b|\\bopen\\w*|\\bcommence\\b|محلول|محلولة|محلولين|كنحلو|نحلو|يتحل|كيتحل|نفتح|كنفتحو|مفتوح|الفتح|\\bma7lou?l\\w*|\\bkan7ell?o\\b|\\bn7ell?o\\b|\\bkayt7el\\b|\\bt7el\\b|\\bkanfet7o\\b|\\blfe\\S*7\\b|\\bfet7\\b"),
+    when: W("\\bm3a ch7al\\b|\\bm3a chhal\\b|\\b7ta l ?ch7al\\b|\\bwe9tach\\b|معا شحال|\\best ouverte?s?\\b|tout de suite|\\bwla la\\b|ولا لا|\\bsavoir si\\b|\\best ouvert\\b|\\bsommes ouverts?\\b|\\bc ouvert\\b|هل|quelle heure|kel heure|\\bquand\\b|\\bwhen\\b|what time|\\bheure\\b|\\bhoraires?\\b|\\btime\\b|\\bhours?\\b|\\ba cb\\b|\\ba combien\\b|\\bvers\\b|est[- ]ce qu|\\bare we\\b|\\bis (?:the|my|it|our)\\b|\\bwach\\b|واش|فوقاش|وقتاش|فاش|امتى|متى|موعد|وقت|ساعة|فالساعة|حتى لشحال|مع شحال|في كم|\\bfo9ach\\b|\\bfach\\b|\\bwa9tach\\b|\\bwe9t\\b|\\bsa3a\\b|\\bimta\\b|\\b7ta\\b"),
     notHours: W("heure de pointe|heures? de pointe|\\brush\\b|\\bpeak\\b|ouvr\\w* le (?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)|\\bdois\\b|\\bdoit\\b|faut[- ]il|vaut le coup|\\bramadan\\b|\\baid\\b|\\beid\\b|\\bferie|\\bholiday|\\bconges?\\b|\\bvacances?\\b|رمضان|العيد|عطلة|chiffre d'?affaire|\\bbenefice|\\bmarges?\\b|\\bcouts?\\b|\\bsalaires?\\b|cloture de caisse|fermeture de caisse|\\bcommandes? (?:sont )?ouvertes\\b|open orders|tables? ouvertes|\\bset opening\\b|\\bmodifi\\w*|\\bchange\\w*|\\bdevrais\\b|\\bshould\\b|\\brentable\\b|\\bdeuxieme\\b|\\bsecond (?:shop|store)\\b|\\bnouveau (?:magasin|resto|cafe)\\b|\\bouvrir (?:un|une)\\b"),
-    revenue: W("bring in|brought in|\\bchiffre\\b|\\b(?:mon|le|du|son|notre) ca\\b|\\bca (?:du|de|ce|d'?aujourd|mensuel|ajd|aujourd)|\\bc\\.a\\b|\\brecettes?\\b|\\bencaiss\\w*|\\bgagne\\w*|\\bfait\\b|\\bmade\\b|\\bmake\\b|\\bearn\\w*|\\brevenue\\b|\\bsales\\b|\\btakings\\b|\\bturnover\\b|\\bventes?\\b|\\bvendu\\b|\\brapporte\\w*|\\bbrought in\\b|\\btaken\\b|\\bincome\\b|مبيعات|المبيعات|ايرادات|الايرادات|دخل|دخلت|ربح|درت|درنا|بعت|بعنا|باع|الكا|الشيفر|شيفر|رقم المعاملات|جاب|\\bdkhal\\b|\\bdkhe?lt?\\b|\\bdert\\b|\\bderna\\b|\\bb3t\\b|\\bb3na\\b|\\bba3\\b|\\brba7\\b|\\bchiffre\\b|\\blka\\b|\\bjab\\b|\\bdakhel\\b"),
+    revenue: W("\\bdkhelna\\b|دخلنا|\\bmadakhil\\b|مداخيل|المداخيل|بالفلوس|\\bb flous\\b|bring in|brought in|\\bchiffre\\b|\\b(?:mon|le|du|son|notre) ca\\b|\\bca (?:du|de|ce|d'?aujourd|mensuel|ajd|aujourd)|\\bc\\.a\\b|\\brecettes?\\b|\\bencaiss\\w*|\\bgagne\\w*|\\bfait\\b|\\bmade\\b|\\bmake\\b|\\bearn\\w*|\\brevenue\\b|\\bsales\\b|\\btakings\\b|\\bturnover\\b|\\bventes?\\b|\\bvendu\\b|\\brapporte\\w*|\\bbrought in\\b|\\btaken\\b|\\bincome\\b|مبيعات|المبيعات|ايرادات|الايرادات|دخل|دخلت|ربح|درت|درنا|بعت|بعنا|باع|الكا|الشيفر|شيفر|رقم المعاملات|جاب|\\bdkhal\\b|\\bdkhe?lt?\\b|\\bdert\\b|\\bderna\\b|\\bb3t\\b|\\bb3na\\b|\\bba3\\b|\\brba7\\b|\\bchiffre\\b|\\blka\\b|\\bjab\\b|\\bdakhel\\b"),
     month: W("\\bmois\\b|\\bmonth\\w*|\\bmensuel\\w*|الشهر|شهر|\\bch(?:h|7)a?r\\b|\\bchhr\\b|\\bce mois\\b"),
     orders: W("\\btalab\\w*|طلب|\\bcommandes?\\b|\\btickets?\\b|\\borders?\\b|\\btransactions?\\b|\\bfactures?\\b|\\bventes\\b|\\bsales\\b|\\bcouverts?\\b|\\breceipts?\\b|كوموند|كومند|طلبات|طلبية|الطلبات|تيكي|تيكيات|فاتورة|فواتير|عملية بيع|بيعات|\\bcommandat?\\b|\\btiki\\w*\\b|\\bcomand\\w*"),
-    avg: W("\\bmoyen\\w*|\\baverage\\b|\\bavg\\b|\\bmean\\b|\\bper (?:ticket|order|sale|customer)\\b|\\bpar (?:ticket|commande|vente|client|achat)\\b|معدل|متوسط|المتوسط|المعدل|موايان|البانيي|\\bmo3adal\\b|\\blmo3adal\\b|\\bmoyenne\\b"),
+    avg: W("مويان|\\bmoyen\\b|\\bmoyen\\w*|\\baverage\\b|\\bavg\\b|\\bmean\\b|\\bper (?:ticket|order|sale|customer)\\b|\\bpar (?:ticket|commande|vente|client|achat)\\b|معدل|متوسط|المتوسط|المعدل|موايان|البانيي|\\bmo3adal\\b|\\blmo3adal\\b|\\bmoyenne\\b"),
     menu: W("قايمتي|قايمة الطعام|قايمة|مدرج|\\bentries\\b|كتالوج|\\bmenu\\b|\\bcarte\\b|\\bcatalogu?e?\\b|\\bcatalog\\b|المنيو|المينيو|الكارط|القائمة|الكاتالوغ|كاطالوغ|الكاطالوغ|منيو|\\bmenu\\b|\\bcarte\\b|\\bcatalogue\\b|\\bdans ma boutique\\b|\\bau magasin\\b|\\benregistres?\\b|\\blistes?\\b|مسجل|\\bmsajel\\b|\\bchoix\\b|اختيار|\\bin stock\\b|\\bje propose\\b"),
-    menuItem: W("\\bentries\\b|عناصر|\\bplats?\\b|\\bproduits?\\b|\\barticles?\\b|\\breferences?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\bchoix\\b|\\boptions?\\b|بلات|بلاتوات|منتوج|منتج|منتجات|اطباق|الاطباق|صنف|اصناف|آرتيكل|ارتيكل|حاجة|اختيار|\\bplat\\b|\\bsenf\\b|\\barticle\\b|\\bproduit\\b"),
+    menuItem: W("طبق|ماكلة|ماكلات|برودوي|\\bmakla\\b|\\bentries\\b|عناصر|\\bplats?\\b|\\bproduits?\\b|\\barticles?\\b|\\breferences?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\bchoix\\b|\\boptions?\\b|بلات|بلاتوات|منتوج|منتج|منتجات|اطباق|الاطباق|صنف|اصناف|آرتيكل|ارتيكل|حاجة|اختيار|\\bplat\\b|\\bsenf\\b|\\barticle\\b|\\bproduit\\b"),
     notStaffCount: W("راتب|ساعات|\\bheures\\b|\\bhours\\b|\\bworked\\b|licenci|layoff|lay off|\\bvirer\\b|\\bfire\\b|renvoy|econom|\\bsave\\b|kankhelles|nkhelles|كنخلص|نخلص|\\bcoute\\w*|\\bcout\\b|\\bcost\\w*|\\bembauch\\w*|\\brecrut\\w*|\\bhir(?:e|ing)\\b|\\bsalaires?\\b|\\brawatib\\b|رواتب|يكلف|توظيف|\\bpay(?:roll)?\\b|\\bpaie\\b"),
   };
   /* The order is the precedence: the most specific question wins. */
@@ -1021,7 +1098,7 @@
    * margin question, a season, a past period. agent.js owns those. */
   var NOT_OWN = W("je veux (?:gagner|faire|atteindre)|j'?aimerais (?:gagner|faire)|i want to (?:make|earn|hit)|\\bobjectif\\b|\\btarget\\b|\\bgoal\\b|بغيت نربح|اريد ربح|هدفي|\\bhadaf\\b");
   /* An order to the app, not a question: the operation routes own it. */
-  var COMMAND = W("^(?:stp |svp |please |عفاك )?(?:ajoute\\w*|add|supprime\\w*|delete|remove|annule\\w*|cancel|modifie\\w*|change|set|mets|met|envoie\\w*|send|cree\\w*|create|enregistre\\w*|ecris|write|zid|nzid)\\b|^(?:عفاك )?(?:زيد|ضيف|حيد|بدل|بدّل|صيفط|ارسل|اضف|احذف|الغ|غير|سجل)(?=\\s|$)|\\b(?:send|envoie\\w*)\\b.{0,30}\\b(?:message|sms|whatsapp)|(?:صيفط|ارسل).{0,30}(?:رسالة|ميساج)");
+  var COMMAND = W("^(?:stp |svp |please |عفاك )?(?:ajoute\\w*|add|supprime\\w*|delete|remove|annule\\w*|cancel|modifie\\w*|change|set|mets|met|envoie\\w*|send|cree\\w*|create|enregistre\\w*|ecris|write|zid|nzid|bdel|beddel|khlli|khalli|7yed|7ayed|lghi|ilghi)\\b|^(?:عفاك )?(?:اجعل|خلي|لغي|حط|دير|زيد|ضيف|حيد|بدل|بدّل|صيفط|ارسل|اضف|احذف|الغ|غير|سجل)(?=\\s|$)|\\b(?:send|envoie\\w*)\\b.{0,30}\\b(?:message|sms|whatsapp)|(?:صيفط|ارسل).{0,30}(?:رسالة|ميساج)");
   var PAID_OUT = W("دفعت|دفعنا|خلصت|خلصنا|\\bkhlle?st\\b|\\bpaye\\b|\\bpaid\\b|\\bdecaiss\\w*|\\bspent on\\b|\\bsorti de (?:la )?caisse\\b");
   var LATER = W("\\bdemain\\b|\\btomorrow\\b|غدا|غدوة|\\bghda\\b|\\bghedda\\b|apres[- ]demain|la semaine prochaine|next week");
   var HOWTO = W("^(?:comment (?!va\\b|ca va)|how (?:do|to|can|does|should)\\b|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b)|\\bwach kayn\\b|est.ce qu'?il y a");
@@ -1029,7 +1106,7 @@
   var MONEY_TALK = W("\\bmarges?\\b|\\bmargin\\b|benefice|\\bprofit|rentab|break.?even|\\bseuil\\b|\\bgagn\\w*|\\bearn\\w*|\\bincome\\b|\\bnet\\b|ربح|ارباح|\\brba7\\b|\\bargent\\b|\\bcash\\b|tresorerie|\\bmoney\\b|\\bflous\\b|فلوس|\\bcouter\\b|\\bcoute\\b|\\bcost\\b|\\bbaiss\\w*|\\bhausse\\b|augment\\w*|\\bdrop\\w*|\\bcompar\\w*");
   var SEASON = W("\\bramadan\\b|\\bramdan\\b|\\baid\\b|\\beid\\b|\\bete\\b|\\bsummer\\b|\\bhiver\\b|\\bwinter\\b|\\bsaison\\w*|\\bseason\\w*|رمضان|العيد|الصيف|الشتاء|موسم");
   var OTHER_DAY = W("\\bhier\\b|\\byesterday\\b|avant[- ]hier|البارح|البارحة|(?:^|\\s)امس|\\blbare7\\b|\\blundi\\b|\\bmardi\\b|\\bmercredi\\b|\\bjeudi\\b|\\bvendredi\\b|\\bsamedi\\b|\\bdimanche\\b|\\bjanvier\\b|\\bfevrier\\b|\\bmars\\b|\\bavril\\b|\\bmai\\b|\\bjuin\\b|\\bjuillet\\b|\\baout\\b|\\bseptembre\\b|\\boctobre\\b|\\bnovembre\\b|\\bdecembre\\b|\\bsemaine\\b|\\bweek\\b|\\blast\\b|dernier|derniere|passee?\\b|الماضي|الاسبوع");
-  var COUNT_OF = W("\\bcount\\b|\\b3adad\\b|\\bnombre\\b|combien d|\\bcb d|how many|number of|nombre d|\\bnbr? d|عدد|(?:^|\\s)كم(?=\\s)|شحال من|شحال ديال|\\b(?:ch|sh)(?:7|h)h?al (?:mn|d)\\b");
+  var COUNT_OF = W("\\b(?:ch|sh)(?:7|h)h?al\\b.{0,20}\\bmn\\b|حسب ليا|احسب|\\b7seb\\b|\\bcompte (?:les|mes)\\b|العدد الكلي|\\bcount\\b|\\b3adad\\b|\\bnombre\\b|combien d|\\bcb d|how many|number of|nombre d|\\bnbr? d|عدد|(?:^|\\s)كم(?=\\s)|شحال من|شحال ديال|\\b(?:ch|sh)(?:7|h)h?al (?:mn|d)\\b");
   /* An order to change data (« change closing time to 11 », « ajoute 20
    * points à Salma ») used to come back as a reading of that data. The
    * assistant never writes to the books: it says so and opens the page where
@@ -1037,11 +1114,11 @@
    * ticket number stays with the operation lane, which can move an order. */
   var CMD_TARGETS = [
     { rx: W("\\bpoints?\\b|fidelit|loyalty|نقط|\\bn9at\\b|\\bclients?\\b|\\bcustomers?\\b|زبون|زبناء|كليان|\\bklyan\\b"), page: 'pClients', h: 'clients-directory' },
-    { rx: W("horaire|\\bheures? d|\\bouverture\\b|\\bfermeture\\b|closing|opening|\\bhours\\b|وقت|ساعات|الاغلاق|الفتح|\\bsa3a\\b"), page: 'pHours', h: 'settings-hours' },
+    { rx: W("horaire|\\bheures? d|\\bouverture\\b|\\bfermeture\\b|closing|opening|\\bhours\\b|وقت|ساعات|الاغلاق|الفتح|السدان|\\bsdan\\b|\\bl7ell\\b|\\bwa9t\\b|\\bsa3a\\b"), page: 'pHours', h: 'settings-hours' },
     { rx: W("employe|serveur|caissier|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|employee|worker|waiter|خدام|موظف|عامل|\\bkhddam\\b|\\bkhdam\\b"), page: 'pTeam', h: 'nav-equipe' },
     { rx: W("\\bstock\\b|inventaire|inventory|مخزون|\\bstok\\b"), page: 'pStock', h: 'nav-stock' },
     { rx: W("\\bcommandes?\\b|\\bventes?\\b|\\btickets?\\b|\\borders?\\b|\\bsales?\\b|طلب|طلبات|كوموند|\\bcommande\\b"), page: 'pOrders', h: 'nav-transactions' },
-    { rx: W("\\bplats?\\b|\\bmenu\\b|\\bcarte\\b|\\bdish|\\bprix\\b|\\bprice\\b|produit|product|article|\\bitem\\b|منيو|طبق|منتوج|سلعة|ثمن|\\bplat\\b"), page: 'pMenu', h: 'nav-menu' },
+    { rx: W("\\bplats?\\b|\\bmenu\\b|\\bcarte\\b|\\bdish|\\bprix\\b|\\bprice\\b|produit|product|article|\\bitem\\b|منيو|مينيو|طبق|منتوج|سلعة|ثمن|سعر|تمن|\\btaman\\b|\\bplat\\b"), page: 'pMenu', h: 'nav-menu' },
   ];
   var CMD_T = {
     fr: 'Je ne modifie pas vos données depuis cette conversation : la modification se fait sur la page, avec vos droits.',
@@ -1073,20 +1150,32 @@
     if (target.h === 'nav-menu' && !window.KiwiMenuStore && window.KiwiBoutiqueCatalog) target = { page: 'pStock', h: 'nav-catalogue' };
     return { text: CMD_T[L] || CMD_T.fr, open: open1(L, target.page, target.h) };
   }
+  var WEEKDAY = W("\\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|monday|tuesday|wednesday|thursday|friday|saturday|sunday|tnin|tlat|larb3a|lkhmis|jjem3a|jem3a|ssebt|sebt|l7ed)\\b|الاثنين|الثلاثاء|الاربعاء|الخميس|الجمعة|السبت|الاحد|نهار الجمعة");
+  var REFUND_W = W("rembours\\w*|\\brefund\\w*|\\bannul\\w*|\\bcancel\\w*|\\bvoid\\w*|استرجاع|استرداد|مرجوع|ملغ|الغاء|\\brj3o\\b|\\bmrjou3\\b");
+  var BEST_DAY = W("(?:meilleur\\w*|\\bbest\\b|\\btop\\b|احسن|افضل|\\ba7san\\b|\\bafdal\\b)\\s+(?:\\w+\\s+){0,2}(?:jour\\w*|\\bday\\b|نهار|يوم|\\bnhar\\b)|(?:jour|day|نهار|\\bnhar\\b)\\s+(?:ou |where |li )?(?:j'?ai |i |)(?:le plus|the most|most|كثر|بعت فيه كثر|\\bktar\\b)");
+  var WORST_DAY = W("(?:pire|\\bworst\\b|plus faible|plus mauvais\\w*|اسوا|اضعف|\\bkhayb\\b)\\s+(?:\\w+\\s+){0,2}(?:jour\\w*|\\bday\\b|نهار|يوم|\\bnhar\\b)|(?:jour|day|نهار|\\bnhar\\b)\\s+(?:ou |where |li )?(?:j'?ai |i |)(?:le moins|the least|least|قل|\\bqell?\\b)");
+  /* « le meilleur jour pour ouvrir / lancer une promo » asks for advice. */
+  var AIM_DAY = W("(?:jour|day|نهار|\\bnhar\\b)\\s+(?:pour|to|for)\\b|(?:jour|day|نهار|\\bnhar\\b)\\s+(?:باش|\\bbach\\b)");
+  var CASH_PAY = W("\\ben (?:liquide|especes|cash)\\b|\\bliquide\\b|\\bin cash\\b|\\bcash (?:takings|payments?|recus?|received|sales|pay\\w*)\\b|\\bpa(?:y|id) (?:in )?cash\\b|نقدا|النقد|النقدية|بالكاش|\\bna9dan\\b|\\bkhlas cash\\b|\\bcash lyoum\\b|\\bpaiements en cash\\b");
+  var DAYS_W = W("\\bjours?\\b|\\bdays?\\b|\\bweekdays?\\b|نهار|ايام|يوم|يوما|\\bnhar\\b|\\bnharat\\b|\\biyam\\b|\\byoum\\b");
+  var OPENISH = W("ouvr|\\bopen|\\boperate|عمل|الخدمة|فتح|افتتاح|نستقبل|كنستقبلو|\\bkansta9blo\\b|7ell|t7el|محلول|كيتحل|\\bma7loul\\b|ouverture");
+  var WEEK_W = W("semaine|hebdo|\\bweek\\w*|سيمانة|اسبوع|\\bsimana\\b|\\bsmana\\b");
   var LAST_MONTH = W("mois (?:dernier|passe|precedent)|last month|previous month|الشهر (?:الماضي|اللي فات|الفايت|السابق|لي فات)|\\bch(?:h|e)?ar (?:li |l)?fa(?:t|yt)\\b|\\bchhr li fat\\b");
-  var CASH_BOX = W("(?:dans|in|en) (?:la |ma |the |my )?(?:caisse|tiroir|drawer|till)\\b|\\bf(?:e|i)? ?(?:sndo9|sendo9|sndoq|snadq)\\b|فالصندوق|في الصندوق|فصندوق|فالكاسة|\\bcash\\b.{0,25}\\b(?:aujourd|today|lyoum|lyouma)|\\bespeces\\b.{0,25}\\b(?:aujourd|today)|كاش اليوم");
+  var CASH_BOX = W("فالدرج|الدرج|الكاسة|\\btiroir\\b|(?:dans|in|en) (?:la |ma |the |my )?(?:caisse|tiroir|drawer|till)\\b|\\bf(?:e|i)? ?(?:sndo9|sendo9|sndoq|snadq)\\b|فالصندوق|في الصندوق|فصندوق|فالكاسة|\\bcash\\b.{0,25}\\b(?:aujourd|today|lyoum|lyouma)|\\bespeces\\b.{0,25}\\b(?:aujourd|today)|كاش اليوم");
   var WEEK_DAYS = W("(?:\\bjours?\\b|\\bdays?\\b|نهار|ايام|يوما|يوم|\\bnhar\\b|\\biyam\\b).{0,30}(?:ouvr|\\bopen|travaill|\\bwork|نعمل|تعمل|نفتح|مفتوح|كنخدمو|نخدمو|كنحلو|خدامين|\\bkhdmo\\b|\\bkn?khdmo\\b|\\bkan7ellou\\b)|(?:ouvert|\\bopen\\b).{0,20}(?:par semaine|per week|a week)");
-  var HRS_WORD = W("\\bheures?\\b|\\bhours?\\b|ساعات|ساعة|سوايع|\\bsway3\\b|\\bsa3at\\b|\\bsa3a\\b");
-  var WORK_VERB = W("travaill|\\bbosse|\\bworked\\b|\\bwork\\b|خدمو|\\bkhdmo\\b|\\bkhedmo\\b");
+  var HRS_WORD = W("combien de temps|how long|time worked|staff time|\\bswa3e3\\b|\\bswaye3\\b|\\bheures?\\b|\\bhours?\\b|ساعات|ساعة|سوايع|\\bsway3\\b|\\bsa3at\\b|\\bsa3a\\b");
+  var WORK_VERB = W("اشتغل\\w*|بوانتاو|\\bbwantaw\\b|\\bkhedmo\\b|\\bkhedma\\b|الخدمة|سجلو|\\bworked\\b|travaill|\\bbosse|\\bworked\\b|\\bwork\\b|خدمو|\\bkhdmo\\b|\\bkhedmo\\b");
   var PRESENT = W("موجود|حاضر|\\bpresents?\\b|\\best la\\b|\\bsont la\\b|\\bthere\\b|\\bhere\\b|\\bkayn\\b|كاين|\\bici\\b");
-  var VISITED = W("\\bvenus?\\b|\\bvenues?\\b|\\bpasse(?:s|e|es)?\\b|\\bcame\\b|\\bcome in\\b|\\bvisit\\w*|\\bja\\b|\\bjaw\\b|\\bdaz\\b|\\bdazo\\b|(?:^|\\s)(?:جا|جاو|جاؤوا|جاءوا|جاووا|جاء|داز|دازو|زار|زارو|زاروا|حضر|حضروا|اجا|اتى|اتوا)(?=\\s|$)");
-  var LAST_VISIT = W("derniere (?:fois|visite)|last (?:time|visit)|\\blast (?:came|come|visited)\\b|\\bvisit(?:ed)? last\\b|\\bcame (?:in )?last\\b|quand (?:est|a|etait)|when did|when was|اخر مرة|اخر زيارة|\\bakhir mra\\b|\\bakher mra\\b|فوقاش|\\bfo9ach\\b|امتى|متى");
-  var CONTACT = W("\\bnumero\\b|\\btelephone\\b|\\btel\\b|\\bphone\\b|\\bcontact\\b|\\bemail\\b|\\bnemra\\b|رقم|نمرة|تيليفون|الهاتف");
-  var UNIT_WORD = W("\\barticles?\\b|\\bproduits?\\b|\\bpieces?\\b|\\bunites?\\b|\\bunits?\\b|\\bitems?\\b|\\bplats?\\b|منتوج|منتجات|منتج|سلعة|حاجة|حوايج|\\bmontoj\\b|\\bproduit\\b");
+  var VISITED = W("\\bhere\\b|\\bdazou\\b|\\bzarouna\\b|\\bjaw\\b|(?:^|\\s)(?:زارونا|زارنا|قدموا|مروا|مرو|دازو|جاو)(?=\\s|$)|\\bvenus?\\b|\\bvenues?\\b|\\bpasse(?:s|e|es)?\\b|\\bcame\\b|\\bcome in\\b|\\bvisit\\w*|\\bja\\b|\\bjaw\\b|\\bdaz\\b|\\bdazo\\b|(?:^|\\s)(?:جا|جاو|جاؤوا|جاءوا|جاووا|جاء|داز|دازو|زار|زارو|زاروا|حضر|حضروا|اجا|اتى|اتوا)(?=\\s|$)");
+  var LAST_VISIT = W("last here|last (?:come|came)|\\bakhe?r merr?a\\b|\\bakher mra\\b|\\bdate\\b|تاريخ اخر|شحال هادي ما|\\bch7al hadi ma\\b|how long since|derniere (?:fois|visite)|last (?:time|visit)|\\blast (?:came|come|visited)\\b|\\bvisit(?:ed)? last\\b|\\bcame (?:in )?last\\b|quand (?:est|a|etait)|when did|when was|اخر مرة|اخر زيارة|\\bakhir mra\\b|\\bakher mra\\b|فوقاش|\\bfo9ach\\b|امتى|متى");
+  var CONTACT = W("\\bcontact\\w*|تواصل|اتواصل|الاتصال|نتاصل|\\bntasel\\b|\\bnemro\\b|هاتف|\\bjoindre\\b|\\bappeler\\b|\\bnumero\\b|\\btelephone\\b|\\btel\\b|\\bphone\\b|\\bcontact\\b|\\bemail\\b|\\bnemra\\b|رقم|نمرة|تيليفون|الهاتف");
+  var UNIT_WORD = W("قطعة|قطع|القطع|وحدة|وحدات|الوحدات|بياسة|البرودويات|\\bpieces?\\b|\\bunites?\\b|\\b9ta3\\b|\\bl9ta3\\b|\\b7aja\\b|\\barticles?\\b|\\bproduits?\\b|\\bpieces?\\b|\\bunites?\\b|\\bunits?\\b|\\bitems?\\b|\\bplats?\\b|منتوج|منتجات|منتج|سلعة|حاجة|حوايج|\\bmontoj\\b|\\bproduit\\b");
   function ownIntent(q, raw) {
     q = String(q || '');
     var h = function (k) { return LX[k].test(q); };
     if (COMMAND.test(q)) return commandIntent(q);
+    /* « كيفاش نتاصل ببناني », « how can I contact Bennani »: a client's card. */
+    if (CONTACT.test(q) && findClient(raw || q).hit) return { entity: 'client', agg: 'card', contact: true };
     if (NOT_OWN.test(q) || HOWTO.test(q)) return null;
     /* Money paid out is a cost, not the takings that the day card shows. */
     if (PAID_OUT.test(q) && /combien|\bcb\b|how much|كم|شحال|\bch7al\b|\bchhal\b/.test(q) && !/\breste\b|\bleft\b|\bremain|بقا|باقي|\bb9a\b/.test(q)) return { route: 'charges' };
@@ -1098,15 +1187,22 @@
     /* Last month is a past period: agent.js answers that it keeps no history. */
     if (LAST_MONTH.test(q)) return null;
     var howMuch = /combien|\bcb\b|how much|how many|كم|شحال|\bch7al\b|\bchhal\b|\bwhat'?s in\b/.test(q);
+    if (!PAID_OUT.test(q) && h('now') && CASH_PAY.test(q) && (howMuch || h('count') || /montant|total|show me|give me|value|اعطني|عطيني|قيمة|المبلغ|مجموع|اجمالي/.test(q))) return { entity: 'cash', agg: 'today' };
     if (howMuch && CASH_BOX.test(q) && !/combien de temps|how long|\btien[st]?\b|\btenir\b|survi|\bdure\b|شحال من وقت|كم من الوقت/.test(q)) return { entity: 'cash', agg: 'today' };
+    if (DAYS_W.test(q) && OPENISH.test(q) && WEEK_W.test(q) && (!h('client') || /نستقبل|كنستقبلو|\bkansta9blo\b|\breceive\b|accueill/.test(q)) && !h('sell')) return { entity: 'hours', agg: 'week' };
     if (WEEK_DAYS.test(q) && /semaine|\bweek\b|سيمانة|السيمانة|الاسبوع|اسبوع|\bsimana\b|\bsmana\b|\bssimana\b/.test(q)) return { entity: 'hours', agg: 'week' };
     if (HRS_WORD.test(q) && (h('staff') || WORK_VERB.test(q)) && !h('open') && !h('close') && !/ouverture|opening|الفتح|semaine|\bweek\b|سيمانة|الاسبوع/.test(q)) return { entity: 'staff', agg: 'hours' };
     if (h('staff') && PRESENT.test(q) && h('now') && !h('count')) return { entity: 'staff', agg: 'today' };
-    if (h('client') && VISITED.test(q) && h('now') && !COUNT_OF.test(q) && !h('gone')) return { entity: 'client', agg: 'today' };
+    if (h('client') && (VISITED.test(q) || h('who')) && h('now') && !COUNT_OF.test(q) && !h('gone') && !h('top') && !h('spend') && !h('points')) return { entity: 'client', agg: 'today' };
     if ((LAST_VISIT.test(q) || CONTACT.test(q)) && !h('points') && hit()) return { entity: 'client', agg: 'card', contact: CONTACT.test(q) };
-    if (!money && !past && COUNT_OF.test(q) && h('sell') && h('now') && UNIT_WORD.test(q)) return { entity: 'product', agg: 'units' };
+    if (!money && !past && (COUNT_OF.test(q) || h('count')) && h('sell') && h('now') && UNIT_WORD.test(q)) return { entity: 'product', agg: 'units' };
+    if (REFUND_W.test(q) && (howMuch || COUNT_OF.test(q) || h('who')) && !past && !LATER.test(q)) return { entity: 'refunds', agg: 'today' };
+    if (!season && !AIM_DAY.test(q) && BEST_DAY.test(q)) return { entity: 'dayrank', agg: 'best', week: /semaine|\bweek\b|سيمانة|الاسبوع|\bsimana\b/.test(q) };
+    if (!season && !AIM_DAY.test(q) && WORST_DAY.test(q)) return { entity: 'dayrank', agg: 'worst', week: /semaine|\bweek\b|سيمانة|الاسبوع|\bsimana\b/.test(q) };
     /* Opening hours. Holidays stay with agent.js's exception route. */
     if (!h('notHours')) {
+      /* « on ferme à quelle heure le vendredi »: that day is in the week's grid. */
+      if ((h('close') || h('open')) && h('when') && !h('sell') && !h('orders') && WEEKDAY.test(q)) return { entity: 'hours', agg: 'week' };
       if (h('close') && !h('sell') && (h('when') || (h('now') && /fermeture|closing|اغلاق|السد/.test(q)))) return { entity: 'hours', agg: 'close' };
       if (h('open') && !h('orders') && !h('sell') && (h('when') || h('now'))) return { entity: 'hours', agg: 'open' };
     }
@@ -1114,9 +1210,12 @@
     if (h('points') && !h('notPoints') && (hit() || !/combien de clients|how many (?:clients|customers)|عدد الزباين|عدد الزبناء|كم زبون|شحال من (?:كليان|زبون)/.test(q))) return { entity: 'client', agg: 'points' };
     if (h('gone') && (h('client') || (PERSON.test(q) && /revien|vient|venu|come|visit|رجع|يجي|كيجي|كيدوز|يزور|rje3|kayjiw|\bjaw/.test(q)))) return { entity: 'client', agg: 'dormant' };
     /* The average ticket, before anything that reads "spend" as a client. */
-    if (!money && !season && !past && h('avg') && (h('orders') || /panier|basket|ticket|الباني|السلة|سلة|عملية|مبلغ|قيمة|تذاكر|commande|achat|شراء|البيعة|الفواتير|الفاتورة|vente|\bsale\b|order|depense|spend|كيصرف|ينفق|kayserf|kaykhelles/.test(q))) return { route: h('now') ? 'day' : 'revenue' };
+    /* « معدل الفلوس » is money as a unit, not a profit question. */
+    var cashWord = money && !MONEY_TALK.test(q.replace(/فلوس|\bflous\b/g, ' '));
+    if ((!money || cashWord) && !season && !past && h('avg') && (h('orders') || /panier|basket|ticket|الباني|السلة|سلة|عملية|مبلغ|قيمة|تذاكر|commande|achat|شراء|البيعة|الفواتير|الفاتورة|vente|\bsale\b|order|depense|spend|كيصرف|ينفق|kayserf|kaykhelles/.test(q))) return { route: h('now') ? 'day' : 'revenue' };
     /* A product the customers take most, even when the sentence names them. */
     if (!season && h('top') && h('sell') && h('item') && !h('spend') && !h('staff')) return { entity: 'product', agg: 'top' };
+    if (!season && !money && h('low') && h('sell') && h('item') && !h('spend') && !h('staff')) return { entity: 'product', agg: 'bottom' };
     if (/clients? les plus fideles|most loyal (?:clients|customers)/.test(q)) return { route: 'clients' };
     if (h('client') && (h('top') || h('spend')) && (!h('count') || h('top'))) return { entity: 'client', agg: 'top' };
     if (PERSON.test(q) && h('spend') && h('top') && !h('staff')) return { entity: 'client', agg: 'top' };
@@ -1137,7 +1236,7 @@
       return MENU_WORD.test(q) ? { entity: 'menu', agg: 'count' } : { route: 'stock' };
     }
     if (h('client') && h('count') && !h('now')) return { route: 'clients' };
-    if (!money && !past && h('revenue') && h('month')) return { route: 'revenue' };
+    if ((!money || cashWord) && !past && h('revenue') && h('month')) return { route: 'revenue' };
     if (!past && h('revenue') && h('now') && !/\b(?:ca|ça) va\b/.test(q)) return { route: 'day' };
     return null;
   }

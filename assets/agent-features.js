@@ -236,7 +236,9 @@
     if (f.key === 'scanner' && /scan|camera|barcode|code.?barre|iphone/.test(norm(q))) score += 8;
     if (f.key === 'payments' && /split|partag|credit client|cash|carte/.test(norm(q)) && !/fidel|loyal|points/.test(norm(q))) score += 6;
     if (f.key === 'clients' && /fidel|loyal|points|wallet|نقط|ولاء/.test(norm(q))) score += 6;
-    if (f.key === 'receipts' && /imprim|ticket|recu|etiquette|bluetooth/.test(norm(q))) score += 6;
+    if (f.key === 'receipts' && /imprim|ticket|recu|etiquette|bluetooth|printer|طابعة|الطابعة|طباعة|\btabi3a\b/.test(norm(q))) score += 6;
+    if (f.key === 'reporting' && /\bz\b|rapport z|cloture|\bexport|excel|\bcsv\b|تقرير/.test(norm(q))) score += 8;
+    if (f.key === 'caisse' && /\bipad\b|tablette|\btablet\b|appareil|device|جهاز|تابليت|connecte|connect/.test(norm(q)) && !/imprim|printer|طابعة/.test(norm(q))) score += 6;
     if (f.key === 'offline' && /hors ligne|offline|sans internet|synchron/.test(norm(q))) score += 8;
     if (f.key === 'pressing-services' && /prix|tarif|nom|renomm|service|traitement/.test(norm(q))) score += 7;
     if (f.key === 'pressing-orders' && /depot|acompte|solde|commande/.test(norm(q))) score += 7;
@@ -470,6 +472,7 @@
   }
   function isPlans(raw) { return PLAN_RX.test(norm(raw)); }
   /* « wach kayn mode hors ligne », « is there a kitchen screen » ask whether Kiwi has it. */
+  var TROUBLE_RX = /probleme|\bmarche pas\b|fonctionne pas|n'?imprime pas|ne s'?allume|ne se connecte|connecte pas|\bbug\b|\bbloque|\bplante\b|not working|doesn'?t work|does not work|won'?t (?:print|connect|start)|\bbroken\b|ما خدام|ماخدام|ما كيخدمش|ماكيخدمش|ما كتخدمش|\bmakhdam\w*|\bma khdam\w*|\bmakaykhdamch\b|خاسر|عطل|مشكل/;
   var EXISTS_RX = /\bwach kayn\b|واش كاين|كاين شي|est.ce qu'?il y a|\by a.t.il\b|\bil y a\b.{0,10}\b(?:un|une)\b|\bis there\b|\bdo you have\b|\bdoes kiwi\b|\bkiwi (?:a|fait|gere|peut)\b|\bca existe\b/;
   /* A how-to about a Kiwi feature outranks a simulation that shares a word
    * with it: « how do I add an employee » is the team page, not a hire. */
@@ -477,15 +480,18 @@
     var q = norm(raw);
     /* « can I add a worker » is a hiring question; only an explicit « how »,
      * « is there » or a question naming Kiwi is about the product. */
-    var how = /^(?:comment\b|how\b|كيفاش|كيفاه|كيف\b|kifa?c?h\b|kifash\b)/.test(q) || EXISTS_RX.test(q) || /kiwi/.test(q);
-    return how && (HOWTO_VERB.test(q) || EXISTS_RX.test(q) || /kiwi/.test(q)) && !!matchFeature(raw, trade());
+    var how = /^(?:comment\b|how\b(?! (?:much|many|long|often)\b)|كيفاش|كيفاه|كيف\b|kifa?c?h\b|kifash\b)/.test(q) || EXISTS_RX.test(q) || /kiwi/.test(q);
+    /* « l'imprimante n'imprime pas », « الطابعة ما خدامةش », « export my sales
+     * to excel », « imprime le rapport z »: a fault or a product task. */
+    var task = TROUBLE_RX.test(q) || /^(?:exporte?\w*|export|imprime\w*|print|telecharge\w*|download|fais(?: moi)? le z|sors? le z)\b/.test(q);
+    return (how || task) && (HOWTO_VERB.test(q) || EXISTS_RX.test(q) || /kiwi/.test(q) || task) && !!matchFeature(raw, trade());
   }
 
   function canHandle(raw) {
     var q = norm(raw), t = trade();
     if (state.pending && state.pending.trade === t) return true;
     if (LIST_RX.test(q) || SETUP_RX.test(q) || PLAN_RX.test(q)) return true;
-    return (GUIDE_RX.test(q) || EXISTS_RX.test(q)) && !!matchFeature(raw, t);
+    return ((GUIDE_RX.test(q) || EXISTS_RX.test(q)) && !!matchFeature(raw, t)) || isHowTo(raw);
   }
   /* A setup in progress takes the next message as its answer, unless that
    * message is a question of its own: a plan, or how to use another feature. */

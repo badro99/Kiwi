@@ -80,16 +80,16 @@
     "sha": "9f2e1a16520debe9"
   },
   "assets/agent-data.js": {
-    "v": "11",
-    "sha": "d2f07b310b11494c"
+    "v": "12",
+    "sha": "c8f7d2be9b13367a"
   },
   "assets/agent-doc-followup.js": {
     "v": "2",
     "sha": "24cd3d07c8a854ef"
   },
   "assets/agent-features.js": {
-    "v": "6",
-    "sha": "0fb07a5df80e161c"
+    "v": "7",
+    "sha": "297062c9152afb21"
   },
   "assets/agent-skin.css": {
     "v": "15",
@@ -104,12 +104,12 @@
     "sha": "30c8de89f6b2d25b"
   },
   "assets/agent.js": {
-    "v": "51",
-    "sha": "7e7efdede4350438"
+    "v": "52",
+    "sha": "0602a29d2223ce3c"
   },
   "assets/agent/ui.js": {
-    "v": "10",
-    "sha": "d97bb43da7b24600"
+    "v": "11",
+    "sha": "d91653404aaa580a"
   },
   "assets/ai-image-import.js": {
     "v": "8",

@@ -2673,7 +2673,16 @@ function respond(rawIn) {
     if (d.kind === 'notrend') return __state.sNoTrend();
     if (d.kind === 'unclear') return __state.sUnclear();
     if (d.kind === 'runway') return sRunway();
-    if (d.kind === 'market') return __state.sMarket();
+    if (d.kind === 'market') {
+      /* A competitor or the sector is not an investment: say what is missing. */
+      if (/bourse|crypto|bitcoin|\betf\b|trading|placement|stock market|بورصة|اسهم/.test(d.q)) return __state.sMarket();
+      const sector = {
+        fr: 'Je ne vois que vos propres ventes. Les chiffres d’un concurrent ou la moyenne du secteur ne sont pas dans Kiwi, et je ne vais pas les inventer. Je peux vous dire ce que votre commerce fait, et ce qu’un changement de prix ou d’équipe y changerait.',
+        en: 'I only see your own sales. A competitor’s figures or the sector average are not in Kiwi, and I won’t make them up. I can tell you what your business does, and what a price or staffing change would do to it.',
+        ar: 'كنشوف غير المبيعات ديالك. الأرقام ديال المنافسين ولا المعدل ديال القطاع ما كايناش ف Kiwi، وما غاديش نخترعهم. نقدر نقول ليك شنو كيدير المحل ديالك، وشنو غيتبدل إلا بدلتي الثمن ولا الفريق.',
+      };
+      return { text: sector[__state.L] || sector.fr };
+    }
     if (d.kind === 'secret') return __state.sSecret();
     if (d.kind === 'season') return sSeason(d.q);
     if (d.kind === 'goal') return sGoal(d.q);

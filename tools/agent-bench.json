@@ -23,7 +23,15 @@
    "je veux savoir combien jai de salariés",
    "kel est le nombre de mes employés",
    "combien de personnes dans mon equipe",
-   "mon effectif il est de combien"
+   "mon effectif il est de combien",
+   "j'ai cb d'employes en tout ?",
+   "combien de personnes bossent chez moi au total stp",
+   "le nombre total de mon personnel ?",
+   "on est combien de salaries dans mon resto",
+   "effectif total de la boutique c'est cb",
+   "dis moi combien j'ai de serveurs et employes en tout",
+   "combien d'employes j'ai en tout ajd",
+   "total des gens que j'emploie ?"
   ],
   "en": [
    "how many employees do I have",
@@ -39,7 +47,12 @@
    "total people in our team?",
    "how many workers do we have",
    "what is my headcount",
-   "count my employees"
+   "count my employees",
+   "how many employees do I have in total?",
+   "total staff count please",
+   "how many people work for my business altogether",
+   "what's my total number of employees?",
+   "count all my staff for me"
   ],
   "ar": [
    "كم عدد الموظفين",
@@ -53,7 +66,12 @@
    "أريد عدد أفراد الفريق",
    "كم عدد العمال عندي",
    "ما إجمالي الموظفين عندنا",
-   "كم شخص ضمن طاقمي"
+   "كم شخص ضمن طاقمي",
+   "كم عدد الموظفين لدي إجمالاً؟",
+   "أريد العدد الكلي للعاملين في مطعمي",
+   "كم موظفاً يعمل عندي بالمجموع؟",
+   "ما إجمالي عدد أفراد طاقم العمل؟",
+   "احسب لي كل موظفي المحل"
   ],
   "darija": [
    "شحال من خدام عندي",
@@ -68,7 +86,13 @@
    "عندي شحال من سيرفور وخدام",
    "واش تقدر تعطيني عدد الخدامة ديالي",
    "شحال كاين من واحد فالطاقم ديالي",
-   "شحال من موظف فالمحل ديالي"
+   "شحال من موظف فالمحل ديالي",
+   "شحال عندي ديال الخدامة كاملين؟",
+   "عطيني العدد ديال الموظفين لي عندي فالمحل كامل",
+   "شحال من واحد خدام عندي فالمجموع",
+   "الطاكام ديالي كامل شحال فيه دالناس؟",
+   "بغيت نعرف شحال عندي من موظف فالمطعم كاملين",
+   "حسب ليا الخدامة ديالي كاملين عافاك"
   ],
   "arabizi": [
    "ch7al mn khddam 3ndi",
@@ -80,7 +104,13 @@
    "chhal dyal nas kaykhdmo m3aya",
    "wach t9der t9oli chhal 3ndi d staff",
    "ch7al mn salarié 3ndna",
-   "3ndi chhal f l equipe"
+   "3ndi chhal f l equipe",
+   "ch7al 3andi dyal lkheddama kamlin?",
+   "3tini nombre total dyal les employes li 3andi",
+   "ch7al men wa7ed kheddam 3andi f total",
+   "staff dyali kamel ch7al fih?",
+   "7seb lia ga3 les employes dyali 3afak",
+   "f resto dyali ch7al mn employe 3andi b kolhom?"
   ],
   "near": [
    "combien coûte un employé",
@@ -110,7 +140,15 @@
    "personnel prévu pour aujourd hui c qui",
    "qui est sur le planning aujourd hui",
    "les gens qui bossent ajd c est qui",
-   "qui assure le service en ce moment"
+   "qui assure le service en ce moment",
+   "qui bosse aujourd'hui chez moi ?",
+   "c'est qui de service ajd stp",
+   "montre moi les employes en poste maintenant",
+   "qui travaille au resto aujourd hui",
+   "le personnel present sur le shift actuel ?",
+   "j'ai qui au boulot ajd",
+   "liste des serveurs et employes qui bossent aujourd'hui",
+   "qui est en service en ce moment dans ma boutique ?"
   ],
   "en": [
    "who is working today",
@@ -124,7 +162,12 @@
    "which employees are on duty",
    "who is scheduled to work today",
    "who is covering the shift now",
-   "who is in today’s shift"
+   "who is in today’s shift",
+   "who's working today?",
+   "show me who's on shift right now",
+   "which of my staff are working today please",
+   "who is currently on duty at my shop?",
+   "list today's staff on shift"
   ],
   "ar": [
    "من يعمل اليوم",
@@ -136,7 +179,12 @@
    "من المسؤول عن العمل الآن",
    "من هم الموظفون المناوبون حاليا",
    "من ضمن فريق العمل اليوم",
-   "أريد معرفة من يعمل الآن"
+   "أريد معرفة من يعمل الآن",
+   "من يعمل اليوم في المطعم؟",
+   "من هم الموظفون المناوبون الآن؟",
+   "اعرض لي العاملين اليوم عندي",
+   "من في الوردية الحالية بالمحل؟",
+   "أريد أسماء الموظفين الذين يعملون اليوم"
   ],
   "darija": [
    "شكون خدام اليوم",
@@ -149,7 +197,13 @@
    "شكون من الفريق خدام اليوم",
    "بغيت نعرف شكون خدام دابا",
    "شكون مبرمج يخدم اليوم عندي",
-   "شنو هما الناس اللي خدامين اليوم"
+   "شنو هما الناس اللي خدامين اليوم",
+   "شكون خدام اليوم عندي؟",
+   "شكون فالسيرفيس دابا عافاك",
+   "وريني الخدامة لي خدامين اليوم",
+   "شكون فالورديّة دابا فالمحل",
+   "اليوم شكون خدام فالمطعم ديالي؟",
+   "عطيني سميات الموظفين لي خدامين اليوم"
   ],
   "arabizi": [
    "chkoun khddam lyoum",
@@ -160,7 +214,13 @@
    "chkon mn staff khdam daba",
    "chkoun mprogrammi ykhdem lyouma",
    "chkon f l equipe dyal lyoum",
-   "wach t9der twerini chkon khdam daba"
+   "wach t9der twerini chkon khdam daba",
+   "chkoun kheddam lyom 3andi?",
+   "chkoun f service daba 3afak",
+   "werini les employes li khddamin lyom",
+   "chkon f shift daba f lma7al",
+   "lyom chkoun khdam f resto dyali?",
+   "3tini smiyat staff li khddam lyom khoya"
   ],
   "near": [
    "combien de salariés jai",
@@ -186,7 +246,15 @@
    "kel est mon meilleur employé en ventes",
    "le serveur numéro un en chiffre c qui",
    "qui rapporte le plus dans mon staff",
-   "meilleur vendeur du resto c est lequel"
+   "meilleur vendeur du resto c est lequel",
+   "quel employe vend le plus chez moi ?",
+   "c'est qui mon meilleur vendeur stp",
+   "le serveur qui fait le plus de ventes ?",
+   "classe mon personnel par ventes et donne moi le premier",
+   "qui vend le mieux au resto",
+   "mon employe numero 1 en ventes c'est qui",
+   "parmi mes serveurs lequel vend le plus",
+   "meilleur vendeur de la boutique ?"
   ],
   "en": [
    "who is my best waiter",
@@ -198,7 +266,11 @@
    "who is our number one seller",
    "which waiter brings in the most revenue",
    "top employee by sales?",
-   "who sells the most for me"
+   "who sells the most for me",
+   "which employee sells the most?",
+   "who's my top selling waiter?",
+   "which staff member makes the most sales at my shop?",
+   "who is number one in sales among my employees?"
   ],
   "ar": [
    "من أفضل نادل عندي",
@@ -208,7 +280,12 @@
    "أي نادل لديه أكبر مبيعات",
    "من يتصدر مبيعات العاملين لدي",
    "أريد معرفة الموظف الأكثر بيعا",
-   "من أفضل موظف عندي من حيث المبيعات"
+   "من أفضل موظف عندي من حيث المبيعات",
+   "أي موظف يحقق أعلى مبيعات عندي؟",
+   "من هو أفضل بائع بين موظفي المطعم؟",
+   "أي نادل يبيع أكثر؟",
+   "أرني الموظف الأول من حيث المبيعات",
+   "من الأكثر بيعاً من طاقم المحل؟"
   ],
   "darija": [
    "شكون أحسن سيرفور عندي",
@@ -220,7 +297,13 @@
    "شكون من السيرفورات داير أكبر شيفر",
    "وريني الموظف اللي كيبيع كثر",
    "شكون كيدخل ليا كثر من الخدامة",
-   "أشكون الأول فبيع الفريق ديالي"
+   "أشكون الأول فبيع الفريق ديالي",
+   "شكون من الخدامة كيبيع كثر؟",
+   "أشكون هو حسن بياع عندي فالمحل",
+   "أنهي سيرفور كيدير أكثر مبيعات؟",
+   "وريني الموظف لي باع كثر من صحابو",
+   "شكون الأول فالمبيعات من الموظفين ديالي",
+   "فالمطعم ديالي شكون النادل لي كيبيع كثر عافاك"
   ],
   "arabizi": [
    "chkon a7san serveur 3ndi",
@@ -230,7 +313,13 @@
    "achmen khdam kaybi3 kter",
    "warini a7san vendeur f team",
    "chkon dayr akbar chiffre mn lkhadama",
-   "chkon howa lowel f ventes dyal staff"
+   "chkon howa lowel f ventes dyal staff",
+   "chkoun mn lkheddama kaybi3 kter?",
+   "chkon howa a7san vendeur 3andi",
+   "achmen serveur kaydir kter ventes?",
+   "werini l employe li ba3 kter mn s7abou",
+   "chkon lowel f ventes mn staff dyali",
+   "f resto dyali chkon serveur li kaybi3 kter 3afak"
   ],
   "near": [
    "combien de serveurs travaillent ici",
@@ -262,7 +351,15 @@
    "qu est ce que je vends le mieux",
    "produit le plus demandé chez moi c lequel",
    "quel plat est en tête des ventes",
-   "mon produit le plus populaire en ventes"
+   "mon produit le plus populaire en ventes",
+   "c'est quoi mon produit le plus vendu ?",
+   "quel plat se vend le mieux chez moi stp",
+   "top vente du menu c'est lequel",
+   "qu'est ce que les clients commandent le plus dans ma carte",
+   "mon article numero 1 en ventes ?",
+   "montre moi le plat qui part le plus",
+   "le produit qui se vend le plus au magasin",
+   "kel plat est le plus vendu ici"
   ],
   "en": [
    "what is my best seller",
@@ -278,7 +375,12 @@
    "my bestselling menu item?",
    "which item is selling best in my shop",
    "what do we sell the most of",
-   "which of my products has the most sales"
+   "which of my products has the most sales",
+   "what's my best selling product?",
+   "which dish sells the most at my restaurant?",
+   "show me the item with the most sales",
+   "what menu item do customers buy most?",
+   "my top selling dish please"
   ],
   "ar": [
    "ما هو المنتج الأكثر مبيعا",
@@ -290,7 +392,12 @@
    "أظهر لي أكثر صنف تم بيعه",
    "ما الوجبة التي تحقق أكبر عدد من المبيعات",
    "أي صنف يتصدر مبيعاتي",
-   "ما هو المنتج الأول في المبيعات عندي"
+   "ما هو المنتج الأول في المبيعات عندي",
+   "ما المنتج الأكثر مبيعاً عندي؟",
+   "أي طبق يباع أكثر في مطعمي؟",
+   "أظهر لي أكثر صنف مبيعاً في القائمة",
+   "ما أكثر منتج يشتريه زبائني؟",
+   "ما الطبق الأول من حيث المبيعات؟"
   ],
   "darija": [
    "شنو اللي كيتباع بزاف",
@@ -304,7 +411,13 @@
    "أشنو أكثر حاجة كياخدو الزبناء عندي",
    "شنو اللي داير أكبر عدد ديال البيعات فالمينيو",
    "أشنو المنتج اللي متصدر عندي فالبيع",
-   "شنو كيتباع ليا مزيان كثر من الباقي"
+   "شنو كيتباع ليا مزيان كثر من الباقي",
+   "شنو هو البرودوي لي كيتباع كثر عندي؟",
+   "أشنو الطبق لي كنبيعو كثر فالمطعم",
+   "وريني أكثر حاجة كتباع فالمنيو",
+   "شنو أكثر منتوج كيشريوه الكليان عندي",
+   "أشمن ماكلة كتمشي كثر فالمحل؟",
+   "الطبق اللول فالمبيعات شنو هو عافاك"
   ],
   "arabizi": [
    "chno li kaytba3 bzaf",
@@ -316,7 +429,13 @@
    "warini produit li tba3 kter",
    "achno best seller dyali",
    "chno lowel f ventes dyal menu",
-   "achmen article 3ndo kter ventes 3ndi"
+   "achmen article 3ndo kter ventes 3ndi",
+   "chno produit li kaytba3 kter 3andi?",
+   "achno plat li kanbi3ou kter f resto",
+   "werini aktar 7aja katba3 f menu",
+   "chno produit li kaychriwh clients kter 3andi",
+   "achmen makla katmchi kter f lma7al?",
+   "plat lowel f ventes chno howa 3afak"
   ],
   "near": [
    "combien coûte mon produit le plus vendu",
@@ -345,7 +464,15 @@
    "le plat qui marche le moins chez moi",
    "quel est mon produit en bas du classement des ventes",
    "je veux voir le produit le moins vendu",
-   "quelle référence a le moins de ventes chez moi"
+   "quelle référence a le moins de ventes chez moi",
+   "quel produit se vend le moins chez moi ?",
+   "c'est quoi le plat le moins commande stp",
+   "mon article avec le moins de ventes",
+   "dans ma carte qu'est ce qui part le moins",
+   "quel produit les clients achetent le moins",
+   "montre moi le dernier produit en nombre de ventes",
+   "le plat qui se vend le moins au resto ?",
+   "kel article marche le moins en ventes dans ma boutique"
   ],
   "en": [
    "what sells the least",
@@ -359,7 +486,12 @@
    "my least popular dish by sales?",
    "which product has the fewest sales",
    "what sells least in my shop",
-   "which menu item has the lowest sales"
+   "which menu item has the lowest sales",
+   "which product sells the least in my shop?",
+   "what's my least sold dish?",
+   "show me the menu item with the fewest sales",
+   "which of my products do customers buy least?",
+   "what dish has the lowest sales count?"
   ],
   "ar": [
    "ما هو المنتج الأقل مبيعا",
@@ -370,7 +502,12 @@
    "ما الوجبة الأقل مبيعا في مطعمي",
    "أي منتج في آخر ترتيب مبيعاتي",
    "ما الصنف الذي لديه أقل عدد من المبيعات",
-   "ما الذي يباع أقل في محلي"
+   "ما الذي يباع أقل في محلي",
+   "ما المنتج الأقل مبيعاً عندي؟",
+   "أي طبق يباع أقل في مطعمي؟",
+   "أظهر لي الصنف الأقل مبيعاً في القائمة",
+   "ما المنتج الذي يشتريه زبائني أقل من غيره؟",
+   "أي طبق لديه أقل عدد من المبيعات؟"
   ],
   "darija": [
    "شنو اللي ما كيتباعش",
@@ -384,7 +521,13 @@
    "أشنو أقل صنف فعدد البيعات ديالي",
    "شنو أسوأ منتوج عندي فالبيع",
    "شنو اللي كيمشي أقل فالحانوت",
-   "أشمن منتوج عندو أقل مبيعات عندي"
+   "أشمن منتوج عندو أقل مبيعات عندي",
+   "شنو هو البرودوي لي كيتباع أقل عندي؟",
+   "أشمن طبق كنبيعو أقل فالمطعم",
+   "وريني أقل حاجة كتباع فالمنيو",
+   "شنو المنتوج لي كيشريوه الكليان أقل",
+   "أشمن ماكلة كتمشي أقل فالمحل؟",
+   "الطبق اللخر فعدد المبيعات شنو هو عافاك"
   ],
   "arabizi": [
    "chno li makaytba3ch",
@@ -395,7 +538,13 @@
    "warini produit li tba3 9ell",
    "chno akher article f classement ventes",
    "achmen produit 3ndo a9al ventes",
-   "chno least selling item 3ndi"
+   "chno least selling item 3ndi",
+   "chno produit li kaytba3 a9al 3andi?",
+   "achmen plat kanbi3ou a9al f resto",
+   "werini a9al 7aja katba3 f menu",
+   "chno produit li kaychriwh clients a9al",
+   "achmen makla katmchi a9al f lma7al?",
+   "plat lekher f nombre de ventes chno howa 3afak"
   ],
   "near": [
    "quel produit est en rupture",
@@ -424,7 +573,15 @@
    "quel client a acheté pour le plus gros montant",
    "mon top client en chiffre c est qui",
    "qui est en tête de mes clients par achats",
-   "le client avec le plus de dépenses chez moi"
+   "le client avec le plus de dépenses chez moi",
+   "quel client depense le plus chez moi ?",
+   "c'est qui mon meilleur client en montant depense",
+   "le client qui a laisse le plus d'argent au resto stp",
+   "qui a depense le plus dans ma boutique",
+   "montre moi le client numero 1 par depenses",
+   "parmi mes clients lequel a le plus depense",
+   "mon plus gros client en valeur d'achats ?",
+   "quel client a le total d'achats le plus eleve"
   ],
   "en": [
    "who is my best customer",
@@ -438,7 +595,12 @@
    "who spent the most at my shop",
    "which customer brings in the most revenue",
    "my top client by purchases?",
-   "who has the highest total spend here"
+   "who has the highest total spend here",
+   "which customer spends the most at my business?",
+   "who is my highest spending customer?",
+   "show me the customer with the largest total spend",
+   "which of my clients has spent the most?",
+   "my top customer by money spent please"
   ],
   "ar": [
    "من هو أفضل زبون",
@@ -449,7 +611,12 @@
    "أظهر لي العميل صاحب أعلى مشتريات",
    "أي زبون دفع أكبر مبلغ عندي",
    "من هو العميل الأول في محلي",
-   "أريد معرفة أفضل عميل حسب قيمة مشترياته"
+   "أريد معرفة أفضل عميل حسب قيمة مشترياته",
+   "من هو الزبون الأكثر إنفاقاً عندي؟",
+   "أي عميل أنفق أكبر مبلغ في مطعمي؟",
+   "أظهر لي العميل صاحب أعلى إجمالي مشتريات",
+   "من من زبائني صرف أكثر مال؟",
+   "ما اسم الزبون الأول حسب المبلغ المنفق؟"
   ],
   "darija": [
    "شكون أحسن كليان عندي",
@@ -463,7 +630,13 @@
    "أشكون عندو أكبر مجموع ديال الشريات عندي",
    "شنو هو الكليان اللي كيشري كثر بالقيمة",
    "شكون متصدر الزبناء ديالي فالمصاريف",
-   "أشكون أحسن كليان ديالي حسب الشراء"
+   "أشكون أحسن كليان ديالي حسب الشراء",
+   "شكون الكليان لي صرف كثر عندي؟",
+   "أشكون الزبون لي خلا أكثر فلوس فالمطعم",
+   "وريني الكليان لي مجموع مشترياتو هو لكبر",
+   "من بين الزبناء ديالي شكون صرف أكثر",
+   "شكون أحسن كليان عندي من ناحية الفلوس لي صرف",
+   "عطيني سميت الزبون لي شرا بأكبر مبلغ عافاك"
   ],
   "arabizi": [
    "chkoun a7san client 3ndi",
@@ -474,7 +647,13 @@
    "chkon lowel f clients dyali",
    "achmen client 3ndo kter depenses 3ndi",
    "chkon client top par achats",
-   "chkoun kaykhelli kter flous f lma7al"
+   "chkoun kaykhelli kter flous f lma7al",
+   "chkoun client li sref kter 3andi?",
+   "achkoun zbon li khlla kter flous f resto",
+   "werini client li total achats dyalou howa lkber",
+   "mn bin clients dyali chkon sref kter",
+   "chkon a7san client 3andi mn na7iyat flous li sref",
+   "3tini smit zbon li chra b akbar montant 3afak"
   ],
   "near": [
    "combien de clients jai",
@@ -503,7 +682,15 @@
    "le compte fidélité de Salma Bennani a combien de points",
    "cb de points cumulés par Salma Bennani",
    "je veux savoir les points de Salma Bennani",
-   "solde fidélité Salma Bennani c combien"
+   "solde fidélité Salma Bennani c combien",
+   "Salma Bennani elle a cb de points fidelite ?",
+   "combien de points sur la carte de Salma Bennani stp",
+   "points de fidelite, Salma Bennani ?",
+   "donne moi le solde de points de Salma Bennani",
+   "il reste combien de points fidelite a Salma Bennani",
+   "pour Salma Bennani c'est quoi son nombre de points",
+   "la cliente Salma Bennani a combien de points",
+   "verifie les points fidelite de Salma Bennani"
   ],
   "en": [
    "how many points does Salma Bennani have",
@@ -517,7 +704,12 @@
    "how many reward points are on Salma Bennani’s account",
    "points for customer Salma Bennani",
    "what is the loyalty points total for Salma Bennani",
-   "does Salma Bennani have how many points"
+   "does Salma Bennani have how many points",
+   "how many loyalty points does Salma Bennani have?",
+   "Salma Bennani's points balance please",
+   "check the loyalty points for Salma Bennani",
+   "what's Salma Bennani's loyalty points total?",
+   "points on Salma Bennani's loyalty account?"
   ],
   "ar": [
    "كم نقطة عند Salma Bennani",
@@ -528,7 +720,12 @@
    "ما مجموع النقاط التي جمعتها سلمى بناني",
    "كم نقطة في حساب سلمى بناني",
    "أريد معرفة نقاط المكافآت لسلمى بناني",
-   "كم لدى سلمى بناني من نقاط في برنامج الولاء"
+   "كم لدى سلمى بناني من نقاط في برنامج الولاء",
+   "كم نقطة ولاء لدى سلمى بناني؟",
+   "رصيد نقاط سلمى بناني كم هو؟",
+   "أظهر نقاط الولاء للعميلة سلمى بناني",
+   "سلمى بناني، كم لديها من نقاط المكافآت؟",
+   "تحقق من عدد نقاط الولاء لدى سلمى بناني"
   ],
   "darija": [
    "شحال من نقطة عند Salma Bennani",
@@ -541,7 +738,13 @@
    "شحال باقي لسلمى بناني من نقطة فحسابها",
    "أشحال عند سلمى بناني ديال نقاط الولاء",
    "واش تبين ليا شحال عند سلمى بناني من نقطة",
-   "شحال مجموع النقط اللي عند سلمى بناني"
+   "شحال مجموع النقط اللي عند سلمى بناني",
+   "شحال عند سلمى بناني من نقطة ديال الوفاء؟",
+   "نقاط الوفاء ديال سلمى بناني شحال؟",
+   "وريني رصيد النقط ديال Salma Bennani",
+   "سلمى بناني شحال مجمعة من نقط ديال الكارط؟",
+   "عافاك شوف ليا نقاط الوفاء ديال Salma Bennani",
+   "شحال بقاو من نقطة فالكونط ديال الوفاء ديال سلمى بناني؟"
   ],
   "arabizi": [
    "ch7al mn point 3nd Salma Bennani",
@@ -552,7 +755,13 @@
    "chhal f compte fidélité dyal Salma Bennani",
    "bghit solde points dyal Salma Bennani",
    "Salma Bennani 3ndha chhal mn point",
-   "wach t9oli chhal 3nd Salma Bennani f carte fidélité"
+   "wach t9oli chhal 3nd Salma Bennani f carte fidélité",
+   "ch7al 3and Salma Bennani mn points fidelite?",
+   "points fidelite dyal Salma Bennani ch7al?",
+   "werini solde points dyal Salma Bennani 3afak",
+   "Salma Bennani ch7al mejm3a mn points dyal carte fidelite?",
+   "chof lia points de fidelite dyal Salma Bennani khoya",
+   "ch7al ba9i f compte fidelite dyal Salma Bennani mn point?"
   ],
   "near": [
    "ajoute 20 points à Salma Bennani",
@@ -581,7 +790,15 @@
    "kel client a cessé de venir",
    "quels clients ont pas remis les pieds ici",
    "qui parmi mes clients ne revient plus",
-   "mes anciens clients qui sont plus revenus"
+   "mes anciens clients qui sont plus revenus",
+   "quels clients ne reviennent plus ?",
+   "montre moi les clients qui ont arrete de venir",
+   "qui sont mes clients inactifs depuis longtemps stp",
+   "j'ai perdu quels clients qui venaient avant",
+   "liste des clients qui ne viennent plus au resto",
+   "quels clients ont cesse leurs visites chez moi",
+   "les clients qui n'ont pas remis les pieds depuis longtemps ?",
+   "retrouve ceux qui venaient et ne reviennent plus"
   ],
   "en": [
    "which customers stopped coming",
@@ -595,7 +812,12 @@
    "which regulars no longer come back",
    "who are our lapsed customers",
    "find customers who stopped visiting",
-   "which of my clients haven’t come back"
+   "which of my clients haven’t come back",
+   "which customers have stopped coming back?",
+   "show me customers who used to visit but no longer do",
+   "who are my inactive customers who haven't returned in a long time?",
+   "list the customers who stopped visiting my shop",
+   "which of my regulars haven't come back in a long time?"
   ],
   "ar": [
    "من هم الزبائن الذين لم يعودوا",
@@ -606,7 +828,12 @@
    "أي العملاء توقفوا عن زيارتنا",
    "أريد قائمة الزبائن الغائبين منذ فترة",
    "من من عملائي لم يعد يزورنا",
-   "ما أسماء العملاء الذين انقطعوا عن المجيء"
+   "ما أسماء العملاء الذين انقطعوا عن المجيء",
+   "من هم الزبائن الذين توقفوا عن العودة؟",
+   "اعرض العملاء الذين كانوا يزورون المحل ولم يعودوا",
+   "أي زبائن انقطعوا عن زيارة مطعمي منذ مدة؟",
+   "أريد قائمة العملاء الذين توقفوا عن المجيء",
+   "من هم زبائني الذين لم يعودوا منذ وقت طويل؟"
   ],
   "darija": [
    "شكون الكليان اللي ما بقاوش كيجيو",
@@ -619,7 +846,13 @@
    "شكون من الزبناء ديالي ما بقا كيرجع",
    "فين هما الكليان اللي قطعو علينا",
    "شكون الزبناء القدام اللي ما رجعوش",
-   "أشكون من الزبناء ولى ما كيجيش للمحل"
+   "أشكون من الزبناء ولى ما كيجيش للمحل",
+   "شكون الكليان لي حبسو ما بقاوش كيجيو؟",
+   "وريني الزبناء لي كانو كيجيو وما رجعوش",
+   "شكون من الكليان ديالي مقاطع المحل هادي مدة",
+   "عطيني لاليست ديال الزبناء لي حبسو المجي",
+   "شكون لي كان كيجينا وما بقاش رجع للمطعم",
+   "الكليان لي ما جاوش عندي من مدة طويلة شكون هما؟"
   ],
   "arabizi": [
    "chkoun lclients li ma b9awch kayjiw",
@@ -630,7 +863,12 @@
    "achmen clients ma b9awch kaydouzo 3ndna",
    "bghit liste dyal clients li ma jawch hadi moda",
    "chkon li ma b9ach kayrje3 lma7al",
-   "chkoun mn clients dyali 9te3 3lina"
+   "chkoun mn clients dyali 9te3 3lina",
+   "chkoun clients li 7ebso ma b9awch kayjiw?",
+   "chkon mn clients dyali m9ate3 lma7al hadi moda",
+   "3tini liste dyal clients li 7ebso lmaji",
+   "chkon li kan kayjina w ma b9ach rje3 l resto",
+   "clients li ma jawch 3andi mn moda twila chkon homa?"
   ],
   "near": [
    "combien de clients sont venus aujourd hui",
@@ -660,7 +898,15 @@
    "on manque de quoi au magasin",
    "quels ingrédients sont presque épuisés",
    "produits indisponibles en stock svp",
-   "qu est ce que je dois bientôt réapprovisionner"
+   "qu est ce que je dois bientôt réapprovisionner",
+   "qu'est ce qui est en rupture de stock ?",
+   "montre moi ce qui manque ou va bientot manquer en stock",
+   "quels produits sont epuises ou presque stp",
+   "j'ai quoi qui est en train de finir dans le stock",
+   "liste des articles en rupture et stock bas",
+   "y a quoi qui reste presque plus en stock au magasin",
+   "produits indisponibles ou bientot epuises ?",
+   "dis moi ce qu'il faut reapprovisionner, stock vide ou presque"
   ],
   "en": [
    "what is out of stock",
@@ -673,7 +919,11 @@
    "what stock needs replenishing soon",
    "which items have low stock",
    "what has sold out in my shop",
-   "what are we running out of"
+   "what are we running out of",
+   "what's out of stock or running low?",
+   "which products are nearly out of stock?",
+   "what do I have left very little of in stock?",
+   "list my out of stock and low stock items"
   ],
   "ar": [
    "ما هي المنتجات النافدة",
@@ -684,7 +934,12 @@
    "أي منتجات مخزونها منخفض",
    "ما المكونات التي قاربت على النفاد",
    "أريد قائمة الأصناف النافدة أو القليلة",
-   "ما الذي نحتاج إلى إعادة تخزينه قريبا"
+   "ما الذي نحتاج إلى إعادة تخزينه قريبا",
+   "ما الأصناف النافدة أو التي أوشكت على النفاد؟",
+   "أظهر المنتجات غير المتوفرة في المخزون",
+   "ما الذي قارب على النفاد من مخزون المحل؟",
+   "ما المنتجات التي انتهى مخزونها؟",
+   "أعطني قائمة الأصناف الناقصة والتي مخزونها منخفض"
   ],
   "darija": [
    "شنو اللي سالا من الستوك",
@@ -698,7 +953,13 @@
    "شنو باقي منو غير شوية فالمخزون",
    "شنو ناقص فستوك المحل",
    "أشمن منتوجات على وشك تسالي",
-   "شنو ما بقاش متوفر فالستوك ديالي"
+   "شنو ما بقاش متوفر فالستوك ديالي",
+   "شنو سالا من الستوك ولا قرب يسالي؟",
+   "وريني البرودويات لي ما بقاوش فالستوك",
+   "أشنو قرب ينفد عندي فالمحل",
+   "شنو لي سالا من المخزون عافاك",
+   "عطيني الحوايج لي ستوك ديالها ناقص بزاف أو سالا",
+   "فالستوك شنو بقا منو غير شوية؟"
   ],
   "arabizi": [
    "chno li sala mn stock",
@@ -709,7 +970,13 @@
    "chno ba9i meno ghir chwiya",
    "achmen ingredients salaw 3ndna",
    "chno khasni n3awed njib 7it 9reb ysali",
-   "chno out of stock f lma7al"
+   "chno out of stock f lma7al",
+   "chno sala mn stock wla 9reb ysali?",
+   "werini produits li ma b9awch f stock",
+   "achno 9reb yenfed 3andi f lma7al",
+   "chno li sala mn stock 3afak",
+   "3tini les articles li stock dyalhom na9es بزاف wla sala",
+   "f stock chno b9a menno ghir chwiya?"
   ],
   "near": [
    "ajoute 10 cafés au stock",
@@ -738,7 +1005,14 @@
    "fermeture prévue pour aujourd hui",
    "ce soir mon resto ferme à combien",
    "quelle heure on baisse le rideau aujourd hui",
-   "on ferme a cb ce soir"
+   "on ferme a cb ce soir",
+   "on ferme a quelle heure aujourd'hui ?",
+   "c'est quelle heure la fermeture ajd stp",
+   "mon resto ferme quand ce soir",
+   "heure de fermeture de ma boutique pour aujourd'hui ?",
+   "jusqu'a quelle heure mon magasin est ouvert aujourd'hui",
+   "dis moi l'heure ou on ferme ce soir",
+   "fermeture aujourd hui c'est a combien ?"
   ],
   "en": [
    "what time do we close",
@@ -752,7 +1026,12 @@
    "tell me our closing time for today",
    "when are we due to close tonight",
    "what time do I close the café today",
-   "closing time for my store today"
+   "closing time for my store today",
+   "what time do we close today?",
+   "when does my shop close tonight?",
+   "today's closing time please",
+   "until what time is my restaurant open today?",
+   "what time is closing for my store today?"
   ],
   "ar": [
    "متى نغلق",
@@ -763,7 +1042,12 @@
    "متى موعد إغلاقنا اليوم",
    "أريد معرفة ساعة إغلاق المقهى اليوم",
    "في كم نغلق هذا اليوم",
-   "ما ساعة إغلاق المتجر الليلة"
+   "ما ساعة إغلاق المتجر الليلة",
+   "في أي ساعة يغلق المحل اليوم؟",
+   "ما وقت إغلاق مطعمي اليوم؟",
+   "متى نغلق هذا المساء؟",
+   "حتى أي ساعة يفتح متجري اليوم؟",
+   "أخبرني بموعد الإغلاق اليوم"
   ],
   "darija": [
    "فوقاش كنسدو",
@@ -777,7 +1061,13 @@
    "فاش غادي نسدو القهوة الليلة",
    "اليوم حتى لشحال محلولين",
    "وقتاش كنسدو الريسطو هاد النهار",
-   "شحال فالساعة غيتسد الحانوت اليوم"
+   "شحال فالساعة غيتسد الحانوت اليوم",
+   "معا شحال كنسدو اليوم؟",
+   "فاش كيسد المحل ديالي اليوم",
+   "شحال ساعة السد ديال المطعم اليوم عافاك",
+   "حتى لشحال غادي نبقاو محلولين اليوم؟",
+   "وقتاش كنسدو هاد العشية",
+   "اليوم السد ديال الحانوت مع شحال؟"
   ],
   "arabizi": [
    "fo9ach kansdo",
@@ -788,7 +1078,13 @@
    "ch7al sa3a fermeture lyoum",
    "wa9tach ghanseddo cafe had l3chiya",
    "bghit we9t sedd dyal lyouma",
-   "fach kantsaliw service lila"
+   "fach kantsaliw service lila",
+   "m3a ch7al kanseddo lyom?",
+   "fach kaysed lma7al dyali lyom",
+   "ch7al sa3a sed dyal resto lyom 3afak",
+   "7ta lch7al ghadi nb9aw m7ellin lyom?",
+   "we9tach kanseddo had l3chiya",
+   "lyom sed dyal l7anout m3a ch7al?"
   ],
   "near": [
    "on ouvre à quelle heure demain",
@@ -814,7 +1110,15 @@
    "le resto ouvre quand",
    "on ouvre a cb",
    "je veux savoir si le magasin est ouvert",
-   "heure d ouverture de ma boutique c est quoi"
+   "heure d ouverture de ma boutique c est quoi",
+   "on est ouvert maintenant ?",
+   "a quelle heure ouvre mon resto aujourd'hui",
+   "la boutique est ouverte la tout de suite ?",
+   "c'est quoi l'heure d'ouverture du magasin stp",
+   "est ce qu'on a ouvert maintenant",
+   "on ouvre a kel heure ajd",
+   "mon commerce est ouvert en ce moment ?",
+   "heure d'ouverture du resto aujourd hui ?"
   ],
   "en": [
    "are we open right now",
@@ -826,7 +1130,12 @@
    "is the café open at the moment",
    "when do we start business",
    "what time does my store open",
-   "are we open yet"
+   "are we open yet",
+   "are we open right now?",
+   "what time does my shop open today?",
+   "is my restaurant currently open?",
+   "when do we open today please?",
+   "tell me my store's opening time"
   ],
   "ar": [
    "هل نحن مفتوحون الآن",
@@ -836,7 +1145,12 @@
    "متى يفتح المتجر",
    "هل المقهى مفتوح في هذه اللحظة",
    "ما ساعة فتح المحل عندنا",
-   "أريد معرفة وقت فتح مشروعي"
+   "أريد معرفة وقت فتح مشروعي",
+   "هل المحل مفتوح الآن؟",
+   "في أي ساعة يفتح مطعمي اليوم؟",
+   "هل متجري مفتوح حالياً؟",
+   "متى نفتح اليوم؟",
+   "ما موعد فتح المحل؟"
   ],
   "darija": [
    "واش حنا محلولين دابا",
@@ -848,7 +1162,13 @@
    "أشحال ساعة الفتح عندنا",
    "واش المحل ديالي خدام دابا",
    "فاش غادي يتحل المحل",
-   "بغيت نعرف وقتاش كنحلو"
+   "بغيت نعرف وقتاش كنحلو",
+   "واش حنا محلولين دابا؟",
+   "معا شحال كيحل المحل ديالي اليوم",
+   "المطعم محلول دابا ولا لا؟",
+   "فاش كنحلو اليوم عافاك",
+   "الحانوت واش محلول حاليا",
+   "شحال ساعة الحلان ديال المطعم؟"
   ],
   "arabizi": [
    "wach 7na ma7loulin daba",
@@ -858,7 +1178,13 @@
    "wa9tach kayt7el resto dyali",
    "daba wach 7anout ma7loul",
    "chno howa we9t lfeṭ7 3ndna",
-   "fach ghadi n7ello"
+   "fach ghadi n7ello",
+   "wach 7na m7ellin daba?",
+   "m3a ch7al kay7ell lma7al dyali lyom",
+   "resto m7ell daba wla la?",
+   "fach kan7ellou lyom 3afak",
+   "l7anout wach m7ell daba",
+   "ch7al sa3a l7ell dyal resto?"
   ],
   "near": [
    "on ferme à quelle heure aujourd hui",
@@ -889,7 +1215,15 @@
    "total encaissé depuis ce matin",
    "jai vendu pour combien aujourd hui",
    "notre recette du jour elle est de combien",
-   "chiffre affaires aujourdhui stp"
+   "chiffre affaires aujourdhui stp",
+   "on a fait cb aujourd'hui en chiffre d'affaires ?",
+   "combien on a encaisse ajd stp",
+   "les ventes en dirhams aujourd'hui ca fait combien",
+   "c'est quoi mon CA du jour",
+   "on a gagne combien au resto aujourd hui en ventes",
+   "donne moi le total des recettes d'aujourd'hui",
+   "aujourd'hui le chiffre d'affaires est de combien",
+   "total encaisse pour la journee ?"
   ],
   "en": [
    "how much did I make today",
@@ -904,7 +1238,12 @@
    "what is our turnover today",
    "how much have we sold today in value",
    "what did the restaurant bring in today",
-   "total sales amount for today"
+   "total sales amount for today",
+   "how much revenue did we make today?",
+   "today's sales total in money please",
+   "how much did my restaurant bring in today?",
+   "what's my revenue so far today?",
+   "total takings for today?"
   ],
   "ar": [
    "كم ربحت اليوم",
@@ -916,7 +1255,12 @@
    "كم قبضنا اليوم من المبيعات",
    "أظهر لي مبيعات اليوم بالقيمة",
    "ما قيمة المبيعات التي حققناها اليوم",
-   "كم دخل المطعم اليوم من المبيعات"
+   "كم دخل المطعم اليوم من المبيعات",
+   "كم بلغت إيرادات اليوم؟",
+   "كم حقق مطعمي من المبيعات اليوم بالمال؟",
+   "أعطني إجمالي دخل المبيعات لهذا اليوم",
+   "ما رقم معاملات اليوم؟",
+   "كم حصلنا من المبيعات اليوم؟"
   ],
   "darija": [
    "شحال درت اليوم",
@@ -930,7 +1274,13 @@
    "أشحال جبنا اليوم فالمبيعات",
    "شحال داير رقم المعاملات اليوم",
    "بغيت نعرف شحال تقبضنا اليوم",
-   "شحال جاب الريسطو اليوم من البيع"
+   "شحال جاب الريسطو اليوم من البيع",
+   "شحال دخلنا اليوم من البيع؟",
+   "شحال درنا ديال شيفر دافير اليوم عافاك",
+   "مجموع الفلوس ديال المبيعات اليوم شحال؟",
+   "اليوم المطعم شحال دخل من المبيعات",
+   "عطيني المداخيل ديال اليوم",
+   "شحال بعنا بالفلوس اليوم فالمحل؟"
   ],
   "arabizi": [
    "ch7al dert lyoum",
@@ -942,7 +1292,13 @@
    "chhal dkhel lma7al mn lbi3 lyouma",
    "warini recette dyal lyouma",
    "ch7al jbedna f ventes lyouma",
-   "chhal howa CA dyal lyoum"
+   "chhal howa CA dyal lyoum",
+   "ch7al dkhelna lyom mn lbi3?",
+   "ch7al derna chiffre d affaires lyom 3afak",
+   "total flous dyal ventes lyom ch7al?",
+   "lyom resto ch7al dkhel mn ventes",
+   "3tini madakhil dyal lyom",
+   "ch7al b3na b flous lyom f lma7al?"
   ],
   "near": [
    "combien de tickets aujourd hui",
@@ -968,7 +1324,15 @@
    "recette de ce mois c combien",
    "on a vendu pour combien ce mois ci",
    "affiche le CA mensuel en cours",
-   "combien de ventes en valeur pour ce mois"
+   "combien de ventes en valeur pour ce mois",
+   "on a fait cb de chiffre d'affaires ce mois ?",
+   "combien on a encaisse ce mois ci stp",
+   "les ventes en dirhams de ce mois ca fait combien",
+   "c'est quoi mon CA du mois",
+   "le resto a rapporte combien ce mois en ventes",
+   "donne moi les recettes de ce mois",
+   "ce mois ci le chiffre d'affaires est de combien",
+   "total encaisse depuis le debut du mois ?"
   ],
   "en": [
    "what is my revenue this month",
@@ -980,7 +1344,12 @@
    "how much did we sell this month in value",
    "current month revenue?",
    "what is the restaurant’s revenue this month",
-   "total sales amount this month"
+   "total sales amount this month",
+   "how much revenue did we make this month?",
+   "this month's sales total in money please",
+   "how much has my restaurant brought in this month?",
+   "what's my revenue so far this month?",
+   "total takings since the start of this month?"
   ],
   "ar": [
    "كم بلغت إيراداتي هذا الشهر",
@@ -990,7 +1359,12 @@
    "أظهر قيمة مبيعات هذا الشهر",
    "كم دخل المطعم من المبيعات هذا الشهر",
    "ما رقم معاملاتنا للشهر الجاري",
-   "كم بلغت مبيعاتي بالقيمة هذا الشهر"
+   "كم بلغت مبيعاتي بالقيمة هذا الشهر",
+   "كم بلغت إيرادات هذا الشهر؟",
+   "كم حقق مطعمي من المبيعات هذا الشهر بالمال؟",
+   "أعطني إجمالي دخل المبيعات لهذا الشهر",
+   "ما رقم معاملات الشهر الحالي؟",
+   "كم حصلنا من المبيعات منذ بداية الشهر؟"
   ],
   "darija": [
    "شحال دخلت هاد الشهر",
@@ -1002,7 +1376,13 @@
    "أشحال تقبضنا من المبيعات هاد الشهر",
    "شحال داير الكا ديال الشهر الحالي",
    "بغيت نعرف recette ديال هاد الشهر",
-   "شحال بعنا بالقيمة هاد الشهر"
+   "شحال بعنا بالقيمة هاد الشهر",
+   "شحال دخلنا هاد الشهر من البيع؟",
+   "شحال درنا ديال شيفر دافير هاد الشهر عافاك",
+   "مجموع الفلوس ديال مبيعات هاد الشهر شحال؟",
+   "هاد الشهر المطعم شحال دخل من المبيعات",
+   "عطيني المداخيل ديال هاد الشهر",
+   "شحال بعنا بالفلوس من بداية هاد الشهر؟"
   ],
   "arabizi": [
    "chhal dkhelt had chhar",
@@ -1012,7 +1392,13 @@
    "warini CA dyal had chhar",
    "ch7al jbedna mn ventes had chhar",
    "chno recette dyal chhar li 7na fih",
-   "chhal b3na b l9ima had chhar"
+   "chhal b3na b l9ima had chhar",
+   "ch7al dkhelna had chhar mn lbi3?",
+   "ch7al derna chiffre d affaires had chhar 3afak",
+   "total flous dyal ventes had chhar ch7al?",
+   "had chhar resto ch7al dkhel mn ventes",
+   "3tini madakhil dyal had chhar",
+   "ch7al b3na b flous mn bidayt had chhar?"
   ],
   "near": [
    "chiffre d affaires aujourd hui",
@@ -1041,7 +1427,15 @@
    "on a traité combien de commandes aujourd hui",
    "nombre de transactions de vente aujourd hui",
    "combien de commandes au resto ce jour",
-   "jai fait cb de ventes depuis ce matin"
+   "jai fait cb de ventes depuis ce matin",
+   "cb de commandes aujourd'hui ?",
+   "on a fait combien de tickets ajd stp",
+   "nombre de ventes aujourd hui en tickets",
+   "combien de commandes on a recu au resto aujourd'hui",
+   "total des tickets de caisse du jour ?",
+   "ajd on a vendu combien de commandes",
+   "donne moi le nombre de commandes de la journee",
+   "y a eu cb de transactions de vente aujourd'hui"
   ],
   "en": [
    "how many orders today",
@@ -1054,7 +1448,12 @@
    "how many customer orders today",
    "show me today’s order count",
    "how many transactions have we had today",
-   "what is the number of sales today"
+   "what is the number of sales today",
+   "how many orders did we have today?",
+   "today's number of sales tickets please",
+   "how many customer orders came in today?",
+   "count today's sales transactions",
+   "how many orders has my restaurant received today?"
   ],
   "ar": [
    "كم عدد الطلبات اليوم",
@@ -1064,7 +1463,12 @@
    "أظهر عدد المبيعات لهذا اليوم",
    "ما إجمالي عدد الطلبات اليوم",
    "كم تذكرة بيع سجلنا اليوم",
-   "كم معاملة بيع لدينا اليوم"
+   "كم معاملة بيع لدينا اليوم",
+   "كم عدد الطلبات اليوم؟",
+   "كم تذكرة بيع سجلنا اليوم؟",
+   "أعطني عدد طلبات المطعم لهذا اليوم",
+   "كم عملية بيع تمت اليوم؟",
+   "ما إجمالي عدد الطلبات التي استقبلناها اليوم؟"
   ],
   "darija": [
    "شحال من كوموند اليوم",
@@ -1076,7 +1480,12 @@
    "وريني عدد التيكيات ديال اليوم",
    "شحال بعنا من مرة اليوم",
    "شحال من طلب تسجل فالريسطو اليوم",
-   "شحال مجموع الكوموندات ديال اليوم"
+   "شحال مجموع الكوموندات ديال اليوم",
+   "شحال من كوموند درنا اليوم؟",
+   "شحال من تيكي تسجلو اليوم عافاك",
+   "المطعم شحال جاو ليه من طلب اليوم",
+   "حسب ليا عمليات البيع ديال اليوم شحال فيهم",
+   "اليوم شحال من كوموند وصلاتنا؟"
   ],
   "arabizi": [
    "ch7al mn commande lyoum",
@@ -1087,7 +1496,13 @@
    "chhal mn vente dazet 3ndna lyouma",
    "warini nombre tickets dyal lyoum",
    "chhal mn transaction de vente lyouma",
-   "ch7al mn talab tsajel f resto lyoum"
+   "ch7al mn talab tsajel f resto lyoum",
+   "ch7al mn commande derna lyom?",
+   "ch7al mn ticket tsajlo lyom 3afak",
+   "nombre dyal commandes dyal lyom ch7al",
+   "resto ch7al jaw lih mn talab lyom",
+   "7seb lia operations de vente dyal lyom ch7al fihom",
+   "lyom ch7al mn commande wslatna?"
   ],
   "near": [
    "combien jai encaissé aujourd hui",
@@ -1116,7 +1531,15 @@
    "montant moyen des tickets du resto",
    "je veux voir mon panier moyen",
    "c quoi la moyenne par commande",
-   "mes clients dépensent combien en moyenne par achat"
+   "mes clients dépensent combien en moyenne par achat",
+   "c'est quoi mon panier moyen ?",
+   "combien fait le ticket moyen stp",
+   "en moyenne un client depense combien par commande",
+   "montant moyen des tickets de caisse ?",
+   "donne moi la valeur moyenne d'une commande",
+   "le panier moyen au resto il est a combien",
+   "en moyenne ca fait cb par vente",
+   "moyenne en dirhams par ticket ?"
   ],
   "en": [
    "what is my average basket",
@@ -1129,7 +1552,12 @@
    "what is the average receipt amount",
    "my average basket value?",
    "how much is the typical order worth on average",
-   "average sale amount for my business"
+   "average sale amount for my business",
+   "what's my average basket value?",
+   "average ticket amount please",
+   "how much do customers spend per order on average?",
+   "what is the average value of a sale?",
+   "show me my average spend per transaction"
   ],
   "ar": [
    "ما هو متوسط السلة",
@@ -1140,7 +1568,12 @@
    "كم ينفق العميل في الطلب الواحد بالمتوسط",
    "ما متوسط قيمة تذاكر البيع لدي",
    "أريد معرفة متوسط سلة العملاء",
-   "كم تبلغ قيمة المشتريات في كل عملية بالمتوسط"
+   "كم تبلغ قيمة المشتريات في كل عملية بالمتوسط",
+   "ما متوسط قيمة السلة؟",
+   "كم يبلغ متوسط مبلغ الفاتورة؟",
+   "كم ينفق العميل في الطلب الواحد بالمتوسط؟",
+   "أعطني متوسط قيمة عمليات البيع",
+   "ما متوسط المبلغ لكل تذكرة بيع؟"
   ],
   "darija": [
    "شحال الباني موايان",
@@ -1153,7 +1586,13 @@
    "أشحال معدل السلة ديال المحل",
    "شنو هو متوسط المبلغ فكل تيكي",
    "شحال كيدفع الزبون فكل شراء كمعدل",
-   "بغيت نعرف البانيي موايان ديال الريسطو"
+   "بغيت نعرف البانيي موايان ديال الريسطو",
+   "شحال هو البانيي مويان عندي؟",
+   "فالمتوسط شحال كيدير التيكي الواحد",
+   "الكليان شحال كيصرف فكل كوموند بالمعدل؟",
+   "عطيني متوسط القيمة ديال الطلبات",
+   "معدل الفلوس فكل عملية بيع شحال",
+   "التيكي مويان ديال المطعم شحال عافاك"
   ],
   "arabizi": [
    "ch7al panier moyen",
@@ -1164,7 +1603,13 @@
    "warini ticket moyen dyal lma7al",
    "ch7al katji commande f lmo3adal",
    "chno average basket dyali",
-   "chhal kaykheless client f kol achat b moyenne"
+   "chhal kaykheless client f kol achat b moyenne",
+   "ch7al howa panier moyen 3andi?",
+   "f moyenne ch7al kaydir ticket lwa7ed",
+   "client ch7al kaysref f kol commande b moyenne?",
+   "3tini moyenne dyal valeur des commandes",
+   "moyenne flous f kol vente ch7al",
+   "ticket moyen dyal resto ch7al 3afak"
   ],
   "near": [
    "combien de tickets aujourd hui",
@@ -1193,7 +1638,15 @@
    "je veux le total des fiches client",
    "combien de clients sont dans mon carnet",
    "nombre total de clients enregistrés svp",
-   "ma base client contient combien de personnes"
+   "ma base client contient combien de personnes",
+   "j'ai cb de clients dans mon fichier ?",
+   "combien de fiches clients au total stp",
+   "nombre de clients enregistres dans ma base",
+   "ma liste clients contient combien de personnes",
+   "combien de clients j'ai enregistres",
+   "total des clients dans le fichier client ?",
+   "compte les clients de ma base",
+   "y a cb de clients inscrits chez moi"
   ],
   "en": [
    "how many customers do I have",
@@ -1207,7 +1660,12 @@
    "what is my customer book count",
    "number of customers registered in my shop",
    "how many client profiles are saved",
-   "show me the total number of customers on file"
+   "show me the total number of customers on file",
+   "how many customers are in my customer database?",
+   "count my registered customers please",
+   "how many client records do I have?",
+   "total customers in my customer list?",
+   "how many customers have I registered in my system?"
   ],
   "ar": [
    "كم عدد الزبائن",
@@ -1218,7 +1676,12 @@
    "أظهر العدد الإجمالي للعملاء المسجلين",
    "كم شخصا في قائمة عملائي",
    "ما عدد العملاء المحفوظين في سجلي",
-   "أريد معرفة عدد الزبائن في دفتر العملاء"
+   "أريد معرفة عدد الزبائن في دفتر العملاء",
+   "كم عدد العملاء المسجلين في ملف الزبائن؟",
+   "أعطني إجمالي الزبائن في قاعدة بياناتي",
+   "كم سجل عميل لدي؟",
+   "كم عميلاً مسجلاً عندي في النظام؟",
+   "احسب العملاء الموجودين في قائمة زبائني"
   ],
   "darija": [
    "شحال من كليان عندي",
@@ -1231,7 +1694,13 @@
    "شحال من واحد فليست ديال الزبناء",
    "بغيت نعرف شحال من زبون مسجل عندي",
    "أشحال مجموع الزبناء فالسجل ديالي",
-   "شحال كاين من كليان فكناش الزبناء"
+   "شحال كاين من كليان فكناش الزبناء",
+   "شحال من كليان مسجل عندي فالفيشي؟",
+   "عطيني العدد ديال الزبناء فقاعدة البيانات",
+   "شحال عندي من فيش ديال الكليان",
+   "حسب ليا الزبناء المسجلين عندي فالنظام",
+   "لاليست ديال الكليان فيها شحال من واحد؟",
+   "شحال كاين من زبون فملف الزبناء ديالي عافاك"
   ],
   "arabizi": [
    "ch7al mn client 3ndi",
@@ -1242,7 +1711,12 @@
    "warini total clients msajlin",
    "chhal mn wa7ed f liste clients",
    "bghit n3ref ch7al mn client 3ndi f fichier",
-   "chhal kayn f registre dyal clients"
+   "chhal kayn f registre dyal clients",
+   "ch7al mn client msajel 3andi f fichier?",
+   "3tini nombre dyal clients f base de donnees",
+   "ch7al 3andi mn fiche client",
+   "liste dyal clients fiha ch7al mn wa7ed?",
+   "ch7al kayn mn zbon f fichier clients dyali 3afak"
   ],
   "near": [
    "combien de clients sont venus aujourd hui",
@@ -1268,7 +1742,14 @@
    "je veux savoir combien de plats jai au menu",
    "combien de produits sont listés dans ma boutique",
    "ma carte contient combien de plats",
-   "nombre total d articles sur mon menu"
+   "nombre total d articles sur mon menu",
+   "cb d'articles j'ai sur ma carte ?",
+   "combien de plats dans mon menu en tout stp",
+   "nombre total de produits dans mon catalogue",
+   "compte les articles du menu",
+   "j'ai combien de produits references au catalogue",
+   "total des plats proposes sur ma carte ?",
+   "y a cb d'items dans mon menu"
   ],
   "en": [
    "how many items are on my menu",
@@ -1280,7 +1761,12 @@
    "number of dishes on my menu?",
    "how many menu entries do we have",
    "show me the count of catalogue items",
-   "how many products have I listed"
+   "how many products have I listed",
+   "how many items are on my menu?",
+   "count the dishes on my menu please",
+   "how many products are in my catalog in total?",
+   "what's the total number of menu items?",
+   "how many dishes does my restaurant's menu list?"
   ],
   "ar": [
    "كم صنفا في قائمتي",
@@ -1290,7 +1776,12 @@
    "أظهر عدد أصناف القائمة",
    "ما إجمالي الأطباق في قائمتي",
    "كم عدد عناصر كتالوج المحل",
-   "أريد معرفة عدد المنتجات المدرجة في القائمة"
+   "أريد معرفة عدد المنتجات المدرجة في القائمة",
+   "كم صنفاً في قائمة الطعام عندي؟",
+   "كم عدد الأطباق في قائمة مطعمي؟",
+   "أعطني العدد الإجمالي للمنتجات في الكتالوج",
+   "احسب الأصناف الموجودة في قائمتي",
+   "كم منتجاً مدرجاً في كتالوج المحل؟"
   ],
   "darija": [
    "شحال من بلات فالمنيو ديالي",
@@ -1302,7 +1793,13 @@
    "أشحال مجموع البلاتوات فالمينيو",
    "بغيت نعرف عدد المنتجات فكاطالوغ المحل",
    "شحال من اختيار عندنا فالكارط",
-   "شحال كاين من صنف فالمنيو ديال الريسطو"
+   "شحال كاين من صنف فالمنيو ديال الريسطو",
+   "شحال من طبق عندي فالمنيو؟",
+   "شحال كاين من برودوي فالكاتالوغ ديالي كامل",
+   "حسب ليا الأصناف لي فالكارط",
+   "المنيو ديال المطعم فيها شحال من ماكلة؟",
+   "عطيني العدد ديال المنتجات المسجلين فالكاتالوغ",
+   "فالكارط ديالي شحال من طبق كاين عافاك"
   ],
   "arabizi": [
    "chhal mn plat f menu dyali",
@@ -1312,7 +1809,13 @@
    "warini total produits f catalogue",
    "chhal mn choix 3ndna f carte",
    "bghit n3ref ch7al mn produit msajel f menu",
-   "chhal kayn mn senf f menu dyal resto"
+   "chhal kayn mn senf f menu dyal resto",
+   "ch7al mn plat 3andi f menu?",
+   "ch7al kayn mn produit f catalogue dyali kamel",
+   "7seb lia les articles li f carte",
+   "menu dyal resto fiha ch7al mn plat?",
+   "3tini nombre dyal produits msajlin f catalogue",
+   "f carte dyali ch7al mn plat kayn 3afak"
   ],
   "near": [
    "quel plat se vend le plus",
@@ -1326,125 +1829,405 @@
  "client.today": {
   "fr": [
    "quel client est venu aujourd'hui",
-   "qui sont les clients passés ajd"
+   "qui sont les clients passés ajd",
+   "Quels clients identifies sont venus ajd ?",
+   "Qui sont les clients connus passes aujourd'hui ?",
+   "Donne moi les noms des clients identifies venus ce jour",
+   "kel clients inscrits sont venus aujourd hui stp ?",
+   "C'est qui les clients identifies qui sont passes ajd ?",
+   "Liste moi les clients enregistres venus aujourd'hui",
+   "Qui parmi mes clients inscrits est venu aujourd hui ?",
+   "Je veux les noms des clients identifies qui sont venus ajd"
   ],
   "en": [
-   "which customers came in today"
+   "which customers came in today",
+   "Which identified customers came in today?",
+   "Who were the registered customers who visited today?",
+   "Show me the names of known customers who came in today",
+   "Which of my identified clients visited today?",
+   "Who among my registered customers came by today?",
+   "List the identified customers who visited us today",
+   "What are the names of today's identified visitors?",
+   "Who were today's customers with profiles?"
   ],
   "ar": [
-   "من الزبائن الذين جاؤوا اليوم"
+   "من الزبائن الذين جاؤوا اليوم",
+   "من هم العملاء المسجلون الذين زارونا اليوم؟",
+   "أعطني أسماء العملاء المعروفين الذين حضروا اليوم",
+   "أي العملاء المحددة هوياتهم جاءوا اليوم؟",
+   "من من عملائنا المسجلين زار المحل اليوم؟",
+   "اعرض أسماء العملاء المسجلين الذين قدموا اليوم",
+   "من هم الزبائن المعروفون الذين مروا اليوم؟",
+   "أريد أسماء العملاء ذوي الملفات الذين زارونا اليوم",
+   "أي زبائن مسجلين حضروا إلى المحل اليوم؟"
   ],
   "darija": [
-   "شكون من الكليان جا اليوم"
+   "شكون من الكليان جا اليوم",
+   "شكون هما الزبناء المسجلين اللي جاو اليوم؟",
+   "عطيني سميات الكليان المعروفين اللي دازو اليوم",
+   "شكون من الزبناء اللي عندي مسجلين جا اليوم؟",
+   "وريني سميات الزبناء المسجلين اللي زارونا اليوم",
+   "أشنو سميات الكليان اللي معروفين وجاو اليوم؟",
+   "شكون هما الزبناء اللي عندهم حساب وجاو اليوم؟",
+   "بغيت نعرف شكون من الكليان المسجلين داز اليوم",
+   "لائحة الزبناء المعروفين اللي جاو للمحل اليوم عفاك"
   ],
   "arabizi": [
-   "chkon client ja lyouma"
+   "chkon client ja lyouma",
+   "chkoun homa les clients inscrits li jaw lyoum?",
+   "3tini smiyat l clients m3roufin li dazou lyoum",
+   "chkoun men clients msajlin ja lyoum?",
+   "wrini smiyat les clients identifies li jaw lyoum",
+   "chkon les clients li 3andhom compte w jaw lyoum?",
+   "bghit smiyat l clients msajlin li zarouna lyoum",
+   "achmen clients m3roufin dazou lma7al lyoum?",
+   "liste dyal clients inscrits li jaw lyoum 3afak"
   ]
  },
  "client.last": {
   "fr": [
    "quand est venue Salma Bennani la derniere fois",
-   "numero de Salma Bennani"
+   "numero de Salma Bennani",
+   "Salma Bennani est venue quand pour la derniere fois ?",
+   "c'etait quand la derniere visite de Salma ?",
+   "Bennani est passee quand la derniere fois ?",
+   "donne moi le numero de Salma Bennani stp",
+   "C'est quoi le tel de Salma ?",
+   "Je peux avoir le contact de Bennani ?",
+   "Salma Bennani est venue pour la derniere fois kel jour ?",
+   "Retrouve moi le telephone de Salma Bennani"
   ],
   "en": [
-   "when did Salma Bennani last visit"
+   "when did Salma Bennani last visit",
+   "When did Salma Bennani last visit?",
+   "When was Salma last here?",
+   "What date did Bennani last come in?",
+   "Give me Salma Bennani's phone number",
+   "What's Salma's phone number?",
+   "How can I contact Bennani?",
+   "Show me Salma Bennani's contact details",
+   "When did Salma Bennani most recently come by?"
   ],
   "ar": [
-   "متى آخر زيارة لسلمى بناني"
+   "متى آخر زيارة لسلمى بناني",
+   "متى كانت آخر زيارة لسلمى بناني؟",
+   "متى جاءت سلمى آخر مرة؟",
+   "ما تاريخ آخر زيارة لبناني؟",
+   "أعطني رقم هاتف سلمى بناني",
+   "ما رقم هاتف سلمى؟",
+   "كيف أتواصل مع بناني؟",
+   "اعرض بيانات التواصل الخاصة بسلمى بناني",
+   "متى زارتنا سلمى بناني للمرة الأخيرة؟"
   ],
   "darija": [
-   "فوقاش جات سلمى بناني آخر مرة"
+   "فوقاش جات سلمى بناني آخر مرة",
+   "فاش جات سلمى بناني آخر مرة؟",
+   "آخر مرة دازت سلمى فوقاش؟",
+   "فوقاش بناني جات للمحل آخر مرة؟",
+   "عطيني نمرة تلفون سلمى بناني",
+   "شنو نمرة سلمى؟",
+   "كيفاش نتاصل ببناني؟",
+   "وريني معلومات الاتصال ديال سلمى بناني",
+   "سلمى بناني شحال هادي ما جات للمحل؟"
   ],
   "arabizi": [
-   "imta akhir mra jat salma bennani"
+   "imta akhir mra jat salma bennani",
+   "fo9ach jat Salma Bennani akher merra?",
+   "Salma imta dazat akher merra?",
+   "Bennani fo9ach jat lma7al akher merra?",
+   "3tini nemro dyal Salma Bennani",
+   "chno telephone dyal Salma?",
+   "kifach ntasel b Bennani?",
+   "wrini contact dyal Salma Bennani",
+   "Salma Bennani ch7al hadi ma jat lma7al?"
   ]
  },
  "staff.hours": {
   "fr": [
-   "combien d'heures ont travaillé les employés aujourd'hui"
+   "combien d'heures ont travaillé les employés aujourd'hui",
+   "cb d'heures le personnel a travaille ajd ?",
+   "Combien d'heures mes employes ont pointe aujourd'hui ?",
+   "Total des heures travaillees par l'equipe aujourd hui stp",
+   "Le staff a fait combien d heures ajd ?",
+   "Combien d'heures de travail pour les salaries aujourd'hui ?",
+   "Mes employes ont bosse combien de temps aujourd hui ?",
+   "Donne moi les heures pointees par le personnel ajd",
+   "Quel est le total des heures travaillees par mon equipe aujourd'hui ?"
   ],
   "en": [
-   "how many hours did the staff work today"
+   "how many hours did the staff work today",
+   "How many hours did my staff work today?",
+   "How many hours did employees clock today?",
+   "What's the total staff time worked today?",
+   "Show me the hours my team worked today",
+   "How many working hours did my employees log today?",
+   "How long did the staff work today in total?",
+   "Give me today's clocked hours for the team",
+   "What's today's total hours worked by staff?"
   ],
   "ar": [
-   "كم عدد ساعات عمل الموظفين اليوم"
+   "كم عدد ساعات عمل الموظفين اليوم",
+   "كم ساعة عمل الموظفون اليوم؟",
+   "كم ساعة سجل فريق العمل اليوم؟",
+   "ما مجموع ساعات عمل الموظفين اليوم؟",
+   "أعطني ساعات الدوام المسجلة للطاقم اليوم",
+   "كم ساعة اشتغل العاملون لدي اليوم؟",
+   "ما إجمالي ساعات حضور الموظفين المسجلة اليوم؟",
+   "كم بلغ مجموع ساعات عمل فريقي اليوم؟",
+   "اعرض ساعات العمل التي سجلها الموظفون اليوم"
   ],
   "darija": [
-   "شحال من ساعة خدمو الخدامة اليوم"
+   "شحال من ساعة خدمو الخدامة اليوم",
+   "شحال من ساعة خدمو المستخدمين اليوم؟",
+   "شحال سجلو ديال السوايع الخدمة اليوم؟",
+   "عطيني مجموع سوايع خدمة الفريق اليوم",
+   "الكارمونات خدمو شحال ديال السوايع اليوم؟",
+   "شحال من ساعة بوانتاو المستخدمين اليوم؟",
+   "بغيت نعرف سوايع الخدمة ديال العمال اليوم",
+   "شحال هو مجموع السوايع اللي خدم الستاف اليوم؟",
+   "وريني السوايع اللي تسجلات للموظفين اليوم"
   ],
   "arabizi": [
-   "ch7al mn sa3a khdmo lkhddama lyoum"
+   "ch7al mn sa3a khdmo lkhddama lyoum",
+   "ch7al men sa3a khedmo les employes lyoum?",
+   "ch7al sa3a pointaw staff lyoum?",
+   "3tini majmou3 swa3e3 lkhedma dyal l equipe lyoum",
+   "les employes khedmo ch7al dial swa3e3 lyoum?",
+   "ch7al mn sa3a tsajlat lel staff lyoum?",
+   "bghit swa3e3 lkhedma dyal l3ommal lyoum",
+   "total des heures li khedmo l equipe lyoum ch7al?",
+   "wrini heures pointees dyal les salaries lyoum"
   ]
  },
  "units.today": {
   "fr": [
-   "combien d'articles vendus aujourd'hui"
+   "combien d'articles vendus aujourd'hui",
+   "cb de produits vendus ajd ?",
+   "Combien de pieces on a vendues aujourd'hui ?",
+   "Quel est le nombre d'articles vendus aujourd hui ?",
+   "On a vendu combien d'unites ajd stp ?",
+   "Donne moi le total des produits vendus en nombre aujourd'hui",
+   "Combien d'articles sont partis aujourd hui ?",
+   "Je veux le nombre de pieces vendues ajd",
+   "Total des unites vendues aujourd'hui c'est combien ?"
   ],
   "en": [
-   "how many items did we sell today"
+   "how many items did we sell today",
+   "How many items did we sell today?",
+   "What's the number of units sold today?",
+   "How many products were sold today?",
+   "Give me today's total units sold",
+   "How many individual pieces did we sell today?",
+   "What's today's item count sold?",
+   "Count the products sold today",
+   "How many units went out in sales today?"
   ],
   "ar": [
-   "كم منتجا بعنا اليوم"
+   "كم منتجا بعنا اليوم",
+   "كم قطعة بعنا اليوم؟",
+   "ما عدد المنتجات المباعة اليوم؟",
+   "كم وحدة تم بيعها اليوم؟",
+   "أعطني مجموع القطع المباعة اليوم",
+   "كم منتجا بعنا اليوم من حيث العدد؟",
+   "ما إجمالي عدد الوحدات التي بيعت اليوم؟",
+   "أريد عدد الأصناف المباعة كقطع اليوم",
+   "كم عدد القطع التي خرجت في المبيعات اليوم؟"
   ],
   "darija": [
-   "شحال من منتوج بعنا اليوم"
+   "شحال من منتوج بعنا اليوم",
+   "شحال من بياسة بعنا اليوم؟",
+   "شحال من وحدة تباعت اليوم؟",
+   "عطيني العدد ديال البرودويات اللي تباعو اليوم",
+   "شحال بعنا ديال القطع اليوم بالعدد؟",
+   "مجموع الوحدات اللي بعنا اليوم شحال؟",
+   "بغيت عدد المنتجات المباعة اليوم",
+   "شحال من قطعة خرجات فالبيع اليوم؟",
+   "حسب ليا عدد الحوايج اللي تباعو اليوم"
   ],
   "arabizi": [
-   "ch7al mn produit b3na lyoum"
+   "ch7al mn produit b3na lyoum",
+   "ch7al men piece b3na lyoum?",
+   "ch7al men unite tba3at lyoum?",
+   "3tini 3adad produits li tba3o lyoum",
+   "ch7al b3na dial l9ta3 lyoum b l3adad?",
+   "total des unites vendues lyoum ch7al?",
+   "bghit nombre dial produits vendus lyoum",
+   "ch7al men 7aja tba3at lyoum b l3adad?",
+   "7seb lia nombre de pieces vendues lyoum"
   ]
  },
  "cash.today": {
   "fr": [
-   "combien de cash dans la caisse"
+   "combien de cash dans la caisse",
+   "cb de cash dans la caisse ajd ?",
+   "Combien d'especes on a encaisse aujourd'hui ?",
+   "Quel montant en liquide est dans le tiroir caisse aujourd hui ?",
+   "Total des paiements en cash recus ajd stp",
+   "On a pris combien en especes aujourd'hui ?",
+   "Il y a combien de liquide dans la caisse aujourd hui ?",
+   "Montant encaisse en cash aujourd'hui ?",
+   "Donne moi le total des ventes payees en especes ajd"
   ],
   "en": [
-   "how much cash is in the till"
+   "how much cash is in the till",
+   "How much cash is in the till today?",
+   "How much cash did we take today?",
+   "What's in the cash drawer today?",
+   "What's the total amount received in cash today?",
+   "How much did customers pay in cash today?",
+   "Show me today's cash takings",
+   "How much money is in the register in cash today?",
+   "What's the value of cash payments received today?"
   ],
   "ar": [
-   "كم يوجد في الصندوق نقدا اليوم"
+   "كم يوجد في الصندوق نقدا اليوم",
+   "كم نقدا في درج الصندوق اليوم؟",
+   "كم مبلغ النقد الذي استلمناه اليوم؟",
+   "ما إجمالي المدفوعات النقدية اليوم؟",
+   "كم دفع الزبائن نقدا اليوم؟",
+   "ما المبلغ الموجود نقدا في الصندوق اليوم؟",
+   "أعطني إجمالي المقبوضات النقدية لهذا اليوم",
+   "كم جمعنا نقدا اليوم؟",
+   "ما قيمة المبيعات المدفوعة نقدا اليوم؟"
   ],
   "darija": [
-   "شحال عندي فالصندوق دابا"
+   "شحال عندي فالصندوق دابا",
+   "شحال كاين كاش فالصندوق اليوم؟",
+   "شحال دخلنا كاش اليوم؟",
+   "شحال ديال الفلوس نيشان فالدرج ديال الكاسة اليوم؟",
+   "عطيني مجموع الخلاص بالكاش اليوم",
+   "شحال خلصونا الزبناء نقدا اليوم؟",
+   "شحال جمعنا ديال الكاش اليوم؟",
+   "شنو هو المبلغ اللي دخل نقدا اليوم؟",
+   "شحال كاين ديال النقد فالكاسة دابا اليوم؟"
   ],
   "arabizi": [
-   "ch7al kayn f sndo9 daba"
+   "ch7al kayn f sndo9 daba",
+   "ch7al kayn cash f caisse lyoum?",
+   "ch7al dkhelna cash lyoum?",
+   "ch7al dial flous cash f tiroir lyoum?",
+   "3tini total dial khlas cash lyoum",
+   "ch7al khalsouna clients en especes lyoum?",
+   "ch7al jme3na dial cash lyoum?",
+   "chno montant li dkhel na9dan lyoum?",
+   "ch7al kayn men liquide f caisse lyoum?"
   ]
  },
  "hours.week": {
   "fr": [
-   "combien de jours on est ouvert par semaine"
+   "combien de jours on est ouvert par semaine",
+   "On ouvre quels jours de la semaine ?",
+   "cb de jours par semaine le resto est ouvert ?",
+   "Quels sont nos jours d'ouverture chaque semaine ?",
+   "On est ouvert kel jours dans la semaine stp ?",
+   "Combien de jours par semaine ma boutique ouvre ?",
+   "Donne moi les jours ou mon commerce est ouvert",
+   "Le magasin ouvre combien de jours par semaine ?",
+   "C'est quoi les jours d'ouverture hebdomadaires du resto ?"
   ],
   "en": [
-   "how many days a week are we open"
+   "how many days a week are we open",
+   "Which days of the week are we open?",
+   "How many days a week is my shop open?",
+   "What are our weekly opening days?",
+   "On which weekdays does my restaurant open?",
+   "How many days per week do we open?",
+   "List the days my business is open each week",
+   "Which days is the shop open during the week?",
+   "How many days a week does the restaurant operate?"
   ],
   "ar": [
-   "كم يوما نعمل في الاسبوع"
+   "كم يوما نعمل في الاسبوع",
+   "ما أيام الأسبوع التي نفتح فيها؟",
+   "كم يوما في الأسبوع يفتح متجري؟",
+   "ما أيام عمل المطعم أسبوعيا؟",
+   "في أي أيام الأسبوع يفتح المحل؟",
+   "كم عدد أيام فتح النشاط كل أسبوع؟",
+   "اعرض أيام افتتاح المتجر خلال الأسبوع",
+   "كم يوما في الأسبوع نستقبل الزبائن؟",
+   "ما هي أيام فتح مطعمي في الأسبوع؟"
   ],
   "darija": [
-   "شحال من نهار كنخدمو فالسيمانة"
+   "شحال من نهار كنخدمو فالسيمانة",
+   "أشنو هي الأيام اللي كنحلو فيها فالسيمانة؟",
+   "شحال من نهار فالسيمانة المحل محلول؟",
+   "فاش من نهارات كيتحل الريسطو كل سيمانة؟",
+   "عطيني أيام الخدمة ديال المحل فالسيمانة",
+   "واشمن أيام كنفتحو فيها فالسيمانة؟",
+   "الحانوت كيتحل شحال من نهار فالسيمانة؟",
+   "بغيت نعرف أيام الفتح ديال الريسطو كل أسبوع",
+   "شحال من يوم فالسيمانة كنستقبلو الزبناء؟"
   ],
   "arabizi": [
-   "ch7al mn nhar knkhdmo f simana"
+   "ch7al mn nhar knkhdmo f simana",
+   "achmen iyam kan7ello fihom f simana?",
+   "ch7al men nhar f simana lma7al ma7loul?",
+   "f achmen nharat kayt7el resto kol simana?",
+   "3tini iyam l7ell dial lma7al f simana",
+   "wa9tach men nharat kan7ello f simana?",
+   "l7anout kayt7el ch7al men nhar f simana?",
+   "bghit iyam ouverture dial resto kol simana",
+   "ch7al men youm f simana kansta9blo clients?"
   ]
  },
  "command.edit": {
   "fr": [
    "ajoute 20 points à Salma Bennani",
    "change l'heure de fermeture à 23h",
-   "supprime l'employé Omar"
+   "supprime l'employé Omar",
+   "Ajoute 50 points au client Salma Bennani",
+   "Change l'heure d'ouverture a 9h",
+   "Mets la fermeture a 23h",
+   "Ajoute un employe nomme Youssef Alaoui",
+   "Supprime l'employe Karim Amrani",
+   "Ajoute le plat tajine poulet a 80 dh",
+   "Change le prix du cafe a 15 dh",
+   "Annule la commande d'aujourd'hui"
   ],
   "en": [
    "change closing time to 11",
-   "add a new dish to the menu"
+   "add a new dish to the menu",
+   "Add 50 points to Salma Bennani's account",
+   "Change the opening time to 9 am",
+   "Set the closing time to 11 pm",
+   "Add an employee named Youssef Alaoui",
+   "Delete employee Karim Amrani",
+   "Add chicken tagine to the menu for 80 dirhams",
+   "Change the coffee price to 15 dirhams",
+   "Cancel today's order"
   ],
   "ar": [
-   "احذف الموظف عمر"
+   "احذف الموظف عمر",
+   "أضف ٥٠ نقطة إلى حساب سلمى بناني",
+   "غير وقت الافتتاح إلى التاسعة صباحا",
+   "اجعل وقت الإغلاق الحادية عشرة مساء",
+   "أضف موظفا اسمه يوسف العلوي",
+   "احذف الموظف كريم العمراني",
+   "أضف طبق طاجين الدجاج بسعر ٨٠ درهما",
+   "غير سعر القهوة إلى ١٥ درهما",
+   "ألغ طلب اليوم"
   ],
   "darija": [
-   "بدل وقت الاغلاق للحداش"
+   "بدل وقت الاغلاق للحداش",
+   "زيد ٥٠ نقطة فحساب سلمى بناني",
+   "بدل وقت الحلان للتسعود دالصباح",
+   "خلي وقت السدان للحاداش دالليل",
+   "زيد موظف سميتو يوسف العلوي",
+   "حيد الموظف كريم العمراني",
+   "زيد طاجين الدجاج فالمينيو ب ٨٠ درهم",
+   "بدل ثمن القهوة ل ١٥ درهم",
+   "لغي الطلب ديال اليوم"
   ],
   "arabizi": [
-   "zid 10 points l salma"
+   "zid 10 points l salma",
+   "zid 50 points f compte Salma Bennani",
+   "bdel wa9t l7ell l 9 d sba7",
+   "khlli wa9t sdan l 11 d lil",
+   "zid employe smito Youssef Alaoui",
+   "7yed l employe Karim Amrani",
+   "zid tajine djaj f menu b 80 dh",
+   "bdel taman l9ahwa l 15 dh",
+   "lghi commande dial lyoum"
   ]
  }
 }

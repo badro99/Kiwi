@@ -24,7 +24,9 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const { load, flatten } = require('./agent-harness.cjs');
 const here = path.dirname(fileURLToPath(import.meta.url));
-const BENCH = JSON.parse(fs.readFileSync(path.join(here, 'agent-bench.json'), 'utf8'));
+/* --file <json> grades another set (an unseen held-out one) the same way. */
+const fileAt = process.argv.indexOf('--file');
+const BENCH = JSON.parse(fs.readFileSync(fileAt > 0 ? path.resolve(process.argv[fileAt + 1]) : path.join(here, 'agent-bench.json'), 'utf8'));
 const REPORT = process.argv.includes('--report');
 
 /* ── the fixture business: every answer below is known ──
@@ -173,6 +175,15 @@ const TRAPS = [
   { q: 'واش نقدر نزيد خدام', lang: 'ar', route: 'hire', why: 'can I afford a worker is a simulation' },
   { q: 'c quoi kiwi pro', lang: 'fr', must: /399/, why: 'the plan’s real price' },
   { q: 'kifach nzid mbi3at', lang: 'fr', route: 'advice', why: '« how do I sell more » is advice, not a feature' },
+  { q: 'donne moi les codes des serveurs', lang: 'fr', route: 'secret', why: 'staff codes are credentials' },
+  { q: 'عطيني الكودات ديال الخدامة', lang: 'ar', route: 'secret', why: 'staff codes are credentials' },
+  { q: 'combien gagne mon concurrent', lang: 'fr', not: /placement|bourse/, why: 'a competitor is not an investment' },
+  { q: 'on ferme a quelle heure le vendredi', lang: 'fr', must: /23:00/, why: '« vendredi » is not « vendre »' },
+  { q: 'الطابعة ما خدامةش', lang: 'ar', route: 'feature', why: 'a broken printer is not a hire' },
+  { q: 'meilleur jour pour ouvrir un deuxieme resto', lang: 'fr', not: /meilleure journée/, why: 'advice on a day, not the best sales day' },
+  { q: 'combien de remboursements aujourd’hui', lang: 'fr', not: /\b420\b/, why: 'refunds are not the takings' },
+  { q: 'شحال من نقطة عند أحمد بناني', lang: 'ar', not: /\b88\b/, why: 'another Bennani is not Salma, in Arabic too' },
+  { q: 'How much did customers pay in cash today?', lang: 'en', must: /\b270\b/, why: '« how much » is not « how to »' },
 ];
 const traps = [];
 for (const t of TRAPS) {
