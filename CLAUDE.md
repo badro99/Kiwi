@@ -5,7 +5,7 @@ It captures rules and conventions that aren't obvious from the code alone — mo
 things that already cost someone a session.
 **New session resuming work? Read `docs/handoffs/HANDOFF.md` first.** Part 1 is the
 current-state brief (what's true right now, recent work, gotchas, the two dev tracks, the
-Design 2026 skin); Part 2 is the full project context (history, architecture, brand system,
+design skins; the tills are Design 2027 only now, see §4); Part 2 is the full project context (history, architecture, brand system,
 roadmap). All other documents live under `docs/` — `audits/`, `roadmaps/`, `specs/`, `ops/`
 (runbooks: deploy, auth, admin, Live Link, kiosk) — see `docs/README.md`. Only `README.md`
 and this file stay at the repo root (`AGENTS.md` is a gitignored file the claude-mem
@@ -373,6 +373,35 @@ check the GitHub Pages mirror instead, or use a real browser session.
 ---
 
 ## 4. Brand system — locked
+
+### Design 2027 is the only design (owner, 2026-11-27)
+
+**Forget the old skin.** Since 26 Nov 2026 every client runs the caisse, the
+kitchen screen, the team app and guest ordering in Design 2027: it is the
+default, and only a store set to `skin2027: false` in kiwi-admin keeps the old
+look (`assets/api-base.js`, `functions/_middleware.js`). Every till fix, feature
+and check targets the 2027 screens. Only the tills changed: the dashboard keeps
+its own screens (owner, 2026-10-27), and the three-skin note below still
+applies there.
+
+- **Build on the kit, not the old modals.** The 2027 till is `assets/kit/*.js`
+  driven by `assets/caisse/till-frame.js` (`tillKit*`, `KiwiTillFrame` panes).
+  A change made only in an old modal of `kiwi-caisse.html` reaches no client.
+  This already happened: the 27 Nov « Par montant » split landed in the old
+  split modal (`assets/caisse/split-tender.js`), while 2027 opens its own split
+  pane (`<k-split>` in `assets/kit/till.js`).
+- **Logic stays shared.** A 2027 control still presses the shipped control or
+  calls the shipped function, with no logic of its own (owner, 2026-10-27,
+  `tools/parity-2027.mjs`). Money, stock, kitchen and journal code is written
+  once, outside the skin; only the screen is 2027.
+- **The old skin is a fallback, not a target.** Keep it working for stores on
+  `skin2027: false`, but add no new UI, styling or tests to it.
+- **Open the demo in 2027 before you judge it.** `kiwi-caisse.html?demo` has no
+  store, so it opens in the old skin. Add `&skin=2027` (or set
+  `localStorage['kiwiSkin2027:till'] = '1'`) and check `data-store-skin` on
+  `<html>` or `tillKitOn()` before you screenshot or call a till flow done.
+  Browser suites that judge what a client sees open the 2027 till the same way.
+
 
 - **2026-08-22 · Typography:** Instrument Serif is retired from every user-facing surface. Existing serif/editorial/display aliases remain for compatibility but resolve to Inter Tight; emphasis uses upright weight and colour, never italics. User-facing copy uses commas, full stops or middle dots instead of U+2014 em dashes.
 
