@@ -31,7 +31,7 @@
     'assets/stock-identity.js?v=4',
     'assets/menu-nutrition.js?v=4',
     'assets/restaurant-recipes.js?v=30',
-    'assets/menu-option-stock.js?v=1',
+    'assets/menu-option-stock.js?v=2',
     'assets/menu-i18n.js?v=10',
     'assets/kiwi-select.js?v=4',
     'assets/food-trade-settings.js?v=2',

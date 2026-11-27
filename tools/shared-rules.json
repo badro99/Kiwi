@@ -40,6 +40,14 @@
       ]
     },
     {
+      "name": "KiwiOptionIds",
+      "source": "functions/api/_rules-option-ids.js",
+      "targets": [
+        "assets/inventory-consumption.js",
+        "assets/cost.js"
+      ]
+    },
+    {
       "name": "KiwiRecipeUnits",
       "source": "functions/api/_rules-recipe-units.js",
       "targets": [

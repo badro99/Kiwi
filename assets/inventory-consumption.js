@@ -109,40 +109,67 @@
 
   /* Les options d'un plat (« Boisson : Coca-Cola », « Supplément cheddar »)
    * sortent leur propre article : une fiche `opt:<choix>` du document des
-   * coûts, écrite depuis la carte (assets/menu-option-stock.js). Le choix se
-   * trouve par son identifiant (caisse, vente rapide) ; une commande venue
-   * d'ailleurs (serveur, OrderPro) n'en porte plus que le texte
-   * « Groupe : Choix » que le serveur a validé, on le relit alors. */
-  function optionIds(line, d) {
-    var recipes = d.recipes || {}, out = [], seen = {}, structured = false;
-    function add(id) {
-      id = String(id == null ? '' : id); if (!id) return;
-      structured = true;
-      if (!seen[id] && recipes['opt:' + id]) { seen[id] = 1; out.push(id); }
-    }
-    function list(v) { return Array.isArray(v) ? v : []; }
-    list(line.opts).forEach(function (o) { if (o) add(o.c || o.choiceId); });
-    list(line.optionIds).forEach(add);
-    list(line.options).forEach(function (o) { if (o) add(typeof o === 'object' ? o.id : o); });
-    list(line.optionChoices).forEach(function (o) { if (o && (o.choiceId || o.id)) add(o.choiceId || o.id); });
-    if (structured) return out;
-    var wanted = [];
-    list(line.optionChoices).forEach(function (o) { if (o && o.label) wanted.push({ group: String(o.group || ''), name: norm(o.label) }); });
-    var text = typeof line.optionText === 'string' ? line.optionText : (typeof line.options === 'string' ? line.options : '');
-    if (!wanted.length && text) text.split(/\s*·\s*/).forEach(function (part) {
-      var at = part.indexOf(':');
-      if (at > 0) wanted.push({ groupName: norm(part.slice(0, at)), name: norm(part.slice(at + 1)) });
-    });
-    wanted.forEach(function (w) {
-      var hits = Object.keys(recipes).filter(function (k) {
-        var r = recipes[k];
-        if (!/^opt:/.test(k) || !r || norm(r.name) !== w.name) return false;
-        return w.group ? String(r.group || '') === w.group : norm(r.groupName) === w.groupName;
+   * coûts, écrite depuis la carte (assets/menu-option-stock.js). Quelles
+   * options d'une ligne en ont une : la règle partagée avec le coût matière. */
+  /* GENERATED SHARED KiwiOptionIds BEGIN */
+  /* Copy of functions/api/_rules-option-ids.js made by tools/build-shared-rules.mjs. Edit the source, then run the tool. */
+  var KiwiOptionIds = (function () {
+    /* Quelles options d'une ligne de vente sont reliées au stock : celles qui ont
+     * une fiche `opt:<id du choix>` dans le document des coûts
+     * (assets/menu-option-stock.js). Une règle, deux lecteurs : le décompte du
+     * stock (assets/inventory-consumption.js) et le coût matière (assets/cost.js).
+     * Les deux doivent voir les MÊMES options, sinon le stock sort une canette que
+     * la marge ne compte pas.
+     *
+     * Le choix se trouve par son identifiant (caisse : opts[].c ou optionIds ;
+     * vente rapide : options[].id ; app serveur : optionChoices[].choiceId). Une
+     * commande venue d'ailleurs ne porte plus que le texte « Groupe : Choix » que
+     * le serveur a validé : on le relit, et un nom ambigu ne rend rien. */
+    const fold = (v) => String(v == null ? '' : v).trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const listOf = (v) => (Array.isArray(v) ? v : []);
+
+    function optionChoiceIds(line, recipes) {
+      const book = recipes || {};
+      const out = [];
+      const seen = new Set();
+      let structured = false;
+      const add = (raw) => {
+        const id = String(raw == null ? '' : raw);
+        if (!id) return;
+        structured = true;
+        if (!seen.has(id) && book['opt:' + id]) { seen.add(id); out.push(id); }
+      };
+      if (!line) return out;
+      listOf(line.opts).forEach((o) => { if (o) add(o.c || o.choiceId); });
+      listOf(line.optionIds).forEach(add);
+      listOf(line.options).forEach((o) => { if (o) add(typeof o === 'object' ? o.id : o); });
+      listOf(line.optionChoices).forEach((o) => { if (o && (o.choiceId || o.id)) add(o.choiceId || o.id); });
+      if (structured) return out;
+      const wanted = [];
+      listOf(line.optionChoices).forEach((o) => { if (o && o.label) wanted.push({ group: String(o.group || ''), name: fold(o.label) }); });
+      const text = typeof line.optionText === 'string' ? line.optionText : (typeof line.options === 'string' ? line.options : '');
+      if (!wanted.length && text) {
+        text.split(/\s*·\s*/).forEach((part) => {
+          const at = part.indexOf(':');
+          if (at > 0) wanted.push({ groupName: fold(part.slice(0, at)), name: fold(part.slice(at + 1)) });
+        });
+      }
+      const keys = Object.keys(book).filter((k) => k.indexOf('opt:') === 0 && book[k]);
+      wanted.forEach((w) => {
+        const hits = keys.filter((k) => {
+          const r = book[k];
+          if (fold(r.name) !== w.name) return false;
+          return w.group ? String(r.group || '') === w.group : fold(r.groupName) === w.groupName;
+        });
+        const id = hits.length === 1 ? hits[0].slice(4) : '';
+        if (id && !seen.has(id)) { seen.add(id); out.push(id); }
       });
-      if (hits.length === 1 && !seen[hits[0]]) { seen[hits[0]] = 1; out.push(hits[0].slice(4)); }
-    });
-    return out;
-  }
+      return out;
+    }
+    return { optionChoiceIds };
+  })();
+  /* GENERATED SHARED KiwiOptionIds END */
+  function optionIds(line, d) { return KiwiOptionIds.optionChoiceIds(line, d.recipes || {}); }
 
   function optionTargets(line, qty, d) {
     var out = [];

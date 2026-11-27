@@ -5,7 +5,10 @@
  * un grammage est une fiche technique. Il vit dans le document privé des coûts,
  * comme les recettes, sous la clé `opt:<id du choix>` ; la caisse le lit déjà
  * et assets/inventory-consumption.js le décompte à chaque vente, multiplié par
- * la quantité du plat.
+ * la quantité du plat. L'article y a sa ligne d'ingrédient `optstock:<id>`,
+ * au prix de l'unité de stock, tenue à jour quand le stock change : la fiche
+ * se chiffre donc comme une recette, et assets/cost.js ajoute l'option au
+ * coût matière du plat vendu.
  *
  * Ce module habille la fenêtre « Options » de la carte
  * (assets/menu-catalog/modifiers.js), qui annonce chaque rendu par l'événement
@@ -34,9 +37,25 @@
     try {
       const rows = window.KiwiRestaurantStock?.rows?.() || [];
       return rows.filter((r) => r && r.id && clean(r.name))
-        .map((r) => ({ id: String(r.id), name: clean(r.name), unit: clean(r.unit) }))
+        .map((r) => ({ id: String(r.id), name: clean(r.name), unit: clean(r.unit), cost: unitCost(r) }))
         .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
     } catch (_) { return []; }
+  }
+  /* Le prix de l'unité de stock, ou null quand personne ne l'a saisi : un
+   * zéro inventé donnerait une option gratuite et une marge trop belle. */
+  function unitCost(row) {
+    const raw = row.costPerUnit != null && String(row.costPerUnit).trim() !== '' ? row.costPerUnit : row.cost;
+    const n = raw == null || String(raw).trim() === '' ? NaN : Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+  const ingId = (stockId) => 'optstock:' + stockId;
+  function ingredientRow(art) {
+    return { id: ingId(art.id), name: art.name, unit: art.unit, useCost: art.cost, stockId: art.id, at: Date.now() };
+  }
+  function putIngredient(d, art) {
+    d.ingredients = Array.isArray(d.ingredients) ? d.ingredients : [];
+    const at = d.ingredients.findIndex((x) => x && String(x.id) === ingId(art.id));
+    if (at >= 0) d.ingredients[at] = ingredientRow(art); else d.ingredients.push(ingredientRow(art));
   }
   function costDoc() {
     try { return window.KiwiCost?.doc?.() || null; } catch (_) { return null; }
@@ -65,9 +84,10 @@
       const gone = d.removed && d.removed.recipes && +d.removed.recipes[key];
       d.recipes[key] = {
         status: 'complete', kind: 'option', name: ref.name, group: ref.groupId, groupName: ref.groupName, yield: 1,
-        lines: [{ ing: 'stock:' + stockId, qty: amount, stock: stockId, stockQty: amount, stockUnit: art ? art.unit : '' }],
+        lines: [{ ing: ingId(stockId), qty: amount, stock: stockId, stockQty: amount, stockUnit: art ? art.unit : '' }],
         at: Math.max(Date.now(), gone ? gone + 1 : 0),
       };
+      if (art) putIngredient(d, art);
       if (gone) delete d.removed.recipes[key];
       return d;
     }, venue());
@@ -91,6 +111,39 @@
       return d;
     }, venue());
   }
+
+  /* Le prix d'un article change (réception, inventaire) : chaque fiche
+   * d'option qui le sort suit, et une fiche d'avant le chiffrage (ligne
+   * `stock:<id>`) passe à son ingrédient `optstock:`. Rien ne s'écrit quand
+   * tout est déjà juste, ni pour un article que le stock ne montre pas
+   * encore (pas chargé, ou retiré). */
+  function refresh() {
+    const K = window.KiwiCost, d = costDoc();
+    if (!K?.store?.update || !d || !d.recipes) return;
+    const byId = new Map(articles().map((a) => [a.id, a]));
+    if (!byId.size) return;
+    const ings = new Map((d.ingredients || []).filter(Boolean).map((x) => [String(x.id), x]));
+    const stale = Object.keys(d.recipes).filter((k) => {
+      const line = k.indexOf('opt:') === 0 && d.recipes[k] && Array.isArray(d.recipes[k].lines) ? d.recipes[k].lines[0] : null;
+      const art = line && byId.get(String(line.stock || ''));
+      if (!art) return false;
+      const row = ings.get(ingId(art.id));
+      return line.ing !== ingId(art.id) || !row || row.useCost !== art.cost || row.unit !== art.unit || row.name !== art.name;
+    });
+    if (!stale.length) return;
+    K.store.update((doc) => {
+      stale.forEach((k) => {
+        const rec = doc.recipes && doc.recipes[k], line = rec && rec.lines && rec.lines[0];
+        const art = line && byId.get(String(line.stock || ''));
+        if (!art) return;
+        line.ing = ingId(art.id);
+        putIngredient(doc, art);
+      });
+      return doc;
+    }, venue());
+  }
+  let refreshTimer = null;
+  const refreshSoon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => { try { refresh(); } catch (_) {} }, 600); };
 
   function refs(body) {
     return Array.from(body.querySelectorAll('.mx-og-ch[data-oc]')).map((row) => {
@@ -129,6 +182,7 @@
     const list = articles();
     if (!list.length || !window.KiwiCost?.store) return;
     ensureStyle();
+    refreshSoon();
     refs(body).forEach((ref) => {
       if (ref.row.nextElementSibling && ref.row.nextElementSibling.classList.contains('mx-og-stock')) return;
       const link = linkOf(ref.choiceId);
@@ -174,6 +228,9 @@
       if (e.target.matches('[data-oc-name], [data-og-name]')) setTimeout(() => syncNames(body), 450);
     });
   }
+
+  try { window.KiwiStore?.subscribe?.('stock', refreshSoon); } catch (_) {}
+  refreshSoon();
 
   document.addEventListener('kiwi-menu-options-painted', (e) => {
     try { if (e.target && e.target.querySelectorAll) decorate(e.target); } catch (_) {}
