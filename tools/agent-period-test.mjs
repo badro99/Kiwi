@@ -278,4 +278,34 @@ for (const [q, L, want] of [
   ['comment augmenter mes ventes', 'fr', /^advice/],
 ]) { const r = ask(q, L); ok(want.test(r.route), `« ${q} » keeps its route → {${r.route}}`); }
 
+// 4. A request to act (27 Nov 2026): « ajoute une remise de 15% sur la table 4 »
+// went to the model, which can claim it did it; « préviens-moi quand il en
+// reste cinq » too; « remind me to order coffee beans when stock is low » got
+// the stock value card. A reminder is not kept, a ticket is edited at the till,
+// and stock has a threshold the morning briefing reads.
+const ACT_TXT = /ne touche pas aux tickets|don’t touch tickets|ما كنقيسش التيكيات|ni rappel|neither reminders|ما كنصيفطش لا تذكير/;
+for (const [q, L, want] of [
+  ['Ajoute une remise de 15% sur la table 4 stp', 'fr', /caisse/],
+  ['annule le ticket de la table 7', 'fr', /caisse/],
+  ['apply a 10% discount to table 3', 'en', /till/],
+  ['دير تخفيض 10% للطابلة 5', 'ar', /الكاسة/],
+  ['Mes chemises taille M partent vite, préviens-moi quand il en reste cinq.', 'fr', /seuil/],
+  ['Could you remind me to order coffee beans when stock is low?', 'en', /threshold/],
+  ['نبهني ملي يبقاو غير 5 ديال الحليب', 'ar', /عتبة|الحد/],
+  ['rappelle-moi d’appeler le comptable demain', 'fr', /rappel/],
+  ['offre le café à la table 6 svp', 'fr', /caisse/],
+  ['préviens-moi quand les ventes baissent', 'fr', /point du matin/],
+  ['notify me when sales drop', 'en', /morning briefing/],
+]) {
+  const r = ask(q, L);
+  ok(/^lookup/.test(r.route) && want.test(r.text) && ACT_TXT.test(r.text), `« ${q} » is answered as a request to act → {${r.route}} ${r.text.slice(0, 140)}`);
+}
+// How-tos and figures keep their route.
+for (const [q, L] of [
+  ['comment ajouter une remise sur une table ?', 'fr'],
+  ['how do I apply a discount to a table', 'en'],
+  ['combien de remises cette semaine', 'fr'],
+  ['quand est-ce que je dois commander du stock ?', 'fr'],
+]) { const r = ask(q, L); ok(!ACT_TXT.test(r.text), `« ${q} » is not a request to act → {${r.route}} ${r.text.slice(0, 100)}`); }
+
 console.log(`✓ agent period: ${n} checks (one period read back, two periods refused, how-tos left to the guide)`);

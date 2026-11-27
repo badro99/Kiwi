@@ -2435,7 +2435,7 @@ function decideRoute(rawIn, retry) {
     /* « aide-moi à augmenter les ventes » names the sales but asks for advice. */
     const growAsk = /(?:augment|boost|increase|grow|amelior)\w*.{0,18}(?:vente|chiffre|sales|revenue)|sell\s+more|vendre\s+plus|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\s+(?:ventes|lmbi3at|lbi3)|\bretain\b|fidelis(?:er|e|ez)\b|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+(?:ال)?زبنا|\bnjib\s+zb|\bnjib\s+(?:ال)?زبنا|\bnjib\s+clients|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين/.test(q);
     const books = /توقع|الشهر\s+(?:القادم|الجاي)|next\s+month|mois\s+prochain|left\s+after|reste\b.{0,30}\bapres|صافي\s+دخل|بعد\s+المصاريف|\bkayb9a\b|\btva\b|\bvat\b|\bcnss\b|fiches?.?de.?paie|payslip|payroll|\btax(?:es)?\b|\bbilan\b|comptab|ضريب|الضمان\s*الاجتماعي|فيش\s*دو|البيلان|كومبتابل/.test(q) || __state.BREAKEVEN_ASK.test(q);
-    const mine = !longTrend && !growAsk && !books && window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null;
+    const mine = (window.KiwiAgentData && window.KiwiAgentData.act && window.KiwiAgentData.act(q)) || (!longTrend && !growAsk && !books && window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null);
     if (mine && mine.entity) return { kind: 'lookup', raw, q, spec: Object.assign(mine, { raw, period: periodWindow(q) }) };
     if (mine) return mine.route === 'day' ? { kind: 'day', raw, q, day: { offset: 0 } } : { kind: mine.route, raw, q, run: mine.route === 'charges' ? () => sCharges() : () => sRevenue() };
     /* A dated closure is a holiday, not a bankruptcy — and STRAIN_RX owns

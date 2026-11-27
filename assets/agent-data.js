@@ -1146,6 +1146,21 @@
     en: 'I don’t change your data from this conversation: the change is made on the page, with your own access.',
     ar: 'ما كنبدّلش المعطيات ديالك من هاد المحادثة: التعديل كيتدار فالصفحة، بالصلاحيات ديالك.',
   };
+  /* « ajoute une remise de 15% sur la table 4 », « annule la commande de la
+     table 7 » (27 Nov 2026): a ticket is changed at the till, not from here.
+     « préviens-moi quand il en reste cinq »: no reminder is kept; stock has a
+     threshold the morning briefing reads. */
+  var TILL_EDIT = W("(?:remise|discount|reduction|تخفيض|ريميز|\\bremiz\\b|offert|\\boffre\\b|\\boffer\\b|gratuit|\\bfree\\b|annule\\w*|cancel\\w*|rembours\\w*|refund|لغي|الغ|ألغ).{0,40}(?:\\btables?\\b|\\bticket\\b|\\baddition\\b|\\bbill\\b|\\bcheck\\b|طابلة|الطابلة|للطابلة|الطاولة|طاولة|التيكي|الفاتورة|\\btbla\\b|\\bt[ae]bla\\b)|(?:\\btables?\\b|طابلة|الطاولة|\\btbla\\b)\\s*\\d.{0,30}(?:remise|discount|تخفيض|annul|cancel)");
+  var REMIND = W("previens[- ]?moi|rappelle[- ]?moi|alerte[- ]?moi|avertis[- ]?moi|notifie[- ]?moi|fais[- ]?moi signe|\\bremind me\\b|\\balert me\\b|\\bnotify me\\b|\\bwarn me\\b|\\blet me know when\\b|\\bping me\\b|\\bfakkarni\\b|\\bfekkerni\\b|\\bfakarni\\b|\\bnbbhni\\b|\\bnebbehni\\b|\\bnbehni\\b|(?:^|\\s)(?:فكرني|ذكرني|نبهني|علمني ملي|خبرني ملي|عيط ليا ملي)(?=\\s|$)");
+  var STOCKISH = W("\\bstock\\b|\\breste\\b|\\bleft\\b|\\blow\\b|\\bruns? out\\b|rupture|epuise|\\bcommander\\b|re-?order|\\border more\\b|\\border\\b|بقا|يبقاو|بقاو|يسالي|يخلاص|المخزون|الستوك|\\bb9a\\b|\\bb9aw\\b|\\bysali\\b|\\btsali\\b");
+  var HOWTO_ASK = W("^(?:comment|how|kifach|kifash|كيفاش|كيف)\\b|\\bhow (?:do|can|to)\\b|\\bcomment (?:on |je |faire)|est-ce que (?:je|on) peu|\\bje peux\\b|\\bcan i\\b|\\bwach n9(?:e)?d(?:e)?r\\b|واش نقدر");
+  var BRIEF_WATCH = W("\\bventes?\\b|\\bsales\\b|chiffre|revenue|annul\\w*|cancel\\w*|remises?|discounts?|marge|margin|المبيعات|البيع|الإلغاء|الالغاء|التخفيض|الهامش|\\blbi3\\b|\\blmbi3at\\b");
+  function actIntent(q) {
+    if (HOWTO_ASK.test(q) || /\b(?:commande|order|ticket|طلب|cmd)\s*(?:n[o°]?\s*)?#?\d/.test(q)) return null;
+    if (REMIND.test(q)) return { entity: 'command', remind: true, stock: STOCKISH.test(q), watch: !STOCKISH.test(q) && BRIEF_WATCH.test(q) };
+    if (TILL_EDIT.test(q) && (COMMAND.test(q) || /\b(?:stp|svp|please)\b|عفاك|\b3afak\b|^(?:apply|applique\w*|fais|offre|offer|give|donne)\b/.test(q))) return { entity: 'command', till: true };
+    return null;
+  }
   function commandIntent(q) {
     if (/\b(?:commande|order|ticket|طلب|cmd)\s*(?:n[o°]?\s*)?#?\d/.test(q)) return null;
     /* Not data changes: a new sale or payment link (the action lane opens
@@ -1163,7 +1178,24 @@
     ar: 'ما كنصيفطش الرسائل من هاد المحادثة: الإرسال كيتدار من سجلّ الزبناء، بموافقة كل زبون.',
   };
   var CMD_ORDERS = { fr: 'les commandes', en: 'orders', ar: 'الطلبات' };
+  var CMD_ACT_T = {
+    fr: { till: 'Je ne touche pas aux tickets depuis cette conversation : une remise, une annulation ou un remboursement se fait à la caisse, sur le ticket concerné, avec les droits de la personne qui encaisse.',
+      remind: 'Je n’envoie ni rappel ni notification depuis cette conversation, je ne réponds que quand vous me posez une question.',
+      watch: 'Je n’envoie ni rappel ni notification depuis cette conversation. Mais le point du matin du tableau de bord signale de lui-même une baisse des ventes, des annulations ou des remises qui grimpent, et une marge qui recule.',
+      stock: 'Je n’envoie ni rappel ni notification depuis cette conversation. Pour le stock, chaque article a un seuil d’alerte, son minimum : réglez-le au niveau voulu et le point du matin du tableau de bord signale l’article dès qu’il passe dessous.' },
+    en: { till: 'I don’t touch tickets from this conversation: a discount, a cancellation or a refund is done at the till, on that ticket, with the rights of whoever is serving.',
+      remind: 'I keep neither reminders nor notifications from this conversation, I only answer when you ask me something.',
+      watch: 'I send neither reminders nor notifications from this conversation. But the dashboard’s morning briefing flags on its own a drop in sales, cancellations or discounts going up, and a margin that slips.',
+      stock: 'I send neither reminders nor notifications from this conversation. For stock, each item has a reorder threshold, its minimum: set it where you want and the dashboard’s morning briefing flags the item as soon as it drops below.' },
+    ar: { till: 'ما كنقيسش التيكيات من هاد المحادثة: التخفيض ولا الإلغاء ولا الإرجاع كيتدار فالكاسة، على التيكي نيت، بالصلاحيات ديال لي كيخلّص.',
+      remind: 'ما كنصيفطش لا تذكير لا إشعار من هاد المحادثة، كنجاوب غير ملي كتسولني.',
+      watch: 'ما كنصيفطش لا تذكير لا إشعار من هاد المحادثة. ولكن ملخص الصباح فلوحة التحكم كينبهك بوحدو إلا نقصو المبيعات، ولا طلعو الإلغاءات ولا التخفيضات، ولا تراجع الهامش.',
+      stock: 'ما كنصيفطش لا تذكير لا إشعار من هاد المحادثة. ولكن فالمخزون، كل منتوج عندو عتبة ديال التنبيه، يعني الحد الأدنى ديالو: حطها فالمستوى لي بغيتي، وملخص الصباح فلوحة التحكم كينبهك على المنتوج غير يهبط تحتها.' },
+  };
   function sCommand(spec, L) {
+    var A = CMD_ACT_T[L] || CMD_ACT_T.fr;
+    if (spec.till) return { text: A.till, open: CMD_ORDERS_OPEN(L) };
+    if (spec.remind) return spec.stock ? { text: A.stock, open: open1(L, 'pStock', 'nav-stock') } : { text: spec.watch ? A.watch : A.remind };
     var target = spec.target;
     if (target.page === 'pOrders') return { text: CMD_T[L] || CMD_T.fr, open: [{ label: tr(L).openBtn(CMD_ORDERS[L] || CMD_ORDERS.fr), handler: target.h }] };
     if (spec.send) return { text: CMD_SEND_T[L] || CMD_SEND_T.fr, open: open1(L, 'pClients', 'clients-directory') };
@@ -1196,6 +1228,7 @@
     var h = function (k) { return LX[k].test(q); };
     /* « porte le prix du thé à 18 dh », « نبدل ثمن البريوش ل 8 دراهم »: setting one price is an edit, not a « what if ». */
     if (/\b(?:porte[rz]?|augmente\w*|baisse\w*|change\w*|mets?|passe[rz]?|fixe[rz]?|raise|set|change|lower|increase)\s+(?:le|the)\s+(?:prix|price)\s+(?:d[ue']|of)\s*.{1,25}?\b(?:a|to)\s*\d+|نبدل\s+(?:ال)?ثمن\s+\S+\s+(?:ل|ب)\s*\d+|\bnbdel\s+(?:taman|prix)\b.{0,25}\d/.test(q)) return commandIntent(q);
+    var act = actIntent(q); if (act) return act;
     if (COMMAND.test(q)) return commandIntent(q);
     /* « 7ell lia les ventes », « افتح قائمة المعاملات »: open the page, the action lane takes it. */
     if (/^(?:3afak |stp |please )?(?:7ell?|ouvr\w*|open|go to|take me to|bring me to|emmene\w* moi|افتح|سير ل)\s/.test(q) && !/combien|how much|how many|\bcb\b|كم|شحال|\bch7al\b/.test(q)) return null;
@@ -1995,5 +2028,5 @@
   var TWO_P = W("compar|\\bvs\\.?\\b|versus|\\bthan\\b|par rapport|\\b9aren\\b|قارن|مقارنة|\\bfar9\\b|الفرق|evolu|trend|tendance|chang\\w*|\\btbd+el\\b|تبدل|تغير|baiss|augment|progress|\\bchut|\\bmonte|\\bdrop|\\brose\\b|\\bfell\\b|\\bdown\\b|\\bup\\b|\\bgrow|decline|why|pourquoi|3lach|علاش|لماذا|طلع|هبط|نقص|زاد|\\bt7et\\b|\\btl3\\b|over (?:the )?(?:last |past )?\\w+ (?:months|years)|depuis|since|\\bans?\\b|years?|l3am|العام|chhor|شهور|mois dernier|last (?:month|year)|l\\s?chhar li fat|الشهر الماضي|تطور|اتجاه|سنة|السنة|عام|أشهر|اشهر|الأشهر|كثر من|أكثر من|\\bkter mn\\b|plus que|moins que|more than|less than|\\bmoins\\b|\\bete\\b|summer|ramadan|رمضان|\\beid\\b|عيد|l3id");
   function twoPeriods(q) { return TWO_P.test(String(q || '')); }
 
-  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, period: periodSpec, support: supportAsk, math: wordMath, trend: twoPeriods, _rank: productRanking, _findClient: findClient };
+  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, period: periodSpec, support: supportAsk, act: actIntent, math: wordMath, trend: twoPeriods, _rank: productRanking, _findClient: findClient };
 }());
