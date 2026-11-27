@@ -66,5 +66,20 @@ await ok('revoking a client retires its cards', async () => {
   assert.equal((await S.cardBySerial(DB, again.serial)).revoked, 0);
 });
 
+await ok('the owner\'s counts: cards by phone type, Apple cards actually in a Wallet, revoked and other shops left out', async () => {
+  const { DB: db } = walletDb();
+  const a1 = await S.issueCard(db, { merchant: 'santos-store', clientId: 'k1', platform: 'apple', now: T });
+  await S.issueCard(db, { merchant: 'santos-store', clientId: 'k2', platform: 'apple', now: T });
+  await S.issueCard(db, { merchant: 'santos-store', clientId: 'k1', platform: 'google', now: T });
+  await S.issueCard(db, { merchant: 'santos-store', clientId: 'k3', platform: 'web', now: T });
+  await S.issueCard(db, { merchant: 'santos-store', clientId: 'k4', platform: 'web', now: T });
+  await S.revokeClientCards(db, 'santos-store', 'k4');
+  await S.issueCard(db, { merchant: 'other-shop', clientId: 'z', platform: 'apple', now: T });
+  await S.registerDevice(db, { deviceId: 'd1', serial: a1.serial, pushToken: 'p1', now: T });
+  await S.registerDevice(db, { deviceId: 'd2', serial: a1.serial, pushToken: 'p2', now: T });
+  assert.deepEqual(await S.walletStats(db, 'santos-store'), { clients: 3, apple: 2, appleInWallet: 1, google: 1, web: 1 });
+  assert.deepEqual(await S.walletStats(db, 'empty-shop'), { clients: 0, apple: 0, appleInWallet: 0, google: 0, web: 0 });
+});
+
 void sql;
 console.log(`wallet-store: ${pass} passed`);

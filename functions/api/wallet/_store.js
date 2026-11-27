@@ -89,3 +89,17 @@ export async function useTillToken(db, token, now = Date.now()) {
   const row = (r.results || [])[0];
   return row && row.expires_ts >= now ? { merchant: row.merchant, clientId: row.client_id } : null;
 }
+
+/* What the owner sees in the dashboard: live cards by phone type, and how many
+   Apple cards are really in a Wallet (a device registered for push). Google
+   and the web card do not tell us when they are saved, so those are cards
+   handed out. Revoked cards (client deleted) do not count. */
+export async function walletStats(db, merchant) {
+  const rows = (await db.prepare(`SELECT platform, COUNT(*) AS n, COUNT(DISTINCT client_id) AS c FROM wallet_cards
+    WHERE merchant = ? AND revoked = 0 GROUP BY platform`).bind(merchant).all()).results || [];
+  const clients = await db.prepare('SELECT COUNT(DISTINCT client_id) AS n FROM wallet_cards WHERE merchant = ? AND revoked = 0').bind(merchant).first();
+  const inWallet = await db.prepare(`SELECT COUNT(DISTINCT c.serial) AS n FROM wallet_cards c JOIN wallet_devices d ON d.serial = c.serial
+    WHERE c.merchant = ? AND c.revoked = 0 AND c.platform = 'apple'`).bind(merchant).first();
+  const by = (p) => Number((rows.find((r) => r.platform === p) || {}).n || 0);
+  return { clients: Number((clients && clients.n) || 0), apple: by('apple'), appleInWallet: Number((inWallet && inWallet.n) || 0), google: by('google'), web: by('web') };
+}

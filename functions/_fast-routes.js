@@ -203,17 +203,18 @@ import * as r197 from './api/tickets/index.js';
 import * as r198 from './api/timezone.js';
 import * as r199 from './api/wallet/card.js';
 import * as r200 from './api/wallet/enroll.js';
-import * as r201 from './api/wallet/till-token.js';
-import * as r202 from './api/weather.js';
-import * as r203 from './api/z-reconciliation.js';
-import * as r204 from './auth/forgot.js';
-import * as r205 from './auth/login.js';
-import * as r206 from './auth/logout.js';
-import * as r207 from './auth/operator.js';
-import * as r208 from './auth/reset.js';
-import * as r209 from './auth/signup.js';
-import * as r210 from './order/basic.js';
-import * as r211 from './sitemap-annuaire.xml.js';
+import * as r201 from './api/wallet/stats.js';
+import * as r202 from './api/wallet/till-token.js';
+import * as r203 from './api/weather.js';
+import * as r204 from './api/z-reconciliation.js';
+import * as r205 from './auth/forgot.js';
+import * as r206 from './auth/login.js';
+import * as r207 from './auth/logout.js';
+import * as r208 from './auth/operator.js';
+import * as r209 from './auth/reset.js';
+import * as r210 from './auth/signup.js';
+import * as r211 from './order/basic.js';
+import * as r212 from './sitemap-annuaire.xml.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -423,15 +424,16 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/timezone", r198],
   ["/api/wallet/card", r199],
   ["/api/wallet/enroll", r200],
-  ["/api/wallet/till-token", r201],
-  ["/api/weather", r202],
-  ["/api/z-reconciliation", r203],
-  ["/auth/forgot", r204],
-  ["/auth/login", r205],
-  ["/auth/logout", r206],
-  ["/auth/operator", r207],
-  ["/auth/reset", r208],
-  ["/auth/signup", r209],
-  ["/order/basic", r210],
-  ["/sitemap-annuaire.xml", r211],
+  ["/api/wallet/stats", r201],
+  ["/api/wallet/till-token", r202],
+  ["/api/weather", r203],
+  ["/api/z-reconciliation", r204],
+  ["/auth/forgot", r205],
+  ["/auth/login", r206],
+  ["/auth/logout", r207],
+  ["/auth/operator", r208],
+  ["/auth/reset", r209],
+  ["/auth/signup", r210],
+  ["/order/basic", r211],
+  ["/sitemap-annuaire.xml", r212],
 ]));

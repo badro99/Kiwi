@@ -1688,8 +1688,8 @@
     "sha": "81d453d087fec9fe"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "119",
-    "sha": "369b3f53c9ea0038"
+    "v": "120",
+    "sha": "46f867d0f04fd013"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "360",
@@ -2790,6 +2790,10 @@
   "assets/wallet-carte.js": {
     "v": "1",
     "sha": "e4ae3f21849b212a"
+  },
+  "assets/wallet-dashboard.js": {
+    "v": "1",
+    "sha": "eaccdc0078fac62b"
   },
   "assets/wallet-link.js": {
     "v": "1",

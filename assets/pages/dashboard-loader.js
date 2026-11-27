@@ -38,6 +38,8 @@
     expenses: { dependencies: [], scripts: ['assets/expenses/index.js?v=12'], module: true },
     /* Intégrations → Glovo : le panneau du patron (adresses, carte, fermeture), au premier clic. */
     glovo: { dependencies: [], scripts: ['assets/channel-glovo.js?v=1'] },
+    /* Programme de fidélité → « Carte Wallet » : la section se pose dans la fenêtre ouverte. */
+    wallet: { dependencies: [], scripts: ['assets/wallet-dashboard.js?v=1'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url, module) {
@@ -89,6 +91,9 @@
     event.stopImmediatePropagation();
     load('glovo').then(() => { if (card.isConnected) card.click(); }, unavailable);
   }, true);
+  window.addEventListener('click', () => setTimeout(() => {
+    if (!ready.has('wallet') && document.querySelector('.kiwi-modal .loy-preview')) load('wallet').catch(() => {});
+  }, 0), true);
   let replaying = false;
   function firstUse(event, target, activate) {
     event.preventDefault();
