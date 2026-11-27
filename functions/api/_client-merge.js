@@ -83,7 +83,9 @@ export async function mergeClients(env, merchant, raw, helpers) {
         .bind(...columns.map(k => set[k]), now, merchant, merchant, to, ...guardArgs),
     ];
     if (duplicates.length) statements.push(prepare(`UPDATE client_purchase_events SET visits = 0 WHERE merchant = ? AND ref IN (SELECT value FROM json_each(?)) AND ${guard}`).bind(merchant, JSON.stringify(duplicates), ...guardArgs));
-    for (const table of ['client_purchase_events','client_reward_events','employee_loyalty_events','client_reward_refusals']) {
+    /* wallet_cards and wallet_claims follow the kept client, or the merged
+       customer's Wallet card would point at a deleted record. */
+    for (const table of ['client_purchase_events','client_reward_events','employee_loyalty_events','client_reward_refusals','wallet_cards','wallet_claims']) {
       const exists = await prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").bind(table).first();
       if (exists) {
         const sync = ['client_purchase_events','client_reward_events'].includes(table);

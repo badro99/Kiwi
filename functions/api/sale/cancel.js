@@ -275,7 +275,9 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(ctx) {
+  const { request, env } = ctx;
+  const waitUntil = typeof ctx.waitUntil === 'function' ? ctx.waitUntil.bind(ctx) : null;
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
   if (typeof env.DB.batch !== 'function') {
     /* A void is a money mutation plus an audit mutation. Do not run either
@@ -483,7 +485,7 @@ export async function onRequestPost({ request, env }) {
   } catch (e) {
     return json({ error: 'cancel-failed', detail: safeDetail('cancel', e) }, 500);
   }
-  await voidSaleLoyalty(env, merchant, { id, ref: sale.ref || '' });
+  await voidSaleLoyalty(env, merchant, { id, ref: sale.ref || '' }, waitUntil);
 
   /* The canonical void and its required audit row are committed above. This
      secondary index is analytics only; a missing migration must not turn an

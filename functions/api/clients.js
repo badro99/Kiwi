@@ -48,7 +48,7 @@ import { readsIdentityDocuments, withoutDocumentNumber, keepStoredDocument } fro
 import { mayMergeClients, mergeClients } from './_client-merge.js';
 import { spendCentsOf, toCents } from './_spend-cents.js';
 import { sessionGuard } from './_permissions.js';
-import { notifyClientChanged } from './wallet/_notify.js';
+import { notifyClientChanged, cardsTold } from './wallet/_notify.js';
 import { revokeClientCards } from './wallet/_store.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -61,10 +61,11 @@ const money = (v, max = 1e9) => {
 const PAGE = 500;
 
 // Share cursor allocation and alias resolution without a circular route import.
-const { applyPurchase, applyRefund, applyRedemption, voidSaleLoyalty, restoreSaleLoyalty } = createClientEvents({
+const { applyPurchase, applyRefund, applyRedemption, voidSaleLoyalty: voidLoyalty, restoreSaleLoyalty: restoreLoyalty } = createClientEvents({
   str, money, resolveClientId, clientCursorStatements, clientCursorSql,
   missingEventTable: error => /no such table/i.test(String(error && error.message || error)),
 });
+const voidSaleLoyalty = cardsTold(voidLoyalty), restoreSaleLoyalty = cardsTold(restoreLoyalty); // a void moves balances: the Wallet cards are told
 export { voidSaleLoyalty, restoreSaleLoyalty, applyPurchase, phoneTwins }; // applyPurchase + phoneTwins: the Wallet card's receipt claim (functions/api/wallet/enroll.js)
 
 function hospitalityJson(value) {
@@ -502,10 +503,12 @@ export async function onRequestPost(context) {
     if (!operational) return json({ error: 'unauthorized' }, 401);
     try {
       if (!await mayMergeClients(request, env, merchant)) return json({ error: 'manager-required' }, 403);
-      return await mergeClients(env, merchant, merge, {
+      const merged = await mergeClients(env, merchant, merge, {
         prepare: sql => env.DB.prepare(sql), cursorStatements: clientCursorStatements, cursorSql: clientCursorSql,
         ensure: async () => {},
       });
+      if (merged.ok && context.waitUntil) context.waitUntil(notifyClientChanged(env, merchant, String(merge.to), { baseUrl: new URL(request.url).origin }).catch(() => {}));
+      return merged;
     } catch (_) { return json({ error: 'merge-unavailable' }, 503); }
   }
 

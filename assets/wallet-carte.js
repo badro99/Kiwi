@@ -9,13 +9,19 @@
   'use strict';
   var T = {
     fr: {
-      title: 'Votre carte fidélité', intro: 'Un tampon à chaque passage, la récompense au bout. La carte se range dans votre téléphone et se met à jour toute seule.',
+      title: 'Votre carte fidélité', intro: 'La carte se range dans votre téléphone et se met à jour toute seule.',
+      offerVisit: '{reward} au bout de {n} passages.', offerProduct: '{reward} au bout de {n} × {item}.', offerAmount: '{reward} dès {n} points.',
+      earn: '{p} point par dirham dépensé.', earnFrac: '1 point tous les {d} dirhams dépensés.', rewardAny: 'Une récompense',
+      readyPts: 'Ajoutez-la à votre téléphone : vos points arriveront dessus après chaque achat.',
+      receiptOkPts: 'Ce ticket ajoute ses points à votre carte.', creditedPts: 'Points ajoutés. Votre carte se met à jour toute seule.',
+      consentReq: 'Cochez la case pour recevoir votre carte.', claimLimit: 'Ce numéro a déjà ajouté deux tickets aujourd’hui. Revenez demain.',
+      wa: 'Recevoir le lien sur WhatsApp', waText: 'Ma carte fidélité {shop} : ', mine: 'Votre carte', notMe: 'Ce n’est pas moi',
       first: 'Prénom', phone: 'Téléphone', consent: "J'accepte que {shop} garde mon prénom et mon numéro pour ma carte fidélité.",
       cta: 'Recevoir ma carte', apple: 'Ajouter à Apple Wallet', google: 'Ajouter à Google Wallet', web: 'Garder ma carte ici', open: 'Ouvrir ma carte',
       ready: 'Votre carte est prête', readyP: 'Ajoutez-la à votre téléphone : vos tampons arriveront dessus après chaque passage.',
       exists: 'Ce numéro a déjà une carte chez {shop}. Demandez-la en caisse : on vous la montre en un instant.',
       receiptOk: 'Ce ticket vaut un tampon sur votre carte.', receiptUsed: 'Ce ticket a déjà été ajouté à une carte.',
-      receiptBad: "Ce ticket ne peut plus être ajouté (plus d'une semaine, ou annulé). Votre carte, elle, vous attend.",
+      receiptBad: "Ce ticket ne peut plus être ajouté (plus de deux jours, ou annulé). Votre carte, elle, vous attend.",
       credited: 'Tampon ajouté. Votre carte se met à jour toute seule.',
       show: 'Montrez ce code en caisse', home: "Pour la garder : bouton Partager, puis « Sur l'écran d'accueil ».",
       client: 'Client', stamps: 'Tampons', points: 'Points', reward: 'Récompense', left: 'Il reste', readyShort: 'Prête', gift: 'Offerte',
@@ -24,13 +30,19 @@
       expired: 'Ce code a expiré. Demandez-en un nouveau en caisse.', foot: 'Carte gérée par Kiwi', taking: 'Un instant…',
     },
     en: {
-      title: 'Your loyalty card', intro: 'A stamp every visit, a reward at the end. The card lives in your phone and updates itself.',
+      title: 'Your loyalty card', intro: 'The card lives in your phone and updates itself.',
+      offerVisit: '{reward} after {n} visits.', offerProduct: '{reward} after {n} × {item}.', offerAmount: '{reward} at {n} points.',
+      earn: '{p} point per dirham spent.', earnFrac: '1 point for every {d} dirhams spent.', rewardAny: 'A reward',
+      readyPts: 'Add it to your phone: your points land on it after every purchase.',
+      receiptOkPts: 'This receipt adds its points to your card.', creditedPts: 'Points added. Your card updates itself.',
+      consentReq: 'Tick the box to get your card.', claimLimit: 'This number already added two receipts today. Come back tomorrow.',
+      wa: 'Send me the link on WhatsApp', waText: 'My {shop} loyalty card: ', mine: 'Your card', notMe: 'Not me',
       first: 'First name', phone: 'Phone', consent: 'I agree that {shop} keeps my first name and number for my loyalty card.',
       cta: 'Get my card', apple: 'Add to Apple Wallet', google: 'Add to Google Wallet', web: 'Keep my card here', open: 'Open my card',
       ready: 'Your card is ready', readyP: 'Add it to your phone: your stamps land on it after every visit.',
       exists: 'This number already has a card at {shop}. Ask at the till and they will show it to you.',
       receiptOk: 'This receipt is worth one stamp on your card.', receiptUsed: 'This receipt was already added to a card.',
-      receiptBad: 'This receipt can no longer be added (over a week old, or cancelled). Your card is still waiting for you.',
+      receiptBad: 'This receipt can no longer be added (over two days old, or cancelled). Your card is still waiting for you.',
       credited: 'Stamp added. Your card updates itself.',
       show: 'Show this code at the till', home: 'To keep it: Share button, then “Add to Home Screen”.',
       client: 'Customer', stamps: 'Stamps', points: 'Points', reward: 'Reward', left: 'To go', readyShort: 'Ready', gift: 'Free',
@@ -39,13 +51,19 @@
       expired: 'This code has expired. Ask for a new one at the till.', foot: 'Card run by Kiwi', taking: 'One moment…',
     },
     ar: {
-      title: 'بطاقة الوفاء ديالك', intro: 'ختم مع كل زيارة، والهدية في الأخير. البطاقة كتبقى في تيليفونك وكتتجدد بوحدها.',
+      title: 'بطاقة الوفاء ديالك', intro: 'البطاقة كتبقى فتيليفونك وكتتجدد بوحدها.',
+      offerVisit: '{reward} من بعد {n} زيارات.', offerProduct: '{reward} من بعد {n} × {item}.', offerAmount: '{reward} ملي توصل {n} نقطة.',
+      earn: '{p} نقطة على كل درهم.', earnFrac: 'نقطة على كل {d} دراهم.', rewardAny: 'هدية',
+      readyPts: 'زيدها لتيليفونك: النقاط غادي توصلها مع كل شرية.',
+      receiptOkPts: 'هاد التيكي كيزيد النقاط ديالو فالبطاقة ديالك.', creditedPts: 'تزادو النقاط. البطاقة ديالك كتتجدد بوحدها.',
+      consentReq: 'علّم على الخانة باش تاخد البطاقة ديالك.', claimLimit: 'هاد الرقم زاد جوج تيكيات اليوم. رجع غدا.',
+      wa: 'صيفط ليا الرابط فواتساب', waText: 'بطاقة الوفاء ديالي عند {shop}: ', mine: 'البطاقة ديالك', notMe: 'ماشي أنا',
       first: 'الاسم', phone: 'رقم الهاتف', consent: 'كنوافق باش {shop} يحتافظ باسمي ورقمي من أجل بطاقة الوفاء.',
       cta: 'خذ البطاقة ديالي', apple: 'زيدها لـ Apple Wallet', google: 'زيدها لـ Google Wallet', web: 'خلّي البطاقة هنا', open: 'حلّ البطاقة ديالي',
       ready: 'البطاقة ديالك واجدة', readyP: 'زيدها لتيليفونك: الأختام غادي توصلها مع كل زيارة.',
       exists: 'هاد الرقم عندو بطاقة من قبل عند {shop}. طلبها فالكاشة، يوريوها ليك فلحظة.',
       receiptOk: 'هاد التيكي كيعطيك ختم فالبطاقة ديالك.', receiptUsed: 'هاد التيكي تزاد لبطاقة من قبل.',
-      receiptBad: 'هاد التيكي ما بقاش ممكن يتزاد (فات عليه أسبوع ولا تلغى). ولكن البطاقة ديالك كتسناك.',
+      receiptBad: 'هاد التيكي ما بقاش ممكن يتزاد (فاتو عليه جوج أيام ولا تلغى). ولكن البطاقة ديالك كتسناك.',
       credited: 'تزاد الختم. البطاقة ديالك كتتجدد بوحدها.',
       show: 'وري هاد الرمز فالكاشة', home: 'باش تحتافظ بيها: زر المشاركة، من بعد «إضافة إلى الشاشة الرئيسية».',
       client: 'الزبون', stamps: 'الأختام', points: 'النقاط', reward: 'الهدية', left: 'باقي', readyShort: 'واجدة', gift: 'فابور',
@@ -66,6 +84,23 @@
     if (vars.shop == null) vars.shop = shopName;
     return s.replace(/\{(\w+)\}/g, function (_, k) { return vars[k] == null ? '' : String(vars[k]); });
   }
+  /* What the customer wins and how, in one line: the card sells the reward. */
+  function offerLine(v) {
+    var reward = v.rewardLabel || t('rewardAny');
+    if (v.model === 'amount') {
+      var per = Number(v.perMad) || 1, earn = per >= 1 ? t('earn', { p: Math.round(per * 100) / 100 }) : t('earnFrac', { d: Math.round(1 / per) });
+      return t('offerAmount', { reward: reward, n: v.target }) + ' ' + earn;
+    }
+    if (v.model === 'product' && v.item) return t('offerProduct', { reward: reward, n: v.target, item: v.item });
+    return t('offerVisit', { reward: reward, n: v.target });
+  }
+  var pts = function (v) { return v && v.model === 'amount'; };
+  /* The card the customer just took, kept on this phone: a reload or a second
+     visit to the stand shows it again instead of "this number already has a card". */
+  var KEY = 'kiwiCarte:';
+  function remember(slug, data) { try { localStorage.setItem(KEY + slug, JSON.stringify(data)); } catch (_) {} }
+  function recall(slug) { try { return JSON.parse(localStorage.getItem(KEY + slug) || 'null'); } catch (_) { return null; } }
+  function forget(slug) { try { localStorage.removeItem(KEY + slug); } catch (_) {} }
   var $ = function (id) { return document.getElementById(id); };
   var parts = location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);   /* ['carte', shop, card?] */
   var slug = (parts[1] || qs.get('s') || '').toLowerCase(), serial = parts[2] || qs.get('c') || '';
@@ -155,20 +190,32 @@
     a.appendChild(el('span', '', label));
     return a;
   }
-  function showOffers(offers, credited) {
+  function showOffers(offers, credited, v, restored) {
     var p = panel();
-    p.appendChild(el('h1', 'wc-h', t('ready')));
-    if (credited) note(p, t('credited'));
-    p.appendChild(el('p', 'wc-p', t('readyP')));
+    p.appendChild(el('h1', 'wc-h', restored ? t('mine') : t('ready')));
+    if (credited) note(p, t(pts(v) ? 'creditedPts' : 'credited'));
+    p.appendChild(el('p', 'wc-p', t(pts(v) ? 'readyPts' : 'readyP')));
+    if (!restored) {
+      remember(slug, { offers: offers, card: v || null });
+      try { if (location.search) history.replaceState(null, '', '/carte/' + slug); } catch (_) {}
+    }
     var list = [];
     if (offers.apple) list.push({ at: isIOS ? 0 : 2, node: button(offers.apple, t('apple'), 'wc-btn-main', 'account_balance_wallet') });
     if (offers.google) list.push({ at: isAndroid ? 0 : 3, node: button(offers.google, t('google'), 'wc-btn-main', 'account_balance_wallet') });
     list.push({ at: list.length ? 9 : 0, node: button(offers.web, list.length ? t('web') : t('open'), list.length ? 'wc-btn-alt' : 'wc-btn-main') });
     list.sort(function (a, b) { return a.at - b.at; }).forEach(function (x, i) { if (i > 0 && x.node.classList.contains('wc-btn-main') && list.length > 1) { x.node.classList.replace('wc-btn-main', 'wc-btn-alt'); } p.appendChild(x.node); });
+    /* The web card's link sent to the customer themself: free, and it finds the card again on any phone. */
+    var wa = button('https://wa.me/?text=' + encodeURIComponent(t('waText') + offers.web), t('wa'), 'wc-btn-alt', 'chat');
+    wa.target = '_blank'; wa.rel = 'noopener'; p.appendChild(wa);
+    if (restored) {
+      var other = el('button', 'wc-link', t('notMe')); other.type = 'button';
+      other.addEventListener('click', function () { forget(slug); enroll(true); });
+      p.appendChild(other);
+    }
   }
   function fail(p, res, body) {
     var e = (body && body.error) || '';
-    var key = res && res.status === 429 ? 'busy' : e === 'bad-phone' ? 'badPhone' : e === 'name-required' ? 'nameReq' : e === 'no-card' ? 'none' : e === 'token-expired' ? 'expired' : e === 'receipt-unusable' ? 'receiptBad' : 'error';
+    var key = e === 'claim-limit' ? 'claimLimit' : res && res.status === 429 ? 'busy' : e === 'bad-phone' ? 'badPhone' : e === 'name-required' ? 'nameReq' : e === 'consent-required' ? 'consentReq' : e === 'no-card' ? 'none' : e === 'token-expired' ? 'expired' : e === 'receipt-unusable' ? 'receiptBad' : 'error';
     var box = p.querySelector('.wc-err') || p.appendChild(el('div', 'wc-err'));
     box.textContent = t(key);
   }
@@ -180,8 +227,9 @@
   function form(m, program, receipt) {
     var p = panel();
     p.appendChild(el('h1', 'wc-h', t('title')));
+    p.appendChild(el('p', 'wc-offer', offerLine(program)));
     p.appendChild(el('p', 'wc-p', t('intro')));
-    if (receipt === 'ok') note(p, t('receiptOk'));
+    if (receipt === 'ok') note(p, t(pts(program) ? 'receiptOkPts' : 'receiptOk'));
     else if (receipt === 'used') note(p, t('receiptUsed'), true);
     else if (receipt === 'unusable') note(p, t('receiptBad'), true);
     var f = el('form'); f.className = 'wc-panel'; f.style.animation = 'none'; f.noValidate = true;
@@ -193,20 +241,21 @@
     var go = el('button', 'wc-btn wc-btn-main', t('cta')); go.type = 'submit';
     [l1, l2, l3, go, el('div', 'wc-err')].forEach(function (n) { f.appendChild(n); });
     p.appendChild(f);
-    var preview = { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel, firstName: '' };
+    var preview = { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel, perMad: program.perMad, firstName: '' };
     name.addEventListener('input', function () { preview.firstName = name.value.trim().split(/\s+/)[0] || ''; paintCard(m, preview); });
-    var sync = function () { go.disabled = !consent.checked; };
-    consent.addEventListener('change', sync); sync();
+    /* The button stays live: a tap without the box ticked says why, instead of a grey button that explains nothing. */
+    consent.addEventListener('change', function () { var x = f.querySelector('.wc-err'); if (x && consent.checked) x.textContent = ''; });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       if (go.disabled) return;
+      if (!consent.checked) { fail(f, null, { error: 'consent-required' }); return; }
       go.disabled = true; go.textContent = t('taking');
       var body = { merchant: m.slug, name: name.value, phone: phone.value, consent: consent.checked };
       if (receipt === 'ok') body.r = qs.get('r');
       post(body).then(function (r) {
         var b = r.body || {};
-        if (r.res.ok && b.offers) { if (b.credited) paintCard(m, { model: program.model, balance: 1, target: program.target, rewardLabel: program.rewardLabel, firstName: preview.firstName }); return showOffers(b.offers, b.credited); }
-        if (r.res.ok && b.exists && b.credited) { var q = panel(); q.appendChild(el('h1', 'wc-h', t('credited'))); return; }
+        if (r.res.ok && b.offers) { if (b.card) paintCard(m, b.card); return showOffers(b.offers, b.credited, b.card || program); }
+        if (r.res.ok && b.exists && b.credited) { var q = panel(); q.appendChild(el('h1', 'wc-h', t(pts(program) ? 'creditedPts' : 'credited'))); return; }
         if (r.res.ok && b.exists) { var x = panel(); x.appendChild(el('h1', 'wc-h', t('title'))); note(x, t('exists')); return; }
         if (r.res.ok && b.already) { receipt = 'used'; form(m, program, 'used'); return; }
         go.disabled = false; go.textContent = t('cta'); fail(f, r.res, b);
@@ -214,18 +263,35 @@
     });
   }
 
-  function enroll() {
+  function enroll(fresh) {
     var q = '/api/wallet/enroll?merchant=' + encodeURIComponent(slug) + (qs.get('r') ? '&r=' + encodeURIComponent(qs.get('r')) : '');
     fetch(q).then(function (res) { return res.json().then(function (b) { return { res: res, body: b }; }); }).then(function (r) {
       if (!r.res.ok) { fail(panel(), r.res, r.body); return; }
       var m = r.body.merchant, program = r.body.program;
-      paintCard(m, { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel });
-      if (qs.get('t')) {
+      paintCard(m, { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel, perMad: program.perMad });
+      if (qs.get('t') && !fresh) {
         var p = panel(); p.appendChild(el('p', 'wc-p', t('taking')));
-        post({ merchant: m.slug, t: qs.get('t') }).then(function (x) { if (x.res.ok && x.body.offers) showOffers(x.body.offers); else fail(panel(), x.res, x.body); });
+        post({ merchant: m.slug, t: qs.get('t') }).then(function (x) {
+          if (x.res.ok && x.body.offers) { if (x.body.card) paintCard(m, x.body.card); return showOffers(x.body.offers, false, x.body.card || program); }
+          var kept = recall(slug);
+          if (kept && kept.offers) { if (kept.card) paintCard(m, kept.card); return showOffers(kept.offers, false, kept.card || program, true); }
+          fail(panel(), x.res, x.body);
+        });
         return;
       }
-      form(m, program, r.body.receipt || '');
+      var mine = !fresh && !qs.get('r') && recall(slug);
+      if (mine && mine.offers) {
+        if (mine.card) paintCard(m, mine.card);
+        showOffers(mine.offers, false, mine.card || program, true);
+        /* The kept copy is from the day it was taken: the live balance replaces it. */
+        try {
+          var w = new URL(mine.offers.web, location.origin), sn = w.pathname.split('/').filter(Boolean)[2];
+          fetch('/api/wallet/card?s=' + encodeURIComponent(sn) + '&t=' + encodeURIComponent(w.searchParams.get('t') || ''), { cache: 'no-store' })
+            .then(function (x) { return x.ok ? x.json() : null; }).then(function (b) { if (b && b.card) paintCard(m, b.card); else if (b === null) { forget(slug); } }).catch(function () {});
+        } catch (_) {}
+        return;
+      }
+      form(m, program, fresh ? '' : (r.body.receipt || ''));
     }).catch(function () { fail(panel(), null, null); });
   }
 

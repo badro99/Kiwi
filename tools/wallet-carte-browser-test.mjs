@@ -105,9 +105,11 @@ async function signUp(page, name, phone) {
 await tests.run('fr · stand: a new number gets its card, the same number again is sent to the till', async (t) => {
   // coverage: surface=carte locale=fr viewport=phone
   const page = await open(t, '/carte/pasta-corner?lang=fr');
-  t.step('the button waits for consent; the first name lands on the card as it is typed');
+  t.step('the reward is sold up front; a tap without consent says why and sends nothing; the first name lands on the card as it is typed');
   await page.waitForSelector('#wc-panel form');
-  assert.equal(await page.$eval('#wc-panel form button[type=submit]', (b) => b.disabled), true, 'no consent, no button');
+  assert.match(await text(page, '#wc-panel .wc-offer'), /1 plat offert au bout de 10 passages\./);
+  await page.click('#wc-panel form button[type=submit]');
+  assert.match(await text(page, '#wc-panel form .wc-err'), /Cochez la case/);
   assert.equal(await text(page, '#wc-balance'), '0 / 10');
   assert.equal(await page.$$eval('#wc-stamps .wc-stamp', (s) => s.length), 10, 'ten discs for a ten-stamp card');
   const [nameIn] = await page.$$('#wc-panel form input:not([type=checkbox])');
@@ -120,7 +122,8 @@ await tests.run('fr · stand: a new number gets its card, the same number again 
   await page.waitForFunction(() => /prête/.test(document.querySelector('#wc-panel h1').textContent));
   const href = await page.$eval('#wc-panel a.wc-btn', (a) => a.getAttribute('href'));
   assert.match(href, /^http:\/\/127\.0\.0\.1:\d+\/carte\/pasta-corner\/[a-z0-9]{24}\?t=[a-z0-9]{32}$/, 'the web card link');
-  assert.equal(await page.$$eval('#wc-panel a.wc-btn', (a) => a.length), 1, 'no Wallet button without the Wallet secrets');
+  assert.equal(await page.$$eval('#wc-panel a.wc-btn:not([href^="https://wa.me"])', (a) => a.length), 1, 'no Wallet button without the Wallet secrets');
+  assert.match(await page.$eval('#wc-panel a[href^="https://wa.me"]', (a) => decodeURIComponent(a.href)), /Ma carte fidélité Pasta Corner : http:\/\/127\.0\.0\.1:\d+\/carte\/pasta-corner\//, 'the WhatsApp link carries the web card');
 
   t.step('the web card shows the stamps and the till code');
   await page.goto(href, { waitUntil: 'load' });
@@ -128,8 +131,14 @@ await tests.run('fr · stand: a new number gets its card, the same number again 
   assert.equal(await text(page, '#wc-first'), 'Salma');
   assert.equal(await text(page, '#wc-balance'), '0 / 10');
 
+  t.step('back on the stand, this phone finds its card again; "not me" opens the form');
+  const again = t.watch(await page.browserContext().newPage());
+  await again.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
+  await again.goto(base + '/carte/pasta-corner?lang=fr', { waitUntil: 'load' });
+  await again.waitForFunction(() => /Votre carte/.test(document.querySelector('#wc-panel h1')?.textContent || ''));
+  await again.click('#wc-panel .wc-link');
+
   t.step('the same number again gets no card, no name, no balance');
-  const again = await open(t, '/carte/pasta-corner?lang=fr');
   await signUp(again, 'Quelqu’un', '06 77 88 99 00');
   await again.waitForSelector('#wc-panel .wc-note');
   assert.match(await text(again, '#wc-panel .wc-note'), /déjà une carte chez Pasta Corner/);

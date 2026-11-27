@@ -64,7 +64,7 @@ ok('a ready card says so on the lock screen', () => {
   const v = cardView({ fidelity: PASTA, client: { stamps: 10 } });
   const p = passJson({ view: v, card, merchant, env, baseUrl: 'https://kiwi-os.com' });
   const msgs = [...p.storeCard.primaryFields, ...p.storeCard.secondaryFields].map((f) => f.changeMessage || '').join(' ');
-  assert.match(msgs, /récompense vous attend/i);
+  assert.match(msgs, /récompense prête/i);
 });
 
 ok('the shop position becomes a lock-screen location', () => {
@@ -79,6 +79,17 @@ ok('foreground stays readable on a dark background', () => {
   const v = cardView({ fidelity: PASTA, client: { stamps: 1 } });
   const p = passJson({ view: v, card, merchant: { ...merchant, color: '#F7F5F0', bg: '#053B2C' }, env, baseUrl: 'https://kiwi-os.com' });
   assert.equal(p.foregroundColor, 'rgb(255, 255, 255)');
+});
+
+ok('every change message carries %@, and "reward ready" rides on the balance that moves', () => {
+  const fmt = (m) => (m.replace(/%%/g, '').match(/%@/g) || []).length === 1 && !/%(?!@)/.test(m.replace(/%%/g, '').replace(/%@/g, ''));
+  for (const client of [{ stamps: 7 }, { stamps: 10 }]) {
+    const v = cardView({ fidelity: PASTA, client });
+    const p = passJson({ view: v, card, merchant: { ...merchant, name: 'Café 100% Pasta' }, env, baseUrl: 'https://kiwi-os.com' });
+    const fields = [...p.storeCard.primaryFields, ...p.storeCard.secondaryFields];
+    for (const f of fields) if (f.changeMessage) assert.ok(fmt(f.changeMessage), `${f.key}: ${f.changeMessage}`);
+    if (v.ready) assert.match(p.storeCard.primaryFields[0].changeMessage, /Récompense prête/);
+  }
 });
 
 console.log(`wallet-card: ${pass} passed`);

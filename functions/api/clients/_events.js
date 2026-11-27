@@ -301,7 +301,9 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
     ).bind(merchant, id, ref, ref).all();
     return (rows && rows.results) || [];
   }
-  async function voidSaleLoyalty(env, merchant, sale) {
+  /* `touched`, when given, collects the client ids whose balance moved, so the
+     caller can tell their Wallet cards (clients.js wraps both helpers). */
+  async function voidSaleLoyalty(env, merchant, sale, touched) {
     let taken = 0;
     try {
       for (const group of await saleLoyaltyGroups(env, merchant, sale)) {
@@ -312,12 +314,12 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
           clientId: group.client_id, ref: `refund:void:${n}:${tail}`,
           amount: Number(group.paid), saleRef: group.sale_ref,
         });
-        if (res && res.ok) taken++;
+        if (res && res.ok) { taken++; if (touched) touched.push(String(group.client_id)); }
       }
     } catch (_) { /* the void itself is already committed */ }
     return taken;
   }
-  async function restoreSaleLoyalty(env, merchant, sale) {
+  async function restoreSaleLoyalty(env, merchant, sale, touched) {
     let given = 0;
     try {
       if (typeof env.DB.batch !== 'function') return 0;
@@ -345,7 +347,7 @@ export function createClientEvents({ str, money, resolveClientId, clientCursorSt
           SELECT ?, ?, ?, ?, ?, ?, 0, ?, ${cursor}, 'retour', '[]', ? WHERE changes() > 0`)
             .bind(merchant, back, group.client_id, amount, points, stamps, now, merchant, group.sale_ref),
         ]);
-        if (Number(results[3] && results[3].meta && results[3].meta.changes)) given++;
+        if (Number(results[3] && results[3].meta && results[3].meta.changes)) { given++; if (touched) touched.push(String(group.client_id)); }
       }
     } catch (_) { /* the restore itself is already committed */ }
     return given;

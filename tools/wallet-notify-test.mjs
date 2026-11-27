@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { walletDb } from './wallet-d1-shim.mjs';
 import { notifyClientChanged } from '../functions/api/wallet/_notify.js';
+import { voidSaleLoyalty, applyPurchase } from '../functions/api/clients.js';
 import { issueCard, registerDevice, devicesForSerial, touchCards } from '../functions/api/wallet/_store.js';
 import { _resetGoogleToken } from '../functions/api/wallet/_google.js';
 import { resetApnsJwtCache } from '../functions/api/push/_dispatch.js';
@@ -77,6 +78,31 @@ await ok('a device Apple says is gone (410) is forgotten', async () => {
   reply = () => new Response('{}', { status: 200 });
 });
 
+await ok('a 400 that is not about the device (bad topic) keeps the device; BadDeviceToken drops it', async () => {
+  const w = await world(APNS);
+  reply = (url) => new Response('{"reason":"BadTopic"}', { status: url.includes('/3/device/') ? 400 : 200 });
+  stamps(w, 4);
+  await notifyClientChanged(w.env, 'pasta-corner', 'c1');
+  assert.equal((await devicesForSerial(w.env.DB, w.apple.serial)).length, 1, 'a setup mistake must not disconnect every iPhone');
+  reply = (url) => new Response('{"reason":"BadDeviceToken"}', { status: url.includes('/3/device/') ? 400 : 200 });
+  stamps(w, 5);
+  await notifyClientChanged(w.env, 'pasta-corner', 'c1');
+  assert.equal((await devicesForSerial(w.env.DB, w.apple.serial)).length, 0);
+  reply = () => new Response('{}', { status: 200 });
+});
+
+await ok('a push that failed is sent again on the next call, even with the same balance', async () => {
+  const w = await world(APNS);
+  reply = (url) => new Response('{"reason":"InternalServerError"}', { status: url.includes('/3/device/') ? 500 : 200 });
+  stamps(w, 6);
+  const first = await notifyClientChanged(w.env, 'pasta-corner', 'c1');
+  assert.equal(first.apple, 0);
+  reply = () => new Response('{}', { status: 200 });
+  calls = [];
+  const again = await notifyClientChanged(w.env, 'pasta-corner', 'c1');
+  assert.equal(again.apple, 1, 'the failed card was left marked as unsent');
+});
+
 await ok('a Google card is patched with the new balance, and told when the reward is ready', async () => {
   calls = []; _resetGoogleToken();
   reply = (url) => url.includes('oauth2') ? new Response(JSON.stringify({ access_token: 'ya29.test', expires_in: 3600 })) : new Response('{}', { status: 200 });
@@ -91,6 +117,7 @@ await ok('a Google card is patched with the new balance, and told when the rewar
   assert.equal(body.loyaltyPoints.balance.string, '10 / 10');
   assert.match(body.heroImage.sourceUri.uri, /\/api\/wallet\/strip\/10-10-b3261e-fff8f0@3\.png$/);
   assert.equal(body.messages[0].messageType, 'TEXT_AND_NOTIFY');
+  assert.equal(body.notifyPreference, 'NOTIFY_ON_UPDATE', 'a new balance is announced, not just stored');
   const tokenCall = calls.find((c) => c.url.includes('oauth2'));
   const assertion = new URLSearchParams(tokenCall.init.body).get('assertion');
   const claims = JSON.parse(Buffer.from(assertion.split('.')[1], 'base64url'));
@@ -99,6 +126,33 @@ await ok('a Google card is patched with the new balance, and told when the rewar
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', rsa.publicKey, Buffer.from(assertion.split('.')[2], 'base64url'), new TextEncoder().encode(assertion.split('.').slice(0, 2).join('.')));
   assert.equal(ok, true);
   reply = () => new Response('{}', { status: 200 });
+});
+
+await ok('a voided sale takes its stamp back on the card too (the till and the phone agree)', async () => {
+  calls = []; resetApnsJwtCache(); reply = () => new Response('{}', { status: 200 });
+  const w = await world(APNS);
+  w.sql.prepare("INSERT INTO sales (id, merchant, amount, amount_cents, method, ref, ts) VALUES ('sale-v1','pasta-corner',50,5000,'cash','T1',?)").run(Date.now());
+  const bought = await applyPurchase(w.env, 'pasta-corner', { clientId: 'c1', ref: 'sale-v1', saleRef: 'T1', amount: 50, method: 'cash', items: [] });
+  assert.ok(bought.ok, 'purchase recorded');
+  await notifyClientChanged(w.env, 'pasta-corner', 'c1');
+  const before = w.sql.prepare("SELECT stamps FROM clients WHERE id = 'c1'").get().stamps;
+  calls = [];
+  const jobs = [];
+  await voidSaleLoyalty(w.env, 'pasta-corner', { id: 'sale-v1', ref: 'T1' }, (p) => jobs.push(p));
+  await Promise.all(jobs);
+  assert.equal(w.sql.prepare("SELECT stamps FROM clients WHERE id = 'c1'").get().stamps, before - 1);
+  assert.equal(jobs.length, 1, 'one card job, after the answer');
+  assert.ok(calls.some((c) => c.url.includes('/3/device/')), 'the iPhone is told');
+});
+
+await ok('a merge moves the Wallet card to the kept client, and the kept client is told', () => {
+  const merge = fs.readFileSync(new URL('../functions/api/_client-merge.js', import.meta.url), 'utf8');
+  assert.match(merge, /'wallet_cards','wallet_claims'\]/);
+  const src = fs.readFileSync(new URL('../functions/api/clients.js', import.meta.url), 'utf8');
+  assert.match(src, /merged\.ok && context\.waitUntil\) context\.waitUntil\(notifyClientChanged\(env, merchant, String\(merge\.to\)/);
+  /* the routes reach the cards through the wrapped exports: the main cancel route
+     tells them after its answer, the reopen path inline (voidSaleLoyalty above). */
+  assert.match(fs.readFileSync(new URL('../functions/api/sale/cancel.js', import.meta.url), 'utf8'), /\{ id, ref: sale\.ref \|\| '' \}, waitUntil\);/);
 });
 
 await ok('nothing configured: the balance is recorded and nothing is sent', async () => {

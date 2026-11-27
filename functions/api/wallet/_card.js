@@ -14,6 +14,7 @@ export function cardView({ fidelity, client }) {
   if (cfg.model === 'amount') {
     const target = int(cfg.amount && cfg.amount.threshold) || 100, balance = int(c.points);
     return { model: 'amount', balance, target, remaining: Math.max(0, target - balance), ready: balance >= target,
+      perMad: Math.max(0, Number(cfg.amount && cfg.amount.perMad) || 1),
       rewardLabel: String((cfg.amount && cfg.amount.reward) || '').slice(0, 60), text: `${balance} pts`, firstName };
   }
   const rule = cfg.model === 'product' ? cfg.product : cfg.visit;
@@ -53,12 +54,13 @@ export function passJson({ view, card, merchant, env, baseUrl }) {
   const unit = view.model === 'amount' ? 'points' : 'tampons';
   const balance = {
     key: 'balance', label: view.model === 'amount' ? 'POINTS' : 'TAMPONS', value: view.text,
-    changeMessage: view.ready ? 'Votre récompense vous attend chez ' + shop : (view.model === 'amount' ? 'Vous avez maintenant %@' : 'Carte à %@'),
+    /* Apple shows a change message only when it carries %@ (the new value), and
+       only for a field whose value moved: the balance is the one that always
+       moves, so it carries the "reward ready" news too. A literal % in the
+       shop's name would be read as a format, so it is doubled. */
+    changeMessage: view.ready ? 'Récompense prête chez ' + shop.replace(/%/g, '%%') + ' · %@' : (view.model === 'amount' ? 'Vous avez maintenant %@' : 'Carte à %@'),
   };
-  const next = {
-    key: 'reward', label: 'RÉCOMPENSE', value: view.rewardLabel || 'Offerte',
-    changeMessage: view.ready ? 'Récompense prête : %@' : undefined,
-  };
+  const next = { key: 'reward', label: 'RÉCOMPENSE', value: view.rewardLabel || 'Offerte' };
   const left = { key: 'left', label: 'IL RESTE', value: view.ready ? 'Prête' : `${view.remaining} ${unit}` };
   const pass = {
     formatVersion: 1,
@@ -87,7 +89,6 @@ export function passJson({ view, card, merchant, env, baseUrl }) {
       ].filter(Boolean),
     },
   };
-  if (!next.changeMessage) delete next.changeMessage;
   const lat = Number(merchant.lat), lng = Number(merchant.lng);
   if (Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng)) {
     pass.locations = [{ latitude: lat, longitude: lng, relevantText: view.ready ? `Votre récompense vous attend chez ${shop}` : `${shop} · ${view.text}` }];

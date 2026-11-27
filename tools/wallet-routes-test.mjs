@@ -141,15 +141,60 @@ await ok('with the Apple certificate configured, the offer includes the .pkpass 
   assert.match(r.body.offers.apple, /^https:\/\/kiwi-os\.com\/api\/wallet\/v1\/download\/[a-z0-9]+\.pkpass\?t=[a-z0-9]{32}$/);
 });
 
-await ok('twelve sign-ups an hour per address, known number or not, then 429', async () => {
+await ok('thirty sign-ups an hour per address and shop, known number or not, then 429', async () => {
   const w = world();
   await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true }, { ip: '10.1.1.1' });
-  for (let i = 0; i < 11; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '06' + String(10000000 + i), consent: true }, { ip: '10.9.9.9' })).status, 200);
-  assert.equal((await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.9.9.9' })).body.exists, true);
-  const known = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.9.9.9' });
-  const fresh = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0698989898' }, { ip: '10.9.9.9' });
+  for (let i = 0; i < 29; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '06' + String(10000000 + i), consent: true }, { ip: '10.9.9.9' })).status, 200);
+  assert.equal((await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678', consent: true }, { ip: '10.9.9.9' })).body.exists, true);
+  const known = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678', consent: true }, { ip: '10.9.9.9' });
+  const fresh = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0698989898', consent: true }, { ip: '10.9.9.9' });
   assert.equal(known.status, 429); assert.equal(fresh.status, 429, 'a new number is stopped at the same point');
   assert.deepEqual(known.body, fresh.body);
+});
+
+await ok('consent is checked by the server, before the number is looked up', async () => {
+  const w = world();
+  await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true });
+  const known = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.6.6.6' });
+  const fresh = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0698989898', consent: false }, { ip: '10.6.6.6' });
+  assert.equal(fresh.status, 400); assert.equal(fresh.body.error, 'consent-required');
+  assert.deepEqual(known.body, fresh.body);
+  assert.equal(clientRows(w).length, 1, 'no record without consent');
+});
+
+await ok('the answer carries the card as the customer will see it (a points shop credits points, not "1")', async () => {
+  const w = world();
+  w.sql.prepare("UPDATE store_docs SET data = ? WHERE merchant = 'pasta-corner' AND feature = 'fidelity'").run(JSON.stringify({ ...FID, model: 'amount', amount: { perMad: 1, threshold: 300, reward: '−10 %' } }));
+  addSale(w, 'sale-ref-5f607182-856f-e05a-4a18-ae36-d2d316c27710', { ref: '43110' });
+  const r = await post(w, { merchant: 'pasta-corner', name: 'Hind', phone: '0671717171', consent: true, r: 'sale-ref-5f607182-856f-e05a-4a18-ae36-d2d316c27710' });
+  assert.equal(r.body.credited, true);
+  assert.equal(r.body.card.model, 'amount'); assert.equal(r.body.card.balance, 120); assert.equal(r.body.card.target, 300);
+  assert.equal(r.body.card.firstName, 'Hind');
+});
+
+await ok('a purchase that cannot be recorded gives the receipt back and still hands the card', async () => {
+  const w = world();
+  addSale(w, 'sale-ref-60718293-856f-e05a-4a18-ae36-d2d316c27711', { ref: '43111' });
+  w.sql.exec("CREATE TRIGGER boom BEFORE INSERT ON client_purchase_events BEGIN SELECT RAISE(ABORT, 'boom'); END;");
+  const r = await post(w, { merchant: 'pasta-corner', name: 'Ali', phone: '0672727272', consent: true, r: 'sale-ref-60718293-856f-e05a-4a18-ae36-d2d316c27711' });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.ok(r.body.offers.web, 'the new client still gets a card');
+  assert.notEqual(r.body.credited, true);
+  assert.equal(w.sql.prepare('SELECT COUNT(*) AS n FROM wallet_claims').get().n, 0, 'the receipt is free to claim again');
+  w.sql.exec('DROP TRIGGER boom');
+  const again = await post(w, { merchant: 'pasta-corner', name: 'Ali', phone: '0672727272', consent: true, r: 'sale-ref-60718293-856f-e05a-4a18-ae36-d2d316c27711' });
+  assert.equal(again.body.credited, true);
+});
+
+await ok('a receipt is good for 48 hours, and one number claims at most two a day', async () => {
+  const w = world();
+  addSale(w, 'sale-ref-71829304-856f-e05a-4a18-ae36-d2d316c27712', { ref: '43112', ts: Date.now() - 3 * 86400_000 });
+  assert.equal((await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0673737373', consent: true, r: 'sale-ref-71829304-856f-e05a-4a18-ae36-d2d316c27712' })).body.error, 'receipt-unusable');
+  for (const [i, id] of ['sale-ref-8293a4b5-856f-e05a-4a18-ae36-d2d316c27713', 'sale-ref-93a4b5c6-856f-e05a-4a18-ae36-d2d316c27714', 'sale-ref-a4b5c6d7-856f-e05a-4a18-ae36-d2d316c27715'].entries()) {
+    addSale(w, id, { ref: '4312' + i });
+    const r = await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0674747474', consent: true, r: id });
+    if (i < 2) assert.equal(r.body.credited, true, id);
+    else { assert.equal(r.status, 429); assert.equal(r.body.error, 'claim-limit'); }
+  }
 });
 
 await ok('a nameless sign-up is refused before the number is looked up', async () => {

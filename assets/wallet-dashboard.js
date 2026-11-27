@@ -14,33 +14,36 @@
   'use strict';
   var T = {
     fr: {
-      title: 'Carte Wallet', intro: 'Vos clients rangent la carte dans Apple Wallet ou Google Wallet. Chaque passage y ajoute son tampon, tout seul.',
+      title: 'Carte Wallet', intro: 'Vos clients rangent la carte dans Apple Wallet ou Google Wallet. Chaque achat la met à jour, toute seule.',
+      offerVisit: '{reward} au bout de {n} passages', offerProduct: '{reward} au bout de {n} × {item}', offerAmount: '{reward} dès {n} points', rewardAny: 'Une récompense',
       on: 'Proposer la carte à mes clients', name: 'Nom sur la carte', bg: 'Couleur de la carte', ink: 'Couleur des tampons',
       address: 'Adresse (facultatif)', where: 'Position de la boutique', locate: 'Utiliser ma position ici', located: 'Position enregistrée',
       noLocate: 'Position indisponible sur cet appareil', save: 'Enregistrer la carte', saving: 'Enregistrement…', saved: 'Carte enregistrée',
       failed: 'Enregistrement impossible, réessayez', stale: 'Modifiée ailleurs entre-temps : rechargée, refaites la modification',
       stand: 'Imprimer le présentoir du comptoir', count: '{n} clients ont la carte', apple: 'iPhone', inWallet: 'dans Wallet', google: 'Android', web: 'web',
-      none: 'Aucun client ne l’a encore.', standLine: 'Votre carte fidélité dans votre téléphone', standSub: 'Scannez avec l’appareil photo. Un tampon à chaque passage.',
+      none: 'Aucun client ne l’a encore.', standLine: 'Votre carte fidélité dans votre téléphone', standSub: 'Scannez avec l’appareil photo.',
       stamps: 'Tampons', reward: 'Récompense', points: 'Points', client: 'Client', you: 'Salma',
     },
     en: {
-      title: 'Wallet card', intro: 'Customers keep the card in Apple Wallet or Google Wallet. Every visit adds its stamp by itself.',
+      title: 'Wallet card', intro: 'Customers keep the card in Apple Wallet or Google Wallet. Every purchase updates it by itself.',
+      offerVisit: '{reward} after {n} visits', offerProduct: '{reward} after {n} × {item}', offerAmount: '{reward} at {n} points', rewardAny: 'A reward',
       on: 'Offer the card to my customers', name: 'Name on the card', bg: 'Card colour', ink: 'Stamp colour',
       address: 'Address (optional)', where: 'Shop location', locate: 'Use my location here', located: 'Location saved',
       noLocate: 'Location unavailable on this device', save: 'Save the card', saving: 'Saving…', saved: 'Card saved',
       failed: 'Could not save, try again', stale: 'Changed elsewhere meanwhile: reloaded, make your change again',
       stand: 'Print the counter stand', count: '{n} customers have the card', apple: 'iPhone', inWallet: 'in Wallet', google: 'Android', web: 'web',
-      none: 'No customer has it yet.', standLine: 'Your loyalty card on your phone', standSub: 'Scan with the camera. A stamp every visit.',
+      none: 'No customer has it yet.', standLine: 'Your loyalty card on your phone', standSub: 'Scan with the camera.',
       stamps: 'Stamps', reward: 'Reward', points: 'Points', client: 'Customer', you: 'Salma',
     },
     ar: {
-      title: 'بطاقة Wallet', intro: 'الزبناء كيخليو البطاقة في Apple Wallet ولا Google Wallet. كل زيارة كتزيد الختم ديالها بوحدها.',
+      title: 'بطاقة Wallet', intro: 'الزبناء كيخليو البطاقة في Apple Wallet ولا Google Wallet. كل شرية كتجددها بوحدها.',
+      offerVisit: '{reward} من بعد {n} زيارات', offerProduct: '{reward} من بعد {n} × {item}', offerAmount: '{reward} ملي توصل {n} نقطة', rewardAny: 'هدية',
       on: 'نقترح البطاقة على الزبناء ديالي', name: 'الاسم على البطاقة', bg: 'لون البطاقة', ink: 'لون الأختام',
       address: 'العنوان (اختياري)', where: 'موقع المحل', locate: 'استعمل الموقع ديالي هنا', located: 'تسجل الموقع',
       noLocate: 'الموقع ما متوفرش في هاد الجهاز', save: 'سجل البطاقة', saving: 'كنسجلو…', saved: 'تسجلات البطاقة',
       failed: 'ما قدرناش نسجلو، عاود', stale: 'تبدلات من جهة أخرى: عاودنا حملناها، دير التعديل مرة أخرى',
       stand: 'طبع اللوحة ديال الكاشة', count: '{n} زبون عندهم البطاقة', apple: 'iPhone', inWallet: 'في Wallet', google: 'Android', web: 'ويب',
-      none: 'حتى زبون ما عندو البطاقة باقي.', standLine: 'بطاقة الوفاء ديالك في التيليفون', standSub: 'سكاني بالكاميرا. ختم مع كل زيارة.',
+      none: 'حتى زبون ما عندو البطاقة باقي.', standLine: 'بطاقة الوفاء ديالك في التيليفون', standSub: 'سكاني بالكاميرا.',
       stamps: 'الأختام', reward: 'الهدية', points: 'النقاط', client: 'الزبون', you: 'سلمى',
     },
   };
@@ -53,6 +56,15 @@
   function merchant() { try { return (window.KiwiClients && window.KiwiClients.bookId && window.KiwiClients.bookId()) || ''; } catch (_) { return ''; } }
   function program() { try { return (window.KiwiClients && window.KiwiClients.config && window.KiwiClients.config()) || {}; } catch (_) { return {}; } }
   var HEX = /^#[0-9a-fA-F]{6}$/;
+  /* The reward, in a line, in one language: what the stand and the panel sell. */
+  function offer(cfg, in_lang) {
+    var L = T[in_lang] || T.fr, model = cfg.model || 'visit', rule = cfg[model] || {};
+    var fill = function (k, v) { return (L[k] || T.fr[k]).replace(/\{(\w+)\}/g, function (_, n) { return v[n] != null ? String(v[n]) : ''; }); };
+    var reward = rule.reward || L.rewardAny;
+    if (model === 'amount') return fill('offerAmount', { reward: reward, n: Number(rule.threshold) || 100 });
+    if (model === 'product' && rule.item) return fill('offerProduct', { reward: reward, n: Number(rule.target) || 10, item: rule.item });
+    return fill('offerVisit', { reward: reward, n: Number(rule.target) || 10 });
+  }
 
   var styled = false;
   function style() {
@@ -106,15 +118,17 @@
     var d = w.document;
     d.open();
     d.write('<!doctype html><meta charset="utf-8"><title></title><style>@page{size:A6;margin:8mm}body{margin:0;font-family:"Inter Tight",system-ui,sans-serif;text-align:center;color:#0A0F0D}' +
-      '.s{display:flex;flex-direction:column;align-items:center;gap:4mm}.n{font-size:16pt;font-weight:600}.q svg{width:62mm;height:auto}.a{font-size:13pt;font-weight:600;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}.u{font-size:8pt;color:#5B635F}</style><div class="s"></div>');
+      '.s{display:flex;flex-direction:column;align-items:center;gap:4mm}.n{font-size:16pt;font-weight:600}.q svg{width:62mm;height:auto}.a{font-size:13pt;font-weight:600;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}.o{font-size:12pt;font-weight:600;color:#0B6E4F}.u{font-size:8pt;color:#5B635F}</style><div class="s"></div>');
     d.close();
     var box = d.querySelector('.s');
     var add = function (cls, text) { var n = d.createElement('div'); n.className = cls; n.textContent = text; box.appendChild(n); return n; };
     d.title = doc.name || slug;
     add('n', doc.name || slug);
     add('l', T.fr.standLine);
+    add('o', offer(program(), 'fr'));
     var q = d.createElement('div'); q.className = 'q'; if (svg) q.appendChild(d.importNode(new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement, true)); box.appendChild(q);   /* dessin de qrcode.js, sans texte */
     add('a', T.ar.standLine).dir = 'rtl';
+    add('o', offer(program(), 'ar')).dir = 'rtl';
     add('u', T.fr.standSub);
     add('u', url.replace('https://', ''));
     setTimeout(function () { try { w.focus(); w.print(); } catch (_) {} }, 250);

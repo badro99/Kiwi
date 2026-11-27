@@ -588,8 +588,8 @@ export async function onRequestPost(context) {
 
   // Points earned on a sale leave the card with it, and come back with it.
   for (const r of rows) {
-    if (action === 'void') await voidSaleLoyalty(env, merchant, r);
-    else if (r.void_ts) await restoreSaleLoyalty(env, merchant, r);
+    if (action === 'void') await voidSaleLoyalty(env, merchant, r, context.waitUntil && context.waitUntil.bind(context));
+    else if (r.void_ts) await restoreSaleLoyalty(env, merchant, r, context.waitUntil && context.waitUntil.bind(context));
   }
 
   /* Le journal, après coup et sans jamais faire échouer le geste : si la table

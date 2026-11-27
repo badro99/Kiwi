@@ -36,6 +36,9 @@ export async function touchCards(db, merchant, clientId, balanceKey, now = Date.
   return r.results || [];
 }
 
+export const markCardUnsent = (db, serial) =>
+  db.prepare("UPDATE wallet_cards SET last_balance = '' WHERE serial = ?").bind(serial).run();
+
 export async function revokeClientCards(db, merchant, clientId, now = Date.now()) {
   const r = await db.prepare('UPDATE wallet_cards SET revoked = 1, updated_ts = ? WHERE merchant = ? AND client_id = ? AND revoked = 0')
     .bind(now, merchant, clientId).run();
@@ -74,6 +77,14 @@ export async function claimSale(db, merchant, saleId, clientId, now = Date.now()
   const r = await db.prepare('INSERT OR IGNORE INTO wallet_claims (merchant, sale_id, client_id, claimed_ts) VALUES (?,?,?,?)')
     .bind(merchant, saleId, clientId, now).run();
   return !!(r.meta && r.meta.changes);
+}
+
+export const releaseClaim = (db, merchant, saleId) =>
+  db.prepare('DELETE FROM wallet_claims WHERE merchant = ? AND sale_id = ?').bind(merchant, saleId).run();
+
+export async function claimsToday(db, merchant, clientId, now = Date.now()) {
+  const r = await db.prepare('SELECT COUNT(*) AS n FROM wallet_claims WHERE merchant = ? AND client_id = ? AND claimed_ts > ?').bind(merchant, clientId, now - 86400_000).first();
+  return Number((r && r.n) || 0);
 }
 
 const TILL_TTL = 10 * 60_000;
