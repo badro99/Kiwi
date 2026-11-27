@@ -228,6 +228,47 @@ try {
     check(errors.length === 0, 'no page error', errors.join(' | '));
   });
 
+  /* « La division on ne peut pas saisir le montant » (client, 27 Nov): each
+     guest says what he pays, the last share takes the rest. */
+  await S.run('2027 · split by amount: typed shares, the rest, the over-limit guard, paid share by share', async (tr) => {
+    const { page, errors } = await till(tr, { kit: true });
+    await seatKit(page, FREE, ['m-001', 'm-001', 'm-002', 'm-002', 'm-003', 'm-004']);
+    tr.step('Par montant: 100 for the first guest, 85,50 for the second');
+    await tap(page, 'k-bill >>> [data-w="split"]');
+    await page.click('k-split >>> k-segmented >>> [data-v="amount"]');
+    await wait(250);
+    const type = async (keys) => { for (const k of keys) { await page.click(`k-split >>> [data-kp-key="${k}"]`); await wait(120); } };
+    await type(['1', '0', '0']);
+    await page.click('k-split >>> [data-share="1"]'); await wait(150);
+    await type(['8', '5', 'dec', '5']);
+    let shares = await page.evaluate(() => document.querySelector('k-split').shares());
+    check(JSON.stringify(shares) === JSON.stringify([10000, 8550, 9950]), 'three shares: 100 · 85,50 · the rest 99,50', JSON.stringify(shares));
+    tr.step('a typed amount past the bill blocks the split until it is fixed');
+    await page.click('k-split >>> [data-share="0"]'); await wait(150);
+    await type(['0']);
+    const over = await page.evaluate(() => { const r = document.querySelector('k-split').shadowRoot; const b = r.querySelector('[data-w="pay"]'); return { alert: !!r.querySelector('.amt-err'), off: !b || b.disabled || b.getAttribute('aria-disabled') === 'true' }; });
+    check(over.alert && over.off, 'over the bill: the alert shows and the split cannot start', JSON.stringify(over));
+    await type(['del']);
+    shares = await page.evaluate(() => document.querySelector('k-split').shares());
+    check(JSON.stringify(shares) === JSON.stringify([10000, 8550, 9950]), 'deleting the extra digit brings the shares back');
+    tr.step('pay the three shares');
+    await payShareKit(page, { method: 'card' });
+    await page.waitForFunction(() => { const s = document.querySelector('k-split'); return s && !s.hidden && document.querySelector('k-pay').hidden; }, { timeout: 8000 });
+    const parts = await page.evaluate(() => document.querySelector('k-split').parts.map((p) => [Math.round(p.amount * 100), p.paid]));
+    check(JSON.stringify(parts) === JSON.stringify([[10000, true], [8550, false], [9950, false]]), 'the shares keep the typed amounts', JSON.stringify(parts));
+    await payShareKit(page, { method: 'cash', chipText: 'Exact' });
+    await page.waitForFunction(() => { const s = document.querySelector('k-split'); return s && !s.hidden && document.querySelector('k-pay').hidden; }, { timeout: 8000 });
+    await payShareKit(page, { method: 'card' });
+    await page.waitForFunction(() => document.querySelector('k-split').hidden && document.querySelector('k-pay').hidden, { timeout: 8000 });
+    const sales = await splitSales(page);
+    check(JSON.stringify(sales.slice().sort((a, b) => a.idx - b.idx).map((s) => s.cents)) === JSON.stringify([10000, 8550, 9950]) && new Set(sales.map((s) => s.flow)).size === 1,
+      'three sales of one split: 100 · 85,50 · 99,50', JSON.stringify(sales));
+    const dishes = await page.evaluate(() => { const q = {}; journal.filter((e) => e && e.split && !e.voided).forEach((e) => (e.lines || e.items || []).forEach((l) => { const n = String(l.name).split(' · ')[0]; q[n] = (q[n] || 0) + Number(l.qty); })); return q; });
+    check(Math.abs(dishes['Salade marocaine'] - 2) < 0.01 && Math.abs(dishes['Harira'] - 1) < 0.01, 'the dishes add back to the order across the shares (2 salads, 1 harira)', JSON.stringify(dishes));
+    check(await page.evaluate((id) => ['khlass', 'khawya'].includes(tables[id].status) && !tableSplits.has(id), FREE), 'T8 is freed and its split cleared');
+    check(errors.length === 0, 'no page error', errors.join(' | '));
+  });
+
   await S.run('classic till · a share paid, « Plus tard », another table, resumed and finished', async (tr) => {
     const { page, errors } = await till(tr, { kit: false });
     await page.evaluate((id) => openTable(id), T);

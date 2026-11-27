@@ -433,6 +433,8 @@
       splitState.tipMode = '0';
       splitState.customTipPct = 0;
       if (plan.mode === 'equal') { splitState.splitMode = 'egal'; splitState.numParts = plan.n; }
+      /* Par montant: the typed shares, the shipped flow adds the rest (split-tender.js). */
+      else if (plan.mode === 'amount') { splitState.splitMode = 'montant'; splitState.amountParts = plan.amounts.slice(); }
       else {
         splitState.splitMode = 'article';
         splitState.numConvives = plan.n;
@@ -447,7 +449,7 @@
       launchSplitFlow();
       if (!splitState.flow) return null;
       const map = {};
-      if (splitState.splitMode === 'egal') { for (let i = 1; i <= plan.n; i++) map[i] = i - 1; }
+      if (splitState.splitMode === 'egal' || splitState.splitMode === 'montant') { for (let i = 1; i <= plan.n; i++) map[i] = i - 1; }
       else {
         let k = 0;
         for (let c = 1; c <= plan.n; c++) if (splitState.perConvive[c] && Object.keys(splitState.perConvive[c]).length) map[c] = k++;

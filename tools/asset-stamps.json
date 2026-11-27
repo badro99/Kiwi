@@ -408,8 +408,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "34",
-    "sha": "382ee07bbbb3f86b"
+    "v": "35",
+    "sha": "1b85ecebc4cec95b"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -1188,16 +1188,16 @@
     "sha": "ead331c2ad217c31"
   },
   "assets/kit/strings/till.ar.js": {
-    "v": "18",
-    "sha": "c0df3fd02c0010e3"
+    "v": "19",
+    "sha": "e853e4f53b6ea99e"
   },
   "assets/kit/strings/till.en.js": {
-    "v": "18",
-    "sha": "d42d2cc3de60c2ec"
+    "v": "19",
+    "sha": "6ef07aca0e2e15d6"
   },
   "assets/kit/strings/till.fr.js": {
-    "v": "18",
-    "sha": "700240cfdce9964a"
+    "v": "19",
+    "sha": "af0d6a4bd6e3ce40"
   },
   "assets/kit/team-pin.js": {
     "v": "5",
@@ -1228,8 +1228,8 @@
     "sha": "7b0a46f98e56c876"
   },
   "assets/kit/till.js": {
-    "v": "43",
-    "sha": "c4206958512f1f2e"
+    "v": "44",
+    "sha": "72f70abaf964c7e4"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

@@ -804,6 +804,18 @@
         self.render();
       });
       K.tap(R, '[data-share]', function (el, e, g) { var i = Number(el.getAttribute('data-share')); if (i !== self.__pick) { K.haptic('Choose', g, { trigger: 'tap' }); self.__pick = i; self.render(); } });
+      /* Par montant (owner's client, 27 Nov 2026): the keypad types the picked
+         share; typing on the last row (the rest) makes it a typed share and a
+         new rest row follows; erasing an empty typed share removes it. */
+      if (C.keypad) C.keypad.bind(R, function (id, key) {
+        if (self.__mode !== 'amount' || self.locked()) return;
+        var a = self.__amts, i = self.__pick;
+        if (i >= a.length) { if (key === 'del') return; i = a.length; a.push(''); self.__pick = i; }
+        if (key === 'del' && a[i] === '' && a.length > 1) { a.splice(i, 1); self.__pick = Math.max(0, i - 1); self.render(); return; }
+        var res = C.keypad.input(a[i], key, { decimals: 2, maxInt: 7 });
+        if (!res.ok && key !== 'del') return;
+        a[i] = res.text; self.render();
+      });
       C.button.bind(R, function (el, g) {
         if (el.getAttribute('data-w') === 'leave') { self.emit('leave', null, { gestureId: g }); return; }   /* the header's Back (§10.30) */
         /* Save the split without taking a share, or drop a saved one nothing was paid on (Browse, 26 Nov 2026). */
@@ -815,12 +827,21 @@
     },
     /* What the host needs to build the shares the same way: the mode, the
        count and, by item, which share each line went to. */
-    plan: function () { return { mode: this.__mode, n: this.__n, assign: Object.assign({}, this.__assign) }; },
+    plan: function () {
+      if (this.__mode === 'amount') return { mode: 'amount', n: this.__amts.length + 1, amounts: this.__amts.slice() };
+      return { mode: this.__mode, n: this.__n, assign: Object.assign({}, this.__assign) };
+    },
+    /* Par montant: the typed shares in cents, then the rest of the bill. */
+    amountRest: function () {
+      var typed = this.__amts.reduce(function (s, x) { return s + cents(x === '' ? 0 : C.keypad.value(x)); }, 0);
+      return cents((this.bill || {}).total) - typed;
+    },
     shares: function () {
       var b = this.bill || {}, total = cents(b.total);
       /* A split already set up (saved, or a share paid): its parts, as they are. */
       if (this.locked()) return this.parts.map(function (p) { return cents(p.amount); });
       if (this.__mode === 'equal') return shareMoney(total, this.__n);
+      if (this.__mode === 'amount') return this.__amts.map(function (x) { return x === '' ? 0 : cents(C.keypad.value(x)); }).concat(Math.max(0, this.amountRest()));
       var self = this, sums = [];
       for (var i = 0; i < this.__n; i++) sums.push(0);
       (b.lines || []).forEach(function (l) { var s = self.__assign[l.id]; if (s) sums[s - 1] += cents(l.amount); });
@@ -833,7 +854,7 @@
        unless they are put back here (the host calls it, assets/caisse/till-frame.js). */
     locked: function () { return Array.isArray(this.parts) && this.parts.length > 0; },
     fresh: function (n, quiet) {
-      this.__mode = 'equal'; this.__n = Math.max(2, Math.min(20, Number(n) || 2)); this.__assign = {}; this.__pick = 0;
+      this.__mode = 'equal'; this.__n = Math.max(2, Math.min(20, Number(n) || 2)); this.__assign = {}; this.__pick = 0; this.__amts = [''];
       if (!quiet) this.render();
     },
     render: function () {
@@ -843,15 +864,18 @@
       var unassigned = (b.lines || []).filter(function (l) { return !self.__assign[l.id]; }).length;
       /* The picked share is one still to pay with something in it: the last
          share paid first left the button on it, an empty share by item did nothing. */
-      var open = function (i) { return paid.indexOf(i + 1) < 0 && sh[i] > 0; };
+      var amt = !lock && this.__mode === 'amount', rest = amt ? this.amountRest() : 0;
+      var open = function (i) { return paid.indexOf(i + 1) < 0 && (sh[i] > 0 || amt); };
       if (!open(this.__pick)) { for (var j = 0; j < sh.length; j++) if (open(j)) { this.__pick = j; break; } }
       var shares = '<ul class="sh" role="radiogroup" aria-label="' + esc(t('split.title', { amount: money(b.total || 0) })) + '">' + sh.map(function (c, i) {
         var done = paid.indexOf(i + 1) >= 0, on = i === self.__pick && open(i);
         return '<li role="none"><button type="button" class="srow k-body" role="radio" aria-checked="' + on + '" data-share="' + i + '"' + (done || !c ? ' aria-disabled="true"' : '') + '>' +
-          '<span class="sl"><span>' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + numHtml(money(fromCents(c))) + '</span></span>' +
-          (lock && self.parts[i].label ? '<span class="k-foot k-ink2 sd">' + esc(self.parts[i].label) + '</span>' : '') + '</span>' + (done ? icon('task_alt', 20, 'k-accent-ink') : '') + '</button></li>';
+          '<span class="sl"><span>' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + (amt && i < self.__amts.length && self.__amts[i] === '' ? esc(t('split.type_amount')) : numHtml(money(fromCents(c)))) + '</span></span>' +
+          (amt && i === sh.length - 1 ? '<span class="k-foot k-ink2 sd">' + esc(t('split.the_rest')) + '</span>' : '') +
+            (lock && self.parts[i].label ? '<span class="k-foot k-ink2 sd">' + esc(self.parts[i].label) + '</span>' : '') + '</span>' + (done ? icon('task_alt', 20, 'k-accent-ink') : '') + '</button></li>';
       }).join('') + '</ul>';
-      var mid = this.__mode === 'equal'
+      var mid = amt ? '<p class="k-foot k-ink2">' + esc(t('split.amount_hint')) + '</p>'
+        : this.__mode === 'equal'
         ? C.stepper.render({ id: 'n', value: this.__n, min: 2, max: 20, label: t('split.shares') })
         : '<ul class="items">' + (b.lines || []).map(function (l) {
           var opts = []; for (var i = 1; i <= self.__n; i++) opts.push({ value: String(i), label: String(i) });
@@ -859,21 +883,26 @@
           return '<li class="it" data-l="' + esc(l.id) + '"><span class="k-body">' + esc(l.name) + '</span><span class="k-body k-num k-ink2">' + numHtml(money(l.amount)) + '</span>' +
             C.chip.group({ options: opts, value: self.__assign[l.id] ? String(self.__assign[l.id]) : null, label: l.name }) + '</li>';
         }).join('') + '</ul>' + (unassigned ? '<p class="k-foot k-ink2">' + th('split.unassigned', { n: unassigned }) + '</p>' : '');
-      var blocked = !lock && this.__mode === 'item' && unassigned > 0;
+      var amtBad = amt && (this.__amts.some(function (x) { return x === '' || !(C.keypad.value(x) > 0); }) || rest <= 0);
+      var blocked = (!lock && this.__mode === 'item' && unassigned > 0) || amtBad;
+      /* Above the rows: typing on the rest adds a row, and a keypad under the
+         list moved under the finger mid-number (« 40 » became « 48 »). */
+      var after = amt ? (rest <= 0 ? '<p class="k-foot amt-err" role="alert">' + esc(t('split.amount_over')) + '</p>' : '') +
+        '<div class="kp">' + C.keypad.render({ label: t('split.by_amount') }) + '</div>' : '';
       this.shadowRoot.innerHTML = '<div class="sp"><div class="hd">' + C.button.render({ variant: 'icon', icon: 'chevron_left', label: t('action.back'), id: 'lv', attrs: ' data-w="leave"' }) + '<h2 class="k-heading ti">' + th('split.title', { amount: money(b.total || 0) }) + '</h2></div>' +
-        (lock ? '' : '<k-segmented id="mode" value="' + this.__mode + '" label="' + esc(t('split.title', { amount: '' })) + '"></k-segmented>' + mid) + shares +
+        (lock ? '' : '<k-segmented id="mode" value="' + this.__mode + '" label="' + esc(t('split.title', { amount: '' })) + '"></k-segmented>' + mid) + after + shares +
         (paid.length ? '<p class="k-foot k-ink2">' + th('split.progress', { paid: paid.length, total: sh.length }) + '</p>' : '') +
         C.button.render({ variant: 'primary', size: 'L', full: true, id: 'ps', attrs: ' data-w="pay"', label: t('split.pay_share', { n: this.__pick + 1 }), disabled: blocked || !open(this.__pick) }) +
         /* Set the shares up now, take them later; a saved split nothing was paid on can be undone. */
         (!lock ? C.button.render({ size: 'L', full: true, id: 'sv', attrs: ' data-w="save"', label: t('split.save'), disabled: blocked })
           : !paid.length ? C.button.render({ variant: 'tonal-danger', size: 'L', full: true, id: 'cx', attrs: ' data-w="cancel"', label: t('split.cancel') }) : '') + '</div>';
       var seg = this.$('#mode');
-      if (seg) seg.options = [{ value: 'equal', label: t('split.equally') }, { value: 'item', label: t('split.by_item') }];
+      if (seg) seg.options = [{ value: 'equal', label: t('split.equally') }, { value: 'item', label: t('split.by_item') }, { value: 'amount', label: t('split.by_amount') }];
     }
   });
   K.define('k-split', KSplit, {
     props: ['bill', 'paidShares', 'parts'],
-    css: C.button.css + C.chip.css + C.stepper.css + ':host{display:block}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}.sp{display:flex;flex-direction:column;gap:16px}.ti{margin:0}' +
+    css: C.button.css + C.chip.css + C.stepper.css + (C.keypad ? C.keypad.css : '') + '.kp{max-width:360px}.amt-err{margin:0;color:var(--k-danger)}' + ':host{display:block}.hd{display:flex;align-items:center;gap:4px;margin-inline-start:-12px}.sp{display:flex;flex-direction:column;gap:16px}.ti{margin:0}' +
       '.sh,.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}' +
       '.sl{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding-block:8px}.sd{overflow-wrap:anywhere}' +
       '.srow{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding-inline:16px;border-radius:var(--k-r-2);background-color:var(--k-surface-1);text-align:start}' +
