@@ -770,7 +770,9 @@
       ts: at.getTime(),
       label: shown,
     };
-    if (cfg.show.cashier && sale.cashier) m.cashier = str(sale.cashier, 40);
+    /* Prénom seul : le ticket part avec le client, le nom de famille de
+       l'équipe n'a pas à y figurer (vie privée). La vente garde le nom entier. */
+    if (cfg.show.cashier && sale.cashier) m.cashier = str(String(sale.cashier).trim().split(/\s+/)[0], 40);
     if (cfg.show.terminal) {
       var t = str(sale.terminal, 24) || opts.terminal || deviceTag();
       if (t) m.terminal = t;
