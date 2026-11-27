@@ -380,8 +380,8 @@
     "sha": "f0ec097b029312aa"
   },
   "assets/caisse/receipts.js": {
-    "v": "7",
-    "sha": "71177bda8ee4b8f7"
+    "v": "8",
+    "sha": "28a11ca5726fed6b"
   },
   "assets/caisse/returns.js": {
     "v": "2",
@@ -968,8 +968,8 @@
     "sha": "35f296c19ca0ff54"
   },
   "assets/inventory-consumption.js": {
-    "v": "20",
-    "sha": "c8436504af1f9e42"
+    "v": "21",
+    "sha": "b7f41c46445d3eea"
   },
   "assets/inventory-ledger.js": {
     "v": "20",
@@ -1392,8 +1392,8 @@
     "sha": "d736f082c2b50fe3"
   },
   "assets/menu-catalog/modifiers.js": {
-    "v": "5",
-    "sha": "8861554a5809b819"
+    "v": "6",
+    "sha": "fc8039fed1c46b46"
   },
   "assets/menu-catalog/state.js": {
     "v": "22",
@@ -1406,6 +1406,10 @@
   "assets/menu-nutrition.js": {
     "v": "4",
     "sha": "4bef6c0bce3d1800"
+  },
+  "assets/menu-option-stock.js": {
+    "v": "1",
+    "sha": "99e8bb711deab71e"
   },
   "assets/menu-promos-dashboard.js": {
     "v": "11",
@@ -1696,8 +1700,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "374",
-    "sha": "f63c8a80c6dbcb36"
+    "v": "375",
+    "sha": "65f7f3ac1733c59d"
   },
   "assets/pages/tables-data.js": {
     "v": "6",

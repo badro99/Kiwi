@@ -101,10 +101,71 @@
     if (!want) return '';
     var ids = Object.keys(d.recipes || {});
     for (var i = 0; i < ids.length; i++) {
-      if (/^prep:/.test(ids[i]) || (d.recipes[ids[i]] && d.recipes[ids[i]].kind === 'prep')) continue;  // une préparation ne se vend pas
+      if (/^(prep|opt):/.test(ids[i]) || (d.recipes[ids[i]] && d.recipes[ids[i]].kind === 'prep')) continue;  // une préparation ou une option ne se vend pas seule
       if (norm(d.recipes[ids[i]] && d.recipes[ids[i]].name) === want) return ids[i];
     }
     return '';
+  }
+
+  /* Les options d'un plat (« Boisson : Coca-Cola », « Supplément cheddar »)
+   * sortent leur propre article : une fiche `opt:<choix>` du document des
+   * coûts, écrite depuis la carte (assets/menu-option-stock.js). Le choix se
+   * trouve par son identifiant (caisse, vente rapide) ; une commande venue
+   * d'ailleurs (serveur, OrderPro) n'en porte plus que le texte
+   * « Groupe : Choix » que le serveur a validé, on le relit alors. */
+  function optionIds(line, d) {
+    var recipes = d.recipes || {}, out = [], seen = {}, structured = false;
+    function add(id) {
+      id = String(id == null ? '' : id); if (!id) return;
+      structured = true;
+      if (!seen[id] && recipes['opt:' + id]) { seen[id] = 1; out.push(id); }
+    }
+    function list(v) { return Array.isArray(v) ? v : []; }
+    list(line.opts).forEach(function (o) { if (o) add(o.c || o.choiceId); });
+    list(line.optionIds).forEach(add);
+    list(line.options).forEach(function (o) { if (o) add(typeof o === 'object' ? o.id : o); });
+    list(line.optionChoices).forEach(function (o) { if (o && (o.choiceId || o.id)) add(o.choiceId || o.id); });
+    if (structured) return out;
+    var wanted = [];
+    list(line.optionChoices).forEach(function (o) { if (o && o.label) wanted.push({ group: String(o.group || ''), name: norm(o.label) }); });
+    var text = typeof line.optionText === 'string' ? line.optionText : (typeof line.options === 'string' ? line.options : '');
+    if (!wanted.length && text) text.split(/\s*·\s*/).forEach(function (part) {
+      var at = part.indexOf(':');
+      if (at > 0) wanted.push({ groupName: norm(part.slice(0, at)), name: norm(part.slice(at + 1)) });
+    });
+    wanted.forEach(function (w) {
+      var hits = Object.keys(recipes).filter(function (k) {
+        var r = recipes[k];
+        if (!/^opt:/.test(k) || !r || norm(r.name) !== w.name) return false;
+        return w.group ? String(r.group || '') === w.group : norm(r.groupName) === w.groupName;
+      });
+      if (hits.length === 1 && !seen[hits[0]]) { seen[hits[0]] = 1; out.push(hits[0].slice(4)); }
+    });
+    return out;
+  }
+
+  function optionTargets(line, qty, d) {
+    var out = [];
+    optionIds(line, d).forEach(function (id) {
+      var rows = recipeLines('opt:' + id, qty, d, 0, []);
+      if (rows) out = out.concat(rows);
+    });
+    return out;
+  }
+
+  /* Une formule (« Menu burger ») ne se décompte pas elle-même : ce sont ses
+   * composants qui sortent, le burger par sa fiche, le Coca-Cola par la sienne
+   * ou comme article du stock. La caisse les range dans formulaChoices. */
+  function formulaTargets(line, d) {
+    var out = [];
+    (Array.isArray(line.formulaChoices) ? line.formulaChoices : []).forEach(function (c) {
+      var id = String((c && c.itemId) || ''), qty = Math.max(0, n(c && c.qty));
+      if (!id || !(qty > 0)) return;
+      var rows = recipeLines(id, qty, d, 0, []);
+      if (rows) out = out.concat(rows);
+      else if (ledgerKnows(id)) out.push({ itemId: id, qty: qty, recipe: '', trail: [] });
+    });
+    return out;
   }
 
   /* A recipe line names its ingredient in the costing namespace ("stock:usr-a1"),
@@ -424,12 +485,14 @@
     sale.lines.forEach(function (line, idx) {
       if (!line) return;
       var kind = String(line.kind || '').toLowerCase();
-      if (['service', 'tip', 'tax', 'payment', 'class', 'pt', 'formula'].indexOf(kind) >= 0) { skipped++; return; }
+      if (['service', 'tip', 'tax', 'payment', 'class', 'pt'].indexOf(kind) >= 0) { skipped++; return; }
       var itemId = String(line.itemId || line.id || '');
       var qty = Math.max(0, n(line.qty || line.quantity));
       if (!(qty > 0)) { skipped++; return; }
-      var ingredients = itemId ? recipeLines(itemId, qty, d, 0, []) : null;
-      if (!itemId) {
+      var extras = kind === 'formula' ? formulaTargets(line, d) : optionTargets(line, qty, d);
+      if (kind === 'formula' && !extras.length) { skipped++; return; }
+      var ingredients = kind === 'formula' ? [] : (itemId ? recipeLines(itemId, qty, d, 0, []) : null);
+      if (!itemId && kind !== 'formula') {
         /* Ligne sans identifiant : on n'accepte que le repêchage par nom, et
          * seulement s'il aboutit à une vraie recette. Consommer l'article
          * "Tajine poulet citron" lui-même ne voudrait rien dire. */
@@ -438,8 +501,11 @@
         if (!ingredients) { skipped++; return; }
         itemId = alias;
       }
-      if (!ingredients && !ledgerKnows(itemId)) { skipped++; return; }
-      var targets = ingredients || [{ itemId: itemId, qty: qty, direct: true }];
+      /* Le plat d'abord, ses options ensuite : les mouvements déjà écrits
+         gardent leur numéro de part, une vente rejouée ne sort rien deux fois. */
+      var dish = ingredients || (ledgerKnows(itemId) ? [{ itemId: itemId, qty: qty, direct: true }] : []);
+      var targets = dish.concat(extras);
+      if (!targets.length) { skipped++; return; }
       targets.forEach(function (x, part) {
         var baseCost = x.direct
           ? (line.unitCost != null ? n(line.unitCost) : null)

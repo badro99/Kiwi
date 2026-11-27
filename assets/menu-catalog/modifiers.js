@@ -70,6 +70,8 @@
         <div class="mx-st-hint">${esc(tr(list.length ? T.optsHi : T.optsEm))}</div>
         ${cards}
         <button data-activation=write class="mx-cat-add" type="button" data-og-add>${PLUS}<span>${esc(tr(T.optAdd))}</span></button>`;
+      // assets/menu-option-stock.js pose sous chaque choix ce qu'il sort du stock.
+      if (typeof CustomEvent === 'function') body.dispatchEvent(new CustomEvent('kiwi-menu-options-painted', { bubbles: true }));
       if (focusSel) {
         const inp = body.querySelector(focusSel);
         if (inp) { try { inp.focus(); inp.select(); } catch (_) {} }

@@ -102,6 +102,12 @@
           kind: line.kind || '', formulaUid: line.formulaUid || '',
           promo: line.promo || null,
         };
+        /* Les options choisies suivent la ligne jusqu'au stock : par leur
+           identifiant quand la caisse les a posées, sinon par le texte
+           « Groupe : Choix » d'une commande venue du serveur ou d'OrderPro. */
+        const optionIds = (Array.isArray(line.opts) ? line.opts : []).map(o => String((o && o.c) || '')).filter(Boolean);
+        if (optionIds.length) out.optionIds = optionIds;
+        else if (line.options) out.optionText = String(line.options);
         if (line.kind === 'formula') {
           const parts = source.filter(part => part.kind === 'formula-part'
             && String(part.formulaUid || '') === String(line.formulaUid || ''));
@@ -109,7 +115,7 @@
           out.formulaChoices = (parts.length ? parts.map(part => {
             const partQty = Math.max(1, +part.qty || qty);
             const unit = formulaPartSupplement(line, part);
-            return { name: lineLabel(part), qty: partQty, total: unit * partQty };
+            return { name: lineLabel(part), qty: partQty, total: unit * partQty, itemId: String(part.id || '') };
           }) : saved.map(choice => ({
             name: String((choice && choice.name) || 'Choix'),
             qty: Math.max(1, +(choice && choice.qty) || qty),

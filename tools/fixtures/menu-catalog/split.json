@@ -1,5 +1,5 @@
 {
-  "sha256": "a3118f58be68b484b81408de3087a6b54a14e81b459fbe79ab00b1eb6ae77f62",
+  "sha256": "c0f72a0597910e5b80c320dee3bffa1c4f51be016fcb45d3fc161af29714c652",
   "bind": "  const editor = window.KiwiMenuCatalogParts.item_editor({ store, tr, T, esc, catById, itemById, optsOf, optById, cleanFormula, fmt, fmtPct, venueName, promptText, render, addCategory, renameCategory, deleteCategory, addSubcategory, deleteItem, addItem, updateItem, confirmThen, categoryStationModal, stationsModal, optsModal, PLUS, TRASH, PICKER_SEARCH, PICKER_CHEVRON });\n",
   "parts": [
     {
@@ -23,8 +23,8 @@
           "replacement": "  /* menu-state: edits owned by state. */\n"
         },
         {
-          "start": 157241,
-          "end": 198489,
+          "start": 157455,
+          "end": 198703,
           "offset": 23027,
           "length": 41248,
           "replacement": "  /* menu-state: lifecycle owned by state. */\n"
@@ -111,9 +111,9 @@
       "fragments": [
         {
           "start": 113645,
-          "end": 121926,
+          "end": 122140,
           "offset": 607,
-          "length": 8281,
+          "length": 8495,
           "replacement": "  function optsModal() { return window.KiwiMenuCatalogParts.modifiers({ store, optsOf, optById, tr, T, esc, venueName, PLUS, TRASH, OPT_EMOJIS, cleanOptEmoji, addOptGroup, updateOptGroup, deleteOptGroup, addOptChoice, updateOptChoice, deleteOptChoice, confirmThen, render }).optsModal(); }"
         }
       ],
@@ -182,15 +182,15 @@
           "replacement": "  /* menu-editor: selection owned by editor. */\n"
         },
         {
-          "start": 121928,
-          "end": 153189,
+          "start": 122142,
+          "end": 153403,
           "offset": 969,
           "length": 31261,
           "replacement": "  function itemModal(existing) { return editor.itemModal(existing); }"
         },
         {
-          "start": 153244,
-          "end": 156528,
+          "start": 153458,
+          "end": 156742,
           "offset": 32232,
           "length": 3284,
           "replacement": "  function registerHandlers() { return editor.registerHandlers(); }"
@@ -340,8 +340,8 @@
       "suffix": "\n    return { toggleAvailable };\n  };\n})(window.KiwiMenuCatalogParts = window.KiwiMenuCatalogParts || {});\n",
       "fragments": [
         {
-          "start": 201400,
-          "end": 201542,
+          "start": 201614,
+          "end": 201756,
           "offset": 185,
           "length": 147,
           "replacement": "    toggleAvailable: window.KiwiMenuCatalogParts.availability({ store, updateItem, itemById }).toggleAvailable,",

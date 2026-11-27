@@ -7,7 +7,7 @@
     if (document.readyState !== 'loading') throw new Error('Dashboard startup requires the HTML parser');
     const menuScripts = [
       'assets/menu-catalog/state.js?v=22',
-      'assets/menu-catalog/modifiers.js?v=5',
+      'assets/menu-catalog/modifiers.js?v=6',
       'assets/menu-catalog/item-list.js?v=5',
       'assets/menu-catalog/formulas.js?v=3',
       'assets/menu-catalog/item-editor.js?v=7',
@@ -31,6 +31,7 @@
     'assets/stock-identity.js?v=4',
     'assets/menu-nutrition.js?v=4',
     'assets/restaurant-recipes.js?v=30',
+    'assets/menu-option-stock.js?v=1',
     'assets/menu-i18n.js?v=10',
     'assets/kiwi-select.js?v=4',
     'assets/food-trade-settings.js?v=2',

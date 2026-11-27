@@ -1780,7 +1780,7 @@ section('Whole-project regressions');
     'catalog-cross-tab-conflict-test.mjs',
     'catalog-cross-tab-browser-test.mjs',
     'inventory-ledger-test.mjs',
-    'inventory-consumption-batch-test.mjs',
+    'inventory-consumption-batch-test.mjs', 'option-stock-consumption-test.mjs',
     'inventory-queue-unblock-test.mjs',
     /* Le curseur de stock : une caisse ne saute jamais les mouvements d'une
        autre, et une vente garde son sens (sortie) ; la production demande un
