@@ -103,8 +103,8 @@ ok(mzSaleDiscount({ amountCents: 0, totalCents: 0, remiseCents: 0 }) === null, '
   ok(refused.join() === 'cancel', 'a refused loyalty hold cancels without recording');
 }
 const BQ = read('assets/pos-boutique.js'), TR = read('assets/pos-boutique/ticket-remise.js');
-ok(/concat\(pcts\.filter\(\(p\) => p < 100\), \[100\]\)/.test(TR) && /r === 100 \? tr\('Offert'\)/.test(TR) && /\(t\.remiseAuth && pct < 100\)/.test(TR)
-  && /\(total > 0 \|\| !\(tot\.remise > 0\) \? openPay : \(o\) => payOffered\(/.test(BQ) && /settlementKind: 'complimentary', method: 'complimentary', paymentParts: undefined, ticketAmountCents: undefined/.test(BQ) && /filter\(n => n > 0 && n < 100\)/.test(BQ),
-  'the boutique has an approved « Offert » chip, skips the pay screen only for a ticket its remise brought to 0, and mirrors it as complimentary');
+ok(/!pol\?\.configured\?\.\(d\.bqKey\(\)\) \|\| pol\.allowed\(100, d\.bqKey\(\)\) \? \[100\] : \[\]/.test(TR) && /r === 100 \? tr\('Offert'\)/.test(TR) && /\(t\.remiseAuth && pct < 100\)/.test(TR)
+  && /\(total > 0 \|\| !\(tot\.remise > 0\) \? openPay : \(o\) => payOffered\(/.test(BQ) && /settlementKind: 'complimentary', method: 'complimentary', paymentParts: undefined, ticketAmountCents: undefined/.test(BQ) && /discountPercents: \[\.\.\.new Set\(frozen\.lines\.map\(ln => Number\(ln\.remise\)\)\.filter\(n => n > 0\)\)\]/.test(BQ),
+  'the boutique « Offert » chip follows the owner\'s percentage list (shown with no list, or when it holds 100 %), always asks the approval, skips the pay screen only for a ticket its remise brought to 0, mirrors it as complimentary, and reports 100 % so an out-of-policy gift is flagged to the operator');
 
 console.log(`✓ offered-items-test : ${n} contrôles (remise 100 %, encaisser 0 MAD, article offert, caisse et boutique)`);

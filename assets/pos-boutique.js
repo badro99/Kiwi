@@ -1,7 +1,7 @@
-import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=319';
-import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=236';
-import { printReceiptNow, lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=319';
-import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=319';
+import { $, colorLabel, isDemoStore, shelf, MIN, clById, fmtMAD, rayonOf, fmtHM, DAYS, icons, renderTicket, camSupported, $$, commitEan, openCamScan, wireSellSearch, renderCats, renderClientes, renderGrid, renderExchNote, renderScan, fmtDT, esc, useKiwiCl, pad2, fmtDay, openClientModal } from './pos-boutique/sales.js?v=320';
+import { openDrawerNoSale, tillOperatorView } from './pos-boutique/drawer.js?v=237';
+import { printReceiptNow, lineAvailableQty, lineReturnedQty, renderEchanges, renderNet, toggleOffline, syncNetworkState, injectInvCss, installWedgeScanner, renderAcomptes, openPay, armScanCapture, disarmScanCapture, normScan } from './pos-boutique/checkout.js?v=320';
+import { intake, invUnseen, renderInventaire } from './pos-boutique/inventory.js?v=320';
 import { ticketOwner } from './pos-boutique/ticket-owner.js?v=9'; import { isOddPid, oddInject, mountOddBox } from './pos-boutique/odd-box.js?v=5';
 import { tillNow, tillDate } from './pos-boutique/till-clock.js?v=2'; import { repaintCalm } from './pos-boutique/calm-typing.js?v=1'; import { settleBalances } from './retail-settle.js?v=3';
 import { avoirExpiryBody, localAvoirUntil, avanceExpiresAt, heldLines, askAvoirHolder } from './retail-avance.js?v=6';
@@ -1998,7 +1998,7 @@ import { zServiceStart, zMarkDay, zIsCollection, zRowKind, zAway, zCollected, zD
               amount: cashIn,
               method: method,
               paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round((onAccount ? total : receivedNow) * 100),
-              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0 && n < 100))], agreedMaxPercent: Math.max(0, ...frozen.lines.filter(ln => ln.agreed > 0).map(ln => { const b = ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price; return b > 0 ? Math.ceil((b - ln.unit) / b * 100 - 1e-9) : 0; })) || undefined,
+              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))], agreedMaxPercent: Math.max(0, ...frozen.lines.filter(ln => ln.agreed > 0).map(ln => { const b = ln.promo && +ln.promo.price > 0 ? +ln.promo.price : +ln.price; return b > 0 ? Math.ceil((b - ln.unit) / b * 100 - 1e-9) : 0; })) || undefined,
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter', deliveryCard: ((parts || []).find((x) => x && x.m === 'livraison' && x.card) || {}).card, stockHeld: sale.stockHeld === true,
               label: onAccount ? 'Compte client · ' + label : isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,

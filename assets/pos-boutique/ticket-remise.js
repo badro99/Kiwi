@@ -101,8 +101,8 @@ export function ticketRemise(d) {
     };
     /* « Offert » (100 %) : la pièce sort du stock et du journal à 0 MAD, avec
        sa valeur dans la remise ; un ticket entièrement offert s'enregistre
-       en vente « Offerte » (pos-boutique.js › checkout). Toujours avec l'accord. */
-    [0].concat(pcts.filter((p) => p < 100), [100]).forEach((r) => {
+       en vente « Offerte » (pos-boutique.js › checkout). Visible sans liste du patron, ou si sa liste porte 100 %. */
+    const pol = window.KiwiDiscountPolicy; [0].concat(pcts.filter((p) => p < 100), !pol?.configured?.(d.bqKey()) || pol.allowed(100, d.bqKey()) ? [100] : []).forEach((r) => {
       const b = document.createElement('button');
       b.className = 'bq-chip' + (cur === r ? ' on' : '') + (r === 100 ? ' bq-chip-offer' : '');
       b.dataset.bqTkrem = String(r);
