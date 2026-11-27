@@ -5,6 +5,19 @@ La carte existe en trois formes : Apple Wallet, Google Wallet et une carte web
 marche ; chaque bloc de secrets allume sa plateforme, sans redéploiement de code.
 Conception : `docs/superpowers/specs/2026-11-27-wallet-loyalty-card-design.md`.
 
+**État au 27 nov. 2026 : étapes 1 à 3 faites.** Migration 0040 appliquée. Clé APNs
+« Kiwi Push » (`F726D45Y63`, bac à sable et production, toute l'équipe) : elle sert
+aussi aux accords du patron et au point du matin. Pass Type ID
+`pass.com.kiwios.loyalty`, certificat valable jusqu'au 27 déc. 2027 (à refaire
+avant). Google : émetteur `3388000000023253308`, projet Cloud `kiwi-wallet-261127k`,
+compte de service `kiwi-wallet@…` invité en Developer. Les neuf secrets sont posés
+sur `kiwi-maroc` (production). Reste : remplir le profil d'entreprise Google et
+demander l'accès de publication (sinon seuls les comptes de test enregistrent la
+carte Google), puis allumer chaque commerce (étape 4). Une copie des clés reste
+hors de git, sur le Mac du propriétaire.
+
+**Une variable posée n'agit qu'au déploiement Pages suivant** (un push sur `main`).
+
 Ordre à suivre : **1. la base, 2. Apple, 3. Google, 4. allumer un commerce.**
 Les clés privées restent des secrets Cloudflare : jamais dans git, jamais dans
 un message.
