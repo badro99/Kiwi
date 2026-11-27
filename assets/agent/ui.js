@@ -2591,7 +2591,7 @@ function decideRoute(rawIn, retry) {
 function featureCanTake(raw, decided) {
     try {
       const guide = window.KiwiFeatureGuide;
-      if (!guide || !guide.canHandle(raw) || (decided && (decided.compose || (decided.spec && decided.spec.entity === 'command')))) return false;
+      if (!guide || !guide.canHandle(raw) || (decided && (decided.compose || (decided.spec && /^(?:command|lasthour|pricecost)$/.test(decided.spec.entity))))) return false;
       if (guide.isPlans && guide.isPlans(raw)) {
         /* « combien coûte mon abonnement » is this merchant's cost; a named plan or « quel abonnement » is the catalogue. */
         const q = __state.norm(raw);

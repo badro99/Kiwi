@@ -1044,6 +1044,7 @@
     try {
       if (spec.entity === 'command') return sCommand(spec, L);
       if (spec.entity === 'pricecost') return sPriceCost(spec, L);
+      if (spec.entity === 'lasthour') return sLastHour(spec, L);
       if (spec.entity === 'period') return sPeriod(spec, L);
       if (spec.entity === 'client' && spec.agg === 'today') return sClientsToday(L);
       if (spec.entity === 'client' && spec.agg === 'card') return sClientCard(spec, L);
@@ -1202,7 +1203,126 @@
   /* « affiche les paiements par carte », « show card payments »: no period
      named, so today's split, which the answer names (27 Nov 2026). */
   var PAY_SHOW = W("(?:affiche\\w*|montre\\w*|\\bshow\\b|\\blist\\w*|\\bwrini\\b|وريني|عطيني|give me).{0,25}(?:paiements?\\s+(?:par|en)\\s+(?:carte|especes|cash)|\\bcard payments?\\b|\\bcash payments?\\b|الأداء بالبطاقة|الخلاص بالكارط)");
+  /* « est-ce que mon snack peut fermer une heure plus tôt sans perdre trop de
+     ventes ? » (27 Nov 2026): what the last hour before the day's close
+     brought in over the last four weeks, read against the hours set. */
+  var LH_CLOSE_V = "(?:ferm\\w*|\\bclos\\w*|\\bshut\\b|\\bn9fel\\b|\\bnsed+\\b|\\bsd+it\\b|\\bsedd?it\\b|\\bnsd+\\b|نسد|نغلق|نسكر|سديت|سدينا|\\bnsker\\b|\\bsker\\b)";
+  var LH_OPEN_V = "(?:ouvr\\w*|\\bopen\\w*|\\bnfte7\\b|\\bnfta7\\b|\\bn7ell?\\b|\\b7lit\\b|نفتح|نحل|حليت|فتحت)";
+  var LH_HOUR_W = "(?:heures?|\\bhours?\\b|\\bsa3a\\b|\\bswa3\\b|ساعة|ساعتين|سوايع|\\bdemi-heure\\b|half an hour)";
+  var LH_EARLIER = "(?:plus tot|\\bavant\\b|earlier|\\bbekri\\b|\\bbkri\\b|\\b9bel\\b|\\bqbel\\b|بكري|قبل)";
+  var LH_LATER = "(?:plus tard|\\blater\\b|\\bm3e?tt?el\\b|\\bmen be3d\\b|معطل|من بعد|متأخر|متاخر)";
+  var LH_LAST_CLOSE = W(LH_CLOSE_V + ".{0,40}" + LH_HOUR_W + ".{0,25}" + LH_EARLIER + "|" + LH_CLOSE_V + ".{0,25}" + LH_EARLIER + ".{0,25}" + LH_HOUR_W + "|" + LH_CLOSE_V + ".{0,12}" + "(?:plus tot|earlier|\\bbekri\\b|\\bbkri\\b|بكري)");
+  var LH_FIRST_OPEN = W(LH_OPEN_V + ".{0,40}" + LH_HOUR_W + ".{0,25}" + LH_LATER + "|" + LH_OPEN_V + ".{0,25}" + LH_LATER + ".{0,25}" + LH_HOUR_W + "|" + LH_OPEN_V + ".{0,12}" + "(?:plus tard|later)");
+  /* A question, not « je ferme plus tôt ce soir », which is a fact about today. */
+  var LH_ASK = W("[?؟]|est-ce|\\bpeux\\b|\\bpeut\\b|\\bdois\\b|\\bdevrais\\b|\\bshould\\b|\\bcan i\\b|\\bcould\\b|\\bwach\\b|واش|\\bsi\\b|\\bif\\b|\\bila\\b|إلا|الا|combien|\\bch7al\\b|\\bchhal\\b|شحال|vaut|worth|perd\\w*|\\blose\\b|\\bnkhser\\b|نخسر|cout\\w*|\\bcost\\b|rentable|\\bimpact\\b|what happens|ca change");
+  function lastHourIntent(q) {
+    if (/\b(?:caisse|till|register|session|journee|z)\b|الكاسة|\bcomment\b|\bhow (?:do|to)\b|kifach|كيفاش|\ba quelle heure\b|\bwhat time\b/.test(q)) return null;
+    if (!LH_ASK.test(q)) return null;
+    var side = LH_LAST_CLOSE.test(q) ? 'close' : LH_FIRST_OPEN.test(q) ? 'open' : null;
+    if (!side) return null;
+    var hrs = /demi|half|\bnos\b|\bness\b|نص/.test(q) ? 0.5 : /\b(?:deux|2|two|jouj)\b|ساعتين|زوج/.test(q) ? 2 : /\b(?:trois|3|three|tlata)\b|ثلاث|تلات/.test(q) ? 3 : 1;
+    return { entity: 'lasthour', side: side, hours: hrs };
+  }
+  var LH_T = {
+    fr: {
+      label: function (s, n) { var h = n === 0.5 ? 'demi-heure' : 'heure'; return s === 'close' ? (n > 1 ? 'les ' + n + ' dernières heures' : 'la dernière ' + h) + ' avant la fermeture' : (n > 1 ? 'les ' + n + ' premières heures' : 'la première ' + h) + ' après l’ouverture'; },
+      act: function (s, n) { var d = n === 0.5 ? 'une demi-heure' : n === 1 ? 'une heure' : n + ' heures'; return s === 'close' ? 'Fermer ' + d + ' plus tôt' : 'Ouvrir ' + d + ' plus tard'; },
+      lead: function (N, x, lab, p, k, act, perDay) { return 'Sur vos ' + N + ' derniers jours de ventes : <b>' + x + '</b> encaissés pendant ' + lab + ', soit ' + p + ' % de votre chiffre (' + k + ' vente' + (k > 1 ? 's' : '') + '). ' + act + ' vous aurait coûté environ <b>' + perDay + ' par jour</b>, si ces clients ne venaient pas à un autre moment.'; },
+      colIn: function (s) { return s === 'close' ? 'Fin de journée' : 'Début de journée'; }, colAll: 'Chiffre sur la période', colDay: 'Par jour',
+      days: function (N) { return N + ' jours'; }, sales: function (k) { return k + ' vente' + (k > 1 ? 's' : ''); },
+      few: function (N) { return 'Ce ne sont que ' + N + ' jours : la part se lira mieux après quelques semaines de ventes.'; },
+      outside: function (o) { return o + ' vente' + (o > 1 ? 's tombent' : ' tombe') + ' en dehors de vos horaires réglés et ne ' + (o > 1 ? 'sont pas comptées' : 'est pas comptée') + ' ici : si vous fermez en réalité plus tard, corrigez vos horaires dans les Réglages.'; },
+      unset: 'Pour mesurer ce que rapporte cette heure-là, il me faut vos horaires d’ouverture, et ils ne sont pas encore réglés. Réglez-les et je fais le calcul sur vos ventes.',
+      none: 'Aucune vente enregistrée sur les 28 derniers jours, je n’ai rien à mesurer.',
+      thin: function (N) { return (N > 1 ? 'Je n’ai que ' + N + ' jours de ventes terminés' : 'Je n’ai qu’un jour de ventes terminé') + ' : trop peu pour dire ce que rapporte cette heure-là. Revenez après une ou deux semaines de ventes.'; },
+    },
+    en: {
+      label: function (s, n) { var h = n === 0.5 ? 'half hour' : 'hour'; return s === 'close' ? (n > 1 ? 'the last ' + n + ' hours' : 'the last ' + h) + ' before closing' : (n > 1 ? 'the first ' + n + ' hours' : 'the first ' + h) + ' after opening'; },
+      act: function (s, n) { var d = n === 0.5 ? 'half an hour' : n === 1 ? 'an hour' : n + ' hours'; return s === 'close' ? 'Closing ' + d + ' earlier' : 'Opening ' + d + ' later'; },
+      lead: function (N, x, lab, p, k, act, perDay) { return 'Over your last ' + N + ' days of sales: <b>' + x + '</b> taken during ' + lab + ', ' + p + '% of your takings (' + k + ' sale' + (k > 1 ? 's' : '') + '). ' + act + ' would have cost you about <b>' + perDay + ' a day</b>, if those customers did not come at another time.'; },
+      colIn: function (s) { return s === 'close' ? 'End of day' : 'Start of day'; }, colAll: 'Takings over the period', colDay: 'Per day',
+      days: function (N) { return N + ' days'; }, sales: function (k) { return k + ' sale' + (k > 1 ? 's' : ''); },
+      few: function (N) { return 'That is only ' + N + ' days: the share will read better after a few weeks of sales.'; },
+      outside: function (o) { return o + ' sale' + (o > 1 ? 's fall' : ' falls') + ' outside the opening hours you set and ' + (o > 1 ? 'are' : 'is') + ' not counted here: if you actually close later, correct your hours in Settings.'; },
+      unset: 'To measure what that hour brings in, I need your opening hours, and they are not set yet. Set them and I will work it out from your sales.',
+      none: 'No sale recorded over the last 28 days, so there is nothing to measure.',
+      thin: function (N) { return 'I only have ' + N + ' finished day' + (N > 1 ? 's' : '') + ' of sales: too few to say what that hour brings in. Ask again after a week or two of sales.'; },
+    },
+    ar: {
+      label: function (s, n) { var h = n === 0.5 ? 'نص ساعة' : n === 1 ? 'ساعة' : n === 2 ? 'ساعتين' : n + ' سوايع'; return s === 'close' ? 'آخر ' + h + ' قبل ما تسد' : 'أول ' + h + ' من بعد ما تحل'; },
+      act: function (s, n) { var h = n === 0.5 ? 'نص ساعة' : n === 1 ? 'ساعة' : n === 2 ? 'ساعتين' : n + ' سوايع'; return s === 'close' ? 'لو سديتي ' + h + ' قبل' : 'لو حليتي ' + h + ' من بعد'; },
+      lead: function (N, x, lab, p, k, act, perDay) { return 'فآخر ' + N + ' أيام ديال المبيعات: دخلات <b>' + x + '</b> ف' + lab + '، يعني ' + p + '٪ من المداخيل ديالك (' + k + ' بيعة). ' + act + '، كنتي غادي تخسر تقريبا <b>' + perDay + ' فالنهار</b>، إلا ما جاوش هاد الكليان فوقت آخر.'; },
+      colIn: function (s) { return s === 'close' ? 'آخر النهار' : 'أول النهار'; }, colAll: 'المداخيل فهاد المدة', colDay: 'فالنهار',
+      days: function (N) { return N + ' أيام'; }, sales: function (k) { return k + ' بيعة'; },
+      few: function (N) { return 'هادي غير ' + N + ' أيام: النسبة غادي تبان مزيان من بعد شي أسابيع ديال المبيعات.'; },
+      outside: function (o) { return o + ' بيعة طاحت برا الأوقات لي حطيتي وما تحسباتش هنا: إلا كنتي كتسد فالحقيقة من بعد، صلح الأوقات فالإعدادات.'; },
+      unset: 'باش نحسب شحال كتدخل ليك هاد الساعة، خاصني أوقات الخدمة ديالك، ومازال ما تحطاتش. حطها فالإعدادات ونحسبها ليك من المبيعات.',
+      none: 'ما كاين حتى بيعة مسجلة فآخر 28 يوم، ما عندي ما نحسب.',
+      thin: function (N) { return 'عندي غير ' + (N === 1 ? 'نهار واحد' : N === 2 ? 'جوج أيام' : N + ' أيام') + ' ديال المبيعات: قليل بزاف باش نقول شحال كتدخل هاد الساعة. عاود سولني من بعد سيمانة ولا جوج ديال المبيعات.'; },
+    },
+  };
+  function sLastHour(spec, L) {
+    var t = LH_T[L] || LH_T.fr, KH = window.KiwiHours, HR = 3600000, n = spec.hours || 1;
+    var openH = open1(L, 'pHours', 'settings-hours');
+    if (!KH || !KH.isConfigured || !KH.isConfigured()) return { text: t.unset, open: openH };
+    var wall = function (ms) { return KH.wallClock ? KH.wallClock(ms) : ms; };
+    var bizKey = function (ms) { var d = new Date(wall(ms) - 5 * HR); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+    var isOpen = function (ms) { var st = KH.statusAt(ms); return !!(st && st.open); };
+    /* A close is the day's last when the next opening falls on another business day. */
+    var finalMemo = {}, startMemo = {};
+    var isFinal = function (c) {
+      if (finalMemo[c] != null) return finalMemo[c];
+      var nx = KH.statusAt(c + 60000);
+      return (finalMemo[c] = !(nx && nx.opensAt) || bizKey(nx.opensAt) !== bizKey(c - 60000));
+    };
+    /* The start of a sale's service, and whether it is the day's first. */
+    var serviceStart = function (ms) {
+      var st = ms - (ms % (15 * 60000));
+      for (var i = 0; i < 64 && isOpen(st - 15 * 60000); i++) st -= 15 * 60000;
+      return st;
+    };
+    var firstOfDay = function (start) {
+      if (startMemo[start] != null) return startMemo[start];
+      var k = bizKey(start);
+      for (var x = start - 30 * 60000, i = 0; i < 40 && bizKey(x) === k; x -= 30 * 60000, i++) if (isOpen(x)) return (startMemo[start] = false);
+      return (startMemo[start] = true);
+    };
+    var since = Date.now() - 28 * DAY, today = bizKey(Date.now());
+    var total = 0, inside = 0, k = 0, outside = 0, days = {};
+    salesRows().forEach(function (e) {
+      var ts = +e && +e.ts || +(e && e.ts) || 0, amt = +(e && e.amount) || 0;
+      if (!ts || ts < since || amt <= 0 || bizKey(ts) === today) return;
+      total += amt; days[bizKey(ts)] = 1;
+      var st = KH.statusAt(ts);
+      if (!st || !st.open) { outside++; return; }
+      var hit = spec.side === 'close'
+        ? st.closesAt && st.closesAt - ts <= n * HR && isFinal(st.closesAt)
+        : (function () { var s0 = serviceStart(ts); return ts - s0 < n * HR && firstOfDay(s0); }());
+      if (hit) { inside += amt; k++; }
+    });
+    var N = Object.keys(days).length;
+    if (!N || !total) return { text: t.none, open: openH };
+    if (N < 3) return { text: t.thin(N), open: openH };
+    var loc = L === 'en' ? 'en-GB' : 'fr-FR';
+    var pct = (inside / total * 100).toLocaleString(loc, { maximumFractionDigits: 1 });
+    var perDay = fmtMad(inside / N);
+    var notes = [];
+    if (N < 14) notes.push(t.few(N));
+    if (outside) notes.push(t.outside(outside));
+    return {
+      text: t.lead(N, fmtMad(inside), t.label(spec.side, n), pct, k, t.act(spec.side, n), perDay),
+      stats: [
+        { l: t.colIn(spec.side), v: fmtMad(inside), h: t.sales(k) },
+        { l: t.colAll, v: fmtMad(total), h: t.days(N) },
+        { l: t.colDay, v: perDay, h: '' },
+      ],
+      note: notes.join(' ') || undefined,
+      prov: { mod: 'sales', count: N, unit: 'days' },
+      open: openH,
+    };
+  }
   function actIntent(q) {
+    var lh = lastHourIntent(q); if (lh) return lh;
     var pc = priceCost(q); if (pc) return pc;
     if (PAY_SHOW.test(q) && !periodOf(q)) { var ps = periodSpec(q + ' today', q + ' today'); if (ps) return ps; }
     if (NO_NAMES.test(q) && SALES_REPORT.test(q)) return { route: 'revenue' };
@@ -2043,6 +2163,7 @@
     + "|(?:facture|invoice|فاتورة|الفاتورة|recu|ticket)\\S* .{0,25}(?:au nom|in (?:the|his|her|their|a) (?:company )?name|باسم|\\bb ?smit\\b|\\bb ?smiya\\b)"
     + "|(?:difference|far9|الفرق|فرق) (?:\\S+ ){0,2}(?:bin|entre|between|بين) (?:le |la |l |the )?(?:chiffre|ca\\b|benefice|marge|profit|revenue|turnover|ربح|الربح|رقم|الهامش|tresorerie|cash|ebitda|net\\b|brut|gross)");
   function supportAsk(q) {
+    if (lastHourIntent(String(q || '')) || priceCost(String(q || ''))) return false;
     q = String(q || '');
     if (SUP_KNOW.test(q)) return true;
     if (SUP_NOT.test(q.replace(SUP_TAB, ' carnet '))) return false;
