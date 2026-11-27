@@ -565,14 +565,14 @@
        (tools/dish-photos/gen-own.sh, assets/dishes/own/<commerce>/<fichier>.webp), sinon la photo
        recadrée, qui retombe sur la bibliothèque si elle ne charge pas (hors ligne). */
     const OWN_ICONS_V = 1, OWN_ICONS = new Set('mtj7sa5n-669991bd mtj7shja-ee2bf0bc mtlcofmg-7f17d0b6 mtlcp30w-c08ceec9 mtld61s1-0184723c mtqc8k1e-085e7416 mtqcuilb-7fb006bd mtqdq13k-e11e384f mtqdq92d-9b4192c5 mtqdqrvf-2d308134 mtqds7r4-0325555b mtqdsov7-9efa2ba4 mtqdtjq8-6c4edb87 mtqdxhc6-f1fc1b26 mtqe2avj-3cbde6a3 mtqeh9fj-f0d96864 mtqehh4m-5b61594b mtqejqvk-d2c1702b mtrcojw0-d1bea359 mtrcq4nt-049db438 mua8inm6-bd4e2799 mua9epk6-c8f63a3c mua9klme-b6a2da94 muemg9qr-7e52f7f2 muemphko-2377e587 muempzrt-859d1fb1 muemtldk-77324fe0 mvu9ly2b-32718ef1'.split(' ').map((f) => 'pasta-corner/' + f));
-    const menuArt = (id, cat, name, sub, photo) => {
-      const lib = `assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}`, m = /\/([a-z0-9][a-z0-9_-]{0,79})\/([A-Za-z0-9_-]+)\.[a-z]+$/i.exec(photo || '');
-      const icon = m && OWN_ICONS.has(m[1] + '/' + m[2]) ? `assets/dishes/own/${m[1]}/${m[2]}.webp?v=${OWN_ICONS_V}` : '';
-      return `<img class="menu-photo${photo && !icon ? ' is-own' : ''}" src="${icon || photo || lib}"${photo && !icon ? ` data-lib="${lib}"` : ''} alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">`;
-    };
-    if (typeof document !== 'undefined') document.addEventListener('error', (e) => {
-      const img = e.target; if (img && img.classList && img.classList.contains('is-own') && img.dataset.lib) { img.classList.remove('is-own'); img.src = img.dataset.lib; }
-    }, true);
+    /* God mode › « Photos IA des plats » (features.dishPhotosAI, allumé par défaut) : coupé, seule la photo du commerçant s'affiche, un plat sans photo reste en texte ; menuArtSrc sert aussi les tuiles 2027 (owner, 27 nov. 2026). */
+    const dishPhotosAI = () => { try { const f = window.KiwiConfig && window.KiwiConfig.features; return !(f && f.dishPhotosAI === false); } catch (_) { return true; } };
+    const menuArtSrc = (id, cat, name, sub, photo) => {
+      const lib = dishPhotosAI() ? `assets/dishes/${menuArtKey(id, cat, name, sub)}.webp?v=${DISH_PHOTOS_V}` : '', m = /\/([a-z0-9][a-z0-9_-]{0,79})\/([A-Za-z0-9_-]+)\.[a-z]+$/i.exec(photo || '');
+      const icon = m && OWN_ICONS.has(m[1] + '/' + m[2]) ? `assets/dishes/own/${m[1]}/${m[2]}.webp?v=${OWN_ICONS_V}` : ''; return { src: icon || photo || lib, own: !!(photo && !icon), lib: photo && !icon ? lib : '' };
+    }, menuArt = (id, cat, name, sub, photo) => { const a = menuArtSrc(id, cat, name, sub, photo); return a.src ? `<img class="menu-photo${a.own ? ' is-own' : ''}" src="${a.src}"${a.own ? ` data-lib="${a.lib}"` : ''} alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">` : ''; };
+    if (typeof document !== 'undefined') document.addEventListener('error', (e) => { const img = e.target; if (img && img.classList && img.classList.contains('is-own')) { img.classList.remove('is-own'); if (img.dataset.lib) img.src = img.dataset.lib; else img.remove(); } }, true);
+    let dishPhotosWas = null; if (typeof document !== 'undefined') document.addEventListener('kiwi-config', () => { const on = dishPhotosAI(), same = on === dishPhotosWas || (dishPhotosWas === null && on); dishPhotosWas = on; if (same) return; try { renderMenu(); } catch (_) {} try { if (typeof tillKitPaint === 'function') tillKitPaint(); } catch (_) {} }); /* the switch lands with /api/config, after the first paint */
 
     /* Une carte vide n'est pas une panne : c'est un patron qui n'a pas encore
        composé la sienne. On le dit, et on dit où la composer · même geste que

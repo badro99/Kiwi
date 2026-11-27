@@ -82,19 +82,21 @@
     /* The dish's photo on its kit tile, the same one the shipped grid shows
        (catalogue.js menuArtKey: the dish words, then its sub-category, then
        the brand can for a soda). The 2027 tiles had none (owner, 26 Oct 2026). */
+    /* The owner's own photo first, as on the classic grid (owner, 27 Nov 2026). */
     function tillKitPhoto(m) {
-      try { return 'assets/dishes/' + menuArtKey(m.id, m.cat, m.name, m.subLabel) + '.webp?v=' + DISH_PHOTOS_V; } catch (_) { return ''; }
+      try { return menuArtSrc(m.id, m.cat, m.name, m.subLabel, m.photo); } catch (_) { return { src: '' }; }
     }
     function tillKitSections() {
       const inView = (m) => activeCat === 'all' || (m.cat === activeCat && (!activeSub || m.subId === activeSub));
       const source = (mode !== 'vrap' && selectedId) ? (tableOrders[selectedId] || []) : cart;
       const soldOut = Array.isArray(carteState.soldOut) ? carteState.soldOut : [];
       const secs = [], byCat = {};
+      let ph;
       const put = (m, out) => {
         const cat = String(m.cat || '');
         if (!byCat[cat]) { byCat[cat] = { id: cat || 'menu', title: catLabelL(m.cat) || '', items: [] }; secs.push(byCat[cat]); }
         byCat[cat].items.push({
-          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: tillKitPhoto(m), outLabel: m.dlvOff && typeof dlvOffLabel === 'function' ? dlvOffLabel() : '',
+          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: (ph = tillKitPhoto(m)).src, imgOwn: ph.own, imgLib: ph.lib, outLabel: m.dlvOff && typeof dlvOffLabel === 'function' ? dlvOffLabel() : '',
           options: !out && !!((m.formula && Array.isArray(m.formula.slots) && m.formula.slots.length) || itemOptGroups(m).length),
           qty: out ? 0 : source.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0),
         });

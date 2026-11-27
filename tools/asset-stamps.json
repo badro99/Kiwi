@@ -316,8 +316,8 @@
     "sha": "7e2a2bfc5f39c345"
   },
   "assets/caisse-shell.css": {
-    "v": "34",
-    "sha": "e5499d008728c757"
+    "v": "35",
+    "sha": "47acd5dee270843f"
   },
   "assets/caisse-skin.css": {
     "v": "5",
@@ -332,8 +332,8 @@
     "sha": "efbec3f29e4f9841"
   },
   "assets/caisse/catalogue.js": {
-    "v": "34",
-    "sha": "f188f61b73b7c311"
+    "v": "35",
+    "sha": "c8764adae0640a5a"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -404,8 +404,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "28",
-    "sha": "cb53d139ddea5d3f"
+    "v": "29",
+    "sha": "b2dcdff74a596cad"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -1224,8 +1224,8 @@
     "sha": "7b0a46f98e56c876"
   },
   "assets/kit/till.js": {
-    "v": "39",
-    "sha": "a3baeabd3befac01"
+    "v": "40",
+    "sha": "2c504a5426c22483"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

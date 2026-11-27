@@ -105,6 +105,8 @@
       ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { R.addEventListener(ev, function () { clearTimeout(lp); }); });
       R.addEventListener('pointermove', function (e) { if (lpEl && e.buttons) { /* a scroll cancels the hold */ } });
       R.addEventListener('scroll', function () { clearTimeout(lp); }, true);
+      /* An owner photo that cannot load (offline) falls back to the library one, or goes. */
+      R.addEventListener('error', function (e) { var im = e.target; if (im && im.classList && im.classList.contains('own')) { im.classList.remove('own'); if (im.dataset.lib) im.src = im.dataset.lib; else im.remove(); } }, true);
       K.tap(R, '[data-item]', function (el, e, g) {
         if (fired) { fired = false; return; }
         var id = el.getAttribute('data-item');
@@ -128,7 +130,7 @@
                  "Harira25,00 MAD" (Label in Name, WCAG 2.5.3, 2026-10-25). */
               /* The dish's photo, centred above its name; decorative, the
                  name says what it is (owner, 26 Oct 2026). */
-              (it.img ? '<img class="ph" src="' + esc(it.img) + '" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">' : '') +
+              (it.img ? '<img class="ph' + (it.imgOwn ? ' own" data-lib="' + esc(it.imgLib || '') : '') + '" src="' + esc(it.img) + '" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">' : '') +
               '<span class="nm k-body-s">' + esc(it.name) + '</span> ' +
               '<span class="pr k-callout k-num">' + esc(it.soldOut ? (it.outLabel || t('menu.sold_out')) : price) + '</span> ' +
               /* The count takes the options mark's corner once the dish is on
@@ -163,7 +165,7 @@
          has the tile's whole width: in the top corner it ran into the name
          (owner, 2026-10-24). */
       '.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:var(--k-fw-body-strong)}' +
-      '.ph{display:block;width:64px;height:64px;align-self:center;object-fit:contain;pointer-events:none;-webkit-user-drag:none}.out .ph{opacity:.45}' +
+      '.ph{display:block;width:64px;height:64px;align-self:center;object-fit:contain;pointer-events:none;-webkit-user-drag:none}.ph.own{object-fit:cover;border-radius:12px}.out .ph{opacity:.45}' +
       /* A phone on its side has room for one row of tiles, not one row of
          photos: below 500 tall the tile keeps its name and price only. */
       '@media (max-height:500px){.ph{display:none}}' +
