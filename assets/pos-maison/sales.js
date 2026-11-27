@@ -1,9 +1,9 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=282';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=195';
-import { invSetModal, offerRegister } from './inventory.js?v=195';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=283';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=196';
+import { invSetModal, offerRegister } from './inventory.js?v=196';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
-import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
+import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=15';
 import { mzTicketRemise, mzItemBargain, mzTr as tr, ensureCss as mzRemCss } from './ticket-remise.js?v=9';
 import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=8'; import { oversellOk } from '../pos-boutique/oversell.js?v=5';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
@@ -72,7 +72,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
      artOf() takes a product (its own photo, else a photo picked by its name, retail-photos.js)
      or an icon key, and falls back to the price tag so nothing is blank. */
   const artOf = (p, colour) => (p && typeof p === 'object' && p.photo
-    ? `<img class="mz-product-photo" src="${esc(p.photo)}" alt="" loading="lazy" decoding="async">`
+    ? `<img class="mz-product-photo" ${(window.KiwiThumb ? window.KiwiThumb.attrs(p.photo) : 'src="' + esc(p.photo) + '"')} alt="" loading="lazy" decoding="async">`
     : photoImg(p, 'mz-art-photo', 'tag', colour));
   const ICON_LABELS = {
     bougie: 'Bougie', diffuseur: 'Diffuseur', diffuseur_voiture: 'Diffuseur voiture', coffret: 'Coffret cadeau',

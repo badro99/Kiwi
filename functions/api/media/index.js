@@ -23,6 +23,7 @@
 
 import { activeAccountSession, isTillFor, json } from '../../auth/_lib.js';
 import { ownerMerchant, storeSubscriptionPending, storeSuspended } from '../_private.js';
+import { thumbKey } from './[[key]].js';
 
 // Le navigateur rétrécit la photo avant l'envoi (orderpro-publish.js shrinkPhoto :
 // ~300 Ko), donc ces plafonds sont un filet, pas la norme. 16 Mo couvre le JPEG
@@ -31,6 +32,7 @@ import { ownerMerchant, storeSubscriptionPending, storeSuspended } from '../_pri
 // (pré-contrôle local) et assets/orderpro-publish.js (message affiché).
 const MAX_IMAGE = 16 * 1024 * 1024;
 const MAX_VIDEO = 48 * 1024 * 1024;
+const MAX_THUMB = 1024 * 1024;   // la petite copie (≈400 px) pèse ~25 Ko ; 1 Mo est un filet
 
 const EXT = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
@@ -87,6 +89,27 @@ export async function onRequestPost(context) {
   const ctype = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
   const ext = EXT[ctype];
   if (!ext) return json({ error: 'bad-type', accepted: Object.keys(EXT) }, 415);
+
+  /* ?thumbOf=<clé> : la petite copie d'une photo déjà envoyée par ce même
+   * commerce (voir thumbKey). Elle se range à côté de la photo, jamais
+   * ailleurs, et seulement si la photo existe. */
+  const thumbOf = url.searchParams.get('thumbOf') || '';
+  if (thumbOf) {
+    const tkey = thumbKey(thumbOf), owner = thumbOf.replace(/^media\//, '').split('/')[0];
+    if (!tkey || owner !== merchant || !ctype.startsWith('image/') || ctype === 'image/gif') return json({ error: 'bad-thumb' }, 400);
+    const tdeclared = Number(request.headers.get('Content-Length') || 0);
+    if (tdeclared > MAX_THUMB) return json({ error: 'too-large', max: MAX_THUMB }, 413);
+    const tbytes = await request.arrayBuffer();
+    if (!tbytes.byteLength) return json({ error: 'empty' }, 400);
+    if (tbytes.byteLength > MAX_THUMB) return json({ error: 'too-large', max: MAX_THUMB }, 413);
+    try {
+      if (!(await env.MEDIA.head(thumbOf))) return json({ error: 'no-photo' }, 404);
+      await env.MEDIA.put(tkey, tbytes, { httpMetadata: { contentType: ctype, cacheControl: 'public, max-age=31536000, immutable' } });
+    } catch (e) {
+      return json({ error: 'upload-failed', detail: String((e && e.message) || e) }, 500);
+    }
+    return json({ ok: true, key: tkey, url: '/api/media/' + tkey, kind: 'thumb' });
+  }
 
   const isVideo = ctype.startsWith('video/');
   if (scope === 'hotel-room' && isVideo) return json({ error: 'bad-type', accepted: Object.keys(EXT).filter((x) => x.startsWith('image/')) }, 415);

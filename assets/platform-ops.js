@@ -2,6 +2,19 @@
  * analytics and search. Loaded after platform-kernel.js. */
 (function () {
   'use strict';
+  /* La petite copie d'une photo (≈400 px, ~25 Ko) que les tuiles de caisse
+   * affichent à la place de la grande (1600 px, 300 Ko à 1,4 Mo) : même nom
+   * suivi de « -t.webp » (functions/api/media/[[key]].js thumbKey). attrs()
+   * pose la petite et garde la grande en secours si la petite manque. Défini
+   * avant le garde-fou K pour que les caisses l'aient toujours. */
+  var THUMB_RX = /^(\/api\/media\/(?!(?:media\/)?[^/]+\/hotel-room\/)[^?#"'<>]+?)\.(?:jpe?g|png|webp|avif)$/i;
+  function thumbUrl(u) { u = String(u == null ? '' : u); var m = THUMB_RX.exec(u); return m && !/-t$/.test(m[1]) ? m[1] + '-t.webp' : u; }
+  function attrEsc(v) { return String(v).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); }); }
+  window.KiwiThumb = window.KiwiThumb || {
+    url: thumbUrl,
+    attrs: function (u) { u = String(u == null ? '' : u); var t = thumbUrl(u); return 'src="' + attrEsc(t) + '"' + (t !== u ? ' data-full="' + attrEsc(u) + '" onerror="if(this.dataset.full){this.src=this.dataset.full;this.removeAttribute(\'data-full\')}"' : ''); },
+  };
+
   var K = window.KiwiPlatform; if (!K) return;
   var PRODUCT_CACHE = 'kiwiProductTruth:v1';
 
@@ -35,9 +48,55 @@
   };
   K.register('products',products);
 
+  /* Rétrécir dans le navigateur. createImageBitmap suit l'orientation EXIF et
+   * Safari décode le HEIC. Un PNG (souvent un détourage transparent) part en
+   * WebP quand le navigateur sait l'écrire, sinon il reste PNG ; une photo
+   * opaque part en JPEG. Rien qu'on n'arrive pas à décoder n'est bloqué : le
+   * fichier part tel quel. `keep` : en dessous, inutile de recoder. */
+  var PHOTO_EDGE=1600, THUMB_EDGE=400, PHOTO_KEEP=700*1024;
+  function decodePhoto(file){
+    if(typeof createImageBitmap==='function')return createImageBitmap(file,{imageOrientation:'from-image'}).catch(function(){return createImageBitmap(file);});
+    return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){URL.revokeObjectURL(u);res(im);};im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('decode'));};im.src=u;});
+  }
+  function toBlob(canvas,type,q){return new Promise(function(res){try{canvas.toBlob(function(b){res(b);},type,q);}catch(_){res(null);}});}
+  function shrinkPhoto(file,edge,keep){
+    var type=(file&&file.type)||'';
+    if(!/^image\/(jpeg|png|webp|avif|heic|heif)$/.test(type)||typeof document==='undefined')return Promise.resolve(file);
+    if(keep&&file.size<=keep&&!/hei[cf]/.test(type))return Promise.resolve(file);
+    return decodePhoto(file).then(function(src){
+      var w=src.width||src.naturalWidth||0,h=src.height||src.naturalHeight||0; if(!w||!h)return file;
+      var sc=Math.min(1,edge/Math.max(w,h)),c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
+      var ctx=c.getContext('2d'); if(!ctx)return file; ctx.drawImage(src,0,0,c.width,c.height); if(src.close)try{src.close();}catch(_){}
+      var alpha=/png|webp|avif/.test(type);
+      return toBlob(c,'image/webp',0.8).then(function(b){
+        if(b&&b.type==='image/webp')return b;
+        return toBlob(c,alpha?'image/png':'image/jpeg',0.82);
+      }).then(function(b){
+        if(!b||(b.size>=file.size&&!/hei[cf]/.test(type)))return file;
+        var ext=b.type==='image/webp'?'webp':b.type==='image/png'?'png':'jpg',name=String(file.name||'photo').replace(/\.[A-Za-z0-9]{1,6}$/,'')+'.'+ext;
+        try{return new File([b],name,{type:b.type,lastModified:Date.now()});}catch(_){b.name=name;return b;}
+      });
+    }).catch(function(){return file;});
+  }
+
   var uploads = {
     engine:'Kiwi R2 resilient uploader', available:function(){return typeof XMLHttpRequest==='function';},
+    /* Toute photo passe ici (tableau de bord et caisses) : on garde la photo
+     * du commerçant en bonne qualité (1600 px, plafonds inchangés) et on range
+     * à côté sa petite copie pour les tuiles de caisse. Un échec de la petite
+     * copie ne fait jamais échouer l'envoi : la tuile prendra la grande. */
     upload:function(file,opts){
+      opts=opts||{}; var self=this, hotel=opts.scope==='hotel-room';
+      var ready=file;
+      return shrinkPhoto(file,PHOTO_EDGE,PHOTO_KEEP).then(function(r){ready=r||file;return self.send(ready,opts);}).then(function(body){
+        if(hotel||!body||!body.key||!/^image\/(jpeg|png|webp|avif)$/.test((ready&&ready.type)||''))return body;
+        return shrinkPhoto(ready,THUMB_EDGE,0).then(function(small){
+          if(!small||small===ready)return body;
+          return self.send(small,{merchant:opts.merchant,thumbOf:body.key}).then(function(t){body.thumb=t&&t.url;return body;},function(){return body;});
+        },function(){return body;});
+      });
+    },
+    send:function(file,opts){
       opts=opts||{}; return new Promise(function(resolve,reject){
         /* Un refus doit porter SA raison et SES chiffres jusqu'à l'écran. Les
          * codes ci-dessous sont exactement ceux du serveur
@@ -62,6 +121,7 @@
         var mediaUrl='/api/media?name='+encodeURIComponent(clean(file.name,120));
         if(opts.merchant)mediaUrl+='&merchant='+encodeURIComponent(clean(opts.merchant,64));
         if(opts.scope==='hotel-room')mediaUrl+='&scope=hotel-room';
+        if(opts.thumbOf)mediaUrl+='&thumbOf='+encodeURIComponent(clean(opts.thumbOf,200));
         xhr.open('POST',mediaUrl,true); xhr.setRequestHeader('Content-Type',file.type);
         xhr.upload.onprogress=function(e){if(e.lengthComputable&&typeof opts.progress==='function')opts.progress(Math.round(e.loaded/e.total*100));};
         xhr.onerror=function(){span.end('network-error');fail('network');};

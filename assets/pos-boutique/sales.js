@@ -1,17 +1,17 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=419'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=313';
-import { offerRegister } from './inventory.js?v=313';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=421'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=315';
+import { offerRegister } from './inventory.js?v=315';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { ticketRemise } from './ticket-remise.js?v=8';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=4';
 import { bqKitTicketFoot } from './kit-2027.js?v=27';
-import { sellSearch } from './search.js?v=21';
+import { sellSearch } from './search.js?v=23';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=5';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=75').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=77').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -71,7 +71,7 @@ import('./exch-combined.js?v=75').then((m) => { CX_NOTE = m; }).catch(() => {});
      artOf() takes a product (its name can pick the photo) or an icon key and
      always renders a photo, the hanger when nothing matches (retail-photos.js). */
   const artOf = (p, colour) => (p && typeof p === 'object' && p.photo
-    ? `<img class="bq-product-photo" src="${esc(p.photo)}" alt="" loading="lazy" decoding="async">`
+    ? `<img class="bq-product-photo" ${(window.KiwiThumb ? window.KiwiThumb.attrs(p.photo) : 'src="' + esc(p.photo) + '"')} alt="" loading="lazy" decoding="async">`
     : photoImg(p, 'bq-art-photo', 'cintre', colour));
   const ICON_LABELS = {
     tshirt: 'T-shirt / Haut', chemise: 'Chemise', debardeur: 'Débardeur', pull: 'Pull', sweat: 'Sweat / Hoodie',
@@ -161,7 +161,7 @@ import('./exch-combined.js?v=75').then((m) => { CX_NOTE = m; }).catch(() => {});
   }
 
   function productVisual(p) {
-    if (p && p.photo) return `<img class="bq-product-photo" src="${esc(p.photo)}" alt="${esc(p.name || 'Produit')}" loading="lazy" />`;
+    if (p && p.photo) return `<img class="bq-product-photo" ${(window.KiwiThumb ? window.KiwiThumb.attrs(p.photo) : 'src="' + esc(p.photo) + '"')} alt="${esc(p.name || 'Produit')}" loading="lazy" />`;
     return artOf(p);
   }
 

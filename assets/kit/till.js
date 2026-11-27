@@ -106,7 +106,7 @@
       R.addEventListener('pointermove', function (e) { if (lpEl && e.buttons) { /* a scroll cancels the hold */ } });
       R.addEventListener('scroll', function () { clearTimeout(lp); }, true);
       /* An owner photo that cannot load (offline) falls back to the library one, or goes. */
-      R.addEventListener('error', function (e) { var im = e.target; if (im && im.classList && im.classList.contains('own')) { im.classList.remove('own'); if (im.dataset.lib) im.src = im.dataset.lib; else im.remove(); } }, true);
+      R.addEventListener('error', function (e) { var im = e.target; if (im && im.dataset && im.dataset.full) { im.src = im.dataset.full; im.removeAttribute('data-full'); return; } if (im && im.classList && im.classList.contains('own')) { im.classList.remove('own'); if (im.dataset.lib) im.src = im.dataset.lib; else im.remove(); } }, true);
       K.tap(R, '[data-item]', function (el, e, g) {
         if (fired) { fired = false; return; }
         var id = el.getAttribute('data-item');
@@ -130,7 +130,7 @@
                  "Harira25,00 MAD" (Label in Name, WCAG 2.5.3, 2026-10-25). */
               /* The dish's photo, centred above its name; decorative, the
                  name says what it is (owner, 26 Oct 2026). */
-              (it.img ? '<img class="ph' + (it.imgOwn ? ' own" data-lib="' + esc(it.imgLib || '') : '') + '" src="' + esc(it.img) + '" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">' : '') +
+              (it.img ? '<img class="ph' + (it.imgOwn ? ' own" data-lib="' + esc(it.imgLib || '') : '') + (it.imgFull ? '" data-full="' + esc(it.imgFull) : '') + '" src="' + esc(it.img) + '" alt="" width="64" height="64" loading="lazy" decoding="async" draggable="false">' : '') +
               '<span class="nm k-body-s">' + esc(it.name) + '</span> ' +
               '<span class="pr k-callout k-num">' + esc(it.soldOut ? (it.outLabel || t('menu.sold_out')) : price) + '</span> ' +
               /* The count takes the options mark's corner once the dish is on

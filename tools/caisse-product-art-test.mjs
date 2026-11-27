@@ -62,10 +62,12 @@ eq(own('https://evil.example/x.jpg'), '', 'a photo from anywhere else is refused
 eq(own('/api/media/a.jpg" onerror="x'), '', 'a photo path cannot break out of the attribute');
 eq(own(undefined), '', 'a dish without a photo has none');
 const ownTile = html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '/api/media/media/pasta-corner/new-upload-1.jpg');
-ok(/class="menu-photo is-own" src="\/api\/media\/media\/pasta-corner\/new-upload-1\.jpg"/.test(ownTile), 'a photo without its icon yet shows cropped: ' + ownTile);
+ok(/class="menu-photo is-own" src="\/api\/media\/media\/pasta-corner\/new-upload-1-t\.webp"/.test(ownTile), 'a photo without its icon yet shows cropped, from its small ~400 px copy: ' + ownTile);
+ok(/data-full="\/api\/media\/media\/pasta-corner\/new-upload-1\.jpg"/.test(ownTile), 'and keeps the full photo for when the small copy is missing');
+ok(/addEventListener\('error'[\s\S]{0,120}img\.dataset\.full\) \{ img\.src = img\.dataset\.full/.test(catalogue), 'a missing small copy falls back to the full photo first');
 ok(/data-lib="assets\/dishes\/ravioli\.webp\?v=\d+"/.test(ownTile), 'and keeps the library ravioli to fall back on');
 ok(!/is-own/.test(html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '')), 'without a photo the library picture shows, as before');
-ok(/addEventListener\('error'[\s\S]{0,240}img\.src = img\.dataset\.lib/.test(catalogue), 'a merchant photo that fails to load falls back to the library picture');
+ok(/addEventListener\('error'[\s\S]{0,400}img\.src = img\.dataset\.lib/.test(catalogue), 'a merchant photo that fails to load falls back to the library picture');
 // Those photos redrawn as cut-out icons in the library's style (GPT, from the
 // merchant's own photos, tools/dish-photos/gen-own.sh): the icon wins.
 const iconTile = html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg');

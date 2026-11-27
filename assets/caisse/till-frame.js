@@ -96,7 +96,7 @@
         const cat = String(m.cat || '');
         if (!byCat[cat]) { byCat[cat] = { id: cat || 'menu', title: catLabelL(m.cat) || '', items: [] }; secs.push(byCat[cat]); }
         byCat[cat].items.push({
-          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: (ph = tillKitPhoto(m)).src, imgOwn: ph.own, imgLib: ph.lib, outLabel: m.dlvOff && typeof dlvOffLabel === 'function' ? dlvOffLabel() : '',
+          id: String(m.id), name: menuName(m), price: m.price, soldOut: out, img: (ph = tillKitPhoto(m)).src, imgOwn: ph.own, imgLib: ph.lib, imgFull: ph.full, outLabel: m.dlvOff && typeof dlvOffLabel === 'function' ? dlvOffLabel() : '',
           options: !out && !!((m.formula && Array.isArray(m.formula.slots) && m.formula.slots.length) || itemOptGroups(m).length),
           qty: out ? 0 : source.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0),
         });

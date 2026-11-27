@@ -68,6 +68,6 @@ export function sellSearch(bar, input, on, d) {
   return bqKitScanBar(bar, {
     input, commit: d.commit, open: d.open, pick: d.pick, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => searchArticles(q, d.catalog(), 0, { variants: true }),
-    visual: (r) => (r.photo ? '<img class="bq-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r)),
+    visual: (r) => d.artOf(r),
   });
 }

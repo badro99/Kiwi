@@ -31,6 +31,18 @@ export function publicMediaKey(key) {
   return /^[a-zA-Z0-9][a-zA-Z0-9_-]*\.(?:jpe?g|png|webp|gif|avif|mp4|webm|mov)$/i.test(parts[0] || '');
 }
 
+/* La petite copie d'une photo (≈400 px) que les tuiles de caisse affichent :
+ * même dossier, même nom suivi de « -t », toujours « .webp » dans la clé quel
+ * que soit l'encodage réel (le Content-Type stocké dit le vrai format, et un
+ * navigateur décode une image d'après ses octets). Les caisses dérivent l'URL
+ * de celle de la photo et retombent sur la grande si la petite manque.
+ * Pas de petite copie pour les chambres d'hôtel : leur ménage R2 supprimerait
+ * tout ce que la fiche ne cite pas. */
+export function thumbKey(key) {
+  if (!publicMediaKey(key) || /\/hotel-room\//.test(key) || /-t\.webp$/i.test(key) || /\.(?:gif|mp4|webm|mov)$/i.test(key)) return '';
+  return key.replace(/\.[a-z0-9]+$/i, '-t.webp');
+}
+
 export async function onRequestGet(context) {
   const { params, env, request } = context;
 

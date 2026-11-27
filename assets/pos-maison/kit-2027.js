@@ -676,7 +676,7 @@ function mzSellSearch(bar, input, on, d) {
   return mzKitScanBar(bar, {
     input, commit: d.commit, open: d.open, pick: d.pick, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => mzSearchArticles(q, d.catalog(), 0, { variants: true }),
-    visual: (r) => (r.photo ? '<img class="mz-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r)),
+    visual: (r) => (r.photo ? '<img class="mz-product-photo" ' + (window.KiwiThumb ? window.KiwiThumb.attrs(r.photo) : 'src="' + d.esc(r.photo) + '"') + ' alt="" loading="lazy" />' : d.artOf(r)),
   });
 }
 
@@ -689,7 +689,7 @@ function mzInvSearch(bar, input, on, d) {
     input, id: 'mzi-sgst', enterFirst: true,
     commit: d.code, open: d.open, money: d.money, esc: d.esc, icons: d.icons,
     search: (q) => mzSearchArticles(q, d.catalog()),
-    visual: (r) => (r.photo ? '<img class="mz-product-photo" src="' + d.esc(r.photo) + '" alt="" loading="lazy" />' : d.artOf(r)),
+    visual: (r) => (r.photo ? '<img class="mz-product-photo" ' + (window.KiwiThumb ? window.KiwiThumb.attrs(r.photo) : 'src="' + d.esc(r.photo) + '"') + ' alt="" loading="lazy" />' : d.artOf(r)),
   });
 }
 

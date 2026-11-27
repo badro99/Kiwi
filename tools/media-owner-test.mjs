@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const EXPECTED = 8;
+const EXPECTED = 10;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -85,6 +85,7 @@ function makeWorld() {
   const MEDIA = {
     put: async (key, bytes) => { r2.set(String(key), bytes); },
     get: async (key) => (r2.has(String(key)) ? { body: r2.get(String(key)) } : null),
+    head: async (key) => (r2.has(String(key)) ? { key: String(key) } : null),
     delete: async (key) => { r2.delete(String(key)); },
   };
   return { r2, env: { DB, MEDIA, AUTH_SECRET: SECRET } };
@@ -180,6 +181,39 @@ await check('type and size guards still hold', async () => {
   const tooBig = await postUpload(w.env, A, cookie, big);
   assert.equal(tooBig.status, 413);
   assert.equal(w.r2.size, 0);
+});
+
+function postThumb(env, merchant, cookie, of, type = 'image/webp') {
+  return media.onRequestPost({
+    request: new Request('https://kiwi.test/api/media?merchant=' + encodeURIComponent(merchant) + '&thumbOf=' + encodeURIComponent(of), {
+      method: 'POST', headers: { 'Content-Type': type, ...(cookie ? { Cookie: cookie } : {}) }, body: JPEG,
+    }),
+    env,
+  });
+}
+
+await check('small till copy lands next to its own photo as <name>-t.webp', async () => {
+  const w = makeWorld();
+  const cookie = await sessCookie('acc-owner-a');
+  const key = (await (await postUpload(w.env, A, cookie)).json()).key;
+  const res = await postThumb(w.env, A, cookie, key);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.key, key.replace(/\.jpg$/, '-t.webp'));
+  assert.ok(w.r2.has(body.key));
+  const viaUrl = await postThumb(w.env, A, cookie, key.replace(/^media\//, ''));
+  assert.equal(viaUrl.status, 404, 'a key that holds no photo gets no small copy');
+});
+
+await check('small copy refused for another store, a hotel room, a missing photo or a copy of a copy', async () => {
+  const w = makeWorld();
+  const cookieA = await sessCookie('acc-owner-a');
+  const keyB = (await (await postUpload(w.env, B, await sessCookie('acc-owner-b'))).json()).key;
+  assert.equal((await postThumb(w.env, A, cookieA, keyB)).status, 400);
+  assert.equal((await postThumb(w.env, A, cookieA, 'media/' + A + '/hotel-room/abc123.jpg')).status, 400);
+  assert.equal((await postThumb(w.env, A, cookieA, 'media/' + A + '/nope-1.jpg')).status, 404);
+  assert.equal((await postThumb(w.env, A, cookieA, 'media/' + A + '/nope-1-t.webp')).status, 400);
+  assert.equal(w.r2.size, 1);
 });
 
 assert.equal(checks, EXPECTED, 'expected ' + EXPECTED + ' executed checks, got ' + checks);
