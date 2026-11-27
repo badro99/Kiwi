@@ -325,9 +325,16 @@ try {
     const before = await page.evaluate((id) => window.KiwiMenuStore.data().items.find((x) => x.id === id).opts.slice(), setup.item);
     await page.evaluate((id) => window.Kiwi.handlers['rmw-item-edit'](null, id), setup.item);
     await page.waitForSelector('[data-opt-list] [data-opt-row]:first-child [data-opt-mv="1"]', { visible: true, timeout: 10000 });
-    const shown = await page.$$eval('[data-opt-list] [data-opt-row]', (rows) => rows.map((r) => r.querySelector('[data-opt]').dataset.opt + ':' + r.querySelector('[data-opt-n]').textContent));
+    const rowsNow = () => page.$$eval('[data-opt-list] [data-opt-row]', (rows) => rows.map((r) => r.querySelector('[data-opt]').dataset.opt + ':' + r.querySelector('.rmw-ro-pos').textContent));
+    const shown = await rowsNow();
     check(shown[0] === before[0] + ':1' && shown[1] === before[1] + ':2', 'the dish card lists its groups in its own order, numbered', JSON.stringify(shown));
     await page.click('[data-opt-list] [data-opt-row]:first-child [data-opt-mv="1"]');
+    await page.click('[data-opt-list] [data-opt-row]:last-child [data-opt-del]');
+    await page.waitForSelector(`[data-opt-pick="${before[0]}"]`, { visible: true, timeout: 5000 });
+    check((await rowsNow()).length === 1, 'the cross takes a group off this dish and offers it back as a chip');
+    await page.click(`[data-opt-pick="${before[0]}"]`);
+    const back = await rowsNow();
+    check(back[0] === before[1] + ':1' && back[1] === before[0] + ':2', 'the chip puts the group back, last', JSON.stringify(back));
     const saves = await page.$$('[data-save]');
     let saveBtn = null;
     for (const b of saves) if (await b.isVisible()) saveBtn = b;

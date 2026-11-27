@@ -70,7 +70,7 @@
   /* `.bqx-vr-bc svg` : le code-barres d'une variante, posé sur du papier en
    * sombre pour rester lisible, comme l'étiquette imprimée. L'assombrir, c'est
    * remettre des barres encre sur fond noir. */
-  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark, .ai-btn, .bqx-vr-bc svg';
+  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark, .ai-btn, .bqx-vr-bc svg, .rmw-ico'; // .rmw-ico : un glyphe Material peint par sa couleur de fond (masque), pas une carte
 
   /* Each pass reads every element first, then writes the tags. Reading a
    * computed style right after a class was added forces the browser to

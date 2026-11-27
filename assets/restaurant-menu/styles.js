@@ -285,16 +285,19 @@ html body:not(#kno) .rmw-prep-namefield .rmw-rx-in{width:100%;height:46px;font:6
 .rmw-it-chip:has(input:checked){border-color:color-mix(in srgb,var(--atlas) 45%,var(--n-200));background:color-mix(in srgb,var(--atlas) 7%,var(--rx-field))}
 .rmw-it-chip input:checked+.rmw-it-chip-box{background:var(--atlas);border-color:var(--atlas);color:var(--paper)}
 .rmw-it-chip:has(input:focus-visible){box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 20%,transparent)}
-.rmw-it-optlist{flex-direction:column;flex-wrap:nowrap;gap:6px}
-.rmw-it-optrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px}
-.rmw-it-optrow .rmw-it-chip{width:100%;box-sizing:border-box}
-.rmw-it-optn{font:600 12px var(--mono);color:var(--atlas);text-align:center}
-.rmw-it-optmv{display:inline-flex;gap:2px}
-.rmw-it-optmv button{width:32px;height:32px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:none;color:var(--n-600);cursor:pointer}
-.rmw-it-optmv button svg{width:16px;height:16px;fill:currentColor}
-.rmw-it-optmv button:hover:not(:disabled){background:color-mix(in srgb,var(--atlas) 9%,transparent);color:var(--atlas)}
-.rmw-it-optmv button:disabled{opacity:.25;cursor:default}
-.rmw-it-optrow:not(:has(input:checked)) .rmw-it-optmv{visibility:hidden}
+.rmw-it-opts{display:grid;gap:14px}
+html body:not(#kno) .catalog-reorder.rmw-ro-list.rmw-it-optlist{max-height:none;margin:0;padding:0;overflow:visible}
+html body:not(#kno) .rmw-it-optlist .rmw-ro-row{background:var(--surface)}
+html body:not(#kno) .rmw-ro-steps .rmw-it-optdel{margin-inline-start:4px;color:var(--n-500)}
+html body:not(#kno) .rmw-ro-steps .rmw-it-optdel:hover{background:color-mix(in srgb,#cb5238 9%,transparent);color:#cb5238}
+html body:not(#kno) .rmw-ro-empty.rmw-it-optnone{padding:18px 14px;font-size:13px}
+.rmw-it-optadd{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rmw-it-optadd:empty{display:none}
+.rmw-it-optadd-l{flex:1 0 100%;font:600 12px/1.2 var(--sans);color:var(--n-500)}
+.rmw-it-optchip{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 15px 0 11px;border:1px dashed var(--n-300);border-radius:999px;background:transparent;color:var(--ink);font:600 13px var(--sans);cursor:pointer;transition:border-color .14s ease,color .14s ease,background .14s ease}
+.rmw-it-optchip .rmw-ico{width:17px;height:17px}
+@media(max-width:480px){html body:not(#kno) .rmw-it-optlist .rmw-ro-steps button{width:36px;height:40px}html body:not(#kno) .rmw-it-optlist .rmw-ro-grip{width:30px;min-width:30px!important}html body:not(#kno) .rmw-ro-steps .rmw-it-optdel{margin-inline-start:0}}
+.rmw-it-optchip:hover,.rmw-it-optchip:focus-visible{border-style:solid;border-color:var(--atlas);color:var(--atlas);background:color-mix(in srgb,var(--atlas) 7%,transparent);outline:0}
 .rmw-it-tg{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;cursor:pointer}
 .rmw-it-tg input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 .rmw-it-tg-txt{display:grid;gap:3px;min-width:0}
