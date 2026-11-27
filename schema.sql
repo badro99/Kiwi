@@ -3103,3 +3103,45 @@ CREATE TABLE IF NOT EXISTS owner_approval_devices (
   created_ts INTEGER NOT NULL,
   PRIMARY KEY (merchant, token)
 );
+-- Cartes Wallet (Apple / Google / web) des clients d'un commerce
+-- (functions/api/wallet/, docs/superpowers/specs/2026-11-27-wallet-loyalty-card-design.md).
+-- serial : l'identifiant public de la carte ; auth_token : le secret qu'Apple
+-- renvoie en « ApplePass <jeton> » ; last_balance : la dernière vue poussée, pour
+-- ne pousser qu'un vrai changement de solde.
+CREATE TABLE IF NOT EXISTS wallet_cards (
+  serial TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  auth_token TEXT NOT NULL,
+  platform TEXT NOT NULL DEFAULT 'web',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  last_balance TEXT NOT NULL DEFAULT '',
+  revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_wallet_cards_client ON wallet_cards (merchant, client_id);
+-- Les iPhone qui portent une carte : un jeton APNs par appareil et par carte.
+CREATE TABLE IF NOT EXISTS wallet_devices (
+  device_id TEXT NOT NULL,
+  serial TEXT NOT NULL,
+  push_token TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (device_id, serial)
+);
+CREATE INDEX IF NOT EXISTS idx_wallet_devices_serial ON wallet_devices (serial);
+-- Un ticket de caisse ne crédite qu'une carte, une seule fois (QR du reçu).
+CREATE TABLE IF NOT EXISTS wallet_claims (
+  merchant TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  claimed_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, sale_id)
+);
+-- QR affiché par la caisse pour remettre sa carte à un client déjà connu :
+-- usage unique, dix minutes.
+CREATE TABLE IF NOT EXISTS wallet_tokens (
+  token TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  expires_ts INTEGER NOT NULL
+);

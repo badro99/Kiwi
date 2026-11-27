@@ -262,5 +262,21 @@
   "owner_approval_devices": [
     {"merchant": "upgrade-synth-1", "token": "fixture-token-1", "lang": "fr", "created_ts": 137},
     {"merchant": "upgrade-synth-2", "token": "fixture-token-2", "lang": "fr", "created_ts": 274}
+  ],
+  "wallet_cards": [
+    {"serial": "fixture-serial-1", "merchant": "upgrade-synth-1", "client_id": "fixture-client-1", "auth_token": "fixture-token-1", "platform": "web", "created_ts": 137, "updated_ts": 137, "last_balance": "", "revoked": 0},
+    {"serial": "fixture-serial-2", "merchant": "upgrade-synth-2", "client_id": "fixture-client-2", "auth_token": "fixture-token-2", "platform": "web", "created_ts": 274, "updated_ts": 274, "last_balance": "", "revoked": 0}
+  ],
+  "wallet_devices": [
+    {"device_id": "fixture-device-1", "serial": "fixture-serial-1", "push_token": "fixture-push-1", "created_ts": 137},
+    {"device_id": "fixture-device-2", "serial": "fixture-serial-2", "push_token": "fixture-push-2", "created_ts": 274}
+  ],
+  "wallet_claims": [
+    {"merchant": "upgrade-synth-1", "sale_id": "fixture-sale-1", "client_id": "fixture-client-1", "claimed_ts": 137},
+    {"merchant": "upgrade-synth-2", "sale_id": "fixture-sale-2", "client_id": "fixture-client-2", "claimed_ts": 274}
+  ],
+  "wallet_tokens": [
+    {"token": "fixture-till-1", "merchant": "upgrade-synth-1", "client_id": "fixture-client-1", "expires_ts": 137},
+    {"token": "fixture-till-2", "merchant": "upgrade-synth-2", "client_id": "fixture-client-2", "expires_ts": 274}
   ]
 }
