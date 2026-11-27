@@ -2220,9 +2220,9 @@
     const saleId = String((refund && (refund.saleId || refund.id)) || '').slice(0, 80);
     const existing = rows.find(r => (cursor && Number(r && r.cursor) === cursor) || (saleId && r && r.saleId === saleId));
     if (existing) {
-      if (Array.isArray(refund.lines) && JSON.stringify(existing.lines) !== JSON.stringify(refund.lines)) {
-        existing.lines = refund.lines;
-        if (refundsWrite(id, rows)) salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+      const who = String((refund && refund.actor) || '').trim().slice(0, 80), linesMoved = Array.isArray(refund.lines) && JSON.stringify(existing.lines) !== JSON.stringify(refund.lines);
+      if (linesMoved || (who && existing.actor !== who)) {
+        if (refundsWrite(id, rows.map(r => r === existing ? Object.assign({}, r, linesMoved ? { lines: refund.lines } : {}, who ? { actor: who } : {}) : r))) salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });   // copie (le registre en cache est gelé) : lignes et qui a remboursé
       }
       return false;
     }
@@ -2230,7 +2230,7 @@
       ts: Number(refund && refund.ts) || Date.now(), amount: Math.abs(Number(refund && refund.amount) || 0),
       method: String((refund && refund.method) || 'cash').slice(0, 16), kind: 'refund',
       label: String((refund && refund.label) || 'Remboursement').slice(0, 80),
-      ref: String((refund && refund.ref) || '').slice(0, 80), cursor, saleId,
+      ref: String((refund && refund.ref) || '').slice(0, 80), cursor, saleId, ...(String((refund && refund.actor) || '').trim() ? { actor: String(refund.actor).trim().slice(0, 80) } : {}),   // qui a remboursé (sale_audit, via /api/feed)
       lines: Array.isArray(refund && refund.lines) ? refund.lines : [],
     };
     if (!(entry.amount > 0 || entry.lines.length) || !refundsWrite(id, rows.concat(entry))) return false;

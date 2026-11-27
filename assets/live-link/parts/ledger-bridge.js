@@ -176,6 +176,7 @@
           window.KiwiRefunds.add(vid, {
             amount: Math.abs(signedCents) / 100, method: s.method || 'cash', cursor: cur, ts: s.ts,
             label: s.label || 'Remboursement', ref: s.orderRef || s.ref || '', saleId: s.id || '', lines: s.lines,
+            actor: s.refundBy || '',   // qui a remboursé (sale_audit)
           });
           haveRefund[cur] = 1;
         } catch (_) { import('./live-consumer-errors.js').then(function (m) { m.reportConsumerFailure(window, 'KiwiRefunds', 'add', tenant); }).catch(function () { /* next feed retries */ }); }
@@ -185,7 +186,7 @@
         var existing = have[cur];
         var patch = {
           ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '',
-          origin: s.origin || '', server: s.server || '', channel: s.channel || '',
+          origin: s.origin || '', server: s.server || '', seller: s.seller || '', channel: s.channel || '',
           saleId: s.id || s.saleId || '',
           paymentParts: s.paymentParts || null,
           tipCents: Number(s.tipCents) > 0 ? Math.round(Number(s.tipCents)) : 0,
@@ -218,6 +219,7 @@
         saleId: s.id || s.saleId || '', grossAmountCents: s.grossAmountCents,
         discountAmountCents: s.discountAmountCents, discountReason: s.discountReason || '', actorId: s.actorId || '',
       });
+      if (s.seller) fresh[fresh.length - 1].seller = String(s.seller).slice(0, 80);   // qui a encaissé (sales.seller_name)
       have[cur] = 1;
     });
     if (fresh.length) {

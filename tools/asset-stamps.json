@@ -544,12 +544,12 @@
     "sha": "37e7d396bdf155a8"
   },
   "assets/dateRange.js": {
-    "v": "159",
-    "sha": "ad4acbf0e82dbecc"
+    "v": "160",
+    "sha": "f578725ba2588f51"
   },
   "assets/daterange/activity.js": {
-    "v": "8",
-    "sha": "a790a0292516c5c7"
+    "v": "9",
+    "sha": "fde2cf7a6f2f7552"
   },
   "assets/daterange/cards.js": {
     "v": "10",
@@ -576,8 +576,8 @@
     "sha": "fed02e7171af24bd"
   },
   "assets/daterange/renderers.js": {
-    "v": "54",
-    "sha": "8e27aa865d074e00"
+    "v": "55",
+    "sha": "7d22cf2d35cf5be4"
   },
   "assets/daterange/revenue.js": {
     "v": "5",
@@ -1324,12 +1324,12 @@
     "sha": "75f091468ae1fc87"
   },
   "assets/live-link.js": {
-    "v": "138",
-    "sha": "bfe3f8753776f0b9"
+    "v": "140",
+    "sha": "8cd8e5b52e21f52b"
   },
   "assets/live-link/queue-store.js": {
-    "v": "30",
-    "sha": "ddfcf3f0a74d2752"
+    "v": "31",
+    "sha": "8916b3304fe104ab"
   },
   "assets/live-link/sale-identity.js": {
     "v": "4",
@@ -1592,8 +1592,8 @@
     "sha": "019b0b381221ac8c"
   },
   "assets/pages-pro-spa-starter.js": {
-    "v": "13",
-    "sha": "56f48eebcedb9bf1"
+    "v": "14",
+    "sha": "dec103e69a2ee804"
   },
   "assets/pages-pro.css": {
     "v": "7",
@@ -1700,8 +1700,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "377",
-    "sha": "919241dfe172e260"
+    "v": "378",
+    "sha": "3716d1425b7278f1"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2772,16 +2772,16 @@
     "sha": "224335f16ed46fe5"
   },
   "assets/venues.js": {
-    "v": "80",
-    "sha": "01ac5a209b43df7e"
+    "v": "81",
+    "sha": "64b5267730ab5ac4"
   },
   "assets/venues/data.js": {
     "v": "8",
     "sha": "1a9a92a9836116e7"
   },
   "assets/venues/helpers.js": {
-    "v": "10",
-    "sha": "56eae432ba68e7a9"
+    "v": "11",
+    "sha": "bb7aaadc855a3c3a"
   },
   "assets/vertical-state.js": {
     "v": "10",

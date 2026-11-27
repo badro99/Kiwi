@@ -1166,10 +1166,21 @@
       const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (salesParts(s) ? salesMethodKeys(s).map((k) => L[k] || k).join(' + ') : (L[salesMethodKey(s)] || L.unknown));
       const ref = String(s.ref || s.label || '').trim();
       const origin = String(s.origin || (ref ? 'caisse' : '')).toLowerCase();
-      const source = origin === 'employee'
+      const baseSource = origin === 'employee'
         ? (s.server ? `${s.server} · ${T({ fr: 'App employé', en: 'Employee app', ar: 'تطبيق الموظف' })}` : T({ fr: 'App employé', en: 'Employee app', ar: 'تطبيق الموظف' }))
         : origin === 'orderpro' ? 'OrderPro'
         : origin === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : '';
+      /* Qui a encaissé, qui a remboursé : la promesse de clarté faite au
+         commerçant. Le vendeur vient de sales.seller_name (preuve signée du code
+         saisi), l'auteur d'un remboursement du journal sale_audit. Absent = on le
+         dit, plutôt que de laisser croire que personne n'a touché la caisse. */
+      const refundWho = String(s.actor || '').trim();
+      const sellerWho = String(s.seller || '').trim();
+      const byLine = isRefund
+        ? (refundWho ? T({ fr: 'Remboursé par ', en: 'Refunded by ', ar: 'استرداد بواسطة ' }) + refundWho : T({ fr: 'Auteur du remboursement non enregistré', en: 'Refund author not recorded', ar: 'منفّذ الاسترداد غير مسجل' }))
+        : sellerWho && sellerWho !== String(s.server || '').trim() ? T({ fr: 'Encaissé par ', en: 'Taken by ', ar: 'حصّلها ' }) + sellerWho
+        : '';
+      const source = [baseSource, byLine].filter(Boolean).join(' · ');
       const identity = ref || source
         ? `<div class="rtx-identity">${ref ? `<span class="rtx-ref">${escS(ref)}</span>` : ''}${source ? `<span class="rtx-source">${escS(source)}</span>` : ''}</div>`
         : '';

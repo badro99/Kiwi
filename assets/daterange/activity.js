@@ -363,7 +363,8 @@ function buildCustomFeed(venue) {
          * which the sale now carries — a row reading "Chemise en lin" is what the
          * owner needs to find the original sale when that customer returns. Falls
          * back to the generic subtitle only when the till sent no label. */
-        sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: s.label || '',
+        sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: [s.label || '', String(s.seller || s.server || s.actor || '').trim()].filter(Boolean).join(' · '),
+        server: String(s.seller || s.server || s.actor || '').trim(),   // qui a encaissé / remboursé, lu par le tiroir de détail
         // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
         amt: (isRefund ? '− ' : '') + num(shown),

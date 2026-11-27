@@ -766,6 +766,15 @@ function postSale(entry) {
       body.seller = { member: entry.seller.member.slice(0, 96) };
     } else if (entry.seller && typeof entry.seller === 'object' && typeof entry.seller.proof === 'string' && entry.seller.proof) {
       body.seller = { proof: entry.seller.proof.slice(0, 2048) };
+    } else if (!entry.seller && Math.abs(Date.now() - body.ts) < 10 * 60000) {
+      /* Toutes les caisses (resto, café, maison…), pas seulement la boutique :
+         une vente FRAÎCHE sans vendeur porte la preuve signée de la personne en
+         poste, pour que le tableau de bord dise qui a encaissé. Jamais sur une
+         vente rejouée (journal, Z) : la personne en poste aujourd'hui n'est pas
+         celle d'hier. Le serveur juge la preuve et ignore tout nom en clair. */
+      var onDuty = '';   // la personne en poste, telle que caisse-pairing.js la range (clé de session, pas un global)
+      try { onDuty = (JSON.parse(sessionStorage.getItem('kiwiTillStaff') || 'null') || {}).sellerProof || ''; } catch (_) { onDuty = ''; }
+      if (typeof onDuty === 'string' && onDuty) body.seller = { proof: onDuty.slice(0, 2048) };
     }
     /* La fiche du destinataire d'une livraison (functions/api/_delivery-card.js). */
     if (entry.deliveryCard && typeof entry.deliveryCard === 'object') {

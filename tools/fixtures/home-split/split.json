@@ -1,6 +1,6 @@
 {
   "file": "assets/daterange/renderers.js",
-  "sha256": "7f705e31b64dabc7f9773328d170fef52dba8b964a3b88e4588b67a0aad2e1fe",
+  "sha256": "038ea1bc62af521cdda8a621363a772ca808c82f156654290351dae302f8e5af",
   "parts": [
     {
       "name": "hero",
@@ -99,7 +99,7 @@
         },
         {
           "name": "heroDataByVenue",
-          "start": 236006,
+          "start": 236220,
           "length": 2609,
           "offset": 22191
         }
@@ -198,43 +198,43 @@
           "name": "hotelPerfEntry",
           "start": 176599,
           "length": 1717,
-          "offset": 31175
+          "offset": 31104
         },
         {
           "name": "hotelTilesFrom",
           "start": 178316,
           "length": 1364,
-          "offset": 32890
+          "offset": 32821
         },
         {
           "name": "tableTimeEntry",
           "start": 179680,
           "length": 1617,
-          "offset": 34254
+          "offset": 34185
         },
         {
           "name": "openKpiCustomizer",
           "start": 181297,
           "length": 5621,
-          "offset": 35871
+          "offset": 35802
         },
         {
           "name": "dutyBand",
-          "start": 208918,
+          "start": 209132,
           "length": 2830,
-          "offset": 41492
+          "offset": 41423
         },
         {
           "name": "retailBand",
-          "start": 211748,
+          "start": 211962,
           "length": 2025,
-          "offset": 44322
+          "offset": 44253
         },
         {
           "name": "kpiByVenue",
-          "start": 238615,
+          "start": 238829,
           "length": 10257,
-          "offset": 46347
+          "offset": 46278
         }
       ],
       "bridges": [
@@ -331,7 +331,7 @@
         },
         {
           "name": "revChartByVenue",
-          "start": 248872,
+          "start": 249086,
           "length": 9857,
           "offset": 45122
         }
@@ -407,7 +407,7 @@
         {
           "name": "buildCustomFeed",
           "start": 195661,
-          "length": 6015,
+          "length": 6229,
           "offset": 17944
         }
       ],
@@ -503,31 +503,31 @@
         },
         {
           "name": "fmtHumanRange",
-          "start": 214606,
+          "start": 214820,
           "length": 708,
           "offset": 2787
         },
         {
           "name": "closeCustomPicker",
-          "start": 215314,
+          "start": 215528,
           "length": 1011,
           "offset": 3495
         },
         {
           "name": "openCustomPicker",
-          "start": 216325,
+          "start": 216539,
           "length": 14403,
           "offset": 4506
         },
         {
           "name": "mountDaySelector",
-          "start": 230728,
+          "start": 230942,
           "length": 2406,
           "offset": 18909
         },
         {
           "name": "registerHandler",
-          "start": 233134,
+          "start": 233348,
           "length": 1551,
           "offset": 21315
         }
@@ -763,27 +763,27 @@
         },
         {
           "name": "realLowStock",
-          "start": 201676,
+          "start": 201890,
           "length": 1849,
           "offset": 38666
         },
         {
           "name": "realTopProducts",
-          "start": 203525,
+          "start": 203739,
           "length": 2050,
           "offset": 40515
         },
         {
           "name": "realPairs",
-          "start": 205575,
+          "start": 205789,
           "length": 2697,
-          "offset": 42261
+          "offset": 42565
         },
         {
           "name": "growBars",
-          "start": 208272,
+          "start": 208486,
           "length": 646,
-          "offset": 44652
+          "offset": 45262
         }
       ],
       "bridges": [
@@ -1109,13 +1109,13 @@
         },
         {
           "name": "hookI18n",
-          "start": 213773,
+          "start": 213987,
           "length": 833,
           "offset": 4352
         },
         {
           "name": "tickLiveRevenue",
-          "start": 234685,
+          "start": 234899,
           "length": 1321,
           "offset": 5185
         }

@@ -493,6 +493,32 @@ export async function onRequestGet({ request, env }) {
       const byId = new Map((owners.results || []).map(row => [String(row.id), String(row.client_id)]));
       detailRows.forEach(row => { const c = byId.get(String(row.id)); if (c) row.clientId = c; });
     } catch (_) { /* Old schema without sales.client_id. */ }
+    /* Qui a encaissé (sales.seller_name, écrit par _seller.js depuis une preuve
+       signée, jamais un nom déclaré). Le tableau de bord le dit sur chaque
+       vente. Colonne absente ou vente ancienne : pas de champ. */
+    try {
+      const ids = detailRows.map(row => String(row.id || '')).filter(Boolean);
+      const marks = ids.map(() => '?').join(',');
+      const sellers = await env.DB.prepare(
+        `SELECT id, seller_name FROM sales WHERE merchant IN (?, ?) AND id IN (${marks}) AND seller_name IS NOT NULL AND seller_name <> ''`
+      ).bind(merchant, legacy || merchant, ...ids).all();
+      const byId = new Map((sellers.results || []).map(row => [String(row.id), String(row.seller_name).slice(0, 80)]));
+      detailRows.forEach(row => { const n = byId.get(String(row.id)); if (n) row.seller = n; });
+    } catch (_) { /* Old schema without sales.seller_name. */ }
+    /* Qui a remboursé : le journal sale_audit garde l'auteur de chaque
+       remboursement (note = id de la ligne de remboursement). Le tableau de
+       bord le montre sans attendre le journal d'activité. */
+    try {
+      const refundIds = detailRows.filter(row => Number(row.amount_cents ?? row.amount) < 0).map(row => String(row.id || '')).filter(Boolean);
+      if (refundIds.length) {
+        const marks = refundIds.map(() => '?').join(',');
+        const authors = await env.DB.prepare(
+          `SELECT note, actor FROM sale_audit WHERE merchant IN (?, ?) AND action = 'refund' AND note IN (${marks}) AND actor IS NOT NULL AND actor <> ''`
+        ).bind(merchant, legacy || merchant, ...refundIds).all();
+        const byId = new Map((authors.results || []).map(row => [String(row.note), String(row.actor).slice(0, 80)]));
+        detailRows.forEach(row => { const n = byId.get(String(row.id)); if (n) row.refundBy = n; });
+      }
+    } catch (_) { /* Old schema without sale_audit: the activity log still tells. */ }
   }
 
   /* Restaurant sales use the visit id as their durable payment identity. Join

@@ -422,12 +422,14 @@
     const receiptRef = String((sale && sale.receiptRef) || '').trim().slice(0, 80);
     const origin = String((sale && sale.origin) || '').trim().slice(0, 16);
     const server = String((sale && sale.server) || '').trim().slice(0, 80);
+    const seller = String((sale && sale.seller) || '').trim().slice(0, 80);   // qui a encaissé (sales.seller_name)
     const channel = String((sale && sale.channel) || '').trim().slice(0, 24);
     const saleId = String((sale && (sale.saleId || sale.id)) || '').trim().slice(0, 80);
     if (ref) entry.ref = ref;
     if (receiptRef) entry.receiptRef = receiptRef;
     if (origin) entry.origin = origin;
     if (server) entry.server = server;
+    if (seller) entry.seller = seller;
     if (channel) entry.channel = channel;
     if (saleId) entry.saleId = saleId;
     /* Le pourboire saisi à l'encaissement, en centimes, hors du montant. */
@@ -498,7 +500,7 @@
   function annotatedEntry(original, meta) {
     const entry = Object.assign({}, original);
     let changed = false;
-    [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80], ['channel', 24], ['saleId', 80]].forEach(([key, limit]) => {
+    [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80], ['seller', 80], ['channel', 24], ['saleId', 80]].forEach(([key, limit]) => {
       const value = String(meta && (meta[key] || (key === 'saleId' ? (meta.saleId || meta.id) : '')) || '').trim().slice(0, limit);
       if (value && entry[key] !== value) { entry[key] = value; changed = true; }
     });
