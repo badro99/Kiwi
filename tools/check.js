@@ -2457,7 +2457,7 @@ section('Whole-project regressions');
     'intake-slice1-test.mjs',
     'client-state-truth-test.mjs', 'stock-intake-outbox-test.mjs', 'intake-deadline-test.mjs', 'refund-period-test.mjs', 'sale-error-detail-test.mjs', 'returns-tile-window-test.mjs',
     'client-state-truth-test.mjs', 'stock-intake-outbox-test.mjs', 'intake-deadline-test.mjs', 'refund-period-test.mjs', 'returns-tile-window-test.mjs', 'returns-ledger-zone-test.mjs',
-    'exchange-promo-rule-test.mjs', 'exchange-price-cut-test.mjs', 'exchange-price-cut-browser-test.mjs', 'past-sales-route-test.mjs', 'past-sales-stock-import-test.mjs', 'past-sales-stock-import-browser-test.mjs', 'planning-calm-browser-test.mjs', // + ventes d'avant Kiwi, import d'une liste de stock (Jon's Burgers)
+    'exchange-promo-rule-test.mjs', 'exchange-price-cut-test.mjs', 'exchange-price-cut-browser-test.mjs', 'past-sales-route-test.mjs', 'past-sales-stock-import-test.mjs', 'past-sales-stock-import-browser-test.mjs', 'history-import-route-test.mjs', 'history-import-engine-test.mjs', 'planning-calm-browser-test.mjs', // + ventes d'avant Kiwi, import d'une liste de stock (Jon's Burgers)
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',

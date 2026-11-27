@@ -7,9 +7,10 @@
  * Excel, Numbers, LibreOffice and Google Sheets all open. No dependency, no
  * runtime cost, nothing sent anywhere: the file never leaves the browser.
  *
- * read(bytes)  → Promise<{ sheet, rows: (string|number)[][] }>, first sheet
- *                only; shared strings, inline strings, formula strings,
- *                numbers and booleans.
+ * read(bytes, { sheet })  → Promise<{ sheet, sheets, rows: (string|number)[][] }>,
+ *                the first sheet unless opts.sheet names another by position;
+ *                shared strings, inline strings, formula strings, numbers
+ *                and booleans.
  * write(rows, { sheet, widths }) → Uint8Array, first row in bold and frozen.
  *
  * Node 18+ has the same streams, so tools/catalog-bulk-test.mjs round-trips
@@ -129,7 +130,11 @@
     const budget = { left: lim.bytes };
     const wb = await entry(b, dir, 'xl/workbook.xml', budget);
     if (!wb) throw new Error('not-xlsx');
-    const first = /<(?:\w+:)?sheet\b[^>]*>/.exec(wb);
+    /* opts.sheet picks a sheet by position (the history import reads every
+       sheet of an export); the catalogue keeps reading the first. */
+    const tags = wb.match(/<(?:\w+:)?sheet\b[^>]*>/g) || [];
+    const sheets = tags.map((tg) => attr(tg, 'name') || '');
+    const first = tags.length ? [tags[Math.min(tags.length - 1, Math.max(0, (opts && opts.sheet) | 0))]] : null;
     const sheetName = first ? attr(first[0], 'name') || '' : '';
     const rid = first ? (attr(first[0], 'r:id') || attr(first[0], 'id')) : null;
     let path = 'xl/worksheets/sheet1.xml';
@@ -182,7 +187,7 @@
     }
     for (let i = 0; i < rows.length; i++) if (!rows[i]) rows[i] = [];
     while (rows.length && !rows[rows.length - 1].some((v) => v !== '')) rows.pop();
-    return { sheet: sheetName, rows };
+    return { sheet: sheetName, sheets, rows };
   }
 
   /* ── zip: writing (STORED entries) ────────────────────────────────────── */

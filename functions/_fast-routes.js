@@ -146,75 +146,76 @@ import * as r140 from './api/pair/redeem.js';
 import * as r141 from './api/pair/revoke.js';
 import * as r142 from './api/pair/state.js';
 import * as r143 from './api/pairs.js';
-import * as r144 from './api/past-sales.js';
-import * as r145 from './api/pay-statements.js';
-import * as r146 from './api/permissions.js';
-import * as r147 from './api/pin/face.js';
-import * as r148 from './api/pin/verify.js';
-import * as r149 from './api/pressing/cancel.js';
-import * as r150 from './api/price-lists/index.js';
-import * as r151 from './api/price-lists/clients.js';
-import * as r152 from './api/price-lists/prices.js';
-import * as r153 from './api/price-lists/resolve.js';
-import * as r154 from './api/price-lists/sales.js';
-import * as r155 from './api/price-lists/snapshot.js';
-import * as r156 from './api/print/bridges.js';
-import * as r157 from './api/print/jobs.js';
-import * as r158 from './api/push/morning.js';
-import * as r159 from './api/push/register.js';
-import * as r160 from './api/quarantine.js';
-import * as r161 from './api/receivables.js';
-import * as r162 from './api/reports.js';
-import * as r163 from './api/retail-balances.js';
-import * as r164 from './api/sale.js';
-import * as r165 from './api/sale/cancel.js';
-import * as r166 from './api/sale/refund.js';
-import * as r167 from './api/sales-summary.js';
-import * as r168 from './api/sellers.js';
-import * as r169 from './api/service/events.js';
-import * as r170 from './api/shop/catalog.js';
-import * as r171 from './api/shop/decide.js';
-import * as r172 from './api/shop/orders.js';
-import * as r173 from './api/shop/status.js';
-import * as r174 from './api/shopify/callback.js';
-import * as r175 from './api/shopify/connect.js';
-import * as r176 from './api/shopify/connect-direct.js';
-import * as r177 from './api/shopify/cron.js';
-import * as r178 from './api/shopify/status.js';
-import * as r179 from './api/sister-stock.js';
-import * as r180 from './api/stock-transfers.js';
-import * as r181 from './api/stock/lookup.js';
-import * as r182 from './api/store.js';
-import * as r183 from './api/store-credits.js';
-import * as r184 from './api/suppliers/index.js';
-import * as r185 from './api/suppliers/entry.js';
-import * as r186 from './api/suppliers/expense.js';
-import * as r187 from './api/suppliers/ranking.js';
-import * as r188 from './api/suppliers/scorecard.js';
-import * as r189 from './api/suppliers/statement.js';
-import * as r190 from './api/support/articles.js';
-import * as r191 from './api/support/attachments.js';
-import * as r192 from './api/support/inbound.js';
-import * as r193 from './api/support/tickets.js';
-import * as r194 from './api/table-time.js';
-import * as r195 from './api/team/live.js';
-import * as r196 from './api/ticket-sequence.js';
-import * as r197 from './api/tickets/index.js';
-import * as r198 from './api/timezone.js';
-import * as r199 from './api/wallet/card.js';
-import * as r200 from './api/wallet/enroll.js';
-import * as r201 from './api/wallet/stats.js';
-import * as r202 from './api/wallet/till-token.js';
-import * as r203 from './api/weather.js';
-import * as r204 from './api/z-reconciliation.js';
-import * as r205 from './auth/forgot.js';
-import * as r206 from './auth/login.js';
-import * as r207 from './auth/logout.js';
-import * as r208 from './auth/operator.js';
-import * as r209 from './auth/reset.js';
-import * as r210 from './auth/signup.js';
-import * as r211 from './order/basic.js';
-import * as r212 from './sitemap-annuaire.xml.js';
+import * as r144 from './api/past-cash.js';
+import * as r145 from './api/past-sales.js';
+import * as r146 from './api/pay-statements.js';
+import * as r147 from './api/permissions.js';
+import * as r148 from './api/pin/face.js';
+import * as r149 from './api/pin/verify.js';
+import * as r150 from './api/pressing/cancel.js';
+import * as r151 from './api/price-lists/index.js';
+import * as r152 from './api/price-lists/clients.js';
+import * as r153 from './api/price-lists/prices.js';
+import * as r154 from './api/price-lists/resolve.js';
+import * as r155 from './api/price-lists/sales.js';
+import * as r156 from './api/price-lists/snapshot.js';
+import * as r157 from './api/print/bridges.js';
+import * as r158 from './api/print/jobs.js';
+import * as r159 from './api/push/morning.js';
+import * as r160 from './api/push/register.js';
+import * as r161 from './api/quarantine.js';
+import * as r162 from './api/receivables.js';
+import * as r163 from './api/reports.js';
+import * as r164 from './api/retail-balances.js';
+import * as r165 from './api/sale.js';
+import * as r166 from './api/sale/cancel.js';
+import * as r167 from './api/sale/refund.js';
+import * as r168 from './api/sales-summary.js';
+import * as r169 from './api/sellers.js';
+import * as r170 from './api/service/events.js';
+import * as r171 from './api/shop/catalog.js';
+import * as r172 from './api/shop/decide.js';
+import * as r173 from './api/shop/orders.js';
+import * as r174 from './api/shop/status.js';
+import * as r175 from './api/shopify/callback.js';
+import * as r176 from './api/shopify/connect.js';
+import * as r177 from './api/shopify/connect-direct.js';
+import * as r178 from './api/shopify/cron.js';
+import * as r179 from './api/shopify/status.js';
+import * as r180 from './api/sister-stock.js';
+import * as r181 from './api/stock-transfers.js';
+import * as r182 from './api/stock/lookup.js';
+import * as r183 from './api/store.js';
+import * as r184 from './api/store-credits.js';
+import * as r185 from './api/suppliers/index.js';
+import * as r186 from './api/suppliers/entry.js';
+import * as r187 from './api/suppliers/expense.js';
+import * as r188 from './api/suppliers/ranking.js';
+import * as r189 from './api/suppliers/scorecard.js';
+import * as r190 from './api/suppliers/statement.js';
+import * as r191 from './api/support/articles.js';
+import * as r192 from './api/support/attachments.js';
+import * as r193 from './api/support/inbound.js';
+import * as r194 from './api/support/tickets.js';
+import * as r195 from './api/table-time.js';
+import * as r196 from './api/team/live.js';
+import * as r197 from './api/ticket-sequence.js';
+import * as r198 from './api/tickets/index.js';
+import * as r199 from './api/timezone.js';
+import * as r200 from './api/wallet/card.js';
+import * as r201 from './api/wallet/enroll.js';
+import * as r202 from './api/wallet/stats.js';
+import * as r203 from './api/wallet/till-token.js';
+import * as r204 from './api/weather.js';
+import * as r205 from './api/z-reconciliation.js';
+import * as r206 from './auth/forgot.js';
+import * as r207 from './auth/login.js';
+import * as r208 from './auth/logout.js';
+import * as r209 from './auth/operator.js';
+import * as r210 from './auth/reset.js';
+import * as r211 from './auth/signup.js';
+import * as r212 from './order/basic.js';
+import * as r213 from './sitemap-annuaire.xml.js';
 
 // Nested middlewares, outermost first, with the path each one covers.
 export const FAST_MIDDLEWARES = [
@@ -367,73 +368,74 @@ export const FAST_ROUTES = new Map(/** @type {Array<[string, Record<string, any>
   ["/api/pair/revoke", r141],
   ["/api/pair/state", r142],
   ["/api/pairs", r143],
-  ["/api/past-sales", r144],
-  ["/api/pay-statements", r145],
-  ["/api/permissions", r146],
-  ["/api/pin/face", r147],
-  ["/api/pin/verify", r148],
-  ["/api/pressing/cancel", r149],
-  ["/api/price-lists", r150],
-  ["/api/price-lists/clients", r151],
-  ["/api/price-lists/prices", r152],
-  ["/api/price-lists/resolve", r153],
-  ["/api/price-lists/sales", r154],
-  ["/api/price-lists/snapshot", r155],
-  ["/api/print/bridges", r156],
-  ["/api/print/jobs", r157],
-  ["/api/push/morning", r158],
-  ["/api/push/register", r159],
-  ["/api/quarantine", r160],
-  ["/api/receivables", r161],
-  ["/api/reports", r162],
-  ["/api/retail-balances", r163],
-  ["/api/sale", r164],
-  ["/api/sale/cancel", r165],
-  ["/api/sale/refund", r166],
-  ["/api/sales-summary", r167],
-  ["/api/sellers", r168],
-  ["/api/service/events", r169],
-  ["/api/shop/catalog", r170],
-  ["/api/shop/decide", r171],
-  ["/api/shop/orders", r172],
-  ["/api/shop/status", r173],
-  ["/api/shopify/callback", r174],
-  ["/api/shopify/connect", r175],
-  ["/api/shopify/connect-direct", r176],
-  ["/api/shopify/cron", r177],
-  ["/api/shopify/status", r178],
-  ["/api/sister-stock", r179],
-  ["/api/stock-transfers", r180],
-  ["/api/stock/lookup", r181],
-  ["/api/store", r182],
-  ["/api/store-credits", r183],
-  ["/api/suppliers", r184],
-  ["/api/suppliers/entry", r185],
-  ["/api/suppliers/expense", r186],
-  ["/api/suppliers/ranking", r187],
-  ["/api/suppliers/scorecard", r188],
-  ["/api/suppliers/statement", r189],
-  ["/api/support/articles", r190],
-  ["/api/support/attachments", r191],
-  ["/api/support/inbound", r192],
-  ["/api/support/tickets", r193],
-  ["/api/table-time", r194],
-  ["/api/team/live", r195],
-  ["/api/ticket-sequence", r196],
-  ["/api/tickets", r197],
-  ["/api/timezone", r198],
-  ["/api/wallet/card", r199],
-  ["/api/wallet/enroll", r200],
-  ["/api/wallet/stats", r201],
-  ["/api/wallet/till-token", r202],
-  ["/api/weather", r203],
-  ["/api/z-reconciliation", r204],
-  ["/auth/forgot", r205],
-  ["/auth/login", r206],
-  ["/auth/logout", r207],
-  ["/auth/operator", r208],
-  ["/auth/reset", r209],
-  ["/auth/signup", r210],
-  ["/order/basic", r211],
-  ["/sitemap-annuaire.xml", r212],
+  ["/api/past-cash", r144],
+  ["/api/past-sales", r145],
+  ["/api/pay-statements", r146],
+  ["/api/permissions", r147],
+  ["/api/pin/face", r148],
+  ["/api/pin/verify", r149],
+  ["/api/pressing/cancel", r150],
+  ["/api/price-lists", r151],
+  ["/api/price-lists/clients", r152],
+  ["/api/price-lists/prices", r153],
+  ["/api/price-lists/resolve", r154],
+  ["/api/price-lists/sales", r155],
+  ["/api/price-lists/snapshot", r156],
+  ["/api/print/bridges", r157],
+  ["/api/print/jobs", r158],
+  ["/api/push/morning", r159],
+  ["/api/push/register", r160],
+  ["/api/quarantine", r161],
+  ["/api/receivables", r162],
+  ["/api/reports", r163],
+  ["/api/retail-balances", r164],
+  ["/api/sale", r165],
+  ["/api/sale/cancel", r166],
+  ["/api/sale/refund", r167],
+  ["/api/sales-summary", r168],
+  ["/api/sellers", r169],
+  ["/api/service/events", r170],
+  ["/api/shop/catalog", r171],
+  ["/api/shop/decide", r172],
+  ["/api/shop/orders", r173],
+  ["/api/shop/status", r174],
+  ["/api/shopify/callback", r175],
+  ["/api/shopify/connect", r176],
+  ["/api/shopify/connect-direct", r177],
+  ["/api/shopify/cron", r178],
+  ["/api/shopify/status", r179],
+  ["/api/sister-stock", r180],
+  ["/api/stock-transfers", r181],
+  ["/api/stock/lookup", r182],
+  ["/api/store", r183],
+  ["/api/store-credits", r184],
+  ["/api/suppliers", r185],
+  ["/api/suppliers/entry", r186],
+  ["/api/suppliers/expense", r187],
+  ["/api/suppliers/ranking", r188],
+  ["/api/suppliers/scorecard", r189],
+  ["/api/suppliers/statement", r190],
+  ["/api/support/articles", r191],
+  ["/api/support/attachments", r192],
+  ["/api/support/inbound", r193],
+  ["/api/support/tickets", r194],
+  ["/api/table-time", r195],
+  ["/api/team/live", r196],
+  ["/api/ticket-sequence", r197],
+  ["/api/tickets", r198],
+  ["/api/timezone", r199],
+  ["/api/wallet/card", r200],
+  ["/api/wallet/enroll", r201],
+  ["/api/wallet/stats", r202],
+  ["/api/wallet/till-token", r203],
+  ["/api/weather", r204],
+  ["/api/z-reconciliation", r205],
+  ["/auth/forgot", r206],
+  ["/auth/login", r207],
+  ["/auth/logout", r208],
+  ["/auth/operator", r209],
+  ["/auth/reset", r210],
+  ["/auth/signup", r211],
+  ["/order/basic", r212],
+  ["/sitemap-annuaire.xml", r213],
 ]));

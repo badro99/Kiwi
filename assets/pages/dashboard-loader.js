@@ -11,7 +11,7 @@
       'assets/growth-crm.js?v=7',
       'assets/ramadan.js?v=3',
       'assets/catalog-import.js?v=26',
-      'assets/past-sales.js?v=1',
+      'assets/past-sales.js?v=3',
       'assets/ai-image-import.js?v=8',
       'assets/menu-scan-reader.js?v=9',
       'assets/menu-scan.js?v=20',

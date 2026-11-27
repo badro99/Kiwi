@@ -88,6 +88,9 @@ export async function onRequestPost({ request, env }) {
   const merchant = String(body.merchant || '').slice(0, 64);
   const terminalId = ident(body.terminalId, 80);
   const sessionId = ident(body.sessionId);
+  /* Le poste « historique » et le préfixe hist: appartiennent à /api/past-cash
+     (services d'avant Kiwi) : aucune caisse n'écrit dedans. */
+  if (terminalId === 'historique' || /^hist:/i.test(sessionId) || /^hist:/i.test(String(body.id || ''))) return json({ error: 'reserved-id' }, 400);
   const till = merchant && terminalId && sessionId && await isTillFor(request, env, merchant);
   let terminal = till && await isTerminalFor(request, env, merchant, terminalId);
   let bootstrapTerminal = false;

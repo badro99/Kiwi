@@ -807,6 +807,14 @@
     "v": "7",
     "sha": "29803657f951ca07"
   },
+  "assets/history-import/engine.js": {
+    "v": "1",
+    "sha": "678d9bc605104f74"
+  },
+  "assets/history-import/ui.js": {
+    "v": "1",
+    "sha": "48dc3d9f98f99c0b"
+  },
   "assets/home-top-sellers.js": {
     "v": "4",
     "sha": "87c2a2b64a95bfb3"
@@ -1592,8 +1600,8 @@
     "sha": "8e6e3998cfb5cb02"
   },
   "assets/pages-pro.js": {
-    "v": "2258",
-    "sha": "0db5e9689511cbf3"
+    "v": "2259",
+    "sha": "614bb4c2a22a9226"
   },
   "assets/pages-pro/boutique-promos-returns.js": {
     "v": "28",
@@ -1628,8 +1636,8 @@
     "sha": "64d067b97cd4ce26"
   },
   "assets/pages-pro/catalog-bulk/xlsx.js": {
-    "v": "2",
-    "sha": "710fafda2b7f14c7"
+    "v": "3",
+    "sha": "298908cf6367b714"
   },
   "assets/pages-pro/cheques.js": {
     "v": "4",
@@ -1688,12 +1696,12 @@
     "sha": "81d453d087fec9fe"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "131",
-    "sha": "a3715d4a5b73116c"
+    "v": "133",
+    "sha": "f121abd9b8ca593c"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "361",
-    "sha": "8cc4faa21983ce84"
+    "v": "362",
+    "sha": "d3e282a8211efdc1"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -1716,8 +1724,8 @@
     "sha": "6de061c7ee12b006"
   },
   "assets/past-sales.js": {
-    "v": "1",
-    "sha": "0abdfa31acd26522"
+    "v": "3",
+    "sha": "58adb7d82ac51774"
   },
   "assets/permissions-catalog.js": {
     "v": "6",

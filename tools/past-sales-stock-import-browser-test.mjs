@@ -21,6 +21,7 @@ const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/C
 if (!bin) { console.error('Chromium unavailable'); process.exit(3); }
 const imp = (f) => import(pathToFileURL(path.join(ROOT, f)).href);
 const route = await imp('functions/api/past-sales.js');
+const cashRoute = await imp('functions/api/past-cash.js');
 const auth = await imp('functions/auth/_lib.js');
 const { businessDate, addBusinessDays } = await imp('functions/api/_business-day.js');
 
@@ -48,11 +49,12 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/kiwi-sw.js') { res.writeHead(404); res.end(); return; }
-  if (url.pathname === '/api/past-sales') {
+  if (url.pathname === '/api/past-sales' || url.pathname === '/api/past-cash') {
+    const r = url.pathname === '/api/past-sales' ? route : cashRoute;
     const chunks = []; for await (const c of req) chunks.push(c);
     const init = { method: req.method, headers: { Cookie: owner, 'Content-Type': 'application/json' } };
     if (req.method === 'POST') init.body = Buffer.concat(chunks).toString('utf8');
-    const out = await (req.method === 'POST' ? route.onRequestPost : route.onRequestGet)({ request: new Request('https://k' + req.url, init), env });
+    const out = await (req.method === 'POST' ? r.onRequestPost : r.onRequestGet)({ request: new Request('https://k' + req.url, init), env });
     res.writeHead(out.status, { 'content-type': 'application/json' }); res.end(await out.text()); return;
   }
   if (url.pathname.startsWith('/api/')) {
@@ -146,6 +148,9 @@ await S.run('past sales: one day from the menu, then a period, saved through the
   await page.evaluate(() => window.Kiwi.handlers['nav-transactions-day'](null, window.KiwiPastSalesTestToday));
   await page.waitForSelector('[data-action="past-sales-open"]', { visible: true, timeout: 20000 });
   await page.click('[data-action="past-sales-open"]');
+  /* It opens on « Importer un fichier » (27 nov.) : the menu grid is one tab over. */
+  await page.waitForSelector('[data-khi-root] [data-khi-drop]', { visible: true, timeout: 15000 });
+  await page.click('[data-kps-tab="day"]');
   await page.waitForSelector('[data-kps-qty="it_2"]', { visible: true, timeout: 15000 });
   assert.equal(await page.$('[data-kps-qty="it_4"]'), null, 'archived dishes are not offered');
   const max = await page.$eval('[data-kps-day]', (n) => n.max);
@@ -180,6 +185,56 @@ await S.run('past sales: one day from the menu, then a period, saved through the
   assert.equal(rows.length, 3);
   assert.equal(rows.reduce((s, r) => s + JSON.parse(r.lines)[0].q, 0), 7, 'the period total, spread in whole numbers');
   assert.equal(rows.reduce((s, r) => s + r.amount_cents, 0), 7 * 4000);
+});
+
+await S.run('history import: an .xlsx of receipts and a CSV of shifts, detected, mapped and imported through both routes', async (t) => {
+  require('../assets/pages-pro/catalog-bulk/xlsx.js');
+  const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'kiwi-hist-'));
+  const serial = (d, h, m) => (Date.parse(d + 'T00:00:00Z') / 86400000) + 25569 + (h * 60 + m) / 1440;
+  const xlsx = path.join(dir, 'recus.xlsx');
+  fs.writeFileSync(xlsx, globalThis.KiwiXlsx.write([
+    ['Date', 'Receipt number', 'Receipt type', 'Total collected', 'Payment type', 'Status'],
+    [serial(day(-6), 12, 30), 'R-1', 'Sale', 95, 'Cash', 'Closed'],
+    [serial(day(-6), 13, 10), 'R-2', 'Sale', 40.5, 'Card', 'Closed'],
+    [serial(day(-6), 13, 40), 'R-3', 'Refund', -40.5, 'Card', 'Closed'],
+    [serial(day(-5), 20, 0), 'R-4', 'Sale', 60, 'Cash', 'Closed'],
+  ], { sheet: 'Receipts' }));
+  const csv = path.join(dir, 'services.csv');
+  const fr = (d) => d.split('-').reverse().join('/');
+  fs.writeFileSync(csv, 'Service;Ouverture;Fermeture;Fond de caisse;Sorties;Attendu;Compté\n'
+    + `7;${fr(day(-6))} 09:00;${fr(day(-6))} 23:30;500;120;1450;1440\n`);
+  try {
+    const page = await dashboard(t);
+    await page.evaluate((m) => { window.KiwiLive.merchant = () => m; window.KiwiEnv.isReal = () => true; }, M);
+    await page.evaluate((d) => window.Kiwi.handlers['nav-transactions-day'](null, d), today);
+    await page.waitForSelector('[data-action="past-sales-open"]', { visible: true, timeout: 20000 });
+    await page.click('[data-action="past-sales-open"]');
+    await page.waitForSelector('[data-khi-file]', { timeout: 15000 });
+    const input = await page.$('[data-khi-file]');
+    await input.uploadFile(xlsx, csv);
+    await page.waitForFunction(() => document.querySelectorAll('[data-khi-src]').length === 2, { timeout: 15000 });
+    const kinds = await page.$$eval('[data-khi-kind]', (ns) => ns.map((n) => n.value));
+    assert.deepEqual(kinds, ['tickets', 'shifts']);
+    const summary = await page.$eval('.khi-sum', (n) => n.textContent.replace(/\s+/g, ' '));
+    assert.match(summary, /3 ticket\(s\) · 195,5 MAD/);
+    assert.match(summary, /1 service\(s\) · écart total -10 MAD/);
+    assert.match(summary, /Sorties 120 MAD/);
+    assert.match(summary, /1 remboursement\(s\) non importé\(s\)/);
+    await shot(page, 'history-import');
+    if (process.env.KIWI_SHOT_DIR) { await page.$eval('[data-khi-go]', (n) => n.scrollIntoView({ block: 'end' })); await shot(page, 'history-import-summary'); }
+    await page.click('[data-khi-go]');
+    await page.waitForFunction(() => !document.querySelector('[data-khi-src]') && /Services et mouvements déjà importés/.test(document.querySelector('[data-khi-root]').textContent), { timeout: 20000 });
+    const tickets = db.prepare("SELECT ref, method, amount_cents FROM sales WHERE merchant = ? AND ref LIKE 'HIST-T-%' AND void_ts IS NULL ORDER BY ts").all(M);
+    assert.deepEqual(tickets.map((r) => [r.ref, r.method, r.amount_cents]), [['HIST-T-R-1', 'cash', 9500], ['HIST-T-R-2', 'card', 4050], ['HIST-T-R-4', 'cash', 6000]]);
+    const cash = db.prepare("SELECT event_type, expected_cents, counted_cents, gap_cents, movement_kind, movement_amount_cents FROM cash_session_events WHERE merchant = ? AND terminal_id = 'historique' ORDER BY occurred_ts, id").all(M);
+    assert.deepEqual(cash.map((r) => r.event_type), ['open', 'movement', 'close']);
+    assert.equal(cash[2].gap_cents, -1000);
+    assert.equal(cash[1].movement_amount_cents, 12000);
+    /* The day list under the importer now shows the receipt days, counted in receipts, without « Modifier ». */
+    const hist = await page.$eval('.kps-hist', (n) => n.textContent);
+    assert.match(hist, /2 ticket\(s\)/);
+    assert.equal(await page.$(`[data-kps-edit="${day(-6)}"]`), null);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 await browser.close();

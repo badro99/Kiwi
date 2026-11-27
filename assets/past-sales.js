@@ -18,10 +18,10 @@
 
   const STR = {
     fr: {
-      title: 'Ventes antérieures', tag: 'Avant Kiwi',
-      desc: 'Les ventes faites avant Kiwi. Elles comptent dans le chiffre d’affaires, les produits les plus vendus et les rapports, jamais dans la caisse, le Z ni le stock.',
-      tabDay: 'Un jour', tabPeriod: 'Une période', tabFile: 'Fichier',
-      day: 'Jour', from: 'Du', to: 'Au', method: 'Paiement', cash: 'Espèces', card: 'Carte', other: 'Non précisé',
+      title: 'Historique d’avant Kiwi', tag: 'Avant Kiwi',
+      desc: 'Votre historique d’avant Kiwi : tickets, ventes, services, entrées et sorties de caisse. Il compte dans le chiffre d’affaires, les produits les plus vendus, les dépenses et les rapports, jamais dans la caisse du jour, le Z ni le stock.',
+      tabDay: 'Un jour', tabPeriod: 'Une période', tabFile: 'Importer un fichier',
+      day: 'Jour', from: 'Du', to: 'Au', method: 'Paiement', cash: 'Espèces', card: 'Carte', other: 'Non précisé', transfer: 'Virement', cheque: 'Chèque',
       search: 'Chercher un plat', price: 'Prix', qty: 'Quantité', item: 'Article', total: 'Total',
       addFree: 'Article hors carte', freeName: 'Nom', remove: 'Retirer', none: 'Aucun plat sur la carte. Utilisez l’onglet Fichier.',
       spread: (n) => `Les quantités sont des totaux pour la période, réparties en nombres entiers sur ses ${n} jours. Une période ressaisie remplace ses jours.`,
@@ -38,13 +38,13 @@
       tooLong: 'Une période compte au plus 92 jours.', order: 'La date de fin précède la date de début.',
       errTill: (d, f) => `Le ${d} a déjà des ventes en caisse. Seules les journées avant le ${f} peuvent être ajoutées.`,
       errPast: (d) => `Le ${d} n’est pas encore passé.`, errOld: (d) => `Le ${d} est trop ancien (deux ans au plus).`,
-      errLine: (n) => `Ligne refusée : ${n}.`, errGeneric: 'Enregistrement refusé.', mad: 'MAD', items: (n) => `${n} article(s)`,
+      errLine: (n) => `Ligne refusée : ${n}.`, errGeneric: 'Enregistrement refusé.', mad: 'MAD', items: (n) => `${n} article(s)`, tickets: (n) => `${n} ticket(s)`, mixed: 'Paiements variés',
     },
     en: {
-      title: 'Past sales', tag: 'Before Kiwi',
-      desc: 'Sales made before Kiwi. They count in revenue, best sellers and reports, never in the till, the Z or stock.',
-      tabDay: 'One day', tabPeriod: 'A period', tabFile: 'File',
-      day: 'Day', from: 'From', to: 'To', method: 'Payment', cash: 'Cash', card: 'Card', other: 'Not specified',
+      title: 'History before Kiwi', tag: 'Before Kiwi',
+      desc: 'Your history from before Kiwi: receipts, sales, shifts, cash in and out. It counts in revenue, best sellers, expenses and reports, never in today’s till, the Z or stock.',
+      tabDay: 'One day', tabPeriod: 'A period', tabFile: 'Import a file',
+      day: 'Day', from: 'From', to: 'To', method: 'Payment', cash: 'Cash', card: 'Card', other: 'Not specified', transfer: 'Transfer', cheque: 'Cheque',
       search: 'Find a dish', price: 'Price', qty: 'Quantity', item: 'Item', total: 'Total',
       addFree: 'Item not on the menu', freeName: 'Name', remove: 'Remove', none: 'No dishes on the menu. Use the File tab.',
       spread: (n) => `Quantities are totals for the period, spread in whole numbers over its ${n} days. Saving a period again replaces its days.`,
@@ -61,13 +61,13 @@
       tooLong: 'A period is at most 92 days.', order: 'The end date is before the start date.',
       errTill: (d, f) => `${d} already has till sales. Only days before ${f} can be added.`,
       errPast: (d) => `${d} has not passed yet.`, errOld: (d) => `${d} is too old (two years at most).`,
-      errLine: (n) => `Row refused: ${n}.`, errGeneric: 'Save refused.', mad: 'MAD', items: (n) => `${n} item(s)`,
+      errLine: (n) => `Row refused: ${n}.`, errGeneric: 'Save refused.', mad: 'MAD', items: (n) => `${n} item(s)`, tickets: (n) => `${n} receipt(s)`, mixed: 'Mixed payments',
     },
     ar: {
-      title: 'المبيعات السابقة', tag: 'قبل Kiwi',
-      desc: 'المبيعات التي تمت قبل Kiwi. تُحتسب في رقم المعاملات والمنتجات الأكثر مبيعاً والتقارير، ولا تدخل أبداً في الصندوق ولا في تقرير Z ولا في المخزون.',
-      tabDay: 'يوم واحد', tabPeriod: 'فترة', tabFile: 'ملف',
-      day: 'اليوم', from: 'من', to: 'إلى', method: 'الدفع', cash: 'نقداً', card: 'بطاقة', other: 'غير محدد',
+      title: 'السجل قبل Kiwi', tag: 'قبل Kiwi',
+      desc: 'سجلّك قبل Kiwi: التذاكر والمبيعات والورديات ومداخيل ومصاريف الصندوق. يُحتسب في رقم المعاملات والمنتجات الأكثر مبيعاً والمصاريف والتقارير، ولا يدخل أبداً في صندوق اليوم ولا في تقرير Z ولا في المخزون.',
+      tabDay: 'يوم واحد', tabPeriod: 'فترة', tabFile: 'استيراد ملف',
+      day: 'اليوم', from: 'من', to: 'إلى', method: 'الدفع', cash: 'نقداً', card: 'بطاقة', other: 'غير محدد', transfer: 'تحويل', cheque: 'شيك',
       search: 'ابحث عن طبق', price: 'السعر', qty: 'الكمية', item: 'الصنف', total: 'المجموع',
       addFree: 'صنف خارج القائمة', freeName: 'الاسم', remove: 'حذف', none: 'لا توجد أطباق في القائمة. استعمل تبويب الملف.',
       spread: (n) => `الكميات مجاميع للفترة، تُوزَّع بأعداد صحيحة على أيامها الـ${n}. إعادة حفظ فترة تعوّض أيامها.`,
@@ -84,7 +84,7 @@
       tooLong: 'الفترة 92 يوماً على الأكثر.', order: 'تاريخ النهاية قبل تاريخ البداية.',
       errTill: (d, f) => `يوم ${d} فيه مبيعات في الصندوق. يمكن إضافة الأيام السابقة لـ${f} فقط.`,
       errPast: (d) => `يوم ${d} لم يمضِ بعد.`, errOld: (d) => `يوم ${d} قديم جداً (سنتان على الأكثر).`,
-      errLine: (n) => `سطر مرفوض: ${n}.`, errGeneric: 'رُفض الحفظ.', mad: 'درهم', items: (n) => `${n} صنف`,
+      errLine: (n) => `سطر مرفوض: ${n}.`, errGeneric: 'رُفض الحفظ.', mad: 'درهم', items: (n) => `${n} صنف`, tickets: (n) => `${n} تذكرة`, mixed: 'طرق دفع متعددة',
     },
   };
   const lang = () => { try { return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
@@ -223,6 +223,9 @@
     return ['errGeneric'];
   }
 
+  /* L'import de l'historique (Excel, CSV, tickets, services), chargé à la demande. */
+  const IMPORTER = ['assets/pages-pro/catalog-bulk/xlsx.js?v=3', 'assets/history-import/engine.js?v=1', 'assets/history-import/ui.js?v=1'];
+
   /* ───────────── UI ───────────── */
   function css() {
     if (document.getElementById('kps-css')) return;
@@ -253,7 +256,7 @@
     const body = m.el.querySelector('[data-kps-body]');
     const saveBtn = m.el.querySelector('[data-kps-save]');
     const menu = menuRows();
-    const st = { tab: 'day', info: null, day: '', from: '', to: '', method: 'cash', qty: {}, price: {}, free: [], filter: '', file: null, fileDay: '' };
+    const st = { tab: 'file', info: null, day: '', from: '', to: '', method: 'cash', qty: {}, price: {}, free: [], filter: '', file: null, fileDay: '' };
 
     const lastDay = () => {
       const i = st.info || {};
@@ -318,16 +321,34 @@
       }
       return out;
     }
+    /* L'onglet « Importer » : l'import de l'historique (assets/history-import/),
+       ses propres boutons ; l'ancien lecteur CSV ne sert que s'il manque. */
+    const importer = { state: null, menu, merchant, salesInfo: () => st.info, onDone: () => refresh() };
+    const hasImporter = () => !!(window.KiwiHistoryImport && window.KiwiHistoryImport.mount && window.KiwiHistoryImport.engine);
+    /* Ses trois fichiers arrivent au premier clic sur l'onglet, pas avec le
+       tableau de bord ; sans eux (hors ligne, refus), l'ancien lecteur CSV. */
+    let importerLoad = null, importerFailed = false;
+    function loadImporter() {
+      if (!importerLoad) {
+        const one = (src) => new Promise((ok, ko) => {
+          const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = ko; document.head.appendChild(el);
+        });
+        importerLoad = (window.KiwiXlsx ? Promise.resolve() : one(IMPORTER[0]))
+          .then(() => one(IMPORTER[1])).then(() => one(IMPORTER[2]))
+          .catch(() => { importerFailed = true; importerLoad = null; });
+      }
+      return importerLoad;
+    }
     function historyHtml() {
       const days = (st.info && st.info.days) || [];
       return '<div class="kps-hist"><h4>' + esc(t('history')) + '</h4>' + (days.length
-        ? '<div class="kps-scroll" style="max-height:22vh"><table class="kps-grid"><tbody>' + days.map((d) => '<tr><td>' + esc(dayText(d.day)) + '</td><td>' + esc(t('items', d.lines.length)) + ' · ' + esc(t(d.method) || d.method) + '</td><td class="r">' + esc(fmt(d.totalCents)) + '</td><td class="r"><button class="kps-link" type="button" data-kps-edit="' + esc(d.day) + '">' + esc(t('edit')) + '</button><button class="kps-link kps-bad" type="button" data-kps-del="' + esc(d.day) + '">' + esc(t('del')) + '</button></td></tr>').join('') + '</tbody></table></div>'
+        ? '<div class="kps-scroll" style="max-height:22vh"><table class="kps-grid"><tbody>' + days.map((d) => '<tr><td>' + esc(dayText(d.day)) + '</td><td>' + esc(d.tickets ? t('tickets', d.tickets) : t('items', d.lines.length)) + ' · ' + esc(t(d.method) || d.method) + '</td><td class="r">' + esc(fmt(d.totalCents)) + '</td><td class="r">' + (d.tickets ? '' : '<button class="kps-link" type="button" data-kps-edit="' + esc(d.day) + '">' + esc(t('edit')) + '</button>') + '<button class="kps-link kps-bad" type="button" data-kps-del="' + esc(d.day) + '">' + esc(t('del')) + '</button></td></tr>').join('') + '</tbody></table></div>'
         : '<p class="kps-note">' + esc(t('empty')) + '</p>') + '</div>';
     }
     function render() {
       const max = lastDay();
       const limit = st.info && st.info.firstTillDay ? t('limit', dayText(max)) : t('limitNone');
-      const tabs = '<div class="kps-tabs" role="tablist" data-lens-demo>' + [['day', 'tabDay'], ['period', 'tabPeriod'], ['file', 'tabFile']].map(([k, l]) => '<button type="button" role="tab" data-lens-item data-kps-tab="' + k + '" class="' + (st.tab === k ? 'on' : '') + '" aria-selected="' + (st.tab === k) + '">' + esc(t(l)) + '</button>').join('') + '</div>';
+      const tabs = '<div class="kps-tabs" role="tablist" data-lens-demo>' + [['file', 'tabFile'], ['day', 'tabDay'], ['period', 'tabPeriod']].map(([k, l]) => '<button type="button" role="tab" data-lens-item data-kps-tab="' + k + '" class="' + (st.tab === k ? 'on' : '') + '" aria-selected="' + (st.tab === k) + '">' + esc(t(l)) + '</button>').join('') + '</div>';
       let top = '';
       if (st.tab === 'day') top = '<div class="kps-row"><label>' + esc(t('day')) + '<input type="date" data-kps-day max="' + esc(max) + '" value="' + esc(st.day) + '"></label>' + methodSel() + '</div>';
       if (st.tab === 'period') {
@@ -335,7 +356,16 @@
         top = '<div class="kps-row"><label>' + esc(t('from')) + '<input type="date" data-kps-from max="' + esc(max) + '" value="' + esc(st.from) + '"></label><label>' + esc(t('to')) + '<input type="date" data-kps-to max="' + esc(max) + '" value="' + esc(st.to) + '"></label>' + methodSel() + '</div>'
           + '<p class="kps-note' + (n > 92 || (st.from && st.to && st.to < st.from) ? ' kps-bad' : '') + '">' + esc(st.from && st.to && st.to < st.from ? t('order') : n > 92 ? t('tooLong') : t('spread', n || '…')) + '</p>';
       }
-      body.innerHTML = tabs + '<p class="kps-note">' + esc(limit) + '</p>' + top + (st.tab === 'file' ? fileHtml() : gridHtml()) + historyHtml();
+      if (st.tab === 'file' && !hasImporter() && !importerFailed) {
+        body.innerHTML = tabs + '<p class="kps-note">' + esc(t('loading')) + '</p>';
+        saveBtn.style.display = 'none';
+        loadImporter().then(() => { if (st.tab === 'file') render(); });
+        return;
+      }
+      const smart = st.tab === 'file' && hasImporter();
+      body.innerHTML = tabs + '<p class="kps-note">' + esc(limit) + '</p>' + top + (smart ? '<div data-khi-root></div>' : st.tab === 'file' ? fileHtml() : gridHtml()) + historyHtml();
+      if (smart) window.KiwiHistoryImport.mount(body.querySelector('[data-khi-root]'), importer);
+      saveBtn.style.display = smart ? 'none' : '';
       paintFoot();
     }
     function loadDay(day) {
