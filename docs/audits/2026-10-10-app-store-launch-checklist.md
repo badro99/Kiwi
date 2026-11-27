@@ -258,6 +258,13 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
     find what re-sent a past day (the outbox or the `kiwi:z-manifest` copy)
     before closing A4.
 
+- **Build 63 uploaded and submitted, version 1.0.4** (`0e92f2926`, 27 Nov 2026, main after the
+  full gate went green). "Upload succeeded" at 11:37 UTC, processed into Kiwi Team, attached to
+  1.0.4 and sent to App Review at 11:42 UTC (Waiting for Review). What's New written in French,
+  Arabic and English; release automatic, to all users at once. Built before the Wallet card
+  landed on main (721f69626, 29ef92dd0), so the card is not in this build. The first upload
+  failed on an expired Xcode account session; the owner signed in again and only the export
+  step was rerun from the same archive.
 - **Build 62 uploaded to TestFlight, version 1.0.3** (`28dd46ab`, 26 Nov 2026, main after the Browse
   split-bill fix 97717abc9; Cloudflare Pages had deployed 97717abc9). 1.0.2 is approved, so its
   train is closed: build 59 was refused (61 already used by another upload) and 1.0.2 refused new
