@@ -243,9 +243,13 @@ html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble {
   box-shadow: var(--ai-drop);
   isolation: isolate;
 }
-html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child {
+html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > div:first-child,
+html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > [data-fa-stream] {
   font-size: 16px; line-height: 26px; color: var(--ink-soft); max-width: 64ch;
 }
+/* A server answer is streamed into a bare span: without this it stayed at the
+   base 14px while a computed answer read at 16px (27 Nov 2026). */
+html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble > [data-fa-stream] { display: block; }
 /* Le gras porte l'emphase à lui seul. Le marqueur `inset 0 -0.42em` soulignait
    chaque nombre d'un aplat mint : sur trois chiffres dans un paragraphe, la
    phrase devenait un texte surligné au feutre. */
@@ -812,3 +816,13 @@ html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-ctx-mode:hover {
   html:root[data-kiwi-ai="releve"] .fa-stat { grid-template-columns: 1fr; }
   html:root[data-kiwi-ai="releve"] .fa-stat .v { grid-column: 1; grid-row: auto; text-align: start; }
 }
+
+/* Each bubble takes its direction from its own words, whatever the page's
+   language (27 Nov 2026): an Arabic answer on a French dashboard was set
+   left to right, its full stop opening the line and « Kiwi » cutting the
+   sentence. Text paragraphs only (the bubble, its unclassed blocks): a card
+   cell holding « 12 400 MAD » on an Arabic page must keep its side. Blocks
+   only, too: an inline span with plaintext is isolated, and its Arabic would
+   no longer set the direction of the line that holds it.
+   tools/agent-bidi-browser-test.mjs holds it. */
+:where(.fa-bubble, .fa-bubble [data-fa-stream], .fa-bubble div:not([class]), .fa-bubble p:not([class]), .fa-bubble li:not([class])) { unicode-bidi: plaintext; }
