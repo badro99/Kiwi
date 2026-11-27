@@ -19,7 +19,7 @@ const db = freshDb();
 db.exec('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY, name TEXT, applied_at TEXT)');
 const versionSource = readFileSync(join(ROOT, 'functions/_schema-version.js'), 'utf8');
 const minimum = Number(/MINIMUM_SCHEMA_VERSION\s*=\s*(\d+)/.exec(versionSource)?.[1]);
-assert.equal(minimum, 39, 'Le minimum de production est 0039 (mesures du pont, print_jobs.connect_ms) avec 0038 (accords du patron) : 0020 à 0039 sont appliquées avant ce déploiement (registre de prod vérifié le 26 nov. 2026).');
+assert.equal(minimum, 40, 'Le minimum de production est 0040 (carte fidélité Wallet : wallet_cards, wallet_devices, wallet_claims, wallet_tokens) : 0020 à 0040 sont appliquées avant ce déploiement (registre de prod vérifié le 27 nov. 2026).');
 const migrations = listMigrations().filter(f => Number(f.slice(0, 4)) <= minimum);
 assert.equal(Number(migrations.at(-1).slice(0, 4)), minimum);
 for (const file of migrations) db.exec(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));
