@@ -45,7 +45,7 @@ import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-s
 import { reverseShopifyOrder } from '../../shopify/_order-reversal.js';
 import { bookShopifySale, reverseShopifySale } from '../../shopify/_book-sale.js';
 import { saleMoveId } from '../../shopify/_move-ids.js';
-import { shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
+import { shopifyApp, shopPermanentDomain, verifyWebhookHmac } from '../../shopify/_lib.js';
 import { Countries, merchantCountry } from '../../_country.js';   // la devise attendue suit le pays du commerce
 
 const MAX_LINES = 60;
@@ -352,7 +352,10 @@ async function receiveWebhook(context) {
    * jamais : on ne recopie pas le secret de l'app dans une ligne de la base.
    * Seule une ligne saisie à la main (channel/keys.js) porte son propre secret. */
   const appSigned = !!(cfg && (cfg.oauth || cfg.grant === 'client_credentials'));
-  const secret = str(appSigned ? env.SHOPIFY_CLIENT_SECRET : cfg && cfg.shopifySecret, 200);
+  /* L'app qui a enregistré ces webhooks se choisit par la boutique de la ligne
+   * (domaine saisi et domaine permanent), jamais par l'en-tête de la requête :
+   * c'est le HMAC qui doit prouver la boutique, pas l'inverse. */
+  const secret = str(appSigned ? shopifyApp(env, cfg.shop, cfg.myshopifyDomain).secret : cfg && cfg.shopifySecret, 200);
   if (!secret) {
     /* La configuration n'est pas finie. On refuse — et on l'écrit sur la ligne
      * du canal, parce que c'est le seul endroit où le commerçant peut le lire

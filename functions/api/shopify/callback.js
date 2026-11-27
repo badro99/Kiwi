@@ -3,7 +3,7 @@
 
 import {
   encryptToken, exchangeAuthorizationCode, normalizeShopDomain, registerWebhooks,
-  sha256Hex, verifyOAuthHmac,
+  sha256Hex, shopifyApp, shopifyAppAllows, verifyOAuthHmac,
 } from './_lib.js';
 
 const redirect = (request, value) => {
@@ -18,7 +18,7 @@ export async function onRequestGet({ request, env }) {
   const shop = normalizeShopDomain(url.searchParams.get('shop'));
   const state = url.searchParams.get('state') || '';
   const code = url.searchParams.get('code') || '';
-  if (!shop || !state || !code || !(await verifyOAuthHmac(url, env.SHOPIFY_CLIENT_SECRET))) return redirect(request, 'invalid');
+  if (!shop || !state || !code || !(await verifyOAuthHmac(url, shopifyApp(env, shop).secret))) return redirect(request, 'invalid');
 
   let stateRow;
   try {
@@ -35,6 +35,7 @@ export async function onRequestGet({ request, env }) {
   catch (_) { return redirect(request, 'oauth-failed'); }
 
   const merchant = stateRow.merchant;
+  if (!shopifyAppAllows(env, merchant, shop)) return redirect(request, 'invalid');
   const now = Date.now();
   let existing = null;
   try { existing = await env.DB.prepare('SELECT merchant, shop_domain, channel_link_id, connected_ts FROM shopify_connections WHERE merchant = ?').bind(merchant).first(); }

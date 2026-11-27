@@ -341,7 +341,7 @@ ok('reauthorisation cannot turn a merely ready connection active', callback.incl
 ok('a legitimate shop replacement drops the old variant links', callback.includes("DELETE FROM shopify_variant_links WHERE merchant = ?"));
 
 const webhook = read('functions/api/channel/shopify/[link].js');
-ok('OAuth webhook verifies with app secret', webhook.includes('appSigned ? env.SHOPIFY_CLIENT_SECRET') && webhook.includes('cfg.oauth ||'));
+ok('OAuth webhook verifies with the secret of the shop app', webhook.includes('appSigned ? shopifyApp(env, cfg.shop, cfg.myshopifyDomain).secret') && webhook.includes('cfg.oauth ||'));
 ok('client-credentials webhook verifies with the app secret too', webhook.includes("cfg.grant === 'client_credentials'"));
 ok('online order movement is deterministic (one shared id builder, proved in shopify-move-ids-test)', webhook.includes('const moveId = saleMoveId(ref, lineId)') && webhook.includes("from '../../shopify/_move-ids.js'"));
 ok('online order path does not call outbound enqueuer', !/applyShopifyOrderStock[\s\S]{0,5000}enqueueStockChanges/.test(webhook));

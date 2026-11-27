@@ -2,7 +2,7 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { normalizeShopDomain, sha256Hex, SHOPIFY_SCOPES } from './_lib.js';
+import { normalizeShopDomain, sha256Hex, shopifyApp, shopifyAppAllows, SHOPIFY_SCOPES } from './_lib.js';
 
 function randomState() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -19,6 +19,10 @@ export async function onRequestPost({ request, env }) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   const shop = normalizeShopDomain(body && body.shop);
   if (!shop) return json({ error: 'bad-shop-domain' }, 400);
+  /* Une boutique servie par une app supplémentaire ne se relie qu'aux commerces
+   * que son entrée nomme (shopifyAppAllows) : sinon tout compte Kiwi pourrait
+   * obtenir un jeton pour elle. Même réponse que « déjà reliée ». */
+  if (!shopifyAppAllows(env, merchant, shop)) return json({ error: 'shop-already-connected' }, 409);
 
   const now = Date.now();
   const state = randomState();
@@ -43,7 +47,7 @@ export async function onRequestPost({ request, env }) {
   const appUrl = String(env.SHOPIFY_APP_URL || 'https://kiwi-os.com').replace(/\/$/, '');
   const redirectUri = `${appUrl}/api/shopify/callback`;
   const authorize = new URL(`https://${shop}/admin/oauth/authorize`);
-  authorize.searchParams.set('client_id', env.SHOPIFY_CLIENT_ID);
+  authorize.searchParams.set('client_id', shopifyApp(env, shop).id);
   authorize.searchParams.set('scope', SHOPIFY_SCOPES);
   authorize.searchParams.set('redirect_uri', redirectUri);
   authorize.searchParams.set('state', state);

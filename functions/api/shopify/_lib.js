@@ -40,6 +40,57 @@ export function normalizeShopDomain(value) {
   return /^[a-z0-9][a-z0-9-]{1,62}\.myshopify\.com$/.test(s) ? s : '';
 }
 
+/* ── Plusieurs apps Shopify ─────────────────────────────────────────────────
+ * Le don d'identifiants (connect-direct.js) n'est accepté que si l'app et la
+ * boutique sont dans la MÊME organisation Shopify. Une seule app ne peut donc
+ * pas relier deux boutiques de deux organisations sans passer par la ronde
+ * publique. L'app par défaut reste SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET ;
+ * SHOPIFY_EXTRA_APPS (secret Cloudflare, JSON) en ajoute d'autres, chacune
+ * réservée aux boutiques qu'elle nomme ET aux commerces Kiwi qui peuvent les
+ * relier :
+ *   [{"id":"…","secret":"…","shops":["xxxx.myshopify.com"],"merchants":["slug"]}]
+ * `merchants` est obligatoire : le don d'identifiants ne demande rien à la
+ * boutique, donc sans cette liste n'importe quel compte Kiwi pourrait réclamer
+ * un jeton pour une boutique de cette organisation (voir shopifyAppAllows).
+ * Une boutique absente de toute liste garde l'app par défaut. Un JSON
+ * illisible, ou une entrée sans `shops` ou sans `merchants`, ne casse rien :
+ * on retombe sur l'app par défaut, jamais sur une autre. Le secret ne sort
+ * jamais de ce module, ni dans un message d'erreur. */
+function extraApps(env) {
+  const raw = env && env.SHOPIFY_EXTRA_APPS;
+  if (!raw) return [];
+  let list;
+  try { list = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (_) { return []; }
+  if (!Array.isArray(list)) list = [list];
+  return list.filter((a) => a && a.id && a.secret && Array.isArray(a.shops) && Array.isArray(a.merchants)).map((a) => ({
+    id: String(a.id),
+    secret: String(a.secret),
+    shops: a.shops.map((s) => normalizeShopDomain(s)).filter(Boolean),
+    merchants: a.merchants.map((m) => String(m || '').trim()).filter(Boolean),
+  }));
+}
+
+/* Un commerce peut-il relier cette boutique ? Oui pour toute boutique de l'app
+ * par défaut (règle inchangée : les verrous d'exclusivité de connect*.js
+ * suffisent). Pour une boutique servie par une app supplémentaire, seulement
+ * les commerces que l'entrée nomme. À appeler AVANT tout échange de jeton. */
+export function shopifyAppAllows(env, merchant, ...shops) {
+  const wanted = shops.map((s) => normalizeShopDomain(s)).filter(Boolean);
+  const app = extraApps(env).find((a) => wanted.some((s) => a.shops.includes(s)));
+  return !app || app.merchants.includes(String(merchant || ''));
+}
+
+/* L'app qui parle pour cette boutique. `shops` accepte plusieurs domaines :
+ * le domaine saisi et le domaine permanent (xxxx.myshopify.com) qui signe les
+ * webhooks peuvent différer. */
+export function shopifyApp(env, ...shops) {
+  const wanted = shops.map((s) => normalizeShopDomain(s)).filter(Boolean);
+  for (const app of extraApps(env)) {
+    if (wanted.some((s) => app.shops.includes(s))) return { id: app.id, secret: app.secret };
+  }
+  return { id: String(env && env.SHOPIFY_CLIENT_ID || ''), secret: String(env && env.SHOPIFY_CLIENT_SECRET || '') };
+}
+
 export async function sha256Hex(value) {
   const hash = await crypto.subtle.digest('SHA-256', enc.encode(String(value || '')));
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -99,12 +150,13 @@ export async function decryptToken(value, secret) {
 }
 
 export async function exchangeAuthorizationCode(env, shop, code) {
+  const app = shopifyApp(env, shop);
   const res = await deadlineFetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: new URLSearchParams({
-      client_id: env.SHOPIFY_CLIENT_ID || '',
-      client_secret: env.SHOPIFY_CLIENT_SECRET || '',
+      client_id: app.id,
+      client_secret: app.secret,
       code: String(code || ''),
       expiring: '1',
     }),
@@ -129,13 +181,14 @@ export async function exchangeAuthorizationCode(env, shop, code) {
  * base, et pourquoi aucune colonne nouvelle n'est nécessaire : voir
  * `isClientCredentials`. */
 export async function exchangeClientCredentials(env, shop) {
+  const app = shopifyApp(env, shop);
   const res = await deadlineFetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: env.SHOPIFY_CLIENT_ID || '',
-      client_secret: env.SHOPIFY_CLIENT_SECRET || '',
+      client_id: app.id,
+      client_secret: app.secret,
     }),
   }, providerDeadline(env));
   const data = await readJson(res);
@@ -182,8 +235,8 @@ async function refreshConnectionToken(env, row) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        client_id: env.SHOPIFY_CLIENT_ID || '',
-        client_secret: env.SHOPIFY_CLIENT_SECRET || '',
+        client_id: shopifyApp(env, row.shop_domain).id,
+        client_secret: shopifyApp(env, row.shop_domain).secret,
         refresh_token: refresh,
       }),
     }, providerDeadline(env));

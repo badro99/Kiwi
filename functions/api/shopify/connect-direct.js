@@ -27,7 +27,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import {
   encryptToken, exchangeClientCredentials, normalizeShopDomain,
-  registerWebhooks, sha256Hex, shopPermanentDomain,
+  registerWebhooks, sha256Hex, shopifyAppAllows, shopPermanentDomain,
 } from './_lib.js';
 
 export async function onRequestPost({ request, env }) {
@@ -45,6 +45,10 @@ export async function onRequestPost({ request, env }) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   const shop = normalizeShopDomain(body && body.shop);
   if (!shop) return json({ error: 'bad-shop-domain' }, 400);
+  /* Une boutique servie par une app supplémentaire ne se relie qu'aux commerces
+   * que son entrée nomme (shopifyAppAllows) : sinon tout compte Kiwi pourrait
+   * obtenir un jeton pour elle. Même réponse que « déjà reliée ». */
+  if (!shopifyAppAllows(env, merchant, shop)) return json({ error: 'shop-already-connected' }, 409);
 
   /* Mêmes verrous d'exclusivité que la ronde OAuth : un marchand n'a qu'une
    * boutique, une boutique n'a qu'un marchand. Vérifiés AVANT de demander un

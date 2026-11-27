@@ -805,6 +805,8 @@ for (const test of [
   /* Shopify « don d'identifiants » : les webhooks se vérifient avec le secret de l'app. */
   'shopify-direct-webhook-test.mjs', 'shopify-foreign-sales-test.mjs',
   'shopify-shop-domain-test.mjs',
+  /* Une app Shopify par organisation : SHOPIFY_EXTRA_APPS, choix par boutique, bon secret pour les webhooks. */
+  'shopify-extra-apps-test.mjs',
   'shopify-replay-orders-test.mjs',
   // Les identifiants de mouvement Shopify n'ont qu'un constructeur, compatible avec les journaux stockés (note 13).
   'shopify-move-ids-test.mjs',

@@ -47,6 +47,33 @@ Add encrypted variables/secrets to the production Pages project and redeploy:
 - `SHOPIFY_TOKEN_KEY` — independent random secret, at least 32 bytes
 - `SHOPIFY_APP_URL=https://kiwi-os.com`
 
+- `SHOPIFY_EXTRA_APPS` — optional, one more app per Shopify organisation (below)
+
+### A store in another Shopify organisation
+
+The direct connection (`connect-direct.js`, no approval page) only works when
+the app and the store sit in the same Shopify organisation. A store elsewhere
+would need the public approval round, with an app set to public distribution.
+Instead, give that organisation its own app and list it in `SHOPIFY_EXTRA_APPS`,
+an encrypted variable holding JSON:
+
+```json
+[{"id": "<client id>", "secret": "<client secret>",
+  "shops": ["xxxx.myshopify.com"], "merchants": ["<kiwi merchant slug>"]}]
+```
+
+A store named in `shops` uses that app everywhere: token grant and refresh,
+the OAuth link, and the webhook signature check. Only the Kiwi merchants in
+`merchants` may link it (the direct grant asks the store nothing, so without
+that list any Kiwi account could claim a token for it). An entry without
+`shops` or `merchants`, or unreadable JSON, falls back to the default app.
+Every other store keeps `SHOPIFY_CLIENT_ID`.
+
+Since 27 Nov 2026, CHICTRATEC (`64arxg-03`, organisation "Startoner") uses the
+**Kiwi Inventory Sync** app of that organisation. Maison 121 keeps the default
+app. Set it with `~/.kiwi-secrets/set-shopify-extra-app.sh`, which reads the
+secret from the keyboard. Test: `tools/shopify-extra-apps-test.mjs`.
+
 `SHOPIFY_TOKEN_KEY` is hashed into an AES-256-GCM key. Access and refresh tokens
 are encrypted before D1 writes and are never returned by an API.
 
