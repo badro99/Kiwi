@@ -21,6 +21,7 @@
 let dlvCtx = null;        // { id, ref } : la commande de livraison en cours de saisie
 let dlvPayLabel = null;   // le libellé livré de « Encaisser », rendu en sortant
 let dlvSending = false;
+let dlvCashPay = false;   // le livreur de la plateforme a payé en espèces : la vente entre au tiroir
 
 const DLV_T = {
   pill: { fr: 'Livraison', en: 'Delivery', ar: 'توصيل' },
@@ -38,6 +39,11 @@ const DLV_T = {
   check: { fr: 'Encaissement à vérifier dans le journal avant de réessayer', en: 'Check the journal before trying again', ar: 'تحقق من السجل قبل إعادة المحاولة' },
   handover: { fr: 'Remis au livreur', en: 'Handed to rider', ar: 'سُلّم للسائق' },
   platform: { fr: 'Plateforme', en: 'Platform', ar: 'منصة' },
+  how: { fr: 'Comment est réglée la commande ?', en: 'How is the order paid?', ar: 'كيف دُفع الطلب؟' },
+  paidBy: { fr: 'Payée par {n}', en: 'Paid by {n}', ar: 'دفعت {n}' },
+  cash: { fr: 'Espèces', en: 'Cash', ar: 'نقدًا' },
+  cashIn: { fr: 'dans le tiroir', en: 'in the drawer', ar: 'في الدرج' },
+  sentCash: { fr: '{n} · espèces au tiroir, commande envoyée en cuisine', en: '{n} · cash in the drawer, order sent to the kitchen', ar: '{n} · نقدًا في الدرج، أُرسل الطلب إلى المطبخ' },
 };
 function dlvLang() {
   try { const l = window.KiwiCaisseLang ? window.KiwiCaisseLang.get() : localStorage.getItem('kiwiCaisseLang'); return l === 'en' || l === 'ar' ? l : 'fr'; } catch (_) { return 'fr'; }
@@ -147,7 +153,7 @@ function dlvFeeLines(o) {
   const have = base.some((i) => i && i.kind === 'fee');
   return have ? [] : [{ n: dlvT('fee'), p: fee, q: 1, kind: 'fee' }];
 }
-function dlvMethod(method) { return dlvIsPlatform() ? 'platform' : method; }
+function dlvMethod(method) { return dlvIsPlatform() && !dlvCashPay ? 'platform' : method; }
 /* La vente : son canal est l'option (« glovo », « livraison »), son libellé dit
    la plateforme et son numéro, comme la tablette du livreur. */
 function dlvSaleTag(entry, order) {
@@ -226,21 +232,43 @@ function dlvRepaint() {
   try { if (typeof tillKitPaint === 'function') tillKitPaint(); } catch (_) {}
 }
 
-/* ── envoyer : la plateforme a encaissé ── */
-async function dlvSend() {
+/* ── envoyer : la plateforme a encaissé, ou le livreur a payé en espèces ──
+   Quand le patron a coché « Le livreur paie aussi en espèces » (Menu ›
+   Livraison), la caisse demande d'abord comment la commande est réglée.
+   « Espèces » : une vente en espèces au nom de la plateforme, le tiroir
+   s'ouvre, l'argent est au Z et au chiffre du jour. */
+async function dlvSend(pay) {
   const c = dlvCur();
   if (!c || dlvIsHouse(c) || tenderInFlight || dlvSending) return;
   if (!(cart || []).some((l) => l && l.qty > 0 && l.kind !== 'fee')) return;
-  const name = dlvName(c.id);
+  const P = window.KiwiDeliveryPay;
+  if (!pay && P && P.cashOn && P.cashOn(c.id)) { dlvAskPay(c); return; }
+  const name = dlvName(c.id), cash = pay === 'cash';
   dlvSending = true;
   tenderInFlight = true;
+  dlvCashPay = cash;
   let settled;
-  try { settled = await finalizeTender('platform'); }
-  catch (_) { tenderInFlight = false; dlvSending = false; toast(dlvT('check')); return; }
+  try { settled = await finalizeTender(cash ? 'cash' : 'platform'); }
+  catch (_) { tenderInFlight = false; dlvSending = false; dlvCashPay = false; toast(dlvT('check')); return; }
   tenderInFlight = false;
   dlvSending = false;
-  if (settled === 'complete') toast(dlvT('sent', { n: name }));
+  dlvCashPay = false;
+  if (settled === 'complete') {
+    if (cash) { try { if (typeof openCashDrawer === 'function') openCashDrawer(); } catch (_) {} }
+    toast(dlvT(cash ? 'sentCash' : 'sent', { n: name }));
+  }
   dlvRepaint();
+}
+const DLV_CASH = '<svg viewBox="0 -960 960 960" width="40" height="40" fill="currentColor" aria-hidden="true"><path d="M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm440 240H120q-33 0-56.5-23.5T40-240v-440h80v440h680v80ZM280-400v-320 320Z"/></svg>';
+function dlvAskPay(c) {
+  const D = dlvApi(), name = dlvName(c.id), v = dlvVeilEl();
+  if (D && D.ensureCSS) D.ensureCSS();
+  v.innerHTML = '<div class="cloture-card kdl-pick-card"><div class="clo-title">' + dlvEsc(dlvT('how')) + '</div>'
+    + '<div class="kdl-pick">'
+    + '<button type="button" class="kdl-pick-btn" data-kdl-paid="platform">' + (D ? D.logoHTML(c.id, 40) : '') + '<span>' + dlvEsc(dlvT('paidBy', { n: name })) + '</span></button>'
+    + '<button type="button" class="kdl-pick-btn" data-kdl-paid="cash">' + DLV_CASH + '<span>' + dlvEsc(dlvT('cash')) + '</span><small>' + dlvEsc(dlvT('cashIn')) + '</small></button>'
+    + '</div><div class="clo-foot"><button type="button" data-kdl-cancel>' + dlvEsc(dlvT('cancel')) + '</button></div></div>';
+  v.classList.add('is-open');
 }
 /* Le bouton « Encaisser » livré (et la carte) devient « Envoyer · Glovo » sur
    une commande de plateforme : on l'intercepte avant son propre écouteur. */
@@ -260,23 +288,27 @@ function dlvPay() {
 
 /* ── le choix de la plateforme ── */
 let dlvVeil = null;
+function dlvVeilEl() {
+  if (dlvVeil) return dlvVeil;
+  dlvVeil = document.createElement('div');
+  dlvVeil.className = 'cloture-veil kdl-veil';
+  dlvVeil.setAttribute('role', 'dialog');
+  dlvVeil.setAttribute('aria-modal', 'true');
+  document.body.appendChild(dlvVeil);
+  dlvVeil.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-kdl-pick]'), paid = e.target.closest('[data-kdl-paid]');
+    if (b) { dlvVeil.classList.remove('is-open'); dlvStart(b.getAttribute('data-kdl-pick')); return; }
+    if (paid) { dlvVeil.classList.remove('is-open'); dlvSend(paid.getAttribute('data-kdl-paid')); return; }
+    if (e.target === dlvVeil || e.target.closest('[data-kdl-cancel]')) dlvVeil.classList.remove('is-open');
+  });
+  return dlvVeil;
+}
 function dlvOpen() {
   const D = dlvApi();
   if (!D || !dlvOn()) return;
   const opts = D.options();
   if (opts.length === 1) { dlvStart(opts[0].id); return; }
-  if (!dlvVeil) {
-    dlvVeil = document.createElement('div');
-    dlvVeil.className = 'cloture-veil kdl-veil';
-    dlvVeil.setAttribute('role', 'dialog');
-    dlvVeil.setAttribute('aria-modal', 'true');
-    document.body.appendChild(dlvVeil);
-    dlvVeil.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-kdl-pick]');
-      if (b) { dlvVeil.classList.remove('is-open'); dlvStart(b.getAttribute('data-kdl-pick')); return; }
-      if (e.target === dlvVeil || e.target.closest('[data-kdl-cancel]')) dlvVeil.classList.remove('is-open');
-    });
-  }
+  dlvVeilEl();
   D.ensureCSS();
   dlvVeil.innerHTML = '<div class="cloture-card kdl-pick-card"><div class="clo-title">' + dlvEsc(dlvT('pick')) + '</div>'
     + '<div class="kdl-pick">' + opts.map((o) => '<button type="button" class="kdl-pick-btn" data-kdl-pick="' + dlvEsc(o.id) + '">'
@@ -500,7 +532,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=14';
+  s.src = 'assets/delivery.js?v=16';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

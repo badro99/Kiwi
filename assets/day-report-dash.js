@@ -888,15 +888,15 @@
       + '</div>';
 
     /* ── moyens de paiement ── */
-    var mRows = Object.keys(r.methods || {})
-      .filter(function (k) { return r.methods[k]; })
-      .sort(function (a, b) { return r.methods[b] - r.methods[a]; })
-      .map(function (k) { return row(methodLabel(k), money(r.methods[k]) + ' ' + CUR()); }).join('');
+    var DZ = r.deliveries ? (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'view', report: r }) : null, RM = DZ ? DZ.own.methods : (r.methods || {}), mRows = Object.keys(RM)   /* les livraisons à part (delivery.js) */
+      .filter(function (k) { return RM[k]; })
+      .sort(function (a, b) { return RM[b] - RM[a]; })
+      .map(function (k) { return row(methodLabel(k), money(RM[k]) + ' ' + CUR()); }).join('');
     /* L'en-tête est la somme des lignes qu'il chapeaute. Les lignes sont nettes
        des remboursements (day-report.js les déduit par moyen) : y poser le brut
        affichait 500 au-dessus de lignes qui font 450 dès qu'on remboursait. */
-    var mSum = Object.keys(r.methods || {}).reduce(function (s, k) { return s + (+r.methods[k] || 0); }, 0);
-    var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' ' + CUR() + '</em></div>' + mRows + '</div>' : '';
+    var mSum = Object.keys(RM).reduce(function (s, k) { return s + (+RM[k] || 0); }, 0);
+    var payBlock = (mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(Math.round(mSum * 100) / 100)) + ' ' + CUR() + '</em></div>' + mRows + '</div>' : '') + (DZ ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(DZ.title) + '</span><em>' + esc(money(DZ.total)) + ' ' + CUR() + '</em></div>' + DZ.lines.map(function (x) { return row(x.l, x.v == null ? '' : money(x.v) + ' ' + CUR()); }).join('') + row(DZ.dayLabel, money(DZ.day) + ' ' + CUR()) + '</div>' : '');
     var ui = { LANG: LANG, esc: esc, money: money, CUR: CUR, row: row }; payBlock = (window.KiwiDayReportVat && window.KiwiDayReportVat.sale ? window.KiwiDayReportVat.sale.html(r, ui) : '') + payBlock + (window.KiwiDayReportVat ? window.KiwiDayReportVat.html(r, ui) : '');
     var acompteBlock = r.acomptes && (r.acomptes.received || r.acomptes.outstanding)
       ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
@@ -921,7 +921,7 @@
       cashBlock = drawers.map(function (drawer) {
       var cash = drawer.cash || {};
       var cr = row(T(L.opening), money(cash.opening) + ' ' + CUR());
-      cr += row(T(L.cashIn), '+ ' + money(cash.sales) + ' ' + CUR());
+      cr += row(T(L.cashIn), '+ ' + money(cash.sales) + ' ' + CUR()) + (DZ && DZ.cash && drawers.length === 1 ? row(DZ.drawerLabel, money(DZ.cash) + ' ' + CUR()) : '');
       if (cash.tips) cr += row(T(L.cashTips), '+ ' + money(cash.tips) + ' ' + CUR());
       (cash.movements || []).forEach(function (m) {
         cr += row(m.reason || (m.type === 'in' ? '↑' : '↓'), (m.type === 'in' ? '+ ' : '− ') + money(m.amount) + ' ' + CUR(), 'sub');

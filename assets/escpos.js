@@ -477,6 +477,12 @@
        pour un même tableau finissent toujours par diverger. */
     var itemsOnly = !!o.itemsOnly;
 
+    /* Les livraisons à part (assets/delivery.js) : le haut du ticket compte ce
+       que le restaurant a vendu lui-même, un bloc LIVRAISONS suit, puis le
+       total du jour. Sans livraison, le ticket ne change pas d'un octet. */
+    var DZ = !itemsOnly && r.deliveries && typeof document !== 'undefined' ? (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'view', report: r, lang: 'fr', labels: o.methodLabels }) : null;
+    if (DZ) r = Object.assign({}, r, DZ.own);
+
     /* L'argent. */
     if (!itemsOnly) {
       b.line(row('Transactions', String(r.txns || 0), paper));
@@ -507,6 +513,14 @@
       if (recv > 0) {
         b.line(row('dont à recevoir', '- ' + money(recv), paper));
         b.bold(true).line(row('NET ENCAISSÉ', money(Math.round((collected - recv) * 100) / 100), paper)).bold(false);
+      }
+      if (DZ) {
+        b.line(rule(paper));
+        b.align('center').bold(true).line(DZ.title.toUpperCase()).bold(false).align('left');
+        DZ.lines.forEach(function (x) { b.bold(!!x.b).line(row((x.note ? '    ' : x.sub ? '  ' : '') + x.l, x.v == null ? '' : money(x.v), paper)).bold(false); });
+        b.bold(true).line(row(DZ.totalLabel.toUpperCase(), money(DZ.total), paper)).bold(false);
+        b.line(rule(paper));
+        b.bold(true).line(row(DZ.dayLabel.toUpperCase(), money(DZ.day), paper)).bold(false);
       }
       if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
       if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
@@ -595,6 +609,7 @@
     b.align('center').bold(true).line(o.drawerTitle || 'TIROIR-CAISSE').bold(false).align('left');
     b.line(row("Fond d'ouverture", money(cash.opening), paper));
     b.line(row('Espèces encaissées', '+ ' + money(cash.sales), paper));
+    if (DZ && DZ.cash) b.line(row('  ' + DZ.drawerLabel, money(DZ.cash), paper));
     if (cash.tips) b.line(row('Pourboires espèces', '+ ' + money(cash.tips), paper));
     (cash.movements || []).forEach(function (m) {
       b.line(row('  ' + (m.ts ? new Date(m.ts).toTimeString().slice(0, 5) + ' ' : '') + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')) + (m.who ? ' · ' + m.who : ''),

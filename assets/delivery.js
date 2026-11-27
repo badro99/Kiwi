@@ -266,6 +266,180 @@
     return true;
   }
 
+  /* ── Le versement et les espèces d'une plateforme (27 nov. 2026) ──────────
+   * Glovo verse l'argent le 1er et le 15 : une commande payée par la
+   * plateforme n'entre au chiffre d'affaires du tableau de bord qu'au
+   * versement qui suit son jour de caisse. Chaque réglage des jours est daté
+   * (payH) : une vente garde la règle de son jour, changer les jours ne
+   * déplace pas le passé, et une vente d'avant le premier réglage reste au
+   * jour de la vente. « Espèces » : le livreur peut aussi payer en liquide ;
+   * la caisse demande alors comment la commande est réglée, et le liquide
+   * entre au tiroir et au chiffre du jour. */
+  const SP = {
+    pay: { fr: 'Jours de versement', en: 'Payout days', ar: 'أيام التحويل' },
+    payP: { fr: 'Les jours du mois où {n} vous verse l\'argent, par exemple 1, 15. Une commande payée par {n} entre au chiffre d\'affaires au versement suivant. Vide : le jour de la vente.', en: 'The days of the month {n} pays you, for example 1, 15. An order paid through {n} enters revenue on the next payout. Empty: on the day of the sale.', ar: 'أيام الشهر التي تحوّل فيها {n} المال، مثلًا 1، 15. الطلب الذي تدفعه {n} يدخل رقم المعاملات في التحويل التالي. فارغ: يوم البيع.' },
+    cash: { fr: 'Le livreur paie aussi en espèces', en: 'The rider also pays cash', ar: 'السائق يدفع نقدًا أيضًا' },
+    cashP: { fr: 'La caisse demande alors « Payée par {n} » ou « Espèces ». En espèces, l\'argent entre au tiroir et au chiffre du jour.', en: 'The till then asks « Paid by {n} » or « Cash ». In cash, the money goes in the drawer and into the day\'s revenue.', ar: 'يسأل الصندوق عندها « دفعت {n} » أو « نقدًا ». نقدًا، يدخل المال الدرج ورقم اليوم.' },
+    errPay: { fr: 'Un jour de versement va de 1 à 31.', en: 'A payout day is between 1 and 31.', ar: 'يوم التحويل بين 1 و31.' },
+    due: { fr: 'À recevoir', en: 'To receive', ar: 'للاستلام' },
+    on: { fr: 'versement le {d}', en: 'payout on {d}', ar: 'التحويل يوم {d}' },
+  };
+  const payParse = (raw) => {
+    const out = [];
+    String(raw || '').split(/[^0-9]+/).forEach((t) => { const n = +t; if (t && n >= 1 && n <= 31 && out.indexOf(n) < 0) out.push(n); });
+    return out.sort((a, b) => a - b).slice(0, 6);
+  };
+  const payBad = (raw) => String(raw || '').split(/[^0-9]+/).some((t) => t && (+t < 1 || +t > 31));
+  const payHist = (id, d) => { const p = ((d || doc()).platforms || {})[id]; return p && Array.isArray(p.payH) ? p.payH : []; };
+  /* Les jours en vigueur aujourd'hui (le réglage), ou à l'heure d'une vente. */
+  function payDays(id, ts) {
+    let r = null;
+    payHist(id).forEach((x) => { if (x && (ts == null || +x.at <= ts)) r = x; });
+    return r && Array.isArray(r.days) ? r.days.slice() : [];
+  }
+  const dayCut = () => { try { const h = window.KiwiDayReport && window.KiwiDayReport.cutoff && window.KiwiDayReport.cutoff(); return typeof h === 'number' && h >= 0 && h <= 12 ? h : 5; } catch (_) { return 5; } };
+  /* Le premier jour de versement STRICTEMENT après le jour de caisse de la
+   * vente (bascule à 5 h, comme le Z). Un 31 tombe le dernier jour d'un mois
+   * court. L'heure rendue est 1 h après la bascule : dans la journée du
+   * versement, quel que soit l'écran qui la découpe. null : pas de règle. */
+  function payoutOf(id, ts) {
+    ts = +ts;
+    if (!isId(String(id || '')) || id === HOUSE || !(ts > 0)) return null;
+    const days = payDays(id, ts);
+    if (!days.length) return null;
+    const cut = dayCut(), s = new Date(ts - cut * 3600000), y = s.getFullYear(), m = s.getMonth();
+    const inMonth = (mm) => days.map((x) => Math.min(x, new Date(y, mm + 1, 0).getDate()));
+    const here = inMonth(m).filter((x) => x > s.getDate());
+    return (here.length ? new Date(y, m, Math.min.apply(null, here), cut + 1) : new Date(y, m + 1, Math.min.apply(null, inMonth(m + 1)), cut + 1)).getTime();
+  }
+  function cashOn(id) { const p = platformOf(id); return !!(p && p.on && doc().platforms[id].cash); }
+  /* L'heure à laquelle une vente entre au chiffre d'affaires du tableau de
+   * bord : celle du versement pour une commande payée par la plateforme. */
+  function revenueTs(e) {
+    const ts = +(e && e.ts) || 0;
+    if (!e || String(e.method || '').toLowerCase() !== 'platform') return ts;
+    return payoutOf(String(e.channel || '').toLowerCase(), ts) || ts;
+  }
+  const fmtDay = (ms) => { const d = new Date(ms); return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); };
+
+  /* ── Le rapport Z : chaque livraison à part ─────────────────────────────
+   * Le Z compte d'abord ce que le restaurant a vendu lui-même (salle, comptoir),
+   * puis un bloc « Livraisons » par option, puis le total du jour. Les chiffres
+   * sont ceux de la vente, sans commission : le Z dit le chiffre, la page
+   * Marges dit le net. zOf() lit les lignes du rapport (day-report.js) et se
+   * range dans le rapport ; zView() en fait des lignes pour chaque écran. */
+  const FEE_RX = /^(Frais de livraison|Delivery fee|رسوم التوصيل)/i;
+  const zChannel = (ch) => { const id = String(ch || '').toLowerCase(); return id === HOUSE || !!PRESETS[id] || /^pf[a-z]{1,22}$/.test(id); };
+  function zOf(rows) {
+    const by = {}, order = [];
+    (rows || []).forEach((s) => {
+      if (!s || s.voided || s.kind === 'refund' || !(+s.amount > 0) || !zChannel(s.channel)) return;
+      const id = String(s.channel).toLowerCase();
+      if (!by[id]) { by[id] = { id, n: 0, c: 0, m: {}, fee: 0, ts: +s.ts || 0 }; order.push(id); }
+      const B = by[id], c = Math.round(+s.amount * 100);
+      B.n++; B.c += c;
+      const parts = Array.isArray(s.parts) && s.parts.length ? s.parts : [{ method: s.method, amountCents: c }];
+      parts.forEach((p) => { const k = String((p && p.method) || 'cash').toLowerCase(); B.m[k] = (B.m[k] || 0) + Math.round(+(p && p.amountCents) || 0); });
+      (s.lines || []).forEach((l) => { if (l && FEE_RX.test(String(l.name || ''))) B.fee += Math.round(+l.total * 100); });
+    });
+    if (!order.length) return null;
+    const out = { n: 0, total: 0, cash: 0, blocks: [] };
+    order.sort((a, b) => (a === HOUSE) - (b === HOUSE) || by[b].c - by[a].c).forEach((id) => {
+      const B = by[id], methods = {};
+      Object.keys(B.m).forEach((k) => { if (B.m[k]) methods[k] = B.m[k] / 100; });
+      out.n += B.n; out.total += B.c; out.cash += B.m.cash || 0;
+      out.blocks.push({ id, n: B.n, total: B.c / 100, methods, fees: B.fee / 100, payout: payoutOf(id, B.ts) || 0 });
+    });
+    out.total /= 100; out.cash /= 100;
+    return out;
+  }
+  const ZT = {
+    title: { fr: 'Livraisons', en: 'Deliveries', ar: 'التوصيلات' },
+    orders: { fr: '{n} commande', en: '{n} order', ar: '{n} طلب' },
+    ordersN: { fr: '{n} commandes', en: '{n} orders', ar: '{n} طلبات' },
+    plat: { fr: 'dont payé par {n}', en: 'incl. paid by {n}', ar: 'منها دفعت {n}' },
+    payout: { fr: 'versement le {d}', en: 'payout on {d}', ar: 'التحويل يوم {d}' },
+    cash: { fr: 'dont espèces · tiroir', en: 'incl. cash · drawer', ar: 'منها نقدًا · الدرج' },
+    card: { fr: 'dont carte', en: 'incl. card', ar: 'منها بطاقة' },
+    other: { fr: 'dont {n}', en: 'incl. {n}', ar: 'منها {n}' },
+    fees: { fr: 'dont frais de livraison', en: 'incl. delivery fees', ar: 'منها رسوم التوصيل' },
+    total: { fr: 'Total livraisons', en: 'Total deliveries', ar: 'مجموع التوصيلات' },
+    day: { fr: 'Total du jour', en: 'Day total', ar: 'مجموع اليوم' },
+    drawer: { fr: 'dont livraisons espèces', en: 'incl. delivery cash', ar: 'منها نقد التوصيل' },
+  };
+  const zName = (id) => labelOf(id) || (PRESETS[id] ? PRESETS[id].name : id === HOUSE ? house().name : /^pf[a-z]+$/.test(id) ? id.charAt(2).toUpperCase() + id.slice(3) : id);
+  /* lg : 'fr' pour le ticket imprimé (toujours en français), sinon la langue de
+   * l'écran. labels : les noms des moyens de paiement de l'écran appelant. */
+  function zView(r, lg, labels) {
+    const D = r && r.deliveries;
+    if (!D || !Array.isArray(D.blocks) || !D.blocks.length) return null;
+    const L = (o, v) => { let s = o[lg || lang()] != null ? o[lg || lang()] : o.fr; Object.keys(v || {}).forEach((k) => { s = s.replace('{' + k + '}', v[k]); }); return s; };
+    const own = Object.assign({}, r.methods || {}), lines = [];
+    D.blocks.forEach((b) => {
+      const name = zName(b.id);
+      lines.push({ l: name + ' · ' + L(b.n > 1 ? ZT.ordersN : ZT.orders, { n: b.n }), v: b.total, b: true });
+      Object.keys(b.methods || {}).forEach((k) => {
+        const v = +b.methods[k] || 0;
+        if (!v) return;
+        if (own[k] != null) { own[k] = Math.round((+own[k] - v) * 100) / 100; if (Math.abs(own[k]) < 0.005) delete own[k]; }
+        const plat = k === b.id || k === 'platform';
+        lines.push({ l: plat ? L(ZT.plat, { n: name }) : k === 'cash' ? L(ZT.cash) : (k === 'card' || k === 'tap') ? L(ZT.card) : L(ZT.other, { n: (labels && labels[k]) || k }), v, sub: true });
+        /* La date du versement sur sa propre ligne : un rouleau de 58 mm la couperait. */
+        if (plat && b.payout) lines.push({ l: L(ZT.payout, { d: fmtDay(b.payout) }), v: null, sub: true, note: true });
+      });
+      if (b.fees) lines.push({ l: L(ZT.fees), v: b.fees, sub: true });
+    });
+    const refunds = (r.refunds && r.refunds.count) ? (+r.refunds.amount || 0) : 0;
+    return {
+      own: { txns: Math.max(0, (+r.txns || 0) - D.n), gross: Math.round(((+r.gross || 0) - D.total) * 100) / 100, methods: own },
+      lines, total: D.total, cash: D.cash, day: Math.round(((+r.gross || 0) - refunds) * 100) / 100,
+      title: L(ZT.title), totalLabel: L(ZT.total), dayLabel: L(ZT.day), drawerLabel: L(ZT.drawer),
+    };
+  }
+  /* Ce qui attend son versement, par plateforme (l'accueil du tableau de bord). */
+  function pending(list, now) {
+    const by = {};
+    (list || []).forEach((x) => {
+      if (!x || x.voided || !(+x.amount > 0) || String(x.method || '').toLowerCase() !== 'platform') return;
+      const at = revenueTs(x);
+      if (!(at > now) || at === +x.ts) return;
+      const id = String(x.channel || '').toLowerCase();
+      const P = by[id] || (by[id] = { id, cents: 0, at });
+      P.cents += Math.round(+x.amount * 100); P.at = Math.min(P.at, at);
+    });
+    return Object.keys(by).map((k) => by[k]).sort((a, b) => a.at - b.at);
+  }
+  window.KiwiDeliveryPay = { payoutOf, payDays, cashOn, revenueTs, pending };
+  /* Les jours changent : le tableau de bord recompte (dateRange.js écoute). */
+  subs.add(() => { try { window.dispatchEvent(new CustomEvent('kiwi:deliveries')); } catch (_) {} });
+  /* Deux services du même jour (Z rouvert) : leurs livraisons s'additionnent. */
+  function zMerge(a, b) {
+    if (!a || !b) return a || b || null;
+    const by = {}, r2 = (n) => Math.round(n * 100) / 100;
+    a.blocks.concat(b.blocks).forEach((x) => {
+      const B = by[x.id] || (by[x.id] = { id: x.id, n: 0, total: 0, methods: {}, fees: 0, payout: 0 });
+      B.n += +x.n || 0; B.total = r2(B.total + (+x.total || 0)); B.fees = r2(B.fees + (+x.fees || 0)); B.payout = B.payout || +x.payout || 0;
+      Object.keys(x.methods || {}).forEach((k) => { B.methods[k] = r2((B.methods[k] || 0) + (+x.methods[k] || 0)); });
+    });
+    const blocks = Object.keys(by).map((k) => by[k]).sort((x, y) => (x.id === HOUSE) - (y.id === HOUSE) || y.total - x.total);
+    return { n: (+a.n || 0) + (+b.n || 0), total: r2((+a.total || 0) + (+b.total || 0)), cash: r2((+a.cash || 0) + (+b.cash || 0)), blocks };
+  }
+  window.KiwiDeliveryZ = { of: zOf, view: zView, merge: zMerge, isChannel: zChannel };
+  /* Le rapport Z, ses écrans et le tableau de bord ne lisent pas ce module (le
+   * cliquet de couplage) : ils posent la question par un événement, comme
+   * « kiwi-sales-channels », et la réponse revient dans detail.out. Sans ce
+   * module chargé, personne ne répond et tout reste comme avant. */
+  if (typeof document !== 'undefined') document.addEventListener('kiwi-delivery-z', (e) => {
+    const d = e && e.detail;
+    if (!d) return;
+    try {
+      if (d.op === 'of') d.out = zOf(d.rows);
+      else if (d.op === 'merge') d.out = zMerge(d.a, d.b);
+      else if (d.op === 'view') d.out = zView(d.report, d.lang, d.labels);
+      else if (d.op === 'revenue') d.out = (d.list || []).map((x) => { const t = revenueTs(x); return !x || t === +x.ts ? x : Object.assign({}, x, { ts: t }); });
+    } catch (_) {}
+  });
+
   /* ═════════════════════ LE RÉGLAGE (tableau de bord) ═════════════════════ */
   const S = {
     title: { fr: 'Livraison', en: 'Delivery', ar: 'التوصيل' },
@@ -342,6 +516,10 @@
             <div><label class="kf-label">${esc(tr(S.rate))}</label><input class="kf-input" type="number" inputmode="decimal" min="0" max="60" step="0.1" data-kdl-rate value="${c.rate == null ? '' : c.rate}" placeholder="0"></div>
             <div><label class="kf-label">${esc(tr(S.fee))}</label><input class="kf-input" type="number" inputmode="decimal" min="0" step="0.5" data-kdl-fee value="${c.fee == null ? '' : c.fee}" placeholder="0"></div>
           </div>
+          <div class="kdl-grid"><div><label class="kf-label">${esc(tr(SP.pay))}</label><input class="kf-input" type="text" inputmode="numeric" maxlength="20" data-kdl-pay value="${esc(payDays(p.id).join(', '))}" placeholder="1, 15"></div></div>
+          <div class="kf-help">${esc(tr(SP.payP).split('{n}').join(p.name))}</div>
+          <label class="kdl-check"><input type="checkbox" data-kdl-cash${(d.platforms[p.id] || {}).cash ? ' checked' : ''}><span>${esc(tr(SP.cash))}</span></label>
+          <div class="kf-help kdl-gap">${esc(tr(SP.cashP).split('{n}').join(p.name))}</div>
           <label class="kf-label">${esc(tr(S.fillLbl))}</label>
           <div class="kdl-fill"><span class="kdl-pct"><input class="kf-input" type="number" inputmode="decimal" step="1" data-kdl-pct placeholder="25" aria-label="${esc(tr(S.fillLbl))}"><span class="kdl-pct-u">%</span></span><button type="button" class="kb ghost" data-kdl-fill>${esc(tr(S.fill))}</button></div>
           <div class="kf-help">${esc(tr(S.fillP))}</div>
@@ -556,14 +734,20 @@
         const on = isOn(row.querySelector('[data-kdl-on]'));
         const prev = next.platforms[pid] || {};
         const entry = PRESETS[pid] ? { on } : { on, name: (pending[pid] || prev).name, color: (pending[pid] || prev).color };
-        if (prev.on !== entry.on || !next.platforms[pid] || pending[pid]) next.platforms[pid] = Object.assign({}, entry, { at: now });
+        /* Les jours de versement sont datés : une vente garde la règle de son jour. */
+        const payIn = row.querySelector('[data-kdl-pay]'), days = payParse(payIn && payIn.value), cash = !!(row.querySelector('[data-kdl-cash]') || {}).checked;
+        if (payIn && payBad(payIn.value)) { bad = 'pay'; payIn.setAttribute('aria-invalid', 'true'); }
+        const hist = Array.isArray(prev.payH) ? prev.payH : [], was = hist.length ? hist[hist.length - 1].days || [] : [];
+        entry.payH = was.join(',') === days.join(',') ? hist : hist.concat([{ at: now, days }]).slice(-12);
+        entry.cash = cash;
+        if (prev.on !== entry.on || !next.platforms[pid] || pending[pid] || entry.payH !== hist || !!prev.cash !== cash) next.platforms[pid] = Object.assign({}, entry, { at: now });
         const rate = num(row.querySelector('[data-kdl-rate]').value);
         const fee = num(row.querySelector('[data-kdl-fee]').value);
         if (rate != null && rate > 60) { bad = true; row.querySelector('[data-kdl-rate]').setAttribute('aria-invalid', 'true'); }
         com[pid] = { rate, fee };
       });
       removed.forEach((pid) => { if (next.platforms[pid]) next.platforms[pid] = { deleted: true, on: false, at: now }; com[pid] = { rate: null, fee: null }; });
-      if (bad) { err.textContent = tr(S.errRate); err.hidden = false; return false; }
+      if (bad) { err.textContent = tr(bad === 'pay' ? SP.errPay : S.errRate); err.hidden = false; return false; }
       const hOn = isOn(q('[data-kdl-house]')), hFee = num(q('[data-kdl-housefee]').value);
       if (!!next.house.on !== hOn || num(next.house.fee) !== hFee) next.house = { on: hOn, fee: hFee, at: now };
       const ch = {};
@@ -637,6 +821,8 @@
       + '@media (max-width:640px){.kdl-row{grid-template-columns:repeat(var(--kdl-n,1),minmax(0,1fr));row-gap:6px;padding-block:10px}.kdl-nm,.kdl-base{grid-column:1/-1}.kdl-base{text-align:start;font-size:12px}.kdl-base::before{content:attr(data-l) " "}.kdl-row-h{display:none}.kdl-money-p{display:inline-flex}}'
       + '.kdl-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.kdl-hint{font-size:11.5px;font-weight:400;color:var(--n-500)}.kdl-prices label{display:grid;gap:4px;font-size:12px}.kdl-prices .kdl-lbl{display:flex;align-items:center;gap:6px}'
       + '.kdl-split{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:13px}.kdl-split-i{display:inline-flex;align-items:center;gap:6px}.kdl-split-i b{font-weight:600}.kdl-split-i span{font-variant-numeric:tabular-nums;opacity:.8}'
+      + '.kdl-check{display:flex;align-items:center;gap:10px;min-height:44px;margin-top:6px;font-size:14px;color:var(--ink);cursor:pointer}.kdl-check input{width:18px;height:18px;margin:0;accent-color:var(--atlas)}.kdl-gap{margin-bottom:6px}'
+      + '.kdl-due{display:flex;flex-basis:100%;flex-wrap:wrap;gap:6px 16px;margin-top:6px;font-size:12.5px;color:var(--n-600)}.kdl-due b{font-weight:600;color:var(--ink)}'
       + '@media (max-width:640px){.kdl-grid{grid-template-columns:1fr}.kdl-pct{flex:1}}';
     document.head.appendChild(s);
   }
@@ -781,18 +967,22 @@
     const host = document.querySelector('.vexel-goals-card .vexel-rings');
     const old = document.querySelector('.vexel-goals-card .kdl-split');
     if (!host) return;
-    let rows = [];
+    let rows = [], due = [];
     try {
       const V = window.KiwiVenue, S = window.KiwiSales, R = window.KiwiDateRange;
       const b = R && R.bounds ? R.bounds() : null;
       const from = b ? b[0] : -Infinity, to = b && b[1] !== Infinity ? b[1] : Date.now() + 1;
-      rows = (S && S.list ? S.list(V && V.getVenue ? V.getVenue() : undefined) || [] : [])
-        .filter((x) => x && !x.voided && +x.amount > 0 && +x.ts >= from && +x.ts < to && isChannel(x.channel));
+      const all = S && S.list ? S.list(V && V.getVenue ? V.getVenue() : undefined) || [] : [];
+      /* Une commande payée par la plateforme compte au jour de son versement. */
+      rows = all.filter((x) => { const t = revenueTs(x); return x && !x.voided && +x.amount > 0 && t >= from && t < to && isChannel(x.channel); });
+      due = pending(all, Date.now());
     } catch (_) { rows = []; }
     const by = {};
     rows.forEach((x) => { const k = String(x.channel).toLowerCase(); by[k] = (by[k] || 0) + Math.round(+x.amount * 100); });
     const ids = Object.keys(by).sort((a, b) => by[b] - by[a]);
-    const html = (!ids.length && !enabled()) ? '' : ids.map((k) => `<span class="kdl-split-i">${logoHTML(k, 18)}<b>${esc(labelOf(k) || k)}</b><span>${esc(Math.round(by[k] / 100).toLocaleString('fr-FR'))}\u00a0MAD</span></span>`).join('');
+    const mad = (c) => esc(Math.round(c / 100).toLocaleString('fr-FR')) + '\u00a0MAD';
+    const dueHTML = due.length ? `<span class="kdl-due">${due.map((x) => `<span>${esc(tr(SP.due))} · <b>${esc(labelOf(x.id) || x.id)}</b> ${mad(x.cents)} · ${esc(tr(SP.on).replace('{d}', fmtDay(x.at)))}</span>`).join('')}</span>` : '';
+    const html = (!ids.length && !due.length && !enabled()) ? '' : ids.map((k) => `<span class="kdl-split-i">${logoHTML(k, 18)}<b>${esc(labelOf(k) || k)}</b><span>${mad(by[k])}</span></span>`).join('') + dueHTML;
     if (!html) { if (old) old.remove(); return; }
     if (old && old.getAttribute('data-sig') === html) return;
     styleSettings();

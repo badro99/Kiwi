@@ -34,7 +34,7 @@
          de recherche à un commerçant. On nomme donc explicitement le brut et
          le net ; les modes de paiement affichent leur total net. */
       const refundAmt = (r.refunds && r.refunds.count) ? (+r.refunds.amount || 0) : 0;
-      const collected = money(r.gross - refundAmt);
+      const DZ = r.deliveries ? (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'view', report: r, lang: 'fr', labels: M }) : null, RM = DZ ? DZ.own.methods : (r.methods || {}), collected = money((DZ ? DZ.own.gross : r.gross) - refundAmt);   /* les livraisons à part (delivery.js) */
 
       let html = '<div class="rp-kpis">'
         + kpi('Net après remboursements', fmtMAD(r.net), '', true)
@@ -43,10 +43,10 @@
         + kpi('Ventes avant remboursements', fmtMAD(r.gross))
         + '</div>';
 
-      const meth = Object.keys(r.methods || {}).filter(k => r.methods[k])
-        .sort((a, b) => r.methods[b] - r.methods[a])
-        .map(k => row(M[k] || k, fmtMAD(r.methods[k]))).join('');
-      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement · net</span><em>${rpEsc(fmtMAD(collected))}</em></div>${meth}</div>`;
+      const meth = Object.keys(RM).filter(k => RM[k])
+        .sort((a, b) => RM[b] - RM[a])
+        .map(k => row(M[k] || k, fmtMAD(RM[k]))).join('');
+      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement · net</span><em>${rpEsc(fmtMAD(collected))}</em></div>${meth}</div>`; if (DZ) html += `<div class="rp-sec"><div class="rp-h"><span>${rpEsc(DZ.title)}</span><em>${rpEsc(fmtMAD(DZ.total))}</em></div>${DZ.lines.map(x => row(x.l, x.v == null ? '' : fmtMAD(x.v))).join('')}${row(DZ.dayLabel, fmtMAD(DZ.day))}</div>`;
 
       /* Le rythme du service. Utile au comptoir pour une raison très concrète :
          savoir si le coup de feu est passé avant d'envoyer quelqu'un en pause. */

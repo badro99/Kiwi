@@ -113,9 +113,9 @@
   <script src="assets/caisse-motion.js?v=8" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=28" defer></script>
+  <script src="assets/escpos.js?v=29" defer></script>
   <script src="assets/printer/transports.js?v=19" defer></script>
-  <script src="assets/printer-bridge.js?v=107" defer></script>
+  <script src="assets/printer-bridge.js?v=108" defer></script>
   <script src="assets/caisse-hardware.js?v=16" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -222,7 +222,7 @@
         js("assets/kit/till-frame.js?v=16") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=6") +
-        js("assets/kit/till-z.js?v=2") +
+        js("assets/kit/till-z.js?v=3") +
         js("assets/kit/kds.js?v=10") +
         js("assets/kit/kds-board.js?v=2")
       );
@@ -369,7 +369,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=62" defer></script> <script src="assets/z-reconciliation.js?v=34" defer></script>
+  <script src="assets/day-report.js?v=63" defer></script> <script src="assets/z-reconciliation.js?v=34" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=7" defer></script>
@@ -2004,7 +2004,7 @@
 
   <!-- Caisse declarations: parser-ordered classic scripts, before shared state. -->
   <link rel="preload" as="script" href="assets/caisse-strings.js?v=5" data-caisse-script><link rel="preload" as="script" href="assets/wallet-till.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/caisse/dish-words.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse/table-settlement.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/staff-perms-till.js?v=14" data-caisse-script><link rel="preload" as="script" href="assets/owner-approval.js?v=1" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=53" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse-accounting.js?v=54" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-floor.js?v=29" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse-kitchen.js?v=46" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/catalogue.js?v=40" data-caisse-script>
@@ -2022,7 +2022,7 @@
   <link href="assets/caisse/inventory.js?v=10" data-caisse-lazy="inventory">
   <link rel="preload" as="script" href="assets/caisse/offline.js?v=12" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/receipts.js?v=10" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/closing.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/caisse/delivery.js?v=17" data-caisse-script><link rel="preload" as="script" href="assets/caisse/counter-flow.js?v=5" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-recovery.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-refund.js?v=2" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/closing.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/caisse/delivery.js?v=18" data-caisse-script><link rel="preload" as="script" href="assets/caisse/counter-flow.js?v=5" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-recovery.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-refund.js?v=2" data-caisse-script>
   <script src="assets/caisse/workflows-loader.js?v=3"></script>
   <script src="assets/caisse-app.js?v=63"></script>
 </body>

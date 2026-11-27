@@ -602,7 +602,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
         return { method: String((p && (p.method || p.m)) || '').toLowerCase(),
           amountCents: p && p.amountCents != null ? Math.round(Number(p.amountCents)) : Math.round(num(p && p.amount) * 100) };
       }).filter(function (p) { return p.method && p.amountCents > 0; })) : null,
-      label: String(s.label || ''),
+      label: String(s.label || ''), channel: String(s.channel || '').toLowerCase().slice(0, 24),   /* le canal : une livraison a son bloc au Z (delivery.js) */
       ref: String(s.ref || ''),
       kind: String(s.kind || ''),
       tip: num(s.tip), tipMethod: String(s.tipMethod || s.tip_method || '').toLowerCase(),
@@ -933,7 +933,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       builtAt: nowMs(),
       source: String(opts.source || 'caisse'),
       vat: window.KiwiDayReportVat ? window.KiwiDayReportVat.compute(rows) : null,
-      duplicates: dupN ? { count: dupN, amount: round2(dupAmt) } : null,
+      duplicates: dupN ? { count: dupN, amount: round2(dupAmt) } : null, deliveries: (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'of', rows: rows }),   /* chaque livraison à part (delivery.js) */
     }, rows, opts, !!(window.KiwiVenue && window.KiwiVenue.revenueAtSale && window.KiwiVenue.revenueAtSale())); /* à la vente (z-reconciliation.js) : CA comme l'ancienne caisse, détaillé */
   }
 
@@ -1239,7 +1239,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
       discounts: { count: num(r.discounts && r.discounts.count), amount: round2(r.discounts && r.discounts.amount) },
       acomptes: r.acomptes ? { received: round2(r.acomptes.received), outstanding: round2(r.acomptes.outstanding) } : null,
       cancels: num(r.cancels),
-      duplicates: r.duplicates ? { count: num(r.duplicates.count), amount: round2(r.duplicates.amount) } : null,
+      duplicates: r.duplicates ? { count: num(r.duplicates.count), amount: round2(r.duplicates.amount) } : null, deliveries: r.deliveries || null,
       methods: Object.assign({}, r.methods || {}),
       categories: JSON.parse(JSON.stringify(r.categories || [])),
       hours: JSON.parse(JSON.stringify(r.hours || [])),
@@ -1265,7 +1265,7 @@ if (typeof module === 'object' && typeof require === 'function') require('./kit/
     report.duplicates = dN ? { count: dN, amount: round2(num(carried.duplicates && carried.duplicates.amount) + num(own.duplicates && own.duplicates.amount)) } : null;
     var methods = Object.assign({}, carried.methods);
     Object.keys(own.methods).forEach(function (m) { methods[m] = round2(num(methods[m]) + num(own.methods[m])); });
-    report.methods = methods;
+    report.methods = methods; if (carried.deliveries || own.deliveries) report.deliveries = (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'merge', a: carried.deliveries, b: own.deliveries }) || own.deliveries || null;   /* les livraisons du service précédent aussi */
     /* `terminal` est le Z de la JOURNÉE ; après ajout d'un service précédent,
        le montant Kiwi doit donc être recalculé sur la somme consolidée. */
     refreshCardReconciliation(report);

@@ -67,11 +67,19 @@
     var date = f && r.day ? f.date(r.day) : String(r.day || '');
     html += '<p class="k-foot k-ink2 k-z__day">' + esc(t('z.day', { date: date, start: f ? f.time(pad(cut) + ':00') : pad(cut) + ':00', end: f ? f.time(pad((cut + 23) % 24) + ':59') : pad((cut + 23) % 24) + ':59' })) + '</p>';
 
-    var ms = methodRows(r.methods);
+    /* Les livraisons à part (assets/delivery.js) : les moyens de paiement du
+       restaurant, puis un bloc par livraison, puis le total du jour. */
+    var DZ = r.deliveries ? (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'view', report: r, lang: String(document.documentElement.lang || '').slice(0, 2) }) : null;
+    var ms = methodRows(DZ ? DZ.own.methods : r.methods);
     if (ms.length) {
       var total = ms.reduce(function (s, m) { return s + m.cents; }, 0);
       html += section(t('z.by_method'), ms.map(function (m) { return row(m.label, money(m.cents / 100)); }).join('') +
         '<li class="k-z__r k-z__t"><span>' + esc(t('bill.total')) + '</span><span class="k-num">' + esc(money(total / 100)) + '</span></li>');
+    }
+    if (DZ) {
+      html += section(DZ.title, DZ.lines.map(function (x) { return row(x.l, x.v == null ? '' : money(x.v), x.sub ? 'k-z__sub' : ''); }).join('') +
+        '<li class="k-z__r k-z__t"><span>' + esc(DZ.totalLabel) + '</span><span class="k-num">' + esc(money(DZ.total)) + '</span></li>' +
+        '<li class="k-z__r k-z__t"><span>' + esc(DZ.dayLabel) + '</span><span class="k-num">' + esc(money(DZ.day)) + '</span></li>');
     }
     var ref = r.refunds || {};
     if (ref.count) html += section(t('z.refunds'), row(t('bill.total'), counted(ref.count, ref.amount)));
@@ -89,6 +97,7 @@
       var sign = function (n, s) { return s + money(Math.abs(Number(n) || 0)); };
       var lines = row(t('count.opening_float'), money(c.opening)) +
         row(t('count.cash_sales'), sign(c.sales, '+ ')) +
+        (DZ && DZ.cash ? row(DZ.drawerLabel, money(DZ.cash), 'k-z__sub') : '') +
         (cashTips ? row(t('count.cash_tips'), sign(c.tips, '+ ')) : '') +
         (c.movesIn ? row(t('count.cash_in'), sign(c.movesIn, '+ ')) : '') +
         (c.movesOut ? row(t('count.cash_out'), sign(c.movesOut, '− ')) : '') +

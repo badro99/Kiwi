@@ -224,8 +224,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "53",
-    "sha": "c2da426cd88615de"
+    "v": "54",
+    "sha": "9ea88f29e549f012"
   },
   "assets/caisse-app.js": {
     "v": "63",
@@ -344,8 +344,8 @@
     "sha": "211160cd5f8c3dea"
   },
   "assets/caisse/delivery.js": {
-    "v": "17",
-    "sha": "3a3bfc4f305b25e9"
+    "v": "18",
+    "sha": "4093cc5c60107330"
   },
   "assets/caisse/discounts.js": {
     "v": "11",
@@ -548,8 +548,8 @@
     "sha": "37e7d396bdf155a8"
   },
   "assets/dateRange.js": {
-    "v": "160",
-    "sha": "f578725ba2588f51"
+    "v": "161",
+    "sha": "c3d1407020182335"
   },
   "assets/daterange/activity.js": {
     "v": "9",
@@ -592,8 +592,8 @@
     "sha": "c280918a4865ae88"
   },
   "assets/day-report-dash.js": {
-    "v": "54",
-    "sha": "e74a5ab58d41809b"
+    "v": "55",
+    "sha": "69461e8c6664c8e7"
   },
   "assets/day-report-export.js": {
     "v": "31",
@@ -604,8 +604,8 @@
     "sha": "8e57c57850d5aadf"
   },
   "assets/day-report.js": {
-    "v": "62",
-    "sha": "4bc03c32ef7f2284"
+    "v": "63",
+    "sha": "520fea7aa6bd5713"
   },
   "assets/delivery-collect.js": {
     "v": "4",
@@ -616,8 +616,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "14",
-    "sha": "6a6e55c7045bc1e2"
+    "v": "16",
+    "sha": "b4c1400c159cc4c3"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -700,8 +700,8 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "28",
-    "sha": "7b543bafd27978f7"
+    "v": "29",
+    "sha": "86197b2123437105"
   },
   "assets/exchange-queue.js": {
     "v": "1",
@@ -1224,8 +1224,8 @@
     "sha": "08da4c725480ca9d"
   },
   "assets/kit/till-z.js": {
-    "v": "2",
-    "sha": "7b0a46f98e56c876"
+    "v": "3",
+    "sha": "3338c6a559c9d86c"
   },
   "assets/kit/till.js": {
     "v": "45",
@@ -1704,8 +1704,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "380",
-    "sha": "7e5496f482b9801b"
+    "v": "381",
+    "sha": "8bbf1d3fe900251a"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2316,8 +2316,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "107",
-    "sha": "1abca70c9dfcc331"
+    "v": "108",
+    "sha": "e848ec72f48be532"
   },
   "assets/printer-health.js": {
     "v": "3",

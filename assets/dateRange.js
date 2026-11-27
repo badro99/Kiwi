@@ -1558,6 +1558,8 @@
   }
   function realSalesList() {
     let list; try { list = (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+    /* Une commande payée par Glovo (ou une autre plateforme aux jours de versement réglés) entre au chiffre le jour du versement (delivery.js). */
+    list = (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'revenue', list }) || list;
     /* Chiffre d'affaires « à la vente » (sales-history.js) : chaque lecteur voit le ticket, jamais un règlement de compte client. */
     const M = window.KiwiSalesMath;
     return M && M.atSale && M.atSale() ? list.filter((e) => !M.isSettlement(e)).map((e) => ({ ...e, amount: M.saleValue(e), received: Math.max(0, +e.amount || 0) })) : list;
@@ -2698,7 +2700,7 @@
           renderProducts();
         });
         /* Une livraison listée ou reçue change les créances, sans vente nouvelle. */
-        window.addEventListener('kiwi:deliveries', () => { renderKpiBand(); renderHero(); });
+        window.addEventListener('kiwi:deliveries', () => { renderKpiBand(); renderHero(); renderGoal(); renderRevChart(); });
         return;
       }
       setTimeout(subSales, 30);

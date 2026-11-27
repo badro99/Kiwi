@@ -596,6 +596,9 @@
        sur une imprimante pilotée par le système sortait un Z complet · net et
        tiroir compris · au lieu du petit ticket demandé. */
     var itemsOnly = !!o.itemsOnly;
+    /* Les livraisons à part, comme KiwiEscPos.dayReport (assets/delivery.js). */
+    var DZ = !itemsOnly && r.deliveries ? (function (d) { try { document.dispatchEvent(new CustomEvent('kiwi-delivery-z', { detail: d })); } catch (_) {} return d.out || null; })({ op: 'view', report: r, lang: 'fr', labels: o.methodLabels }) : null;
+    if (DZ) r = Object.assign({}, r, DZ.own);
 
     if (!itemsOnly) {
     R('Transactions', String(r.txns || 0));
@@ -625,6 +628,14 @@
     if (recv > 0) {
       R('dont à recevoir', '- ' + money(recv));
       R('NET ENCAISSÉ', money(Math.round((collected - recv) * 100) / 100), 'kpr-b');
+    }
+    if (DZ) {
+      rule();
+      out.push('<div class="kpr-c kpr-b">' + esc(DZ.title.toUpperCase()) + '</div>');
+      DZ.lines.forEach(function (x) { R((x.note ? '    ' : x.sub ? '  ' : '') + x.l, x.v == null ? '' : money(x.v), x.b ? 'kpr-b' : ''); });
+      R(DZ.totalLabel.toUpperCase(), money(DZ.total), 'kpr-b');
+      rule();
+      R(DZ.dayLabel.toUpperCase(), money(DZ.day), 'kpr-b');
     }
     if (r.basket) R('Ticket moyen', money(r.basket));
     if (r.tips) R('Pourboires', money(r.tips));
@@ -682,6 +693,7 @@
     out.push('<div class="kpr-c kpr-b">' + esc(o.drawerTitle || 'TIROIR-CAISSE') + '</div>');
     R("Fond d'ouverture", money(cash.opening));
     R('Espèces encaissées', '+ ' + money(cash.sales));
+    if (DZ && DZ.cash) R('  ' + DZ.drawerLabel, money(DZ.cash));
     if (cash.tips) R('Pourboires espèces', '+ ' + money(cash.tips));
     (cash.movements || []).forEach(function (m) {
       R('  ' + (m.ts ? new Date(m.ts).toTimeString().slice(0, 5) + ' ' : '') + (m.reason || (m.type === 'in' ? 'Entrée' : 'Sortie')) + (m.who ? ' · ' + m.who : ''),
