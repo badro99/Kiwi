@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiImageProof, KiwiLens.
  */
-import { CATALOG, ITEMS, root } from './custody.js?v=54';
+import { CATALOG, ITEMS, root } from './custody.js?v=55';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, COLORS, CUST, CUSTOMERS, MAX_QTY, NOTES, ORDERS, STATUS, availServices, b2bPercentFor, b2bPercentLabel, catalogLabel, clampQty, closeVeil, dataText, esc, fmtDT, fmtMAD, freshTicket, garmentIcon, icons, isLiveOrder, lineTotal, minPrice, mirrorClient, normalizePhone, openVeil, orderStatus, orderTotals, pad2, persistPressing, phoneDigits, pressingOps, priceTable, publicOrderNo, readyOptions, state, storeInstant, storeWall, svcCodes, svcShorts, toast, validReady, validateTicket } = owner.depositContext();
@@ -388,10 +388,10 @@ function openClient(options = {}) {
       if (actor) c.b2bBy = { ...actor, at: Date.now() };
     };
     /* Granting or changing a discount needs a manager; removing one does not. */
-    const refuseRange = async () => { const m = await import('./manager-approval.js?v=2'); toast(m.tr('Remise entre 0 et 50 %')); };
+    const refuseRange = async () => { const m = await import('./manager-approval.js?v=3'); toast(m.tr('Remise entre 0 et 50 %')); };
     const grantsDiscount = (c, v) => !!v.b2b && (!c || !c.b2b || b2bPercentFor(c) !== b2bPercentFor({ b2bPercent: v.b2bPercent }));
     const approveDiscount = async (focus) => {
-      const m = await import('./manager-approval.js?v=2');
+      const m = await import('./manager-approval.js?v=3');
       const r = await m.approveAtTill({ focus, sub: 'Une remise entreprise demande le code d’un responsable.' });
       if (!r.ok) toast(m.tr(m.APPROVAL_MESSAGES[r.reason] || m.APPROVAL_MESSAGES.refused));
       return r.ok ? r.actor : null;
@@ -474,7 +474,7 @@ function openClient(options = {}) {
         applyB2b(c, v, actor);
         persistPressing();
         pressingOps?.save?.('customer-updated');
-        const m = await import('./manager-approval.js?v=2');
+        const m = await import('./manager-approval.js?v=3');
         toast(m.tr(c.b2b ? `Compte entreprise enregistré pour ${c.name}` : `Compte entreprise retiré pour ${c.name}`));
         mode = 'search'; render(q); icons();
       };

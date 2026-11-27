@@ -14,7 +14,8 @@
  * appairée de CE magasin. Fermer ou rouvrir depuis la caisse demande le code
  * d'un responsable, vérifié par le serveur (verifyStaffPin). Le commerçant vient
  * de la session ou de l'appairage, jamais du corps seul. */
-import { entitledMerchant, isTillFor, json, verifyStaffPin } from '../../../auth/_lib.js';
+import { entitledMerchant, isTillFor, json } from '../../../auth/_lib.js';
+import { verifyStaffCredential } from '../../../auth/_till-shift.js';
 import { adjustGlovoPrep, closeGlovoStore, deliveredGlovoOrder, openGlovoOrders, readGlovoClosing, reopenGlovoStore, storesOf } from './_glovo-ops.js';
 
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -61,7 +62,7 @@ export async function onRequestPost(context) {
   else if (action === 'delivered') r = await deliveredGlovoOrder(env, w.merchant, b.orderId);
   else if (action === 'close' || action === 'reopen') {
     if (w.till) {
-      const v = await verifyStaffPin(request, env, w.merchant, String(b.pin || ''), { requireTill: true });
+      const v = await verifyStaffCredential(request, env, w.merchant, String(b.pin || ''), { requireTill: true });
       if (!v.ok) return v.response || json({ error: v.error || 'pin-invalid' }, v.status || 403);
       if (!MANAGER.test(roleKey(v.staff && v.staff.role))) return json({ error: 'manager-required' }, 403);
     }

@@ -80,6 +80,7 @@
     function openAuthorization(actionLabel, onApprove, access, authContext, opts) {
       const act = nextAuthAct && Date.now() - nextAuthAct.at < 1000 ? nextAuthAct.act : null;
       nextAuthAct = null;
+      const asked = { onApprove, authContext, opts };
       /* Droits par personne (assets/staff-perms-till.js) : l'acte dit quel droit il
          coûte. Un code sans ce droit est refusé sur le pavé ; la personne en poste
          qui a reçu le droit (tiroir, espèces, clôture) n'a pas à appeler un
@@ -87,6 +88,16 @@
       const ruled = window.KiwiCaissePairing?.permsForAct?.(act, access, onApprove, authContext, opts);
       if (ruled && ruled.done) return;
       if (ruled) { authContext = ruled.authContext; opts = ruled.opts; if (ruled.onApprove) onApprove = ruled.onApprove; }
+      /* Un gérant ou un propriétaire tient la caisse : sa preuve de poste remplace
+         le code (assets/staff-perms-till.js › shiftApprove). Le serveur dit non,
+         ou le réseau manque : le pavé s'ouvre comme avant. */
+      if (!(asked.opts && asked.opts.noShift) && window.KiwiCaissePairing?.shiftApprove?.(access, authContext, opts, (who) => {
+        if (access !== 'till') authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: actionLabel, via: 'shift' });
+        if (typeof onApprove === 'function') onApprove(who);
+      }, () => {
+        nextAuthAct = act ? { act, at: Date.now() } : null;
+        openAuthorization(actionLabel, asked.onApprove, access, asked.authContext, Object.assign({}, asked.opts, { noShift: true }));
+      })) return;
       /* kiwiSkin2027:till · the approval on the kit's pad (assets/kit/till-pin.js).
          Every approval, at both levels, joins the authorization log with the
          identity, the verdict and, for a verdict read from a row, provenAt. */

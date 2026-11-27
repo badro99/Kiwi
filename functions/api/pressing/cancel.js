@@ -11,8 +11,9 @@
 //     s'enregistre qu'ici) et la caisse gardait la commande vivante.
 import {
   activeAccountSession, employeeRoleOpensDashboard, entitledMerchant, isOperator, json,
-  operatorActor, slugMerchant, verifyStaffPin,
+  operatorActor, slugMerchant,
 } from '../../auth/_lib.js';
+import { verifyStaffCredential, isShiftProof } from '../../auth/_till-shift.js';
 import { poke } from '../_live.js';
 
 const MAX_DOCUMENT = 1500000;
@@ -49,8 +50,8 @@ export async function onRequestPost(context) {
     } catch (_) { staff = null; }
     if (!staff) return json({ error: 'bad-request' }, 400);
   } else {
-    if (!/^\d{4}$/.test(pin)) return json({ error: 'bad-request' }, 400);
-    const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+    if (!/^\d{4}$/.test(pin) && !isShiftProof(pin)) return json({ error: 'bad-request' }, 400);
+    const verified = await verifyStaffCredential(request, env, merchant, pin, { requireTill: true });
     if (!verified.ok) {
       if (verified.response) return verified.response;
       return json({ error: verified.error || 'unauthorized' }, verified.status || 403);

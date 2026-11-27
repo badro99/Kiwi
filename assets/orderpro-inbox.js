@@ -1184,17 +1184,19 @@
     if (e === 'already-picked-up') return T.taken;
     return T.glovo;
   }
-  function glvPost(key, body) {
+  function glvPost(key, body, onRefused) {
     var m = merchant();
     if (!m) return;
     var noteKey = (key.indexOf('close:') === 0 || key.indexOf('reopen:') === 0 ? 's:' : 'o:') + key.slice(key.indexOf(':') + 1);
     GLV.busy[key] = true; glvRepaint();
     body.merchant = m;
     fetch('/api/channel/glovo/till', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j && j.ok, j: j }; }); })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j && j.ok, j: j, status: r.status }; }); })
       .catch(function () { return { ok: false, j: {} }; })
       .then(function (out) {
         delete GLV.busy[key];
+        /* La preuve du responsable en poste n'a pas suffi : le champ du code, comme avant. */
+        if (!out.ok && typeof onRefused === 'function' && (out.status === 401 || out.status === 403)) { glvRepaint(); onRefused(); return; }
         glvSay(noteKey, out.ok ? glvT().sent : glvError(out.j), !out.ok);
         glvLoad();
       });
@@ -1202,7 +1204,12 @@
   }
   /* Le code d'un responsable, pour fermer ou rouvrir. Il part au serveur dans
    * la requête et nulle part ailleurs : champ masqué, vidé à la fermeture. */
-  function glvAskCode(go) {
+  function glvAskCode(go, noShift) {
+    /* Un gérant ou un propriétaire tient la caisse : sa preuve de poste remplace
+       le code (assets/staff-perms-till.js) ; refusée, le champ du code s'ouvre. */
+    var shift = { code: '' };
+    if (!noShift) try { document.dispatchEvent(new CustomEvent('kiwi-shift-code', { detail: shift })); } catch (_) {}
+    if (shift.code) { go(shift.code, function () { glvAskCode(go, true); }); return; }
     var T = glvT(), old = document.getElementById('kgl-code');
     if (old) old.remove();
     var wrap = document.createElement('div');
@@ -1235,8 +1242,8 @@
     if (GLV.busy[kind + ':' + key]) return;
     if (kind === 'prep') glvPost('prep:' + key, { action: 'prep', orderId: key, minutes: min });
     else if (kind === 'delivered') glvPost('delivered:' + key, { action: 'delivered', orderId: key });
-    else if (kind === 'close') glvAskCode(function (pin) { glvPost('close:' + key, { action: 'close', storeId: key, minutes: min, pin: pin }); });
-    else if (kind === 'reopen') glvAskCode(function (pin) { glvPost('reopen:' + key, { action: 'reopen', storeId: key, pin: pin }); });
+    else if (kind === 'close') glvAskCode(function (pin, refused) { glvPost('close:' + key, { action: 'close', storeId: key, minutes: min, pin: pin }, refused); });
+    else if (kind === 'reopen') glvAskCode(function (pin, refused) { glvPost('reopen:' + key, { action: 'reopen', storeId: key, pin: pin }, refused); });
   });
   function glvWake() { if (!document.hidden && GLV.merchant) glvLoad(); }
   document.addEventListener('visibilitychange', glvWake);

@@ -6,7 +6,8 @@
  *             le code est comparé par verifyStaffPin (functions/auth/_lib.js), jamais ici,
  *             et seul un rôle qui ouvre le tableau de bord accorde. L'accord est journalisé.
  *   'promise' { id, amountCents, dueDate, note }  « paiera le … », une ligne d'échéancier. */
-import { entitledMerchant, verifyStaffPin, employeeRoleOpensDashboard, json } from '../../auth/_lib.js';
+import { entitledMerchant, employeeRoleOpensDashboard, json } from '../../auth/_lib.js';
+import { verifyStaffCredential } from '../../auth/_till-shift.js';
 import { addPromise, limitCheck, logEvent, tillLimits, validTarget } from '../_credit-accounts.js';
 
 const fail = () => json({ error: 'credit-unavailable' }, 503);
@@ -38,7 +39,7 @@ export async function onRequestPost({ request, env }) {
       if (add == null || add < 1) return json({ error: 'bad-amount' }, 400);
       const decision = await limitCheck(env, merchant, source, key, add, amount(body.localOwedCents) || 0);
       if (action === 'check' || !decision.over) return json({ ok: true, ...decision, approved: false }, 200, noStore);
-      const verified = await verifyStaffPin(request, env, merchant, String(body.pin || ''), { requireTill: true });
+      const verified = await verifyStaffCredential(request, env, merchant, String(body.pin || ''), { requireTill: true });
       if (!verified.ok) return verified.response || json({ error: verified.error || 'bad-pin' }, verified.status || 401);
       if (!employeeRoleOpensDashboard(verified.staff && verified.staff.role)) return json({ error: 'not-manager' }, 403);
       const name = String(verified.staff.name || '').slice(0, 100);

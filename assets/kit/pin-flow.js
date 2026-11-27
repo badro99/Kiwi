@@ -182,7 +182,7 @@
       var who = assign({ verdict: 'online' }, reply.body.staff || reply.body.who || {});
       if (reply.body.approval) who.approval = String(reply.body.approval);
       if (reply.body.actorProof) who.actorProof = String(reply.body.actorProof);
-      if (reply.body.sellerProof) who.sellerProof = String(reply.body.sellerProof);   /* qui vend (commissions vendeurs) */
+      if (reply.body.sellerProof) who.sellerProof = String(reply.body.sellerProof);   /* qui vend (commissions vendeurs) */ if (reply.body.shiftProof) who.shiftProof = String(reply.body.shiftProof);   /* le responsable en poste (functions/auth/_till-shift.js) */
       if (reply.body.permission && typeof reply.body.permission === 'object') who.permission = reply.body.permission;
       if (reply.body.actProof) who.actProof = String(reply.body.actProof);   /* la preuve de CE geste (droits de l'équipe) */
       if (use === 'manager') return managerRole(who, ctx) || { success: who };

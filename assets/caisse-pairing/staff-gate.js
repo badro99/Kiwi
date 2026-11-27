@@ -45,7 +45,7 @@
     if (p) {
       var name = String(p.name || '').trim() || 'Caissier';
       s = { id: String(p.id || '').slice(0, 80), name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
-      if (p.offline) s.offline = true; if (typeof p.sellerProof === 'string' && p.sellerProof) s.sellerProof = p.sellerProof.slice(0, 2048);   // offline: proven against a cached verifier · sellerProof: qui vend, signé par /api/pin/verify (commissions)
+      if (p.offline) s.offline = true; if (typeof p.sellerProof === 'string' && p.sellerProof) s.sellerProof = p.sellerProof.slice(0, 2048); if (!p.offline && typeof p.shiftProof === 'string' && /^ks1\./.test(p.shiftProof)) s.shiftProof = p.shiftProof.slice(0, 1024);   // offline: proven against a cached verifier · sellerProof: qui vend, signé par /api/pin/verify (commissions)
     }
     window.KiwiStaff = s; if (!(p && p.operator)) try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {}   // seul bootForOperator garde la vue opérateur ; tout vrai poste l'efface
     try {

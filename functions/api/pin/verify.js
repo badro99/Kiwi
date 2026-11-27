@@ -8,7 +8,7 @@
 // there; the comparison now happens here, so no four-digit code ever leaves D1.
 // Both shapes are rate-limited and answer with an identity, never with a code.
 import {
-  verifyStaffPin, verifyAccountPin, employeeRoleOpensDashboard,
+  verifyAccountPin, employeeRoleOpensDashboard,
   managerRefundProof, managerStockProof, tillActorProof, employeeRoleOpensTill,
   faceAccessTier, faceMarkState, json,
 } from '../../auth/_lib.js';
@@ -17,6 +17,7 @@ import { tillSellerProof } from '../_seller.js';
 import { priceListProof } from '../_price-list-sale.js';
 import { decide, Catalog } from '../_permissions.js';
 import { tillActProof, ACT_KINDS } from '../_act-proof.js';
+import { verifyStaffCredential, tillShiftProof, isShiftProof } from '../../auth/_till-shift.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -34,7 +35,7 @@ export async function onRequestPost(context) {
   // verifyAccountPin derives the store list from the session's own registry and
   // refuses outright without a session.
   const verified = merchant
-    ? await verifyStaffPin(request, env, merchant, pin, { requireTill: true })
+    ? await verifyStaffCredential(request, env, merchant, pin, { requireTill: true })
     : await verifyAccountPin(request, env, pin);
 
   if (!verified.ok) {
@@ -104,6 +105,10 @@ export async function onRequestPost(context) {
        Seulement quand le code OUVRE la caisse (sans acte) : un accord donné au
        pavé pour un geste ne fait pas de son auteur la personne en poste. */
     ...(merchant && !action && employeeRoleOpensTill(verified.staff.role) ? { sellerProof: await tillSellerProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
+    /* Un gérant ou un propriétaire qui OUVRE la caisse avec son code : la preuve
+       de poste, que la caisse présentera à la place de son code tant qu'il tient
+       la caisse (functions/auth/_till-shift.js). Jamais refaite depuis une preuve. */
+    ...(merchant && !action && !isShiftProof(pin) ? await shiftField(request, env, merchant, verified.staff) : {}),
     ...(approval ? { approval } : {}),
     /* Espèces, tiroir, clôture, remise : la preuve de CE geste (acte, montant,
        sens), valable pour un seul fait (functions/api/_act-proof.js). */
@@ -115,4 +120,11 @@ export async function onRequestPost(context) {
     ...(ruling ? { permission: { id: kindPerm, granted: !!ruling.ok, configured: !!ruling.configured } } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });
+}
+
+async function shiftField(request, env, merchant, staff) {
+  try {
+    const shiftProof = await tillShiftProof(request, env, merchant, staff);
+    return shiftProof ? { shiftProof } : {};
+  } catch (_) { return {}; }
 }

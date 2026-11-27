@@ -5,7 +5,8 @@ import { bookingEpoch } from '../_booking-clock.js';
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
-import { json, entitledMerchant, verifyStaffPin, operatorActor } from '../../auth/_lib.js';
+import { json, entitledMerchant, operatorActor } from '../../auth/_lib.js';
+import { verifyStaffCredential } from '../../auth/_till-shift.js';
 import { commercialSnapshot, readCommercial, quote, BOARDS, problem, directKey } from './_commercial.js';
 import { stayOptions } from './_stay-options.js';
 import { tenantFor } from '../_private.js';
@@ -24,7 +25,7 @@ const checkoutApprover = async (request, env, merchant, actor, pin) => {
     if (actor.role === 'owner' || op?.id) return { approvedBy: { id: String(op?.id || actor.id).slice(0, 96), name: String(op?.label || owner?.name || actor.id).slice(0, 120), role: op?.id ? 'operator' : 'owner' } };
   }
   if (!pin) return { response: json({ error: 'owner-required' }, 403) };
-  const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+  const verified = await verifyStaffCredential(request, env, merchant, pin, { requireTill: true });
   if (!verified.ok) return { response: verified.response || json({ error: verified.error }, verified.status) };
   const staff = verified.staff;
   const role = String(staff.role || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');

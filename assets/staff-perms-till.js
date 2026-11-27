@@ -201,6 +201,41 @@
     return { authContext: ctx, opts: o, onApprove: approved };
   }
 
+  /* Le responsable EN POSTE (owner, 27 nov.) : un gérant ou un propriétaire qui a
+     ouvert la caisse avec son code ne le retape pas pour un geste protégé. La
+     caisse présente sa preuve de poste (functions/auth/_till-shift.js) au même
+     vérificateur que le pavé ; le serveur relit la personne et juge son droit
+     pour CE geste, et signe la même preuve d'acte qu'après un code. Hors ligne,
+     pour une relève (un autre doit taper SON code), ou si le serveur dit non,
+     le pavé s'ouvre comme avant. */
+  function shiftCode() {
+    var s = window.KiwiStaff;
+    if (!s || s.offline || typeof s.shiftProof !== 'string' || s.shiftProof.indexOf('ks1.') !== 0 || offline()) return '';
+    return s.shiftProof;
+  }
+  function shiftApprove(access, authContext, opts, approve, fallback) {
+    var code = shiftCode(), P = window.KiwiCaissePairing;
+    if (!code || !P || (opts && opts.incoming) || typeof approve !== 'function' || typeof fallback !== 'function') return false;
+    var till = access === 'till', ask = till ? P.authorizeTill : P.authorizeManager;
+    if (typeof ask !== 'function') return false;
+    var second = till ? { needsServer: !!(opts && opts.needsServer), action: authContext || undefined } : authContext;
+    Promise.resolve(ask.call(P, code, second)).then(function (ok) {
+      var who = ok === true ? (till ? (P.lastOperator() || P.lastManager()) : P.lastManager()) : null;
+      if (!who || (opts && typeof opts.validate === 'function' && opts.validate(who))) { fallback(); return; }
+      approve(Object.assign({}, who, { viaShift: true }));
+    }, function () { fallback(); });
+    return true;
+  }
+  /* Les pavés qui envoient eux-mêmes un code à leur route (annulation de vente,
+     pressing, plafond de crédit, Glovo) demandent la preuve par un
+     événement : { code, name } rempli ici, vide quand il faut le pavé. */
+  function onShiftAsk(e) {
+    var d = e && e.detail;
+    if (!d || typeof d !== 'object') return;
+    d.code = shiftCode();
+    d.name = d.code ? String((window.KiwiStaff && window.KiwiStaff.name) || '') : '';
+  }
+
   /* data-perm : cadenas et demande d'accord. */
   function apply() {
     try {
@@ -240,6 +275,7 @@
       var P = window.KiwiCaissePairing;
       if (P && !P.permsForAct) P.permsForAct = forAct;
       if (P && !P.permsProofs) P.permsProofs = proofs;
+      if (P && !P.shiftApprove) P.shiftApprove = shiftApprove;
     } catch (_) {}
   }
   attach();
@@ -249,6 +285,7 @@
       attach(); css(); apply(); sync();
       document.addEventListener('click', onClick, true);
       document.addEventListener('kiwi-staff', apply);
+      document.addEventListener('kiwi-shift-code', onShiftAsk);
       window.addEventListener('online', sync);
       var timer = setInterval(sync, REFRESH_MS);
       if (timer && typeof timer.unref === 'function') timer.unref();
@@ -257,6 +294,6 @@
   try {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
-    window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct, proofs: proofs, needHint: needHint };
+    window.KiwiStaffPerms = { can: can, sync: sync, apply: apply, read: read, forAct: forAct, proofs: proofs, needHint: needHint, shiftCode: shiftCode };
   } catch (_) {}
 })();

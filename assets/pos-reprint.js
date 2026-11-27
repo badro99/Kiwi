@@ -614,8 +614,12 @@
     if (!ask.handled) showPin(vertical, entry, reopening);
   }
 
-  function showPin(vertical, entry, reopening, grant) {
+  function showPin(vertical, entry, reopening, grant, noShift) {
     if (!canCancel(vertical)) return;
+    /* Un gérant ou un propriétaire tient la caisse : sa preuve de poste remplace
+       le code (assets/staff-perms-till.js, événement kiwi-shift-code). */
+    var shift = { code: '', name: '' };
+    if (!grant && !noShift) try { document.dispatchEvent(new CustomEvent('kiwi-shift-code', { detail: shift })); } catch (_) {}
     var box = veil && veil.querySelector('.modal');
     if (!box) return;
     var bridge = window.KiwiRestaurantReopen;
@@ -632,8 +636,9 @@
       + '<p>' + esc((entry.label || entry.ref || tr('Ticket')) + ' · ' + methodLabel(entry.method) + ' · ' + mad(entry.total))
       + '<br>' + tr('Ticket') + ' ' + esc(entry.saleId ? ticketNo(entry) : tr('identifiant indisponible'))
       + '<br>' + (grant ? esc(tr('Accepté par {x}. Confirmez l’annulation.').replace('{x}', (grant.actor && grant.actor.name) || tr('le patron')))
+        : shift.code ? esc(tr('Validé par {x}, responsable en poste. Confirmez l’annulation.').replace('{x}', shift.name || tr('le responsable')))
         : tr('Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.')) + '</p></div>'
-      + '<div class="kx-rp-pin">' + (grant ? '' : '<input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password">')
+      + '<div class="kx-rp-pin">' + (grant || shift.code ? '' : '<input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password">')
       + (reopening ? '<p>' + tr('Table pour la note rouverte') + '</p><select data-kx-rp-table>'
         + tableOptions + '</select><p class="kx-rp-error" data-kx-rp-occupied>'
         + (free.indexOf(originalTable) < 0 ? tr('table occupée · rouvrir sur une autre table') : '') + '</p>' : '')
@@ -649,12 +654,12 @@
     var confirm = box.querySelector('[data-kx-rp-confirm]');
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { showTicket(vertical, entry); });
     function submit() {
-      if (!grant && !/^\d{4}$/.test(input.value)) { error.textContent = tr('Entrez le code manager à 4 chiffres.'); return; }
+      if (!grant && !shift.code && !/^\d{4}$/.test(input.value)) { error.textContent = tr('Entrez le code manager à 4 chiffres.'); return; }
       var picked = reopening && box.querySelector('[data-kx-rp-table]');
       if (reopening && (!picked || !picked.value)) { error.textContent = tr('Choisissez une table libre.'); return; }
       confirm.disabled = true; error.textContent = '';
       var how = grant ? { ownerApproval: grant.id } : {};
-      cancelSale(entry, grant ? '' : input.value, reopening ? Object.assign(how, { reopen: true, table: picked.value,
+      cancelSale(entry, grant ? '' : (shift.code || input.value), reopening ? Object.assign(how, { reopen: true, table: picked.value,
         covers: Number(entry.reopenSnapshot && entry.reopenSnapshot.covers) || 1 }) : how).then(function (result) {
         if (reopening && result.floorPending) {
           confirm.disabled = false;
@@ -675,6 +680,8 @@
         } else toast(tr('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total)));
       }).catch(function (err) {
         confirm.disabled = false;
+        /* La preuve de poste n'a pas suffi (expirée, droit retiré) : le pavé, comme avant. */
+        if (shift.code && err && /^(shift-expired|bad-pin|manager-required|forbidden-till|permission-denied)$/.test(err.code || '')) { showPin(vertical, entry, reopening, null, true); return; }
         error.textContent = tr(err && err.code === 'owner-approval-invalid' ? 'L’accord du patron a expiré. Refaites la demande.'
           : err && err.code === 'bad-pin' ? 'Code manager incorrect.'
           : err && err.code === 'manager-required' ? 'Code manager requis. Un manager doit valider l’annulation.'

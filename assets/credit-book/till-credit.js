@@ -187,6 +187,15 @@ function fillIsolated(el, phrase, vars) {
 }
 
 async function askManager({ merchant, base, text }) {
+  /* Un gérant ou un propriétaire tient la caisse : sa preuve de poste remplace
+     le code (assets/staff-perms-till.js) ; refusée ou expirée, le pavé s'ouvre. */
+  const shift = { code: '', name: '' };
+  try { document.dispatchEvent(new CustomEvent('kiwi-shift-code', { detail: shift })); } catch (_) {}
+  if (shift.code) {
+    let r = null;
+    try { r = await post({ ...base, merchant, action: 'approve', pin: shift.code }); } catch (_) { r = null; }
+    if (r && r.status === 200 && (r.body.approved || !r.body.over)) return r.body;
+  }
   const ready = await ensureKit();
   return new Promise((resolve) => {
     if (!ready) { resolve(null); return; }

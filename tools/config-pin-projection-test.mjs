@@ -112,8 +112,12 @@ for (const cols of libSelects) {
 }
 
 const verify = read('functions/api/pin/verify.js');
+/* La forme boutique passe par verifyStaffCredential (functions/auth/_till-shift.js),
+   qui confie tout code à quatre chiffres à verifyStaffPin. */
+const shiftLib = read('functions/auth/_till-shift.js');
 ok('/api/pin/verify route les deux formes (boutique et compte)',
-  /verifyStaffPin\(/.test(verify) && /verifyAccountPin\(/.test(verify));
+  (/verifyStaffPin\(/.test(verify) || (/verifyStaffCredential\(/.test(verify) && /return verifyStaffPin\(/.test(shiftLib)))
+    && /verifyAccountPin\(/.test(verify));
 ok('/api/pin/verify ne renvoie jamais le code reçu',
   !/\bpin\s*:\s*pin\b/.test(verify) && !/\bpin\s*,\s*$/m.test(verify.slice(verify.indexOf('return json'))));
 

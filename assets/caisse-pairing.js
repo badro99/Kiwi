@@ -130,7 +130,7 @@
     }).catch(function () { toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
   function verifyOfflinePin(merchant, code, purge) { /* purge: a server-refused code's verifier lookup, never a keypad guess */
-    var epoch = offlinePinEpoch;
+    var epoch = offlinePinEpoch; if (!/^\d{4}$/.test(String(code || ''))) return Promise.resolve(null);   /* a shift proof (ks1.) is never a keypad code */
     var locked = purge ? 0 : offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } if (!purge && offlineBudget.busy[merchant]) return Promise.resolve(null); /* locked or busy: refused, not counted */
     if (!hasSubtle()) return Promise.resolve(null);
     if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */
@@ -756,7 +756,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
     if (p) {
       var name = String(p.name || '').trim() || 'Caissier';
       s = { id: String(p.id || '').slice(0, 80), name: name, role: String(p.role || '').trim() || 'Caissier', first: firstNameOf(name) || name };
-      if (p.offline) s.offline = true; if (typeof p.sellerProof === 'string' && p.sellerProof) s.sellerProof = p.sellerProof.slice(0, 2048);   // offline: proven against a cached verifier · sellerProof: qui vend, signé par /api/pin/verify (commissions)
+      if (p.offline) s.offline = true; if (typeof p.sellerProof === 'string' && p.sellerProof) s.sellerProof = p.sellerProof.slice(0, 2048); if (!p.offline && typeof p.shiftProof === 'string' && /^ks1\./.test(p.shiftProof)) s.shiftProof = p.shiftProof.slice(0, 1024);   // offline: proven against a cached verifier · sellerProof: qui vend, signé par /api/pin/verify (commissions)
     }
     window.KiwiStaff = s; if (!(p && p.operator)) try { sessionStorage.removeItem('kiwi:tillOperator:v1'); } catch (_) {}   // seul bootForOperator garde la vue opérateur ; tout vrai poste l'efface
     try {
@@ -1137,7 +1137,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
     code = String(code || '');
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
-    if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
+    if (!(/^\d{4}$/.test(code) || /^ks1\.[\w.-]{20,1020}$/.test(code)) || !merchant) return Promise.resolve(null);   // ks1. : la preuve du responsable en poste (functions/auth/_till-shift.js)
     /* The shared hard deadline: it rejects even when the transport ignores abort,
        so the offline fallback below is always reached. */
     lastVerify = { status: 0, wait: 0, offline: false };
@@ -1165,7 +1165,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.shiftProof ? { shiftProof: String(d.shiftProof) } : {}, d.permission ? { permission: d.permission } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -1193,7 +1193,7 @@ var fetchDeadline = function (url, options, readBody, controller) { controller =
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.shiftProof ? { shiftProof: String(d.shiftProof) } : {}, d.permission ? { permission: d.permission } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {

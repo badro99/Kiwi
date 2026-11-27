@@ -100,7 +100,7 @@
     }).catch(function () { toast((window.KiwiCaisseLang || { tr: function (s) { return s; } }).tr("Accès hors ligne non enregistré. Une connexion sera nécessaire au prochain déverrouillage.")); return staff; }); // Cache failure cannot reject a server-proven unlock.
   }
   function verifyOfflinePin(merchant, code, purge) { /* purge: a server-refused code's verifier lookup, never a keypad guess */
-    var epoch = offlinePinEpoch;
+    var epoch = offlinePinEpoch; if (!/^\d{4}$/.test(String(code || ''))) return Promise.resolve(null);   /* a shift proof (ks1.) is never a keypad code */
     var locked = purge ? 0 : offlineBudget.check(merchant); if (locked) { offlineBudget.notice(locked); return Promise.resolve(null); } if (!purge && offlineBudget.busy[merchant]) return Promise.resolve(null); /* locked or busy: refused, not counted */
     if (!hasSubtle()) return Promise.resolve(null);
     if (window.KiwiTrustedClock && window.KiwiTrustedClock.rolledBack()) return Promise.resolve(null); /* clock moved back: wait for the server */

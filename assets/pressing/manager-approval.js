@@ -43,8 +43,21 @@ function askCode({ heading, sub, tr, focus }) {
 export async function approveByManager({ merchant, isReal, tr = (s) => s, focus, sub } = {}) {
   if (!isReal) return { ok: true, actor: { id: 'demo', name: 'Démo', role: 'demo' } };
   if (!merchant) return { ok: false, reason: 'unavailable' };
+  /* A manager or owner already holds the till: their shift proof stands in for
+   * the code (assets/staff-perms-till.js, event kiwi-shift-code). The server
+   * judges it like a code; refused or expired, the pad opens as before. */
+  const shift = { code: '', name: '' };
+  try { document.dispatchEvent(new CustomEvent('kiwi-shift-code', { detail: shift })); } catch (_) {}
+  if (shift.code) {
+    const viaShift = await verifyManager(merchant, shift.code);
+    if (viaShift.ok) return viaShift;
+  }
   const pin = await askCode({ sub, tr, focus });
   if (pin === null || pin === undefined) return { ok: false, reason: 'cancelled' };
+  return verifyManager(merchant, pin);
+}
+
+async function verifyManager(merchant, pin) {
   let res = null, body = null;
   try {
     const { deadlineFetch } = await import('../request-deadline.mjs');

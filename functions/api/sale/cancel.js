@@ -6,7 +6,8 @@
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
 import { safeDetail } from '../_safe-detail.js';
-import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
+import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE } from '../../auth/_lib.js';
+import { verifyStaffCredential } from '../../auth/_till-shift.js';
 import { addBusinessDays, businessBoundary, businessDate, merchantCutoff, merchantZone } from '../_business-day.js';
 import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
 import { creditsIssuedCents, ensureCreditEvents, refundsIssuedCents, voidCreditBackStatements } from '../_store-credit-ledger.js';
@@ -328,7 +329,7 @@ export async function onRequestPost(ctx) {
     actorId = 'owner:approval';
     actorRole = 'owner';
   } else {
-    const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+    const verified = await verifyStaffCredential(request, env, merchant, pin, { requireTill: true });
     if (!verified.ok) {
       if (verified.response) return verified.response;
       return json({ error: verified.error }, verified.status);

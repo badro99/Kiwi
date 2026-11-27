@@ -2,7 +2,7 @@
  * below and live presentation bindings; no sibling module or private window state.
  * Browser reads: KiwiApiBase, KiwiCaisseLang, KiwiCaissePairing, KiwiPressingOps, KiwiStaff, open.
  */
-import { ITEMS, root } from './custody.js?v=54';
+import { ITEMS, root } from './custody.js?v=55';
 export function create(owner) {
   'use strict';
   const { $, $$, COLOR, ORDERS, STATUS, afterStatusChange, catalogLabel, closeVeil, custOf, dataText, effectiveStatus, esc, findOrder, fmtDT, fmtDay, fmtMAD, garmentIcon, icons, isLate, isLiveOrder, moveCaretEnd, openPay, openScan, openTags, openVeil, orderStatus, orderTotals, pad2, pressingScope, publicOrderNo, publicPieceNo, pvName, queueIfOffline, refreshOps, releaseSlot, searchDigits, setSelectedReady, setWholeOrderStatus, state, svcCodes, switchView, syncOwnerOps, toast, whatsappPhone } = owner.workshopContext();
@@ -274,7 +274,7 @@ function openDetail(orderId) {
     };
     const cancelB = $('#px-dt-cancel', el);
     if (cancelB) cancelB.onclick = async () => {
-      const pin = await new Promise(resolve => {
+      const askPad = () => new Promise(resolve => {
         const sheet = document.createElement('k-sheet');
         const pad = document.createElement('k-pin-pad');
         sheet.setAttribute('heading', notifyTr('Autorisation manager'));
@@ -287,16 +287,27 @@ function openDetail(orderId) {
         sheet.appendChild(pad); document.body.appendChild(sheet); sheet.setAttribute('open', '');
         pad.shadowRoot?.querySelector('[data-key="1"]')?.focus();
       });
+      /* A manager or owner holds the till: their shift proof stands in for the
+         code (assets/staff-perms-till.js); refused or expired, the pad opens. */
+      const shift = { code: '', name: '' };
+      try { document.dispatchEvent(new CustomEvent('kiwi-shift-code', { detail: shift })); } catch (_) {}
+      let pin = shift.code || await askPad();
       if (pin === null) return;
       let actor = null;
       let uncertain = false;
       let cancellation = null;
       try {
         const merchant = pressingScope();
-        const response = merchant ? await (await import('../request-deadline.mjs')).deadlineFetch('/api/pressing/cancel', {
+        const post = async (code) => merchant ? (await import('../request-deadline.mjs')).deadlineFetch('/api/pressing/cancel', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ merchant, orderId: String(o.id), pin }),
+          body: JSON.stringify({ merchant, orderId: String(o.id), pin: code }),
         }) : null;
+        let response = await post(pin);
+        if (shift.code && pin === shift.code && response && (response.status === 401 || response.status === 403)) {
+          pin = await askPad();
+          if (pin === null) return;
+          response = await post(pin);
+        }
         uncertain = !!response?.ok;
         const result = response && response.ok ? await response.json() : null;
         cancellation = result && result.ok ? result : null;

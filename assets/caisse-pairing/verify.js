@@ -8,7 +8,7 @@
     code = String(code || '');
     var venue = activeVenue();
     var merchant = (venue && venue.merchant) || '';
-    if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
+    if (!(/^\d{4}$/.test(code) || /^ks1\.[\w.-]{20,1020}$/.test(code)) || !merchant) return Promise.resolve(null);   // ks1. : la preuve du responsable en poste (functions/auth/_till-shift.js)
     /* The shared hard deadline: it rejects even when the transport ignores abort,
        so the offline fallback below is always reached. */
     lastVerify = { status: 0, wait: 0, offline: false };
@@ -36,7 +36,7 @@
       })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.shiftProof ? { shiftProof: String(d.shiftProof) } : {}, d.permission ? { permission: d.permission } : {});
         /* The server said yes: unlock now, refresh the offline verifier behind. */
         rememberOfflinePin(merchant, code, staff);
         return staff;
@@ -64,7 +64,7 @@
       lastFailed = reply.kind !== 'answer';
       var d = reply.body;
       if (reply.kind === 'answer' && reply.status === 200 && d && d.ok && d.staff) {
-        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.permission ? { permission: d.permission } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {}, d.actProof ? { actProof: String(d.actProof) } : {}, d.sellerProof ? { sellerProof: String(d.sellerProof) } : {}, d.shiftProof ? { shiftProof: String(d.shiftProof) } : {}, d.permission ? { permission: d.permission } : {});
         return rememberOfflinePin(merchant, code, staff).then(function () { return reply; }, function () { return reply; });
       }
       if (reply.kind === 'answer' && (reply.status === 401 || reply.status === 403)) return verifyOfflinePin(merchant, code, true).then(function (gone) {
