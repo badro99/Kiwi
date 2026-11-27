@@ -1310,7 +1310,7 @@ function evalMath(expr) {
 
 function partialReply() {
     const t = __state.nv();
-    const r = { text: t.costsNeeded(__state.escHtml(__state.B.name)), note: t.costsCta };
+    const lead = (t.costsLead || {})[__state.lastRouteKind]; const r = { text: (lead ? lead + ' ' : '') + t.costsNeeded(__state.escHtml(__state.B.name)), note: t.costsCta };
     if (__state.B.revenue > 0) {
       r.stats = [
         { l: t.revLabel, v: __state.fmtMad(__state.B.revenue), h: '' },

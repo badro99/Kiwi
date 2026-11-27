@@ -166,6 +166,17 @@ for (const [q, L, not, want] of [
   ok(!not.test(r.text) && (!want || want.test(r.text)), `« ${q} » gets the right guide card or none → {${r.route}} ${r.text.slice(0, 90)}`);
 }
 
+// With no costs entered, the card says what it cannot answer, then why
+// (27 Nov): the same paragraph used to come back for nine different questions.
+for (const [q, L, lead] of [
+  ['My café was packed but where did all the profit go?', 'en', /where your profit goes/],
+  ['فين مشاو الفلوس ديال المصاريف الصغيرة؟', 'ar', /المصاريف ديالك/],
+  ['je peux me permettre un four à 20000 dh ?', 'fr', /permettre/],
+]) {
+  const r = ask(q, L);
+  ok(lead.test(r.text) && !/rather simulate nothing|plutôt que d'inventer|أفضّل ألّا أحاكي/.test(r.text), `« ${q} » names what it cannot answer yet → {${r.route}} ${r.text.slice(0, 110)}`);
+}
+
 // 2. Not a single period: the honest refusal, or the route that owns it.
 for (const [q, L] of [
   ['compare les ventes de cette semaine avec la semaine dernière', 'fr'],

@@ -232,7 +232,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=19';
+  const partUrl = 'assets/agent/ui.js?v=20';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -644,7 +644,8 @@
   /* ─── New-venue (partial profile) strings — fr / en / ar ─── */
   const NV = {
     fr: {
-      costsNeeded: (n) => `${n} démarre sur Kiwi. Je raisonne sur vos ventes réelles enregistrées, mais je n'ai pas encore votre structure de coûts (loyer, salaires, marge, trésorerie). Je préfère ne rien simuler plutôt que d'inventer des chiffres.`,
+      costsNeeded: (n) => `Vos ventes réelles sont bien là, mais vos coûts (loyer, salaires, marge, trésorerie) ne sont pas encore saisis dans Kiwi.`,
+      costsLead: { profit: 'Je ne peux pas encore dire où passe votre bénéfice.', charges: 'Je ne peux pas encore détailler vos dépenses.', afford: 'Je ne peux pas encore dire si vous pouvez vous le permettre.', financing: 'Je ne peux pas encore chiffrer un financement.', hire: 'Je ne peux pas encore chiffrer cette embauche.', price: 'Je ne peux pas encore simuler ce changement de prix.', breakeven: 'Je ne peux pas encore calculer votre seuil de rentabilité.', margin: 'Je ne peux pas encore calculer votre marge.', runway: 'Je ne peux pas encore dire combien de temps votre trésorerie tient.', valuation: 'Je ne peux pas encore estimer la valeur de votre affaire.', overview: 'Je ne peux pas encore faire le bilan complet.', advice: 'Je ne peux pas encore vous conseiller sur vos chiffres.', forecast: 'Je ne peux pas encore prévoir votre résultat.', expansion: 'Je ne peux pas encore chiffrer ce projet.' },
       costsCta: 'Enregistrez vos ventes au fil des jours et renseignez vos charges dans Marges, carte « Charges fixes » : je calcule alors votre résultat net et votre seuil de rentabilité.',
       beText: (fixed, staff, pct) => `Pour couvrir vos charges du mois (${fixed} de charges fixes${staff ? ` et ${staff} de personnel` : ''}), voici ce qu’il faut vendre, à ${pct} de ce qui reste après coût matière et commissions sur 30 jours.`,
       beNeed: 'Seuil · ventes du mois', beNeedH: 'charges et personnel couverts',
@@ -668,7 +669,8 @@
       railEmpty: 'Vos charges, marges et trésorerie apparaîtront ici dès que vous les renseignez.',
     },
     en: {
-      costsNeeded: (n) => `${n} is just starting on Kiwi. I reason from your real recorded sales, but I don't have your cost structure yet (rent, payroll, margin, cash). I'd rather simulate nothing than invent figures.`,
+      costsNeeded: (n) => `Your real sales are here, but your costs (rent, payroll, margin, cash) are not entered in Kiwi yet.`,
+      costsLead: { profit: 'I can’t tell yet where your profit goes.', charges: 'I can’t break down your expenses yet.', afford: 'I can’t tell yet whether you can afford it.', financing: 'I can’t size a loan yet.', hire: 'I can’t cost this hire yet.', price: 'I can’t simulate this price change yet.', breakeven: 'I can’t work out your break-even yet.', margin: 'I can’t work out your margin yet.', runway: 'I can’t tell yet how long your cash lasts.', valuation: 'I can’t value your business yet.', overview: 'I can’t give the full picture yet.', advice: 'I can’t advise on your figures yet.', forecast: 'I can’t forecast your result yet.', expansion: 'I can’t cost this project yet.' },
       costsCta: 'Record your sales day to day and enter your costs in Margins, “Fixed costs” card: I then compute your net result and your break-even.',
       beText: (fixed, staff, pct) => `To cover this month’s costs (${fixed} of fixed costs${staff ? ` and ${staff} of staff` : ''}), here is what you need to sell, at ${pct} left after cost of goods and fees over 30 days.`,
       beNeed: 'Break-even · month sales', beNeedH: 'costs and staff covered',
@@ -692,7 +694,8 @@
       railEmpty: 'Your costs, margins and cash will show up here once you record them.',
     },
     ar: {
-      costsNeeded: (n) => `${n} بدأ للتو على Kiwi. أعتمد على مبيعاتك الحقيقية المسجّلة، لكن ليس لديّ بعد هيكل تكاليفك (الكراء، الأجور، الهامش، السيولة). أفضّل ألّا أحاكي شيئًا على أن أخترع أرقامًا.`,
+      costsNeeded: (n) => `المبيعات الحقيقية ديالك كاينة، ولكن التكاليف (الكراء، الأجور، الهامش، السيولة) مازال ما تدخلاتش فـ Kiwi.`,
+      costsLead: { profit: 'ما نقدرش نقول ليك دابا فين كيمشي الربح ديالك.', charges: 'ما نقدرش نفصّل ليك المصاريف ديالك دابا.', afford: 'ما نقدرش نقول ليك دابا واش تقدر عليها.', financing: 'ما نقدرش نحسب ليك التمويل دابا.', hire: 'ما نقدرش نحسب ليك هاد التوظيف دابا.', price: 'ما نقدرش نحسب ليك هاد التبديل فالثمن دابا.', breakeven: 'ما نقدرش نحسب ليك نقطة التعادل دابا.', margin: 'ما نقدرش نحسب ليك الهامش دابا.', runway: 'ما نقدرش نقول ليك دابا شحال غادي تصبر السيولة ديالك.', valuation: 'ما نقدرش نقيّم ليك المشروع دابا.', overview: 'ما نقدرش نعطيك الحصيلة كاملة دابا.', advice: 'ما نقدرش ننصحك على الأرقام ديالك دابا.', forecast: 'ما نقدرش نتوقع ليك النتيجة دابا.', expansion: 'ما نقدرش نحسب ليك هاد المشروع دابا.' },
       costsCta: 'سجّل مبيعاتك يومًا بيوم وأدخل مصاريفك في الهوامش، بطاقة « المصاريف الثابتة »: عندها أحسب نتيجتك الصافية وعتبة مردوديتك.',
       beText: (fixed, staff, pct) => `لتغطية مصاريف هذا الشهر (${fixed} من المصاريف الثابتة${staff ? ` و${staff} للمستخدمين` : ''})، هذا ما يجب بيعه، بنسبة ${pct} تبقى بعد تكلفة المواد والعمولات خلال 30 يومًا.`,
       beNeed: 'العتبة · مبيعات الشهر', beNeedH: 'المصاريف والمستخدمون مغطّون',
