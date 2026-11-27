@@ -8,7 +8,7 @@ import { stripColors } from './_images.js';
 
 export const balanceKey = (view) => `${view.model}:${view.balance}/${view.target}:${view.ready ? 1 : 0}`;
 export const stripPath = (view, merchant, scale = 2) =>
-  `/api/wallet/strip/${view.model === 'amount' ? 'b' + Math.min(view.balance, view.target) : Math.min(view.balance, view.target)}-${view.target}-${stripColors(merchant).key}@${scale}.png`;
+  `/api/wallet/strip/${view.model === 'amount' ? 'g' : 'c'}${Math.min(view.balance, view.target)}-${view.target}-${stripColors(merchant).key}@${scale}.png`;
 
 export async function offersFor(env, { merchant, clientId, view, baseUrl }) {
   const db = env.DB, slug = merchant.slug, out = {};

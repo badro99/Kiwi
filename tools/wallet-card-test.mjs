@@ -69,7 +69,8 @@ ok('a points card keeps its number as the headline, read against the target', ()
   const v = cardView({ fidelity: { enabled: true, model: 'amount', amount: { perMad: 1, threshold: 300, reward: '−10 %' } }, client: { points: 240 } });
   const p = passJson({ view: v, card, merchant, env, baseUrl: 'https://kiwi-os.com' });
   assert.equal(p.storeCard.primaryFields[0].key, 'balance');
-  assert.equal(p.storeCard.primaryFields[0].value, '240 / 300');
+  assert.equal(p.storeCard.primaryFields[0].value, '240');
+  assert.equal(p.storeCard.primaryFields[0].label, 'POINTS SUR 300', 'no slash: its stroke runs into the label under Apple\'s big number');
 });
 
 ok('a shop with no logo is named plainly beside the Kiwi wordmark', () => {
@@ -116,8 +117,8 @@ const google = loyaltyClass({ WALLET_GOOGLE_ISSUER_ID: '123' }, { merchant, base
 assert.equal(google.hexBackgroundColor, '#031A13');
 assert.equal(google.programLogo.sourceUri.uri, 'https://kiwi-os.com/assets/wallet/kiwi-icon@3x.png');
 
-/* The points bar moved under the number (27 Nov): a new URL, since the old one is cached as immutable for a year. */
+/* The strip was redrawn (27 Nov: 375 × 144, coins and glow): new URLs, since the old ones are cached as immutable for a year. */
 const { stripPath } = await import('../functions/api/wallet/_offers.js');
 const ptsView = cardView({ fidelity: { enabled: true, model: 'amount', amount: { perMad: 1, threshold: 300, reward: '−10 %' } }, client: { points: 240 } });
-assert.match(stripPath(ptsView, merchant, 2), /^\/api\/wallet\/strip\/b240-300-7df2b0-031a13@2\.png$/);
+assert.match(stripPath(ptsView, merchant, 2), /^\/api\/wallet\/strip\/g240-300-7df2b0-031a13@2\.png$/);
 console.log('wallet-card: points strip url ok');

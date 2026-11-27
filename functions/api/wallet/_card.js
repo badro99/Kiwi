@@ -49,7 +49,7 @@ export function passJson({ view, card, merchant, env, baseUrl }) {
   const shop = String(merchant.name || 'Kiwi').slice(0, 60);
   const unit = view.model === 'amount' ? 'points' : 'tampons';
   const balance = {
-    key: 'balance', label: view.model === 'amount' ? 'POINTS' : 'TAMPONS', value: view.model === 'amount' ? `${view.balance} / ${view.target}` : view.text,
+    key: 'balance', label: view.model === 'amount' ? `POINTS SUR ${view.target}` : 'TAMPONS', value: view.model === 'amount' ? String(view.balance) : view.text,
     /* Apple shows a change message only when it carries %@ (the new value), and
        only for a field whose value moved: the balance is the one that always
        moves, so it carries the "reward ready" news too. A literal % in the
