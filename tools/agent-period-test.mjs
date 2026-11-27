@@ -336,4 +336,21 @@ for (const [q, L] of [
   ]) { const r = ask(q, L); ok(want.test(r.text) && !/Je suis aussi votre comptable/.test(r.text), `« ${q} » gets the VAT formula → {${r.route}} ${r.text.slice(0, 140)}`); }
 }
 
+// 6. A price from a cost (27 Nov 2026): « بشحال خاصني نبيع هاد السندويتش إلا
+// كان كيكلّفني 18 درهم » got the revenue card, the French and English went to
+// the model. The price depends on the margin kept: three margins, computed.
+for (const [q, L, want] of [
+  ['بشحال خاصني نبيع هاد السندويتش إلا كان كيكلّفني 18 درهم؟', 'ar', /45/],
+  ['à combien je dois vendre un sandwich qui me coûte 18 dh ?', 'fr', /45/],
+  ['how much should I sell a sandwich that costs me 18 dh', 'en', /45/],
+  ['quel prix pour un plat qui me revient à 30 dh', 'fr', /75/],
+  ['b ch7al nbi3 tacos ila kaykllfni 25 dh', 'fr', /62[,.]50/],
+  ['بكم أبيع البيتزا إذا كانت تكلفتها ٢٢ درهم', 'ar', /55/],
+]) { const r = ask(q, L); ok(/^lookup/.test(r.route) && want.test(r.text) && /60/.test(r.text), `« ${q} » gets prices for a kept margin → {${r.route}} ${r.text.slice(0, 160)}`); }
+for (const [q, L] of [
+  ['combien me coûte le loyer', 'fr'],
+  ['augmente mes prix de 10%', 'fr'],
+  ['how much did I sell today', 'en'],
+]) { const r = ask(q, L); ok(!/1 − |1 - marge|1 − margin/.test(r.text), `« ${q} » is not a price from a cost → {${r.route}}`); }
+
 console.log(`✓ agent period: ${n} checks (one period read back, two periods refused, how-tos left to the guide)`);

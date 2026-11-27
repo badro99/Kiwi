@@ -1043,6 +1043,7 @@
     L = (L === 'en' || L === 'ar') ? L : 'fr';
     try {
       if (spec.entity === 'command') return sCommand(spec, L);
+      if (spec.entity === 'pricecost') return sPriceCost(spec, L);
       if (spec.entity === 'period') return sPeriod(spec, L);
       if (spec.entity === 'client' && spec.agg === 'today') return sClientsToday(L);
       if (spec.entity === 'client' && spec.agg === 'card') return sClientCard(spec, L);
@@ -1166,7 +1167,38 @@
   var VAT_W = W("\\btva\\b|\\bvat\\b|الضريبة|الضريبه|\\bdariba\\b");
   var RECEIPT_W = W("\\brecus?\\b|\\btickets?\\b|\\breceipts?\\b|\\bfactures?\\b|\\binvoices?\\b|فاتورة|الفاتورة|التيكي|تيكي|الوصل");
   var CHECK_W = W("verif\\w*|\\bcheck\\w*|bizarre|\\bfaux\\b|\\bwrong\\b|calcul\\w*|غالط|راجع|\\bweird\\b|\\boff\\b|incorrect|\\bjuste\\b|\\bcorrect\\b|\\bghalet\\b|\\bm9lob\\b");
+  /* « بشحال خاصني نبيع هاد السندويتش إلا كان كيكلّفني 18 درهم » (27 Nov 2026):
+     a price from a cost depends on the margin kept, so three are computed. */
+  var PRICE_ASK = W("\\ba combien\\b|quel prix|quel tarif|combien (?:je dois|dois-je|faut-il|il faut)\\s+(?:le |la |les )?vendre|how much should i (?:sell|charge)|what price|what should i charge|(?:^|\\s)(?:بشحال|ب شحال|بكم)(?=\\s)|(?:^|\\s)شحال (?:خاصني|خصني|نبيع)|\\bb ?ch7al\\b|\\bb ?chhal\\b|\\bbch7al\\b");
+  var COST_OF = W("\\bme coute\\b|\\bme revient\\b|\\bcoute\\b|\\bcosts? me\\b|\\bcosts?\\b|كيكلفني|يكلفني|تكلفني|كتكلفني|كلفني|كيكلف|تكلفة|تكلفت|\\bkayk(?:e|l)?l?fni\\b|\\bkatk(?:e|l)?l?fni\\b|\\bkaykllfni\\b");
+  function priceCost(q) {
+    q = String(q || '').replace(/[\u064b-\u0655\u0670]/g, '').replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x660); });
+    if (!PRICE_ASK.test(q) || !COST_OF.test(q)) return null;
+    var num = /(\d+(?:[.,]\d+)?)(?!\s*%|[.,]?\d)/, after = q.slice(q.search(COST_OF)), m = num.exec(after) || num.exec(q);
+    var cost = m ? parseFloat(m[1].replace(',', '.')) : 0;
+    if (!(cost > 0)) return null;
+    var pct = /(\d{1,2})\s*%/.exec(q.replace(m[0], ''));
+    return { entity: 'pricecost', cost: cost, margins: pct && +pct[1] > 0 && +pct[1] < 95 ? [+pct[1] / 100] : [0.6, 0.65, 0.7] };
+  }
+  var PRICE_T = {
+    fr: { lead: function (c) { return 'Le prix dépend de la part du prix que vous voulez garder. Pour un coût de <b>' + c + '</b> :'; }, row: function (p) { return 'Marge ' + p + ' %'; }, hint: function (p) { return 'le coût fait ' + p + ' % du prix'; },
+      note: 'Formule : prix = coût ÷ (1 − marge). Si ce coût n’est que la matière, la marge doit encore payer le loyer, les salaires et les charges.' },
+    en: { lead: function (c) { return 'The price depends on how much of it you want to keep. For a cost of <b>' + c + '</b>:'; }, row: function (p) { return p + '% margin'; }, hint: function (p) { return 'cost is ' + p + '% of the price'; },
+      note: 'Formula: price = cost ÷ (1 − margin). If that cost is only the ingredients, the margin still has to pay rent, wages and bills.' },
+    ar: { lead: function (c) { return 'الثمن كيتبع شحال بغيتي تبقى ليك من كل بيعة. على تكلفة ديال <b>' + c + '</b>:'; }, row: function (p) { return 'هامش ' + p + '٪'; }, hint: function (p) { return 'التكلفة ' + p + '٪ من الثمن'; },
+      note: 'الحساب: الثمن = التكلفة ÷ (1 − الهامش). إلا كانت هاد التكلفة غير ديال السلعة، الهامش خاصو مازال يخلص الكرا والخدامة والمصاريف.' },
+  };
+  function sPriceCost(spec, L) {
+    var t = PRICE_T[L] || PRICE_T.fr, loc = L === 'en' ? 'en-GB' : 'fr-FR';
+    var mad = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' MAD'; };
+    var stats = spec.margins.map(function (m) {
+      var pr = Math.round(spec.cost / (1 - m) * 100) / 100;
+      return { l: t.row(Math.round(m * 100)), v: mad(pr), h: t.hint(Math.round((1 - m) * 100)) };
+    });
+    return { text: t.lead(mad(spec.cost)), stats: stats, note: t.note };
+  }
   function actIntent(q) {
+    var pc = priceCost(q); if (pc) return pc;
     if (NO_NAMES.test(q) && SALES_REPORT.test(q)) return { route: 'revenue' };
     if (NEG_STOCK.test(q) && STOCK_W.test(q) && !COUNT_ASK.test(q)) return { entity: 'command', negstock: true };
     if (VAT_W.test(q) && RECEIPT_W.test(q) && CHECK_W.test(q)) return { entity: 'command', vat: true };
