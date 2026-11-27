@@ -18,5 +18,7 @@ export async function cardPass(env, card, baseUrl) {
   const view = c && cardView({ fidelity: m.fidelity, client: c });
   if (!view) return null;
   const pass = passJson({ view, card: { serial: card.serial, authToken: card.auth_token, clientId: card.client_id }, merchant: m, env, baseUrl });
-  return buildPkpass({ pass, images: await passImages({ merchant: m, view }), env });
+  const images = await passImages({ merchant: m, view });
+  if (images.lockup) pass.logoText = '';   /* « kiwi × SHOP » is already in the logo image */
+  return buildPkpass({ pass, images, env });
 }

@@ -121,8 +121,12 @@ try {
     assert.equal(p.serialNumber, card.serial);
     assert.equal(p.locations[0].latitude, 33.59);
     assert.equal(verify('live/signature', 'live/manifest.json').status, 0);
+    /* the shop has a logo: the pass logo is the « kiwi × shop » lockup, wider than the
+       Kiwi wordmark alone (182 × 100 at 2x) and inside Apple's 320 × 100, with no text beside it */
     const logoPng = fs.readFileSync(path.join(out, 'logo@2x.png'));
-    assert.equal(logoPng.readUInt32BE(16), 182); assert.equal(logoPng.readUInt32BE(20), 100);
+    const lw = logoPng.readUInt32BE(16);
+    assert.equal(logoPng.readUInt32BE(20), 100); assert.ok(lw > 182 && lw <= 320, 'lockup width ' + lw);
+    assert.equal(p.logoText, '', 'the logo says it all');
     const wrong = await service.onRequest({ env, waitUntil() {}, params: { path: ['download', card.serial + '.pkpass'] }, request: new Request(`https://kiwi-os.com/api/wallet/v1/download/${card.serial}.pkpass?t=${'z'.repeat(32)}`) });
     assert.equal(wrong.status, 404);
   });

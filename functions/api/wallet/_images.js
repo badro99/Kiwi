@@ -43,11 +43,53 @@ export function stripPng({ view, colors, scale }) {
 
 export async function passImages({ merchant, view }) {
   const colors = stripColors(merchant), images = {};
+  const lockups = [];
+  for (const s of [1, 2, 3]) lockups.push(await lockupLogo(merchant, s));
+  const lockup = lockups.every(Boolean);
   for (const [s, suffix] of [[1, ''], [2, '@2x'], [3, '@3x']]) {
-    for (const kind of ['icon', 'logo']) images[kind + suffix + '.png'] = kiwiArt(kind + suffix + '.png');
+    images['icon' + suffix + '.png'] = kiwiArt('icon' + suffix + '.png');
+    images['logo' + suffix + '.png'] = lockup ? lockups[s - 1] : kiwiArt('logo' + suffix + '.png');
     images['strip' + suffix + '.png'] = await stripPng({ view, colors, scale: s });
   }
+  /* not a file: tells the pass to drop its logo text, the image already names the shop */
+  Object.defineProperty(images, 'lockup', { value: lockup });
   return images;
+}
+
+/* Straight-alpha « over » of src onto dst (W wide) at (ox, oy). */
+function over(dst, W, src, ox, oy) {
+  for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) {
+    const q = (y * src.w + x) * 4, a = src.rgba[q + 3] / 255;
+    if (!a) continue;
+    const o = ((y + oy) * W + x + ox) * 4, b = dst[o + 3] / 255, al = a + b * (1 - a);
+    for (let k = 0; k < 3; k++) dst[o + k] = Math.round((src.rgba[q + k] * a + dst[o + k] * b * (1 - a)) / al);
+    dst[o + 3] = Math.round(al * 255);
+  }
+}
+
+/* The pass logo when the shop has one: « kiwi × SHOP » inside Apple's 160 × 50 pt
+   box, the Kiwi wordmark, a fine mint cross, the shop's mark in paper white. */
+async function lockupLogo(merchant, s) {
+  const markPng = await shopTile(merchant);
+  if (!markPng) return null;
+  return cached(`lockup/${await hex(merchant.logoUrl)}@${s}`, async () => {
+    const kiwi = await decodePng(kiwiArt('logo@3x.png')), mark = await decodePng(markPng);
+    if (!kiwi || !mark) return null;
+    const H = 50 * s, kh = 30 * s, kw = Math.round(kiwi.w * kh / kiwi.h), gap = 9 * s, c = 7 * s;
+    const room = 160 * s - kw - 2 * gap - c, k = Math.min(28 * s / mark.h, room / mark.w);
+    const mw = Math.max(1, Math.round(mark.w * k)), mh = Math.max(1, Math.round(mark.h * k)), W = kw + 2 * gap + c + mw;
+    const out = new Uint8Array(W * H * 4);
+    over(out, W, fit(kiwi, kw, kh), 0, Math.round((H - kh) / 2));
+    const cx = kw + gap + c / 2, cy = H / 2, t = 1.3 * s;
+    for (let y = Math.floor(cy - c / 2); y <= Math.ceil(cy + c / 2); y++) for (let x = Math.floor(cx - c / 2); x <= Math.ceil(cx + c / 2); x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) > c / 2) continue;
+      const d = Math.min(Math.abs(dx - dy), Math.abs(dx + dy)) / Math.SQRT2, a = Math.max(0, Math.min(1, t / 2 + 0.5 - d)) * 0.9;
+      if (a) over(out, W, { w: 1, h: 1, rgba: new Uint8Array([125, 242, 176, Math.round(a * 255)]) }, x, y);
+    }
+    over(out, W, fit(mark, mw, mh), kw + 2 * gap + c, Math.round((H - mh) / 2));
+    return encodePng(W, H, out);
+  });
 }
 
 export async function programLogo() { return kiwiArt('icon@3x.png'); }
