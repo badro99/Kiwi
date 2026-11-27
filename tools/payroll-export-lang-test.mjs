@@ -34,7 +34,7 @@ const TOTAL = { fr: /^Total période \(contrat \d+(\.\d+)? h \/ semaine\)$/, en:
 // The real import planner, lifted from the shipped part, to prove the round trip.
 const importSource = read('assets/planning/csv-import.js');
 const lift = {};
-for (const name of ['parseCsv', 'dayIsLocked', 'planHoursImport']) lift[name] = shippedFunction(importSource, name, lift);
+for (const name of ['parseCsv', 'dayIsLocked', 'dayOf', 'hoursOf', 'planHoursImport']) lift[name] = shippedFunction(importSource, name, lift);
 // normHead is declared as a const arrow in the part: lift it by evaluating the declaration.
 vm.runInNewContext('globalThis.normHead = ' + importSource.match(/const normHead = ([^\n]+);/)[1], lift);
 lift.pad = (n) => String(n).padStart(2, '0');

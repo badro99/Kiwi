@@ -39,7 +39,9 @@ export function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBuc
   function parseCsv(text) {
     const src = String(text || '').replace(/^﻿/, '');
     const firstLine = src.split(/\r?\n/, 1)[0] || '';
-    const sep = (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length ? ';' : ',';
+    /* Point-virgule (Excel FR), virgule, ou tabulation (Numbers, collage). */
+    const count = (c) => firstLine.split(c).length - 1;
+    const sep = count('\t') > Math.max(count(';'), count(',')) ? '\t' : count(';') >= count(',') ? ';' : ',';
     const rows = []; let row = [], cell = '', quoted = false;
     for (let i = 0; i < src.length; i++) {
       const c = src[i];
@@ -71,11 +73,37 @@ export function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBuc
       return day >= start && day <= end;
     });
   }
-  function planHoursImport(text, members, root) {
-    const rows = parseCsv(text);
+  /* « 10/11/2026 », « 10/11/26 », « 10-11-2026 », « 2026-11-10 08:00 », ou le
+     numéro de série qu'un .xlsx garde pour une date. */
+  function dayOf(v) {
+    if (typeof v === 'number' && v > 20000 && v < 80000) return new Date(Math.round((Math.floor(v) - 25569) * 86400000)).toISOString().slice(0, 10);
+    const s = String(v == null ? '' : v).trim();
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+    m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/);
+    if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${pad(m[2])}-${pad(m[1])}`;
+    return s;
+  }
+  /* « 7,5 », « 7.5 », « 7:30 », « 7h30 », « 7h », ou la fraction de jour
+     qu'un .xlsx garde pour une durée au format heure (0,3125 = 7:30). */
+  function hoursOf(v) {
+    if (typeof v === 'number') return v > 0 && v < 1 ? Math.round(v * 24 * 100) / 100 : v;
+    const s = String(v == null ? '' : v).trim().toLowerCase();
+    if (!s) return NaN;
+    const hm = s.match(/^(\d{1,2})\s*(?::|h)\s*(\d{0,2})\s*(?:min)?$/);
+    if (hm) return (+hm[1]) + (hm[2] ? (+hm[2]) / 60 : 0);
+    return /^\d+(?:[.,]\d+)?$/.test(s) ? Number(s.replace(',', '.')) : NaN;
+  }
+  function planHoursImport(input, members, root) {
+    const rows = Array.isArray(input) ? input.map((r) => (r || []).map((v) => (typeof v === 'string' ? v.trim() : v))) : parseCsv(input);
     if (rows.length < 2) return null;
     const head = rows[0].map(normHead);
-    const col = (...names) => head.findIndex((h) => names.includes(h));
+    /* Le nom exact, sinon un nom connu suivi d'une précision : « Heures
+       travaillées », « Date du jour », « Nom de l'employé ». */
+    const col = (...names) => {
+      const exact = head.findIndex((h) => names.includes(h));
+      return exact >= 0 ? exact : head.findIndex((h) => names.some((n) => n.length >= 4 && h.startsWith(n)));
+    };
     const iId = col('idmembre', 'memberid', 'id', 'رقمالعضو'), iName = col('employe', 'employee', 'nom', 'name', 'الموظف');
     const iDate = col('date', 'jour', 'day', 'التاريخ'), iHours = col('heures', 'hours', 'الساعات');
     if (iDate < 0 || iHours < 0 || (iId < 0 && iName < 0)) return null;
@@ -83,12 +111,9 @@ export function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBuc
     const byName = new Map(members.map((m) => [memberFullName(m).toLowerCase().replace(/\s+/g, ' ').trim(), m]));
     const changes = []; let skipped = 0; const lockedDays = new Set();
     rows.slice(1).forEach((r) => {
-      const m = (iId >= 0 && byId.get(r[iId])) || (iName >= 0 && byName.get(String(r[iName] || '').toLowerCase().replace(/\s+/g, ' ').trim()));
-      let day = String(r[iDate] || '');
-      const fr = day.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      if (fr) day = `${fr[3]}-${pad(fr[2])}-${pad(fr[1])}`;
-      const rawHours = String(r[iHours] || '').trim();
-      const hours = rawHours ? Number(rawHours.replace(',', '.')) : NaN;
+      const m = (iId >= 0 && byId.get(String(r[iId] == null ? '' : r[iId]).trim())) || (iName >= 0 && byName.get(String(r[iName] || '').toLowerCase().replace(/\s+/g, ' ').trim()));
+      const day = dayOf(r[iDate]);
+      const hours = hoursOf(r[iHours]);
       /* La forme ne suffit pas : « 2026-13-40 » passe l'expression et
        * deviendrait une journée fantôme dans le registre. On relit la date. */
       const parsed = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(day + 'T00:00:00Z') : null;
@@ -105,16 +130,18 @@ export function createCsvImport({ Kiwi, esc, getMembers, handlers, live, lockBuc
     const root = window.__kiwiTeamV2;
     if (root.periodLocked) { Kiwi.toast(C.locked, { type: 'info', desc: C.lockedDesc }); return; }
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.csv,text/csv'; input.hidden = true;
+    input.type = 'file'; input.accept = '.xlsx,.xlsm,.xls,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain'; input.hidden = true;
     document.body.appendChild(input);
     input.addEventListener('change', () => {
       const file = input.files && input.files[0];
       input.remove();
       if (!file) return;
-      file.text().then((text) => {
+      /* Lu par le lecteur partagé : .xlsx, et un CSV d'Excel FR (Windows-1252)
+         dont « Employé » arrivait illisible avec file.text(). */
+      import('../sheet-file.mjs?v=1').then((X) => X.readSheetFile(file)).then((read) => {
         const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
         const key = teamKey(venue);
-        const plan = planHoursImport(text, getMembers(key), root);
+        const plan = read.ok ? planHoursImport(read.rows, getMembers(key), root) : null;
         if (!plan) { Kiwi.toast(C.bad, { type: 'warning', desc: C.badDesc }); return; }
         if (!plan.changes.length) { Kiwi.toast(C.empty, { type: 'info', desc: C.emptyDesc }); return; }
         const membersTouched = new Set(plan.changes.map((c) => c.id)).size;

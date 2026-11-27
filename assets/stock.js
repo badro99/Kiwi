@@ -2461,7 +2461,7 @@
   };
   /* URLs littérales : tools/stamps.js les découvre et remonte au chargeur. */
   const stockUrls = [
-    'assets/stock/import.js?v=2',
+    'assets/stock/import.js?v=3',
     'assets/stock/movements.js?v=3',
     'assets/stock/overview.js?v=3',
     'assets/stock/alerts.js?v=6',

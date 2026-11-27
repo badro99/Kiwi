@@ -14,7 +14,7 @@ window.KiwiStockInternal.install('import', (S) => {
     fr: {
       title: 'Importer une liste d’articles', tag: 'Stock',
       help: 'Colonnes reconnues : article, unite, categorie, fournisseur, cout (prix d’achat par unité), stock, stock_ideal, seuil. Seule article est obligatoire. Sans colonne stock, saisissez ensuite les quantités dans l’Inventaire physique.',
-      choose: 'Choisir un fichier CSV', paste: 'ou collez ici les lignes copiées depuis Excel (avec la ligne d’en-tête)', read: 'Lire', template: 'Télécharger un modèle',
+      choose: 'Choisir un fichier Excel ou CSV', paste: 'ou collez ici les lignes copiées depuis Excel (avec la ligne d’en-tête)', read: 'Lire', template: 'Télécharger un modèle',
       created: 'nouveaux', updated: 'mis à jour', counted: 'avec stock', cats: 'catégorie(s) créée(s)',
       thName: 'Article', thUnit: 'Unité', thCat: 'Catégorie', thCost: 'Coût', thStock: 'Stock',
       isNew: 'nouveau', issues: (n) => `${n} ligne(s) ignorée(s)`, line: 'Ligne', noName: 'article vide', twice: 'en double dans le fichier', badNum: 'nombre illisible', unitFix: (u) => `unité inconnue, comptée en ${u}`,
@@ -25,7 +25,7 @@ window.KiwiStockInternal.install('import', (S) => {
     en: {
       title: 'Import a list of items', tag: 'Stock',
       help: 'Recognised columns: article, unite, categorie, fournisseur, cout (purchase cost per unit), stock, stock_ideal, seuil. Only article is required. Without a stock column, enter quantities afterwards in the Physical count.',
-      choose: 'Choose a CSV file', paste: 'or paste rows copied from Excel here (with the header row)', read: 'Read', template: 'Download a template',
+      choose: 'Choose an Excel or CSV file', paste: 'or paste rows copied from Excel here (with the header row)', read: 'Read', template: 'Download a template',
       created: 'new', updated: 'updated', counted: 'with stock', cats: 'categor(ies) created',
       thName: 'Item', thUnit: 'Unit', thCat: 'Category', thCost: 'Cost', thStock: 'Stock',
       isNew: 'new', issues: (n) => `${n} row(s) skipped`, line: 'Row', noName: 'empty item', twice: 'twice in the file', badNum: 'unreadable number', unitFix: (u) => `unknown unit, counted in ${u}`,
@@ -36,7 +36,7 @@ window.KiwiStockInternal.install('import', (S) => {
     ar: {
       title: 'استيراد لائحة أصناف', tag: 'المخزون',
       help: 'الأعمدة المعروفة: article و unite و categorie و fournisseur و cout (ثمن الشراء للوحدة) و stock و stock_ideal و seuil. العمود article وحده إلزامي. بدون عمود stock، أدخل الكميات بعد ذلك في الجرد الفعلي.',
-      choose: 'اختر ملف CSV', paste: 'أو الصق هنا الأسطر المنسوخة من Excel (مع سطر العناوين)', read: 'قراءة', template: 'تنزيل نموذج',
+      choose: 'اختر ملف Excel أو CSV', paste: 'أو الصق هنا الأسطر المنسوخة من Excel (مع سطر العناوين)', read: 'قراءة', template: 'تنزيل نموذج',
       created: 'جديدة', updated: 'محدَّثة', counted: 'بمخزون', cats: 'فئة منشأة',
       thName: 'الصنف', thUnit: 'الوحدة', thCat: 'الفئة', thCost: 'التكلفة', thStock: 'المخزون',
       isNew: 'جديد', issues: (n) => `${n} سطر متجاهَل`, line: 'السطر', noName: 'صنف فارغ', twice: 'مكرر في الملف', badNum: 'رقم غير مقروء', unitFix: (u) => `وحدة غير معروفة، تُحتسب بـ${u}`,
@@ -52,7 +52,8 @@ window.KiwiStockInternal.install('import', (S) => {
     unit: ['unite', 'unit', 'u', 'mesure', 'unite_de_mesure'],
     cat: ['categorie', 'category', 'famille', 'rayon'],
     sup: ['fournisseur', 'supplier', 'frs'],
-    cost: ['cout', 'cout_unitaire', 'prix', 'prix_achat', 'prix_d_achat', 'prix_unitaire', 'pu', 'cost', 'cout_mad', 'prix_mad'],
+    cost: ['cout', 'cout_unitaire', 'prix', 'prix_achat', 'prix_d_achat', 'prix_unitaire', 'pu', 'cost', 'cout_mad', 'prix_mad',
+      'prix_unitaire_ht', 'prix_achat_ht', 'prix_d_achat_ht', 'cout_ht', 'cout_unitaire_ht', 'prix_ht', 'unit_cost', 'cost_price', 'purchase_price'],
     stock: ['stock', 'quantite', 'qte', 'qty', 'stock_actuel', 'en_stock', 'quantity'],
     par: ['stock_ideal', 'par', 'stock_cible', 'niveau_ideal', 'par_level'],
     reorder: ['seuil', 'seuil_commande', 'reorder', 'alerte', 'stock_min', 'minimum'],
@@ -96,7 +97,40 @@ window.KiwiStockInternal.install('import', (S) => {
       if (rows.length && (!best || rows[0].length > best[0].length)) best = rows;
     });
     if (!best || best.length < 2) return { ok: false };
-    return { ok: true, header: best[0].map(headKey), rows: best.slice(1) };
+    return { ok: true, header: best[0].map(headKey), rows: best.slice(1), all: best };
+  }
+  /* Les lignes d'un .xlsx (assets/sheet-file.mjs), même forme que readCsv. */
+  function readRows(rows) {
+    const all = (rows || []).map((r) => (r || []).map((c) => (c == null ? '' : String(c).trim()))).filter((r) => r.some((c) => c !== ''));
+    return all.length < 2 ? { ok: false } : { ok: true, header: all[0].map(headKey), rows: all.slice(1), all };
+  }
+  /* « Coût (MAD) », « Prix unitaire HT », « Quantité en stock » : le nom exact,
+     puis sans son unité, puis un nom connu suivi d'une précision (le plus long
+     gagne). Avant le 27 nov., ces colonnes passaient en silence : la liste
+     entrait sans coût ni quantité, sans un mot. */
+  const UNIT_TAIL = /_(?:mad|dhs?|dirhams?|eur|euros?|ttc|en_mad|en_dh)$/;
+  const stripUnit = (h) => { let p; do { p = h; h = h.replace(UNIT_TAIL, ''); } while (h && h !== p); return h; };
+  function mapCols(header) {
+    const idx = {}, used = new Set();
+    Object.keys(COLS).forEach((k) => { idx[k] = -1; });
+    for (const form of [(h) => h, stripUnit]) {
+      Object.keys(COLS).forEach((k) => {
+        if (idx[k] >= 0) return;
+        const i = header.findIndex((h, j) => h && !used.has(j) && COLS[k].includes(form(h)));
+        if (i >= 0) { idx[k] = i; used.add(i); }
+      });
+    }
+    header.forEach((raw, i) => {
+      if (!raw || used.has(i)) return;
+      const h = stripUnit(raw);
+      let best = '', len = 0;
+      Object.keys(COLS).forEach((k) => {
+        if (idx[k] >= 0) return;
+        COLS[k].forEach((a) => { if (a.length >= 3 && a.length > len && h.startsWith(a + '_')) { best = k; len = a.length; } });
+      });
+      if (best) { idx[best] = i; used.add(i); }
+    });
+    return idx;
   }
   /* « 0,054 » (Excel en français) est une décimale : une virgule seule n'est
      jamais un séparateur de milliers ici. Puis « 1.234,50 », « 1,234.50 »,
@@ -114,17 +148,21 @@ window.KiwiStockInternal.install('import', (S) => {
   }
 
   /* Texte → plan, sans rien écrire. */
-  function analyse(text) {
-    const parsed = readCsv(text);
+  function analyse(input) {
+    let parsed = Array.isArray(input) ? readRows(input) : readCsv(input);
     if (!parsed.ok) return { ok: false, error: 'empty' };
-    const idx = {};
-    Object.keys(COLS).forEach((k) => { idx[k] = parsed.header.findIndex((h) => COLS[k].includes(h)); });
+    let idx = mapCols(parsed.header), skip = 0;
+    /* Une ligne de titre au-dessus des en-têtes : la première des dix qui nomme l'article. */
+    for (let k = 1; idx.name < 0 && k < Math.min(parsed.all.length - 1, 10); k++) {
+      const header = parsed.all[k].map(headKey), m = mapCols(header);
+      if (m.name >= 0) { idx = m; skip = k; parsed = { ok: true, header, rows: parsed.all.slice(k + 1), all: parsed.all }; }
+    }
     if (idx.name < 0) return { ok: false, error: 'noCols' };
     const existing = new Map(getInv().map((it) => [key(it.name), it]));
     const cats = new Map(allCategories().map((c) => [key(c.label), c.id]));
     const rows = [], issues = [], seen = new Set();
     parsed.rows.forEach((r, i) => {
-      const line = i + 2, cell = (k) => (idx[k] >= 0 ? String(r[idx[k]] == null ? '' : r[idx[k]]).trim() : '');
+      const line = i + 2 + skip, cell = (k) => (idx[k] >= 0 ? String(r[idx[k]] == null ? '' : r[idx[k]]).trim() : '');
       const name = cell('name').slice(0, 120);
       if (!name) { issues.push({ line, why: tr('noName') }); return; }
       if (seen.has(key(name))) { issues.push({ line, why: tr('twice'), name }); return; }
@@ -226,7 +264,7 @@ window.KiwiStockInternal.install('import', (S) => {
     function paint() {
       let html = '<p style="font-size:12.5px;line-height:1.5;color:var(--n-600,#555);margin:0 0 10px;">' + esc(tr('help')) + '</p>'
         + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"><button class="st-btn secondary" type="button" data-sti-pick>' + esc(tr('choose')) + '</button>'
-        + '<input type="file" hidden accept=".csv,.txt,.tsv,text/csv,text/plain" data-sti-file><button class="st-btn secondary" type="button" data-sti-tpl>' + esc(tr('template')) + '</button></div>'
+        + '<input type="file" hidden accept=".xlsx,.xlsm,.xls,.csv,.txt,.tsv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" data-sti-file><button class="st-btn secondary" type="button" data-sti-tpl>' + esc(tr('template')) + '</button></div>'
         + '<textarea data-sti-paste placeholder="' + esc(tr('paste')) + '" style="width:100%;box-sizing:border-box;min-height:110px;font-family:\'JetBrains Mono\',monospace;font-size:12px;' + field + '"></textarea>'
         + '<div style="margin:8px 0 12px;"><button class="st-btn secondary" type="button" data-sti-read>' + esc(tr('read')) + '</button></div>';
       if (error) html += '<p style="color:var(--danger,#cb5238);font-size:13px;">' + esc(tr(error)) + '</p>';
@@ -264,9 +302,19 @@ window.KiwiStockInternal.install('import', (S) => {
     m.el.addEventListener('change', (e) => {
       const el = e.target;
       if (!el.matches('[data-sti-file]') || !el.files || !el.files[0]) return;
+      const file = el.files[0];
+      el.value = '';
+      /* .xlsx : le lecteur de tableur partagé (assets/sheet-file.mjs). */
+      if (/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+        import('../sheet-file.mjs?v=1').then((X) => X.readSheetFile(file).then((r) => {
+          if (!r.ok) { plan = null; error = ''; paint(); K.toast?.(X.errorText(r.error, lang()), { type: 'error' }); return; }
+          use(r.rows);
+        })).catch(() => { plan = null; error = 'empty'; paint(); });
+        return;
+      }
       const fr = new FileReader();
       fr.onload = () => use(decode(fr.result));
-      fr.readAsArrayBuffer(el.files[0]);
+      fr.readAsArrayBuffer(file);
     });
     paint();
     return m;

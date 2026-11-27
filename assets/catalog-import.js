@@ -57,7 +57,7 @@
      as the thousands separator, so a naive parseFloat("1 234,50") returns 1. */
   function num(s) {
     if (s == null) return NaN;
-    let t = String(s).trim().replace(/\s*MAD$/i, '').trim().replace(/[٠-٩۰-۹]/g, c => String(c.charCodeAt(0) - (c <= '٩' ? 0x660 : 0x6f0)))
+    let t = String(s).trim().replace(/\s*(?:MAD|DHS?|DH|dirhams?|EUR|€|درهم)\.?$/i, '').trim().replace(/[٠-٩۰-۹]/g, c => String(c.charCodeAt(0) - (c <= '٩' ? 0x660 : 0x6f0)))
       .replace(/٫/g, '.').replace(/٬/g, ',');
     // Validate the entire cell before removing valid grouping separators.
     if (/^-?\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[,.]\d+)?$/.test(t)) t = t.replace(/[ \u00a0\u202f]/g, '');
@@ -155,7 +155,18 @@
       headerRaw: best.rows[0],
       header: best.rows[0].map(normKey),
       rows: best.rows.slice(1),
+      all: best.rows,
     };
+  }
+
+  /* Les lignes d'un .xlsx (assets/sheet-file.mjs) → la même forme que parse().
+     Un nombre reste écrit comme Excel le garde : 6111234567890, 1.875. */
+  function fromRows(rows) {
+    const all = (rows || []).map((r) => (r || []).map((c) => (c == null ? '' : typeof c === 'number' ? String(c) : String(c).trim())))
+      .filter((r) => r.some((c) => c !== ''));
+    if (!all.length) return { ok: false, error: 'vide' };
+    if (all.length < 2) return { ok: false, error: 'une-seule-ligne' };
+    return { ok: true, delimiter: '', headerRaw: all[0], header: all[0].map(normKey), rows: all.slice(1), all };
   }
 
   /* ───────────────── column mapping ───────────────────────────────────────
@@ -164,7 +175,7 @@
    * and the abbreviations old tills print (qte, pv, gencod, designation). */
   const BOUTIQUE_COLS = {
     produit:     ['produit', 'article', 'articles', 'nom', 'name', 'designation', 'libelle', 'product', 'description_article'],
-    categorie:   ['categorie', 'category', 'rayon', 'famille', 'collection', 'type_produit'],
+    categorie:   ['categorie', 'category', 'rayon', 'famille', 'collection', 'type_produit', 'type_de_produit', 'type_d_article'],
     couleur:     ['couleur', 'color', 'coloris', 'couleur_famille'],
     // La nuance telle qu'elle a été SAISIE ou importée à l'origine ("Bleu nuit"),
     // que exportCsv écrit à côté de la famille affichée ("Bleu"). Elle sert à
@@ -189,29 +200,69 @@
        même — normKey() a déjà ôté les accents avant la comparaison. */
     cout:        ['cout', 'couts', 'prix_achat', 'prix_d_achat', 'cout_achat', 'cout_unitaire',
                   'cost', 'cost_price', 'pa', 'p_a', 'prix_fournisseur', 'tarif_achat', 'achat',
-                  'prix_revient', 'prix_de_revient', 'revient', 'buy_price', 'purchase_price'],
+                  'prix_revient', 'prix_de_revient', 'revient', 'buy_price', 'purchase_price',
+                  'prix_achat_ht', 'prix_d_achat_ht', 'cout_ht', 'cout_unitaire_ht', 'prix_unitaire_achat'],
     stock:       ['stock', 'quantite', 'qte', 'qty', 'quantity', 'stock_actuel', 'dispo'],
     code_barres: ['code_barres', 'codebarres', 'code_barre', 'barcode', 'ean', 'ean13', 'gencod', 'gencode', 'code', 'upc', 'sku'],
     type:        ['type', 'type_code', 'type_code_barres'],
   };
   const MENU_COLS = {
-    article:         ['article', 'produit', 'nom', 'name', 'plat', 'designation', 'libelle', 'item'],
+    article:         ['article', 'produit', 'nom', 'name', 'plat', 'designation', 'libelle', 'item', 'nom_du_plat', 'nom_de_l_article', 'item_name', 'product', 'product_name'],
     categorie:       ['categorie', 'category', 'famille', 'section', 'carte', 'menu'],
     sous_categorie:  ['sous_categorie', 'souscategorie', 'sous_famille', 'subcategory', 'sub_category', 'sous_section', 'sous_menu'],
-    prix_mad:        ['prix_mad', 'prix', 'price', 'pv', 'prix_vente', 'prix_ttc', 'tarif'],
+    prix_mad:        ['prix_mad', 'prix', 'price', 'pv', 'prix_vente', 'prix_de_vente', 'prix_vente_ttc', 'prix_de_vente_ttc', 'prix_ttc',
+                      'prix_unitaire', 'prix_unitaire_ttc', 'prix_public', 'tarif', 'selling_price', 'sale_price', 'unit_price'],
     description:     ['description', 'desc', 'details', 'detail', 'ingredients', 'composition'],
     disponible:      ['disponible', 'dispo', 'available', 'actif', 'en_vente', 'statut'],
   };
 
+  /* Trois passes, chacune ne prend qu'une colonne libre :
+       1. le nom exact (« Prix ») ;
+       2. le nom sans son unité (« Prix (DH) », « Prix TTC (MAD) ») ;
+       3. un nom connu suivi d'une précision (« Nom du plat », « Quantité en
+          stock », « Désignation article ») : le plus long nom connu gagne, si
+          bien que « Prix d'achat HT » va au coût, jamais au prix de vente.
+     Un « HT » n'est jamais lu comme prix de vente (voir prix_mad), et une
+     colonne de promotion ou d'achat non plus. */
+  const UNIT_TAIL = /_(?:mad|dhs?|dirhams?|eur|euros?|ttc|en_mad|en_dh)$/;
+  const stripUnit = (h) => { let p; do { p = h; h = h.replace(UNIT_TAIL, ''); } while (h && h !== p); return h; };
+  const NOT_PRICE = /achat|revient|fournisseur|promo|solde|remise|barre|ancien|cout|(^|_)ht$/;
   function mapColumns(header, spec) {
-    const idx = {};
-    Object.keys(spec).forEach((canon) => {
-      for (let i = 0; i < header.length; i++) {
-        if (idx[canon] != null) break;
-        if (spec[canon].includes(header[i])) idx[canon] = i;
-      }
-    });
+    const idx = {}, used = new Set();
+    const canons = Object.keys(spec);
+    for (const form of [(h) => h, stripUnit]) {
+      canons.forEach((canon) => {
+        if (idx[canon] != null) return;
+        for (let i = 0; i < header.length; i++) {
+          if (used.has(i) || !header[i]) continue;
+          if (spec[canon].includes(form(header[i]))) { idx[canon] = i; used.add(i); return; }
+        }
+      });
+    }
+    for (let i = 0; i < header.length; i++) {
+      if (used.has(i) || !header[i]) continue;
+      const h = stripUnit(header[i]);
+      let best = null, len = 0;
+      canons.forEach((canon) => {
+        if (idx[canon] != null) return;
+        if (canon === 'prix_mad' && NOT_PRICE.test(h)) return;
+        spec[canon].forEach((a) => { if (a.length >= 3 && a.length > len && h.startsWith(a + '_')) { best = canon; len = a.length; } });
+      });
+      if (best) { idx[best] = i; used.add(i); }
+    }
     return idx;
+  }
+  /* Un titre au-dessus des en-têtes (« Carte Jon's Burgers », une ligne vide) :
+     la ligne d'en-tête est la première des dix qui nomme la colonne voulue. */
+  function withHeader(parsed, spec, must) {
+    if (mapColumns(parsed.header, spec)[must] != null || !parsed.all) return parsed;
+    for (let k = 1; k < Math.min(parsed.all.length - 1, 10); k++) {
+      const header = parsed.all[k].map(normKey);
+      if (mapColumns(header, spec)[must] != null) {
+        return Object.assign({}, parsed, { headerRaw: parsed.all[k], header, rows: parsed.all.slice(k + 1), skip: k });
+      }
+    }
+    return parsed;
   }
   const cell = (row, i) => (i == null ? '' : String(row[i] == null ? '' : row[i]).trim());
 
@@ -223,6 +274,7 @@
     const CAT = window.KiwiBoutiqueCatalog;
     if (!CAT) return { ok: false, error: 'catalogue-absent' };
 
+    parsed = withHeader(parsed, BOUTIQUE_COLS, 'produit');
     const idx = mapColumns(parsed.header, BOUTIQUE_COLS);
     if (idx.produit == null) {
       return { ok: false, error: 'colonne-produit', headerRaw: parsed.headerRaw };
@@ -240,7 +292,7 @@
     const seenCodes = new Map();  // code → { line, product }
 
     parsed.rows.forEach((row, i) => {
-      const line = i + 2;         // 1-based, header is line 1
+      const line = i + 2 + (parsed.skip || 0);   // 1-based, under its header line
       const name = cell(row, idx.produit);
       if (!name) { issues.push({ line, level: 'skip', msg: tx('ligne sans nom d\'article', 'row with no item name', 'سطر بلا اسم صنف') }); return; }
 
@@ -297,7 +349,14 @@
               variants of this product at this size;
          and only then the colour family. Each rule demands an exact prior
          match, so two genuinely different variants are never merged. */
-      const rowCode = cell(row, idx.code_barres);
+      let rowCode = cell(row, idx.code_barres);
+      /* « 6,11123E+12 » : Excel a écrit le code-barres en notation scientifique
+         et perdu ses derniers chiffres. Importé tel quel, il ne se scannerait
+         jamais : on le dit, et la ligne entre sans code. */
+      if (/^\d+(?:[.,]\d+)?e[+]?\d+$/i.test(rowCode)) {
+        issues.push({ line, level: 'warn', code: 'barcode-scientific', msg: tx('code-barres abîmé par Excel (« ' + rowCode + ' ») · ignoré : mettez la colonne au format Texte, puis enregistrez de nouveau', 'barcode damaged by Excel ("' + rowCode + '") · ignored: set the column to Text format, then save again', 'رمز شريطي أفسده Excel ("' + rowCode + '") · تم تجاهله: اجعل العمود بصيغة نص ثم احفظ من جديد') });
+        rowCode = '';
+      }
       const rowShade = cell(row, idx.couleur_saisie);
       let colorId = hit ? hit.id : (normKey(colorLabel) || 'sans_couleur');
       const priorVariants = g.existing ? CAT.listVariants(g.existing.id) : [];
@@ -480,6 +539,7 @@
     const MS = window.KiwiMenuStore;
     if (!MS) return { ok: false, error: 'carte-absente' };
 
+    parsed = withHeader(parsed, MENU_COLS, 'article');
     const idx = mapColumns(parsed.header, MENU_COLS);
     if (idx.article == null) return { ok: false, error: 'colonne-article', headerRaw: parsed.headerRaw };
 
@@ -499,7 +559,7 @@
     const newSubs = [];
 
     parsed.rows.forEach((row, i) => {
-      const line = i + 2;
+      const line = i + 2 + (parsed.skip || 0);
       const name = cell(row, idx.article);
       if (!name) { issues.push({ line, level: 'skip', msg: tx('ligne sans nom d\'article', 'row with no item name', 'سطر بلا اسم صنف') }); return; }
 
@@ -722,18 +782,18 @@
       body.innerHTML = [
         where ? '<p class="kci-where">' + where + '</p>' : '',
         '<div class="kci-drop" data-kci-drop tabindex="0" role="button">',
-        '  <h4>' + tx('Déposez votre fichier CSV', 'Drop your CSV file', 'أفلت ملف CSV هنا') + '</h4>',
+        '  <h4>' + tx('Déposez votre fichier Excel ou CSV', 'Drop your Excel or CSV file', 'أفلت ملف Excel أو CSV هنا') + '</h4>',
         '  <p>' + tx('ou cliquez pour le choisir · colonnes reconnues :', 'or click to choose one · recognised columns:', 'أو انقر لاختياره · الأعمدة المعروفة:') + '<br><code>' + esc(L.cols) + '</code></p>',
         '</div>',
-        '<input type="file" accept=".csv,.txt,text/csv,text/plain" hidden data-kci-file />',
+        '<input type="file" accept=".xlsx,.xlsm,.xls,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" hidden data-kci-file />',
         err ? '<div class="kci-iss"><b>' + esc(err) + '</b></div>' : '',
         '<p class="kci-hint">' + tx('Seule la colonne <code>' + esc(L.required) + '</code> est obligatoire. ', 'Only the <code>' + esc(L.required) + '</code> column is required. ', 'العمود <code>' + esc(L.required) + '</code> وحده إلزامي. '),
         tx('Les noms de colonnes sont reconnus en français comme en anglais (<code>prix</code>, <code>price</code>, <code>qte</code>…), ',
           'Column names are recognised in French or English (<code>prix</code>, <code>price</code>, <code>qte</code>…), ',
           'تُعرف أسماء الأعمدة بالفرنسية أو الإنجليزية (<code>prix</code>, <code>price</code>, <code>qte</code>…)، '),
-        tx('le séparateur virgule ou point-virgule, et les accents dans les deux encodages qu\'Excel produit.<br>',
-          'with a comma or semicolon separator, and accents in both encodings Excel produces.<br>',
-          'مع الفاصلة أو الفاصلة المنقوطة كفاصل، والأحرف المعلّمة في كلا الترميزين اللذين ينتجهما Excel.<br>'),
+        tx('même avec une unité (<code>Prix (DH)</code>) ou une ligne de titre au-dessus. Fichier .xlsx, ou CSV à virgule, point-virgule ou tabulation, accents compris.<br>',
+          'even with a unit (<code>Prix (DH)</code>) or a title line above. An .xlsx file, or a CSV with commas, semicolons or tabs, accents included.<br>',
+          'حتى مع وحدة (<code>Prix (DH)</code>) أو سطر عنوان فوقها. ملف ‎.xlsx أو CSV بفاصلة أو فاصلة منقوطة أو علامة جدولة، مع الأحرف المعلّمة.<br>'),
         '<button data-activation=money class="kci-link" data-kci-tpl type="button">' + tx('Télécharger un modèle CSV', 'Download a CSV template', 'تنزيل نموذج CSV') + '</button></p>',
       ].join('');
       go.disabled = true; go.style.opacity = '.5'; go.textContent = tx('Choisir un fichier', 'Choose a file', 'اختيار ملف');
@@ -811,8 +871,8 @@
     /* CSV (fichier ou texte déjà en mémoire) → analyse → plan à l'écran.
      * Partagé entre le dépôt de fichier et l'entrée directe openMenuWithCsv
      * (scan AI d'un menu) : même analyse, même revue, même chemin d'écriture. */
-    function usePlan(csvText) {
-      const parsed = parse(csvText);
+    function usePlan(csvText) { useParsed(parse(csvText)); }
+    function useParsed(parsed) {
       if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || unreadable()); return; }
       const p = kind === 'boutique' ? analyseBoutique(parsed) : analyseMenu(parsed);
       if (!p.ok) {
@@ -831,10 +891,21 @@
 
     function handleFile(file) {
       if (!file) return;
-      if (/\.(xlsx|xls|numbers|ods)$/i.test(file.name)) {
-        renderPick(tx('Kiwi lit le CSV, pas le .xlsx directement. Dans Excel : Fichier → Enregistrer sous → CSV UTF-8, puis redéposez le fichier.',
-          'Kiwi reads CSV, not .xlsx directly. In Excel: File → Save As → CSV UTF-8, then drop the file again.',
-          'يقرأ Kiwi ملفات CSV وليس .xlsx مباشرة. في Excel: ملف ← حفظ باسم ← CSV UTF-8، ثم أعد إفلات الملف.'));
+      /* .xlsx et vieux .xls passent par le lecteur de tableur (27 nov. :
+         « Kiwi lit le CSV, pas le .xlsx » arrêtait les commerçants qui
+         n'avaient que leur fichier Excel). Numbers et OpenOffice restent à
+         exporter. */
+      if (/\.(numbers|ods)$/i.test(file.name)) {
+        renderPick(tx('Enregistrez ce fichier en .xlsx ou en .csv (Fichier → Exporter), puis redéposez-le.',
+          'Save this file as .xlsx or .csv (File → Export), then drop it again.',
+          'احفظ هذا الملف بصيغة ‎.xlsx أو ‎.csv (ملف ← تصدير) ثم أعد إفلاته.'));
+        return;
+      }
+      if (/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+        import('./sheet-file.mjs?v=1').then((S) => S.readSheetFile(file).then((r) => {
+          if (!r.ok) { renderPick(S.errorText(r.error, lang())); return; }
+          useParsed(fromRows(r.rows));
+        })).catch(() => renderPick(tx('Ce fichier n\'a pas pu être lu.', 'This file could not be read.', 'تعذّرت قراءة هذا الملف.')));
         return;
       }
       const fr = new FileReader();
@@ -905,6 +976,6 @@
     openMenuWithCsv: (csvText, o) => open('menu', Object.assign({}, o, { csvText })),
     downloadTemplate, templates: () => Object.assign({}, TEMPLATES),
     // exposed for tests
-    _num: num, _normKey: normKey, _bool: bool, _decode: decodeBytes,
+    _num: num, _normKey: normKey, _bool: bool, _decode: decodeBytes, _fromRows: fromRows, _mapColumns: mapColumns,
   };
 })();

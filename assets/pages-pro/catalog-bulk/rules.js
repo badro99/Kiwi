@@ -262,6 +262,8 @@
       const s = String(raw == null ? '' : raw).trim();
       if (s.length > LIMITS[field]) return { error: 'too-long' };
       if (field === 'barcode' && /\s/.test(s)) return { error: 'bad-barcode' };
+      /* « 6,11123E+12 » : Excel a arrondi le code en notation scientifique. */
+      if (field === 'barcode' && /^\d+(?:[.,]\d+)?e\+?\d+$/i.test(s)) return { error: 'excel-barcode' };
       return { value: s };
     }
     if (field === 'price' || field === 'cost') {
@@ -385,15 +387,42 @@
     category: ['categorie', 'category', 'rayon', 'famille', 'الفئة', 'الصنف'],
     sellable: ['en_vente', 'en_vente_oui_non', 'disponible', 'sellable', 'for_sale', 'available', 'available_for_sale', 'معروض_للبيع', 'للبيع'],
   };
+  /* Three passes, so a real export's header still lands (27 nov. 2026):
+     the exact name, then the name without its unit (« Prix (DH) », « Prix
+     TTC (MAD) »), then a known name followed by more words (« Désignation
+     article », « Prix de vente unitaire »), the longest known name winning.
+     A purchase, promo or HT column is never read as the selling price. */
+  const UNIT_TAIL = /_(mad|dh|dhs|dirhams?|ttc|eur|unitaire|u)$/;
+  const stripUnit = (k) => { let prev; do { prev = k; k = k.replace(UNIT_TAIL, ''); } while (k !== prev && k); return k; };
+  const NOT_PRICE = /achat|revient|fournisseur|promo|solde|remise|barre|ancien|cout|(^|_)ht$/;
   function mapHeader(header, kind) {
     const keys = (header || []).map(normKey);
     const idx = {};
-    ['id'].concat(FIELDS[kind] || []).forEach((f) => {
+    const fields = ['id'].concat(FIELDS[kind] || []);
+    const taken = (i) => Object.values(idx).indexOf(i) !== -1;
+    const allowed = (f, k) => !(f === 'price' && NOT_PRICE.test(k));
+    fields.forEach((f) => {
+      for (let i = 0; i < keys.length; i++) if (idx[f] == null && !taken(i) && allowed(f, keys[i]) && ALIASES[f].indexOf(keys[i]) !== -1) idx[f] = i;
+    });
+    fields.forEach((f) => {
+      for (let i = 0; i < keys.length; i++) if (idx[f] == null && !taken(i) && allowed(f, keys[i]) && ALIASES[f].indexOf(stripUnit(keys[i])) !== -1) idx[f] = i;
+    });
+    fields.forEach((f) => {
+      if (f === 'id' || idx[f] != null) return;
+      let best = -1, bestLen = 0;
       for (let i = 0; i < keys.length; i++) {
-        if (idx[f] == null && ALIASES[f].indexOf(keys[i]) !== -1 && Object.values(idx).indexOf(i) === -1) idx[f] = i;
+        if (taken(i) || !allowed(f, keys[i])) continue;
+        ALIASES[f].forEach((a) => { if (a.length >= 3 && a.length > bestLen && keys[i].indexOf(a + '_') === 0) { best = i; bestLen = a.length; } });
       }
+      if (best !== -1) idx[f] = best;
     });
     return idx;
+  }
+  /* The header is the first of the ten top rows that names a product column:
+     a shop's export often opens with a title line or a blank row. */
+  function headerRow(table, kind) {
+    for (let h = 0; h < Math.min(10, table.length); h++) if (mapHeader(table[h], kind).name != null) return h;
+    return 0;
   }
 
   /* Rows of an import sheet → records, every cell validated.
@@ -402,7 +431,8 @@
   function analyseImport(table, ctx) {
     const kind = ctx.kind;
     const fields = FIELDS[kind];
-    const header = table[0] || [];
+    const h = headerRow(table, kind);
+    const header = table[h] || [];
     const idx = mapHeader(header, kind);
     if (idx.name == null) return { error: 'no-name-column', header };
     const catByName = new Map((ctx.categories || []).map((c) => [normKey(c.name), c.id]));
@@ -416,11 +446,11 @@
       if (!byName.has(normKey(e.name))) byName.set(normKey(e.name), e);
     });
     const rows = [];
-    table.slice(1).forEach((r, i) => {
+    table.slice(h + 1).forEach((r, i) => {
       if (!r || r.every((c) => String(c == null ? '' : c).trim() === '')) return;
       const raw = {};
       fields.forEach((f) => { if (idx[f] != null) raw[f] = r[idx[f]] == null ? '' : String(r[idx[f]]); });
-      rows.push({ line: i + 2, idRaw: idx.id != null ? String(r[idx.id] == null ? '' : r[idx.id]).trim() : '', raw, present: fields.filter((f) => idx[f] != null) });
+      rows.push({ line: i + h + 2, idRaw: idx.id != null ? String(r[idx.id] == null ? '' : r[idx.id]).trim() : '', raw, present: fields.filter((f) => idx[f] != null) });
     });
     rows.forEach((row) => revalidate(row, ctx, { catByName, catIds, byId, bySku, byCode, byName }));
     checkDuplicates(rows);

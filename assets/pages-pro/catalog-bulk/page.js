@@ -41,6 +41,7 @@
     duplicate: () => L('Déjà utilisé par un autre article', 'Already used by another item', 'مستعمل فمنتج آخر'),
     'multi-variant': () => L('Plusieurs déclinaisons : à modifier dans la fiche', 'Several variants: edit it in the item sheet', 'بزاف ديال الأنواع: بدّلو من بطاقة المنتج'),
     'bad-barcode': () => L('Pas d’espace dans un code-barres', 'No spaces in a barcode', 'الباركود ما فيهش فراغات'),
+    'excel-barcode': () => L('Code arrondi par Excel (6,11E+12) : mettez la colonne en Texte', 'Code rounded by Excel (6.11E+12): set the column to Text', 'Excel دوّر الكود (6,11E+12): رد العمود نص'),
     'not-found': () => L('Article introuvable, rechargez la page', 'Item not found, reload the page', 'المنتج ما كاينش، عاود حمّل الصفحة'),
     'too-many-decimals': () => L('Deux décimales au plus (1 234 s’écrit sans virgule)', 'Two decimals at most (write 1234 without a comma)', 'جوج أرقام من بعد الفاصلة على الأكثر (1234 كاتكتب بلا فاصلة)'),
     'zero-price': () => L('0 MAD refusé comme offert : tapez un prix, ou videz la cellule pour reprendre le prix principal', '0 MAD refused as free: type a price, or empty the cell to fall back on the main price', '0 درهم ما تقبلش بحال هدية: كتب ثمن، ولا خوي الخانة باش يرجع الثمن الرئيسي'),
