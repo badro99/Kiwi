@@ -237,20 +237,20 @@
     var score = 0;
     words.forEach(function (w) { if (hay.indexOf(w) >= 0) score += w.length > 7 ? 3 : 1; });
     if (f.key === 'scanner' && /scan|camera|barcode|code.?barre|iphone|باركود|الباركود|سكان|نسكاني|كاميرا/.test(norm(q))) score += 8;
-    if (f.key === 'payments' && /split|partag|credit client|cash|carte/.test(norm(q)) && !/fidel|loyal|points/.test(norm(q))) score += 6;
+    if (f.key === 'payments' && /split|partag|credit client|paiement|payment|moyen de paiement|\btpe\b|terminal|(?:cash|especes) (?:et|and|ou|or|w) (?:carte|card)|(?:carte|card) (?:et|and|ou|or|w) (?:cash|especes)/.test(norm(q)) && !/fidel|loyal|points/.test(norm(q))) score += 6;
     if (f.key === 'clients' && /fidel|loyal|points|wallet|نقط|ولاء/.test(norm(q))) score += 6;
     if (f.key === 'receipts' && /imprim|ticket|recu|etiquette|bluetooth|printer|طابعة|الطابعة|طباعة|\btabi3a\b/.test(norm(q))) score += 6;
     if (f.key === 'team' && /موظف|خدام|employe|staff|equipe/.test(norm(q))) score += 5;
     if (f.key === 'offline' && /انترنت|إنترنت|internet|reseau|ريزو|كونيكسيون/.test(norm(q))) score += 8;
     if (f.key === 'caisse' && /الكيسا|كيسا|جهاز الصندوق|الصندوق|caisse/.test(norm(q))) score += 5;
     if (f.key === 'receipts' && /ايصال|إيصال|الإيصال|البرانط|برانط|imprimante|printer/.test(norm(q))) score += 6;
-    if (f.key === 'menu' && /برودوي|منتج|منتوج|plat|produit|article|طبق/.test(norm(q))) score += 4;
+    if (f.key === 'menu' && /برودوي|منتج|منتوج|plat|produit|article|طبق|\bproducts?\b|\bsizes?\b|\btailles?\b|variant|option|مقاس|حجم/.test(norm(q))) score += 4;
     if (f.key === 'reporting' && /\bz\b|rapport z|cloture|\bexport|excel|\bcsv\b|تقرير/.test(norm(q))) score += 8;
-    if (f.key === 'caisse' && /\bipad\b|tablette|\btablet\b|appareil|device|جهاز|تابليت|connecte|connect/.test(norm(q)) && !/imprim|printer|طابعة/.test(norm(q))) score += 6;
+    if (f.key === 'caisse' && /\bipad\b|tablette|\btablet\b|appareil|device|جهاز|تابليت|connecte|connect/.test(norm(q)) && !/imprim|printer|طابعة/.test(norm(q)) && !/(?:me|se|m') connect|log ?in|sign ?in|mot de passe|password|\bcompte\b|account|identifiant/.test(norm(q))) score += 6;
     if (f.key === 'offline' && /hors ligne|offline|sans internet|synchron/.test(norm(q))) score += 8;
     if (f.key === 'pressing-services' && /prix|tarif|nom|renomm|service|traitement/.test(norm(q))) score += 7;
     if (f.key === 'pressing-orders' && /depot|acompte|solde|commande/.test(norm(q))) score += 7;
-    if (f.key === 'pressing-pickup' && /retrait|rack|rangement|etiquette/.test(norm(q))) score += 7;
+    if (f.key === 'pressing-pickup' && /retrait|\brack|rangement|etiquette/.test(norm(q))) score += 7;
     if (f.key === 'pressing-workshop' && /atelier|flux|lavage|repassage|retard/.test(norm(q))) score += 7;
     if (f.key === 'pressing-quality' && /incident|qualite|photo|dommage|reprise/.test(norm(q))) score += 7;
     if (f.key === 'pressing-delivery' && /collecte|livraison|ramassage|tournee/.test(norm(q))) score += 7;
@@ -258,7 +258,10 @@
     if (f.key === 'kds' && /kds|cuisine|production|station/.test(norm(q))) score += 6;
     return score;
   }
+  /* A login problem has no guide card: « pair the till » or « inventory » would be a guess (27 Nov 2026). */
+  var LOGIN_RX = /(?:me|se|m') connect|log ?in\b|sign ?in\b|mot de passe|password|identifiant|\bmon compte\b|my account|كلمة السر|الرقم السري|نسيت الكود|\bcode pin\b|\bpin code\b/;
   function matchFeature(raw, t) {
+    if (LOGIN_RX.test(norm(raw))) return null;
     var fs = features(t); var ranked = fs.map(function (f, i) { return { f: f, score: scoreFeature(f, raw), i: i }; })
       .filter(function (x) { return x.score > 0; }).sort(function (a, b) { return b.score - a.score || a.i - b.i; });
     /* « comment ajouter un produit » names one short word; a how-to verb on

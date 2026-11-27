@@ -152,6 +152,20 @@ for (const [q, L] of [
   ['What is the difference between revenue and profit?', 'en'],
 ]) { const r = ask(q, L); ok(/^(?:llm|feature)\b/.test(r.route), `« ${q} » asks how things work → {${r.route}} ${r.text.slice(0, 80)}`); }
 
+// The guide card has to be the one asked about (27 Nov): a login problem is
+// not « pair the till », a definition of cash flow is not « split tender ».
+for (const [q, L, not, want] of [
+  ['How do I add a product with two sizes and different prices?', 'en', /Payments and split|Floor plan/, /Menu, options/],
+  ["J'arrive pas à me connecter depuis mon nouveau téléphone", 'fr', /Caisse adaptée au métier/, null],
+  ['What is the difference between revenue and cash flow?', 'en', /Payments and split/, null],
+  ['Je n’arrive pas à me connecter à mon compte', 'fr', /Inventaire|Caisse adaptée/, null],
+  ['How can I track sizes and colors for shirts?', 'en', /Pickup, rack/, null],
+  ['Can I see which items sell best at breakfast?', 'en', /Menu, options/, null],
+]) {
+  const r = ask(q, L);
+  ok(!not.test(r.text) && (!want || want.test(r.text)), `« ${q} » gets the right guide card or none → {${r.route}} ${r.text.slice(0, 90)}`);
+}
+
 // 2. Not a single period: the honest refusal, or the route that owns it.
 for (const [q, L] of [
   ['compare les ventes de cette semaine avec la semaine dernière', 'fr'],
