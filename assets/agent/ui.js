@@ -2114,7 +2114,7 @@ function sCalc(expr, result) {
       text: __state.tr().calc.title,
       stats: [{
         l: expr.trim(),
-        v: __state.fmt1(Math.round(result * 100) / 100).replace(/,0$/, ''),
+        v: (Math.round(result * 100) / 100).toLocaleString(__state.L === 'en' ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 }).replace(/\u202f/g, '\u00a0'),
         h: Math.abs(result) > 999 ? __state.tr().calc.result : '',
       }],
     };
@@ -2390,7 +2390,7 @@ function decideRoute(rawIn, retry) {
     /* Nothing to answer. Offering to download a 1,2 Go model because the
      * merchant hit Enter on an empty box is absurd; greet them instead. */
     if (!/[a-z0-9؀-ۿ]/.test(q)) return { kind: 'greet', raw, q, run: () => sHelp() };
-    if (__state.looksLikeMath(raw)) {
+    { const wm = window.KiwiAgentData && window.KiwiAgentData.math ? window.KiwiAgentData.math(raw) : null; if (wm && evalMath(wm) != null) return { kind: 'math', raw: wm, q }; } if (__state.looksLikeMath(raw)) {
       /* "1/0" reads as arithmetic but has no finite result. Saying so beats
        * falling through to a model that will answer something about zero. */
       return evalMath(raw) != null ? { kind: 'math', raw, q } : { kind: 'calcerr', raw, q };

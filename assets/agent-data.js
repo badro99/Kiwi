@@ -1864,5 +1864,35 @@
     return (SUP_ASK.test(q) && SUP_VERB.test(q)) || SUP_SLIP.test(q);
   }
 
-  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, period: periodSpec, support: supportAsk, _rank: productRanking, _findClient: findClient };
+  /* Arithmetic said in words (27 Nov 2026): « 3200 dh m9ssma 3la 26 nhar »,
+   * « 2 kg à 95 dh le kilo ». Returns an expression for the calculator, or
+   * null. A sum is read only when the words say one: a division verb between
+   * two numbers, a quantity WITH its unit bought at a price PER that unit, or
+   * a bare « X fois Y ». A salary per month or a count of sales at a price is
+   * not a sum. tools/agent-word-math-test.mjs holds it. */
+  var WM_NUM = '(?<![a-z\\d])(\\d+(?:[.,]\\d+)?)(?!\\d)';
+  var WM_END = '(?![a-z\\u0600-\\u06ff])';
+  var WM_MONEY = '(?:\\s*(?:dh|mad|dhs|dirhams?|درهم|دراهم)' + WM_END + ')?';
+  var WM_DIV = new RegExp(WM_NUM + WM_MONEY + '\\s*(?:divise\\w*|reparti\\w*|partage\\w*|m9s+ma|mqs+ma|m9som\\w*|mqsom\\w*|maqsom\\w*|مقسوم[\\w\\u0600-\\u06ff]*|مقسم[\\w\\u0600-\\u06ff]*|divided|split|shared)\\s+(?:par|sur|en|entre|3la|3ela|3lih|على|by|over|between|across|into)\\s+' + WM_NUM);
+  var WM_DIV_VERB = new RegExp('(?:^|\\s)(?:split|divide|divise|partage|reparti\\w*|9sem|qsem|قسم)\\s+' + WM_NUM + WM_MONEY + '\\s+(?:par|sur|entre|between|by|over|across|3la|على)\\s+' + WM_NUM);
+  var WM_UNIT = '(?:kg|kgs|kilos?|kilogrammes?|grammes?|litres?|liters?|l|pieces?|unites?|units?|pcs|boites?|boxes|cartons?|كيلو|كلغ|كيلوغرام)' + WM_END;
+  var WM_PER = new RegExp(WM_NUM + '\\s*' + WM_UNIT + '[^\\d]{0,32}?(?:^|\\s)(?:a|at|b|ب|@)\\s*' + WM_NUM + WM_MONEY
+    + '\\s*(?:le|la|the|per|par|l|el|al|each|chaque|f|for|pour|لل|ال)?\\s*' + WM_UNIT);
+  var WM_TIMES = new RegExp('^\\s*(?:calcule\\s+|combien fait\\s+|what is\\s+|7seb(?: lia)?\\s+|احسب(?: لي)?\\s+)?' + WM_NUM + '\\s*(?:fois|times|ضرب|multiplie par|multiplied by)\\s*' + WM_NUM + '\\s*[?؟]?\\s*$');
+  function wordMath(raw) {
+    var q = String(raw || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+      .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+      .replace(/[’']/g, ' ');
+    var num = function (x) { return x.replace(',', '.'); };
+    var m = q.match(WM_DIV) || q.match(WM_DIV_VERB);
+    if (m) return num(m[1]) + ' ÷ ' + num(m[2]);
+    m = q.match(WM_PER);
+    if (m) return num(m[1]) + ' × ' + num(m[2]);
+    m = q.match(WM_TIMES);
+    if (m) return num(m[1]) + ' × ' + num(m[2]);
+    return null;
+  }
+
+  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, period: periodSpec, support: supportAsk, math: wordMath, _rank: productRanking, _findClient: findClient };
 }());
