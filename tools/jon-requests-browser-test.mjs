@@ -306,20 +306,37 @@ try {
     await page.waitForFunction((g2, g1) => { const ids = window.KiwiMenuStore.data().opts.map((g) => g.id); return ids.indexOf(g1) < ids.indexOf(g2); }, { timeout: 10000 }, setup.g2, setup.g1);
     const sheet = await page.evaluate((id) => ({ item: window.KiwiMenuStore.data().items.find((x) => x.id === id).opts, tabs: [...document.querySelectorAll('.rmw-ro-tabs [data-ro-cat]')].map((b) => b.dataset.roCat) }), setup.item);
     check(sheet.item[0] === setup.g1 && sheet.tabs[1] === setup.g1 && sheet.tabs[2] === setup.g2, 'a group moved down in the sheet: the dish and the tabs follow', JSON.stringify(sheet));
-    await page.click(`.rmw-ro-tabs [data-ro-cat="${setup.g2}"]`);
+    /* The strip was just redrawn in the new order: a tap on the outgoing tab does nothing, tap again. */
+    await tapUntil(page, `.rmw-ro-tabs [data-ro-cat="${setup.g2}"]`, `.rmw-ro-tabs [data-ro-cat="${setup.g2}"].on`);
     await page.waitForSelector('.rmw-ro-list [data-reorder-id]:first-child [data-ro-step="1"]', { visible: true, timeout: 10000 });
     await page.click('.rmw-ro-list [data-reorder-id]:first-child [data-ro-step="1"]');
     await page.waitForFunction((g2) => window.KiwiMenuStore.data().opts.find((x) => x.id === g2).choices[0].name === 'Ketchup', { timeout: 10000 }, setup.g2);
     check(true, 'a choice moved down in its group\'s tab');
     await page.click('[data-catalog-done]');
     tr.step('group editor: the down arrow');
-    await page.waitForSelector(`[data-action="rmw-group-edit"][data-arg="${setup.g2}"]`, { visible: true, timeout: 10000 });
-    await page.click(`[data-action="rmw-group-edit"][data-arg="${setup.g2}"]`);
-    await page.waitForSelector('[data-choice]:first-child [data-choice-down]', { visible: true, timeout: 10000 });
+    /* The sheet is still closing: tap « Modifier les choix » until the editor opens. */
+    await tapUntil(page, `[data-action="rmw-group-edit"][data-arg="${setup.g2}"]`, '[data-choice]:first-child [data-choice-down]');
     await page.click('[data-choice]:first-child [data-choice-down]');
     await page.click('[data-save]');
     await page.waitForFunction((g2) => window.KiwiMenuStore.data().opts.find((x) => x.id === g2).choices[0].name === 'Algérienne', { timeout: 10000 }, setup.g2);
     check(true, 'a choice moved down in the group editor is saved');
+
+    tr.step('dish card: this dish asks « Sauce » before « Cuisson », the rest of the menu does not change');
+    const before = await page.evaluate((id) => window.KiwiMenuStore.data().items.find((x) => x.id === id).opts.slice(), setup.item);
+    await page.evaluate((id) => window.Kiwi.handlers['rmw-item-edit'](null, id), setup.item);
+    await page.waitForSelector('[data-opt-list] [data-opt-row]:first-child [data-opt-mv="1"]', { visible: true, timeout: 10000 });
+    const shown = await page.$$eval('[data-opt-list] [data-opt-row]', (rows) => rows.map((r) => r.querySelector('[data-opt]').dataset.opt + ':' + r.querySelector('[data-opt-n]').textContent));
+    check(shown[0] === before[0] + ':1' && shown[1] === before[1] + ':2', 'the dish card lists its groups in its own order, numbered', JSON.stringify(shown));
+    await page.click('[data-opt-list] [data-opt-row]:first-child [data-opt-mv="1"]');
+    const saves = await page.$$('[data-save]');
+    let saveBtn = null;
+    for (const b of saves) if (await b.isVisible()) saveBtn = b;
+    await saveBtn.click();
+    await page.waitForFunction((id, first) => window.KiwiMenuStore.data().items.find((x) => x.id === id).opts[0] === first, { timeout: 10000 }, setup.item, before[1]);
+    check(true, 'the dish now asks its second group first');
+    await page.evaluate((g) => window.KiwiMenuStore.moveOptGroup(g, -1), before[1]);
+    const kept = await page.evaluate((id) => window.KiwiMenuStore.data().items.find((x) => x.id === id).opts, setup.item);
+    check(kept[0] === before[1] && kept[1] === before[0], 'a menu-wide move keeps the order set on the dish card', JSON.stringify(kept));
 
     tr.step('Livraison: Glovo on, a product price typed');
     await page.evaluate(() => window.KiwiDelivery.openSettings());

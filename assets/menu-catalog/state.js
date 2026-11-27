@@ -254,9 +254,11 @@
       d.opts = optsOf(d);
       const i = d.opts.findIndex((g) => g && g.id === id), j = i + delta;
       if (i < 0 || j < 0 || j >= d.opts.length) return d;
+      const was = d.opts.map((g) => g && g.id), follows = (ids) => ids.every((x, k) => k === 0 || was.indexOf(x) > was.indexOf(ids[k - 1]));
       d.opts.splice(j, 0, d.opts.splice(i, 1)[0]);
       const at = (gid) => d.opts.findIndex((g) => g && g.id === gid);
-      (d.items || []).forEach((it) => { if (it && Array.isArray(it.opts) && it.opts.length > 1) it.opts = it.opts.slice().sort((a, b) => at(a) - at(b)); });
+      /* Un plat rangé à la main depuis sa fiche (27 nov. 2026) garde son ordre : seuls suivent ceux qui étaient dans l'ordre de la carte. */
+      (d.items || []).forEach((it) => { if (it && Array.isArray(it.opts) && it.opts.length > 1 && follows(it.opts)) it.opts = it.opts.slice().sort((a, b) => at(a) - at(b)); });
       return d;
     });
   }

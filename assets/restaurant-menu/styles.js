@@ -285,6 +285,16 @@ html body:not(#kno) .rmw-prep-namefield .rmw-rx-in{width:100%;height:46px;font:6
 .rmw-it-chip:has(input:checked){border-color:color-mix(in srgb,var(--atlas) 45%,var(--n-200));background:color-mix(in srgb,var(--atlas) 7%,var(--rx-field))}
 .rmw-it-chip input:checked+.rmw-it-chip-box{background:var(--atlas);border-color:var(--atlas);color:var(--paper)}
 .rmw-it-chip:has(input:focus-visible){box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 20%,transparent)}
+.rmw-it-optlist{flex-direction:column;flex-wrap:nowrap;gap:6px}
+.rmw-it-optrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px}
+.rmw-it-optrow .rmw-it-chip{width:100%;box-sizing:border-box}
+.rmw-it-optn{font:600 12px var(--mono);color:var(--atlas);text-align:center}
+.rmw-it-optmv{display:inline-flex;gap:2px}
+.rmw-it-optmv button{width:32px;height:32px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:none;color:var(--n-600);cursor:pointer}
+.rmw-it-optmv button svg{width:16px;height:16px;fill:currentColor}
+.rmw-it-optmv button:hover:not(:disabled){background:color-mix(in srgb,var(--atlas) 9%,transparent);color:var(--atlas)}
+.rmw-it-optmv button:disabled{opacity:.25;cursor:default}
+.rmw-it-optrow:not(:has(input:checked)) .rmw-it-optmv{visibility:hidden}
 .rmw-it-tg{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;cursor:pointer}
 .rmw-it-tg input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 .rmw-it-tg-txt{display:grid;gap:3px;min-width:0}
