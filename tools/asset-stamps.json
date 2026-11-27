@@ -408,8 +408,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "35",
-    "sha": "1b85ecebc4cec95b"
+    "v": "36",
+    "sha": "a84adca956a26711"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -940,8 +940,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "17",
-    "sha": "f389db08b5289cd6"
+    "v": "18",
+    "sha": "5721aafdfe733a57"
   },
   "assets/identity.js": {
     "v": "13",
@@ -1064,8 +1064,8 @@
     "sha": "4355e280bf7ef751"
   },
   "assets/kit/gallery.js": {
-    "v": "4",
-    "sha": "7db1a46e4b27e04d"
+    "v": "5",
+    "sha": "aa071bc6991947f4"
   },
   "assets/kit/haptics.js": {
     "v": "16",
@@ -1228,8 +1228,8 @@
     "sha": "7b0a46f98e56c876"
   },
   "assets/kit/till.js": {
-    "v": "44",
-    "sha": "72f70abaf964c7e4"
+    "v": "45",
+    "sha": "4252e8203d5e3f32"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",

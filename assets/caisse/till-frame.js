@@ -159,7 +159,10 @@
          le volet livré l'affiche sur son bouton, l'addition du kit dans son
          en-tête. */
       const note = mode === 'vrap' ? 'vrap:' + (vrapEditingNum == null ? 'new' : vrapEditingNum) : 'table:' + (selectedId || '');
-      if (saleClient && saleClient.ctx === note) meta = meta ? meta + ' · ' + saleClient.name : saleClient.name;
+      /* Its own row says it now (name and card), so the header only names
+         the customer when that row is not drawn. */
+      const loyalty = tillKitBillLoyalty();
+      if (!loyalty.client && saleClient && saleClient.ctx === note) meta = meta ? meta + ' · ' + saleClient.name : saleClient.name;
       if (mode === 'vrap') {
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         const disc = vrapDiscountAmount(gross);
@@ -171,11 +174,11 @@
         const sentAt = at ? String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0') : '';
         const vrapLine = (l, i) => Object.assign(tillKitLine(l, i), wasSent ? { sent: true, sentAt, sentQty: 0 } : {});
         return tillKitSplitRest({ title, meta, lines: cart.map(vrapLine), discount: tillKitDiscount(vrapDiscount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0, comment: counterCommentView() });
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), more: tillKitOverflowRows().length > 0, comment: counterCommentView(), ...loyalty });
       }
       if (mode === 'order' && selectedId) {
         const order = tableOrders[selectedId] || [];
-        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0), more: tillKitOverflowRows().length > 0, comment: counterCommentView() };
+        return { title, meta, lines: order.map(tillKitLine), total: order.reduce((s, l) => s + l.price * l.qty, 0), more: tillKitOverflowRows().length > 0, comment: counterCommentView(), ...loyalty };
       }
       if (selectedId && tables[selectedId]) {
         const lines = generateOrder(selectedId, tables[selectedId]);
@@ -187,7 +190,7 @@
         const first = at.length ? new Date(Math.min(...at)) : null;
         const sentAt = first ? String(first.getHours()).padStart(2, '0') + ':' + String(first.getMinutes()).padStart(2, '0') : '';
         return tillKitSplitRest({ title, meta, lines: lines.map((l, i) => Object.assign(tillKitLine(l, i), l.sent ? { sentAt } : {})), discount: tillKitDiscount(tables[selectedId].discount, disc),
-          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0, comment: counterCommentView() });
+          total: Math.max(0, gross - disc), sendOnPay: true, sendLabel: tillKitShippedSend(), addLabel: tillKitShippedLabel('#rp-add-items'), more: tillKitOverflowRows().length > 0, comment: counterCommentView(), ...loyalty });
       }
       return empty;
     }
@@ -262,6 +265,15 @@
     /* The loyalty reward (assets/caisse-loyalty-reward.js) sits under
        « Client & fidélité » on the shipped bill as #rp-reward: the payment
        row shows its label and presses it, and the amount due follows. */
+    /* « Client & fidélité » on the note itself (owner, 2026-11-27: the card
+       showed only after « Encaisser », so nobody asked for it while taking
+       the order). The same shipped button as the payment's row: hidden there,
+       no row here. */
+    function tillKitBillLoyalty() {
+      const label = tillKitClientLabel();
+      const b = $('#rp-client');
+      return { client: label ? { label, on: !!(b && b.classList.contains('is-on')) } : null, reward: tillKitRewardLabel() };
+    }
     function tillKitRewardLabel() {
       const b = $('#rp-reward');
       if (!b || b.hidden) return '';
@@ -291,6 +303,7 @@
       const b = $('#rp-client');
       if (tillKitClientObs || !b || typeof MutationObserver !== 'function') return;
       tillKitClientObs = new MutationObserver(() => {
+        try { tillKitPaint(); } catch (e) { console.warn('[till-kit]', e); }
         const pay = window.KiwiTillFrame.pay();
         if (!pay || pay.hidden || !pay.p) return;
         const p = pay.p();
@@ -1093,6 +1106,8 @@
           return;
         case 'add-items': click('#rp-add-items'); return;
         case 'comment': counterCommentEdit(); return;   /* commentaire cuisine de la commande (counter-flow.js) */
+        case 'client': { const b = $('#rp-client'); if (b && !b.hidden) b.click(); return; }
+        case 'reward': { const b = $('#rp-reward'); if (b && !b.hidden) b.click(); return; }
         case 'split': tillKitOpenSplit(); return;
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
@@ -1116,6 +1131,7 @@
     }
     function tillKitPaint() {
       if (!tillKitOn()) return;
+      tillKitWatchClient();
       /* Le volet livré s'est fermé (autre table, autre mode) : l'encaissement
          en cours n'a plus d'addition sous lui. */
       if ($('#rp-active').hidden && !tenderInFlight) {

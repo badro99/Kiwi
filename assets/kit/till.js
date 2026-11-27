@@ -179,7 +179,12 @@
   /* ── <k-bill state> .bill ──────────────────────────────────────────────────
      bill: { title, meta, lines:[{id, qty, name, mods:[], price, sent, sentAt,
              sentQty, editOptions}], discount:{label, amount}, service:{label, amount},
-             total, sendOnPay, paying, plain }
+             total, sendOnPay, paying, plain, client:{label, on}, reward }
+     client: the host's « Client & fidélité » for this note (label, and on once
+     a customer is attached: name and card progress). reward: the ready
+     reward's label. Both sit above the total so the card is asked for while
+     the order is taken, not only at the payment (owner, 2026-11-27). They
+     emit k.bill.client / k.bill.reward, like the payment's rows.
      split: {label, amount} the shares of a split already paid (total is the rest).
      plain: a counter sale with no kitchen (the business-type tills, §18.3):
      one list without sent groups, no split, discount, print or overflow. */
@@ -194,6 +199,8 @@
         self.render();
         self.emit('line-select', id, { gestureId: g, open: self.__sel === id });
       });
+      K.tap(R, '[data-client]', function (el, e, g) { if (!self.bill || !self.bill.paying) self.emit('client', null, { gestureId: g }); });
+      K.tap(R, '[data-reward]', function (el, e, g) { if (!self.bill || !self.bill.paying) self.emit('reward', null, { gestureId: g }); });
       C.stepper.bind(R, function (id, dir, g) {
         var line = self.line(id);
         if (!line || dir === 0) return;
@@ -270,7 +277,11 @@
       var primary = sendFirst
         ? C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.send', { n: unsent.length }), id: 'pri', attrs: ' data-w="send"', disabled: paying })
         : C.button.render({ variant: 'primary', size: 'L', full: true, label: t('bill.take_payment', { amount: money(b.total || 0) }), id: 'pri', attrs: ' data-w="pay"', disabled: !lines.length || paying });
-      var foot = '<footer class="ft">' + part(b.discount) + part(b.service) + part(b.split) +
+      var cl = b.client && b.client.label ? '<button type="button" class="cl k-body' + (b.client.on ? ' on' : '') + '" data-client' + (paying ? ' disabled' : '') + '>' +
+        icon(b.client.on ? 'person' : 'person_add', 20, 'ci') + '<span class="cn">' + esc(b.client.label) + '</span>' + icon('chevron_right', 20, 'k-ink2') + '</button>' : '';
+      var rw = b.reward ? '<button type="button" class="cl rw k-body" data-reward' + (paying ? ' disabled' : '') + '>' +
+        icon('redeem', 20, 'ci') + '<span class="cn">' + esc(b.reward) + '</span>' + icon('chevron_right', 20, 'k-ink2') + '</button>' : '';
+      var foot = '<footer class="ft">' + cl + rw + part(b.discount) + part(b.service) + part(b.split) +
         '<div class="tot"><span class="k-body k-ink2">' + th('bill.total') + '</span><span class="k-title k-num" data-k-total>' + numHtml(money(b.total || 0)) + '</span></div>' +
         (b.plain ? '' : '<div class="sec2">' + C.button.render({ label: t('bill.split'), id: 'sp', attrs: ' data-w="split"', disabled: !lines.length || paying }) +
         C.button.render({ label: t('bill.discount'), id: 'dc', attrs: ' data-w="discount"', disabled: !lines.length || paying }) +
@@ -313,6 +324,11 @@
       '.ft{display:flex;flex-direction:column;gap:12px;padding:16px 24px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:inset 0 1px 0 var(--k-line);background-color:var(--k-surface-1)}' +
       '.pt,.tot{display:flex;justify-content:space-between;align-items:baseline;gap:12px}' +
       '.sec2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sec2 .k-btn{width:100%}.sec2>:nth-child(n+3){grid-column:1/-1}' +
+      /* « Client & fidélité » on the note: a quiet row; the attached card's
+         icon in accent, the ready reward on the accent tint. */
+      '.cl{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border:0;border-radius:var(--k-r-2);background:var(--k-surface-2);color:inherit;font:inherit;text-align:start}' +
+      '.cl .ci{color:var(--k-ink-2)}.on .ci,.rw .ci{color:var(--k-accent-ink)}.on .cn{font-weight:600}.rw{background:var(--k-accent-tint)}' +
+      '.cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
       /* A phone on its side has ~390px of height for the whole sheet: the
          roomy header and stacked footer left one bill line visible. There the
          header tightens, split / discount sit in the pay button's row, and the
@@ -321,7 +337,7 @@
         '.hd{padding:12px 24px 4px;align-items:center}.ti{font-size:var(--k-fs-heading,20px);line-height:1.2}' +
         '.gh{margin-block-start:8px}' +
         '.ft{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:12px;row-gap:4px;padding-block:8px calc(8px + env(safe-area-inset-bottom,0px))}' +
-        '.ft>.pt{grid-column:1/-1}' +
+        '.ft>.pt,.ft>.cl{grid-column:1/-1}' +
         '.ft>.tot{display:none}' +
         '.ft>.k-btnw{grid-column:2}' +
         '.ft:not(:has(>.sec2))>.k-btnw{grid-column:1/-1}' +
