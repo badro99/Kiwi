@@ -459,8 +459,11 @@ async function txCount(page) {
   return page.evaluate(() => { const m = /(\d+)/.exec((document.getElementById('stat-txns-card') || {}).innerText || ''); return m ? +m[1] : 0; });
 }
 async function managerCode(page, m) {
-  await page.waitForSelector('[data-mgr="1"]', { visible: true });
-  await typeDigits(page, '[data-mgr="%"]', m._pin);
+  /* The till was opened with this manager's own code: since 27 Nov a protected
+   * act needs no second code (functions/auth/_till-shift.js), so the pad only
+   * comes back when the server refuses the shift proof. Type it if it shows. */
+  const pad = await page.waitForSelector('[data-mgr="1"]', { visible: true, timeout: 5000 }).catch(() => null);
+  if (pad) await typeDigits(page, '[data-mgr="%"]', m._pin);
 }
 async function restoRefund(t, page, m, nthFromTop, amountText) {
   t.step(`till: refund ${amountText}`);
@@ -480,8 +483,11 @@ async function restoVoid(t, page, m) {
   await clickSel(page, '[data-action="cancel-sale"]');
   await clickSel(page, '[data-kx-rp="0"]');
   await clickSel(page, '[data-kx-rp-cancel]');
-  const pin = await page.waitForSelector('[data-kx-rp-pin]', { visible: true });
-  await pin.click(); await pin.type(m._pin);
+  /* The manager who opened the till confirms without a second code (shift proof);
+   * the code field only shows when the server refuses it. */
+  await page.waitForSelector('[data-kx-rp-confirm]', { visible: true });
+  const pin = await page.$('[data-kx-rp-pin]');
+  if (pin && await pin.evaluate((e) => e.offsetWidth > 0)) { await pin.click(); await pin.type(m._pin); }
   await clickSel(page, '[data-kx-rp-confirm]');
   await sleep(2000);
 }

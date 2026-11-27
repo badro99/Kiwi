@@ -15,7 +15,12 @@
  *     personne qui n'est plus gérant ou propriétaire, ne passe plus ;
  *   · chaque route juge ensuite le droit de la personne pour CE geste
  *     (functions/api/_permissions.js › decide), exactement comme avec un code ;
- *   · la caisse l'oublie dès qu'elle se verrouille ou change de personne.
+ *   · la caisse l'oublie dès qu'elle se verrouille ou change de personne, et le
+ *     serveur aussi : chaque code qui ouvre CET appareil y tourne un jeton
+ *     d'ouverture (store_docs « till-shift »), et la preuve porte celui de son
+ *     ouverture. Quelqu'un d'autre ouvre la caisse : la preuve précédente meurt ;
+ *   · elle ne sert qu'à un geste : /api/pin/verify la refuse sans acte, elle ne
+ *     peut donc jamais rouvrir la caisse au nom du responsable.
  * Aucun code n'y figure, et aucun code n'en sort.
  */
 import { hmacHex, json, slugMerchant, tillVerification, employeeRoleOpensDashboard, verifyStaffPin } from './_lib.js';
@@ -23,6 +28,8 @@ import { hmacHex, json, slugMerchant, tillVerification, employeeRoleOpensDashboa
 export const SHIFT_PREFIX = 'ks1.';
 const SHIFT_TTL_MS = 12 * 3600000;
 const SCOPE = 'kiwi-till-shift-v1:';
+const FEATURE = 'till-shift';
+const SAFE_DEVICE = /^[A-Za-z0-9_.-]{1,96}$/;
 
 /* Le contenu est ASCII (slug, identifiant d'appareil, « pin-<uuid> »). */
 function b64url(text) {
@@ -44,15 +51,41 @@ export function isShiftProof(value) {
   return typeof value === 'string' && value.startsWith(SHIFT_PREFIX) && value.length <= 1024;
 }
 
-/* La preuve, pour un code qui vient d'OUVRIR la caisse (sans acte). Rien pour
-   un rôle qui n'ouvre pas le tableau de bord, ni pour un ancien cookie de
-   caisse sans identifiant d'appareil : il n'y aurait rien à quoi la lier. */
+function nonce() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+/* Le jeton d'ouverture de CET appareil : une entrée par appareil dans un seul
+   document du magasin, écrite d'un coup (json_set), jamais lue par /api/store. */
+async function setDeviceNonce(env, merchant, deviceId, value, now) {
+  const entry = JSON.stringify({ n: value, at: now });
+  await env.DB.prepare(`INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+      VALUES (?, ?, json_object(?, json(?)), 1, ?)
+    ON CONFLICT(merchant, feature) DO UPDATE SET
+      data = json_set(CASE WHEN json_valid(data) THEN data ELSE '{}' END, ?, json(?)),
+      rev = rev + 1, updated_ts = excluded.updated_ts`)
+    .bind(merchant, FEATURE, deviceId, entry, now, '$."' + deviceId + '"', entry).run();
+}
+async function deviceNonce(env, merchant, deviceId) {
+  const row = await env.DB.prepare('SELECT json_extract(data, ?) AS n FROM store_docs WHERE merchant = ? AND feature = ?')
+    .bind('$."' + deviceId + '".n', merchant, FEATURE).first();
+  return row && row.n ? String(row.n) : '';
+}
+
+/* Un code vient d'OUVRIR la caisse (sans acte). Sur un appareil appairé, son
+   jeton d'ouverture tourne quoi qu'il arrive : la preuve d'un responsable
+   précédent meurt. Un gérant ou un propriétaire reçoit la preuve liée au
+   nouveau jeton ; personne d'autre. Rien pour un ancien cookie de caisse sans
+   identifiant d'appareil : il n'y aurait rien à quoi la lier. */
 export async function tillShiftProof(request, env, merchant, staff, now = Date.now()) {
   const secret = env && env.AUTH_SECRET;
-  if (!secret || !merchant || !staff || !staff.id || !employeeRoleOpensDashboard(staff.role)) return '';
+  if (!secret || !env.DB || !merchant || !staff || !staff.id) return '';
   const till = await tillVerification(request, env, merchant);
-  if (!till.ok || !till.deviceId) return '';
-  const payload = b64url(JSON.stringify({ m: merchant, d: till.deviceId, id: String(staff.id), exp: now + SHIFT_TTL_MS }));
+  if (!till.ok || !till.deviceId || !SAFE_DEVICE.test(till.deviceId)) return '';
+  const n = nonce();
+  try { await setDeviceNonce(env, merchant, till.deviceId, n, now); } catch (_) { return ''; }
+  if (!employeeRoleOpensDashboard(staff.role)) return '';
+  const payload = b64url(JSON.stringify({ m: merchant, d: till.deviceId, id: String(staff.id), n, exp: now + SHIFT_TTL_MS }));
   return SHIFT_PREFIX + payload + '.' + await hmacHex(secret, SCOPE + payload);
 }
 
@@ -63,7 +96,7 @@ async function readShiftProof(secret, token, now) {
   if (!sameHex(signature, await hmacHex(secret, SCOPE + payload))) return null;
   try {
     const body = JSON.parse(unb64url(payload));
-    return body && body.m && body.d && body.id && Number.isFinite(body.exp) && body.exp > now ? body : null;
+    return body && body.m && body.d && body.id && body.n && Number.isFinite(body.exp) && body.exp > now ? body : null;
   } catch (_) { return null; }
 }
 
@@ -93,9 +126,13 @@ export async function verifyStaffCredential(request, env, merchant, credential, 
   if (till.unavailable) return { ok: false, response: json({ error: 'auth-verification-unavailable' }, 503) };
   if (!till.ok || !till.deviceId) return { ok: false, error: 'forbidden-till', status: 403 };
   const proof = await readShiftProof(env.AUTH_SECRET, credential, Date.now());
-  if (!proof || proof.m !== merchant || proof.d !== till.deviceId) return { ok: false, error: 'shift-expired', status: 401 };
+  if (!proof || proof.m !== merchant || proof.d !== till.deviceId || !SAFE_DEVICE.test(till.deviceId)) return { ok: false, error: 'shift-expired', status: 401 };
   let staff;
-  try { staff = await staffOnShift(env, merchant, proof.id); } catch (_) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
+  try {
+    /* Quelqu'un a rouvert cet appareil depuis : la preuve n'est plus celle du poste en cours. */
+    if (await deviceNonce(env, merchant, till.deviceId) !== String(proof.n)) return { ok: false, error: 'shift-expired', status: 401 };
+    staff = await staffOnShift(env, merchant, proof.id);
+  } catch (_) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
   if (!staff) return { ok: false, error: 'shift-expired', status: 401 };
   if (!employeeRoleOpensDashboard(staff.role)) return { ok: false, error: 'manager-required', status: 403 };
   return { ok: true, staff, viaShift: true };

@@ -218,7 +218,7 @@
     if (!code || !P || (opts && opts.incoming) || typeof approve !== 'function' || typeof fallback !== 'function') return false;
     var till = access === 'till', ask = till ? P.authorizeTill : P.authorizeManager;
     if (typeof ask !== 'function') return false;
-    var second = till ? { needsServer: !!(opts && opts.needsServer), action: authContext || undefined } : authContext;
+    var second = till ? { needsServer: !!(opts && opts.needsServer), action: authContext || { kind: 'till-op' } } : authContext;   // la preuve ne vaut que pour un geste nommé
     Promise.resolve(ask.call(P, code, second)).then(function (ok) {
       var who = ok === true ? (till ? (P.lastOperator() || P.lastManager()) : P.lastManager()) : null;
       if (!who || (opts && typeof opts.validate === 'function' && opts.validate(who))) { fallback(); return; }

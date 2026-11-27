@@ -30,6 +30,9 @@ export async function onRequestPost(context) {
   const pin = String(body && body.pin || '').trim();
 
   if (!pin) return json({ error: 'missing-fields' }, 400);
+  /* Une preuve de poste ne vaut que pour un geste (functions/auth/_till-shift.js) :
+     sans acte, elle rouvrirait la caisse au nom du responsable. */
+  if (isShiftProof(pin) && !(body && body.action)) return json({ error: 'shift-needs-action' }, 400);
 
   // No merchant named ⇒ ask the signed-in account's whole estate. Not a widening:
   // verifyAccountPin derives the store list from the session's own registry and

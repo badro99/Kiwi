@@ -87,7 +87,10 @@ const legacy = await verify({ merchant: 'cafe-atlas', pin: '1234' }, `kiwi_till=
 check('an old till cookie without a device id gets none', legacy.status === 200 && !legacy.body.shiftProof);
 const owner = await verify({ merchant: 'cafe-atlas', pin: '4321' }, await deviceCookie());
 check('the owner, whose code lives under a sibling store, gets one', owner.status === 200 && /^ks1\./.test(owner.body.shiftProof || ''));
-const shift = mgr.body.shiftProof;
+let shift = mgr.body.shiftProof;
+const unlockAsManager = async () => (await verify({ merchant: 'cafe-atlas', pin: '1234' }, await deviceCookie())).body.shiftProof;
+check('the owner\'s unlock replaced the manager\'s proof on this till', !(await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', shift)).ok);
+shift = await unlockAsManager();
 
 console.log('\n2 · The proof stands in for the code, on this till only');
 const disc = await verify({ merchant: 'cafe-atlas', pin: shift, action: { kind: 'discount', pct: 20 } }, await deviceCookie());
@@ -103,14 +106,27 @@ check('another shop cannot use it', otherShop.status === 401);
 const [payload, sig] = shift.slice(4).split('.');
 const tampered = 'ks1.' + Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(payload, 'base64url').toString()), id: 'pin-far' })).toString('base64url') + '.' + sig;
 check('a tampered proof is refused', (await verify({ merchant: 'cafe-atlas', pin: tampered, action: { kind: 'discount', pct: 20 } }, await deviceCookie())).status === 401);
+const bare = await verify({ merchant: 'cafe-atlas', pin: shift }, await deviceCookie());
+check('without an act the proof is refused: it can never reopen the till as the manager', bare.status === 400 && !bare.body.staff && !bare.body.sellerProof);
 const sess = await makeSession('acc-1', AUTH_SECRET);
 const fromSession = await verifyStaffCredential(await reqWith(sessionCookie(sess).split(';')[0]), env, 'cafe-atlas', shift);
 check('a browser session without the till cookie cannot use it', !fromSession.ok && fromSession.status === 403);
 
-console.log('\n3 · The proof ages and follows the team list');
+console.log('\n3 · The proof ages, follows the team list and dies when someone else opens the till');
 const old = await tillShiftProof(await reqWith(await deviceCookie()), env, 'cafe-atlas', { id: 'pin-mgr', name: 'Karim B.', role: 'Manager' }, Date.now() - 13 * 3600000);
 const aged = await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', old);
 check('a proof older than twelve hours is refused', !aged.ok && aged.status === 401);
+shift = await unlockAsManager();
+check('a fresh manager unlock works again', (await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', shift)).ok === true);
+await verify({ merchant: 'cafe-atlas', pin: '5678' }, await deviceCookie());
+const replaced = await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', shift);
+check('a cashier opening the same till kills the manager\'s proof at once', !replaced.ok && replaced.status === 401);
+const first = await unlockAsManager(), second = await unlockAsManager();
+check('each unlock replaces the previous proof', !(await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', first)).ok
+  && (await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', second)).ok);
+await verify({ merchant: 'cafe-atlas', pin: '5678' }, await deviceCookie(OTHER_DEVICE));
+check('another till opening does not touch this till\'s proof', (await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', second)).ok === true);
+shift = second;
 sqlite.prepare("UPDATE staff_pins SET role = 'Caissier' WHERE id = 'pin-mgr'").run();
 const demoted = await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', shift);
 check('a manager demoted to cashier loses it at once', !demoted.ok && demoted.status === 403);
