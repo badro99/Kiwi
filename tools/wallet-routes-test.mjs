@@ -272,6 +272,9 @@ await ok("the shop's mark is served only for a shop with the card on: its logo i
     else if (tile.rgba[q + 3] === 0) clear++;
   }
   assert.ok(ink > 0 && clear > 0, 'paper ink on a clear ground: ' + ink + '/' + clear);
+  /* no receipt logo, but one in the business profile: that one is used */
+  w.sql.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES ('biz-only','wallet',?,1,1), ('biz-only','business',?,1,1)").run(JSON.stringify({ on: true, name: 'Biz Only' }), JSON.stringify({ name: 'Biz Only', logo }));
+  assert.equal((await get('biz-only')).status, 200, 'the business profile logo stands in for a missing receipt logo');
   void zlib;
 });
 

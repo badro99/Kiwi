@@ -76,7 +76,7 @@ async function lockupLogo(merchant, s) {
     const kiwi = await decodePng(kiwiArt('logo@3x.png')), mark = await decodePng(markPng);
     if (!kiwi || !mark) return null;
     const H = 50 * s, kh = 30 * s, kw = Math.round(kiwi.w * kh / kiwi.h), gap = 11 * s, c = s;
-    const room = 160 * s - kw - 2 * gap - c, k = Math.min(28 * s / mark.h, room / mark.w);
+    const room = 160 * s - kw - 2 * gap - c, k = Math.min((mark.w < mark.h * 1.6 ? 42 : 28) * s / mark.h, room / mark.w);   /* a near-square mark stands taller */
     const mw = Math.max(1, Math.round(mark.w * k)), mh = Math.max(1, Math.round(mark.h * k)), W = kw + 2 * gap + c + mw;
     const out = new Uint8Array(W * H * 4);
     over(out, W, fit(kiwi, kw, kh), 0, Math.round((H - kh) / 2));

@@ -120,7 +120,7 @@
     $('wc-card').setAttribute('aria-label', t('title') + ' · ' + m.name);
     if (m.logo) {
       var lg = $('wc-card-logo'), lock = lg.parentNode.parentNode;   /* .wc-lockup: the logo replaces the initial and the name */
-      lg.onload = function () { lock.classList.add('has-logo'); lg.hidden = false; $('wc-shoplogo').parentNode.classList.add('has-logo'); };
+      lg.onload = function () { lock.classList.add('has-logo'); lock.classList.toggle('is-square', lg.naturalWidth < lg.naturalHeight * 1.6); lg.hidden = false; $('wc-shoplogo').parentNode.classList.add('has-logo'); };
       lg.onerror = function () { lock.classList.remove('has-logo'); lg.hidden = true; $('wc-shoplogo').hidden = true; };
       lg.src = m.logo; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false;
     }

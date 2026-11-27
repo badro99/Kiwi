@@ -17,7 +17,7 @@ export function logoBytes(dataUrl) {
 export async function loadMerchant(db, slug) {
   const merchant = String(slug || '').trim().toLowerCase().slice(0, 64);
   if (!/^[a-z0-9][a-z0-9-]*$/.test(merchant)) return null;
-  const r = await db.prepare("SELECT feature, data FROM store_docs WHERE merchant = ? AND feature IN ('wallet', 'fidelity', 'receipt')").bind(merchant).all();
+  const r = await db.prepare("SELECT feature, data FROM store_docs WHERE merchant = ? AND feature IN ('wallet', 'fidelity', 'receipt', 'business')").bind(merchant).all();
   const docs = {};
   for (const row of r.results || []) docs[row.feature] = parse(row.data);
   const w = docs.wallet || {}, look = (docs.receipt && docs.receipt.look) || {};
@@ -33,6 +33,7 @@ export async function loadMerchant(db, slug) {
     address: String(w.address || '').slice(0, 200),
     phone: String(w.phone || '').slice(0, 30),
     fidelity: docs.fidelity || null,
-    logoUrl: look.logoOn === false ? '' : String(look.logo || ''),
+    /* the receipt logo (the shop may switch it off there), else the business profile's */
+    logoUrl: look.logoOn === false ? '' : String(look.logo || (docs.business && docs.business.logo) || ''),
   };
 }

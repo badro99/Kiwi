@@ -49,6 +49,8 @@ em, i { font-style: normal; }
 .wc-tile b { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; color: #053B2C; }
 .wc-lockup.has-logo .wc-tile { width: auto; height: auto; background: none; box-shadow: none; border-radius: 0; overflow: visible; }
 .wc-lockup.has-logo .wc-tile img { display: block; height: 30px; width: auto; max-width: 150px; object-fit: contain; }
+/* A near-square mark (a round badge, a script logo) carries less ink per pixel of height: let it stand taller. */
+.wc-lockup.is-square .wc-tile img { height: 44px; }
 .wc-lockup.has-logo .wc-tile b, .wc-lockup.has-logo .wc-card-name { display: none; }
 .wc-card-name { font-weight: 600; font-size: 17px; letter-spacing: -0.015em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wc-card-client { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; font-size: 15px; padding-bottom: 4px; }
