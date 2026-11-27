@@ -402,4 +402,26 @@ for (const [q, L, want] of [
   ok(report ? r.route === 'revenue' : want.test(r.text), `« ${q} » is caught → {${r.route}} ${r.text.slice(0, 120)}`);
 }
 
+// 8. A last visit counts days, not 24 h blocks (27 Nov 2026): a visit the day
+// before yesterday at noon read « hier » every morning until noon, so the
+// bench went red at night. Built from the start of today, whatever the clock.
+{
+  const s0 = t0;   // the harness has no day report: the day starts at midnight
+  const book = [
+    { name: 'Salma Bennani', spend: 100, visits: 3, points: 1, lastSeen: s0 - DAY - 60e3 },
+    { name: 'Kenza Alami', spend: 100, visits: 3, points: 1, lastSeen: s0 - 60e3 },
+    { name: 'Omar Fassi', spend: 100, visits: 3, points: 1, lastSeen: s0 + 60e3 },
+  ];
+  const w = load({
+    lang: 'fr', role: 'owner', corpus: false, env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Burger test', subtype: 'restaurant' }) },
+    sales: { list: () => FEED, totals: () => ({ revenue: 100, count: 1, basket: 100 }) },
+    globals: { KiwiClients: { hasBook: () => true, list: () => book, config: () => ({ on: true }), segmentCounts: () => ({ total: 3 }) } },
+  });
+  const last = (who) => flatten(w.KiwiAgentAsk('quand est venu ' + who + ' la dernière fois ?', 'fr')).replace(/\s+/g, ' ').split(' Visites')[0];
+  ok(/\b2\b/.test(last('Salma Bennani')) && !/hier/.test(last('Salma Bennani')), `the day before yesterday is 2 days → ${last('Salma Bennani')}`);
+  ok(/hier/.test(last('Kenza Alami')), `one minute before today is yesterday → ${last('Kenza Alami')}`);
+  ok(/aujourd/.test(last('Omar Fassi')), `one minute into today is today → ${last('Omar Fassi')}`);
+}
+
 console.log(`✓ agent period: ${n} checks (one period read back, two periods refused, how-tos left to the guide)`);

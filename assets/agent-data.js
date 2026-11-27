@@ -507,7 +507,10 @@
   }
 
   /* ═══════════ clients ═══════════ */
-  function daysSince(ts) { return ts ? Math.max(0, Math.floor((Date.now() - ts) / DAY)) : null; }
+  /* Days, not elapsed 24 h blocks: a visit the day before yesterday at noon read
+     « hier » every morning until noon (27 Nov 2026). Counted from the start of
+     today's business day, the till's own (startOfDay). */
+  function daysSince(ts) { if (!ts) return null; var s0 = startOfDay(); return ts >= s0 ? 0 : Math.ceil((s0 - ts) / DAY); }
 
   /* « سلمى بناني » for the Salma Bennani of the book: the owner types Arabic,
    * the till typed Latin. Both sides go down to a consonant skeleton (vowels,
