@@ -495,7 +495,7 @@
     var text = asksMine && mine ? t.mine(mine.name) : named.length === 1 ? t.one(named[0].name, t.mo(named[0].m, named[0].y)) : t.lead;
     return { text: text, stats: rows };
   }
-  function isPlans(raw) { return PLAN_RX.test(norm(raw)); }
+  function isPlans(raw) { var q = norm(raw); return PLAN_RX.test(q) && !/الضمان|\bcnss\b|\bamo\b/.test(q); }
   /* « wach kayn mode hors ligne », « is there a kitchen screen » ask whether Kiwi has it. */
   var TROUBLE_RX = /probleme|\bmarche pas\b|fonctionne pas|n'?imprime pas|ne s'?allume|ne se connecte|connecte pas|\bbug\b|\bbloque|\bplante\b|not working|doesn'?t work|does not work|won'?t (?:print|connect|start)|\bbroken\b|ما خدام|ماخدام|ما كيخدمش|ماكيخدمش|ما كتخدمش|\bmakhdam\w*|\bma khdam\w*|\bmakaykhdamch\b|خاسر|عطل|مشكل/;
   var EXISTS_RX = /\bwach kayn\b|واش كاين|كاين شي|est.ce qu'?il y a|\by a.t.il\b|\bil y a\b.{0,10}\b(?:un|une)\b|\bis there\b|\bdo you have\b|\bdoes kiwi\b|\bkiwi (?:a|fait|gere|peut)\b|\bca existe\b/;

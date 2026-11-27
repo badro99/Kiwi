@@ -849,6 +849,7 @@
       contact: 'Ses coordonnées sont sur sa fiche client.',
       worked: function (h, n) { return 'Votre équipe a pointé <b>' + h + '</b> aujourd’hui, sur ' + fmt(n) + ' personne' + (n > 1 ? 's' : '') + '.'; },
       workedNone: 'Aucune heure pointée aujourd’hui pour l’instant.',
+      workedOne: function (n, h) { return '<b>' + n + '</b> a pointé <b>' + h + '</b> aujourd’hui.'; }, workedOneNone: function (n) { return '<b>' + n + '</b> n’a pas encore pointé aujourd’hui.'; },
       workedNote: 'Heures pointées à la pointeuse, service en cours compris.',
       units: function (u, n) { return '<b>' + fmt(u) + ' article' + (u > 1 ? 's' : '') + '</b> vendus aujourd’hui, sur ' + fmt(n) + ' vente' + (n > 1 ? 's' : '') + '.'; },
       unitsNone: 'Aucune vente détaillée enregistrée aujourd’hui.',
@@ -863,6 +864,7 @@
       contact: 'Their contact details are on the client card.',
       worked: function (h, n) { return 'Your team clocked <b>' + h + '</b> today, across ' + fmt(n) + ' ' + (n > 1 ? 'people' : 'person') + '.'; },
       workedNone: 'No hours clocked today yet.',
+      workedOne: function (n, h) { return '<b>' + n + '</b> clocked <b>' + h + '</b> today.'; }, workedOneNone: function (n) { return '<b>' + n + '</b> has not clocked in today yet.'; },
       workedNote: 'Hours from the time clock, the current shift included.',
       units: function (u, n) { return '<b>' + fmt(u) + ' item' + (u > 1 ? 's' : '') + '</b> sold today, over ' + fmt(n) + ' sale' + (n > 1 ? 's' : '') + '.'; },
       unitsNone: 'No itemised sale recorded today.',
@@ -877,6 +879,7 @@
       contact: 'معلومات الاتصال ديالو كاينة فالبطاقة ديالو.',
       worked: function (h, n) { return 'الفريق ديالك خدم <b>' + h + '</b> اليوم، على ' + fmt(n) + ' أشخاص.'; },
       workedNone: 'حتى ساعة ما تسجّلات اليوم مازال.',
+      workedOne: function (n, h) { return '<b>' + n + '</b> خدم <b>' + h + '</b> اليوم.'; }, workedOneNone: function (n) { return '<b>' + n + '</b> مازال ما سجّل حتى ساعة اليوم.'; },
       workedNote: 'الساعات من آلة التسجيل، الخدمة اللي دايرة دابا محسوبة.',
       units: function (u, n) { return 'تباعو <b>' + fmt(u) + ' منتوج</b> اليوم، ف' + fmt(n) + ' عمليات بيع.'; },
       unitsNone: 'حتى بيعة مفصّلة ما تسجّلات اليوم.',
@@ -917,9 +920,10 @@
     if (spec.contact) r.note = g.contact;
     return r;
   }
-  function sStaffHours(L) {
+  function sStaffHours(L, who) {
     var t = tr(L), g = gt(L), team = teamRoster();
     if (!team.length) return { text: t.staffNone, open: open1(L, 'pTeam', 'nav-equipe') };
+    if (who) return { text: +who.hoursToday > 0 ? g.workedOne(esc(who.name), hrs(+who.hoursToday)) : g.workedOneNone(esc(who.name)), note: g.workedNote, open: open1(L, 'pTeam', 'nav-equipe') };
     var worked = team.filter(function (m) { return m && +m.hoursToday > 0; });
     var total = worked.reduce(function (a, m) { return a + (+m.hoursToday || 0); }, 0);
     return {
@@ -1026,7 +1030,8 @@
       if (spec.entity === 'command') return sCommand(spec, L);
       if (spec.entity === 'client' && spec.agg === 'today') return sClientsToday(L);
       if (spec.entity === 'client' && spec.agg === 'card') return sClientCard(spec, L);
-      if (spec.entity === 'staff' && spec.agg === 'hours') return sStaffHours(L);
+      if (spec.entity === 'client' && spec.agg === 'missing') return { text: ({ fr: 'Je ne trouve aucun client nommé <b>' + esc(spec.name) + '</b> dans votre carnet. Seuls les clients identifiés en caisse y figurent.', en: 'I can’t find a client named <b>' + esc(spec.name) + '</b> in your book. Only clients identified at the till are in it.', ar: 'ما لقيت حتى كليان سميتو <b>' + esc(spec.name) + '</b> فالسجل ديالك. غير الزبناء اللي تعرّفو فالكيسا كيكونو فيه.' })[L] || '', open: open1(L, 'pClients', 'clients-directory') };
+      if (spec.entity === 'staff' && spec.agg === 'hours') return sStaffHours(L, spec.who);
       if (spec.entity === 'product' && spec.agg === 'units') return sUnitsToday(L);
       if (spec.entity === 'cash') return sCashToday(L);
       if (spec.entity === 'refunds') return sRefundsToday(L);
@@ -1063,9 +1068,9 @@
     staff: W("العاملون|عاملون|\\bl3ommal\\b|\\bstaff time\\b|عاملين|موظفين|\\bkheddam\\w*|\\blkheddam\\w*|\\bkhddamin\\b|\\bgens que j'?emploie\\b|\\bj'?emploie\\b|الطاكام|طاكم|موظفي|\\bheadcount\\b|\\bsalesperson\\b|\\bl?kh?d+ama\\b|\\blmowadaf\\w*|شخص يعمل|اشخاص يعملون|فريق العمل|عن العمل|الناس اللي|\\bemploy(?:e|es|ee|ees)\\b|\\bsalari(?:e|es)\\b|\\bpersonnel\\b|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|\\beffectif\\b|\\bserveurs?\\b|\\bservers?\\b|\\bwaiters?\\b|\\bcuisiniers?\\b|\\bworkers?\\b|\\bcrew\\b|\\bvendeurs?\\b|\\bsalesperson\\b|\\bbossent\\b|\\btravaillent\\b|work(?:s|ing)? (?:for|with) me|people (?:who )?work|gens (?:qui )?(?:bossent|travaillent)|موظف|خدام|خدامة|(?:^|\\s)(?:ال)?عمال(?=\\s|$)|(?:^|\\s)(?:ال)?عامل(?=\\s|$)|العاملين|فريق|طاقم|تيم|الستاف|سيرفور|نادل|بياع|بائع|\\bkh?d+am\\b|\\bkhdama\\b|\\bkhadama\\b|\\blkhadama\\b|\\bmowadaf\\w*|\\bmwadaf\\w*|\\b3o?mmal\\b|\\btim\\b|\\bekip\\b|kaykhdmo|كيخدمو|ناس.{0,8}كيخدم|\\bnas kaykhdmo"),
     shift: W("\\bau boulot\\b|\\bau travail\\b|\\bkheddam\\b|\\bkhddamin\\b|\\bkheddamin\\b|\\btravaill?e?\\b|\\bbosse\\b|\\bde service\\b|\\ben service\\b|\\ben poste\\b|\\bpointe\\b|\\bpresents?\\b|\\bshift\\b|\\bon duty\\b|\\bworking\\b|\\bclocked\\b|\\bscheduled\\b|\\bplanning\\b|\\bassure le service\\b|\\bcovering\\b|\\bprevu\\b|خدام(?!ة)|خدامين|كاين|فالخدمة|الخدمة|السيرفيس|الشيفت|البيرمانونس|يعمل|يعملون|المناوبة|المناوبون|وردية|مبرمج|\\bkh?d+am(?:in)?\\b|\\bservice\\b|\\bmprogrammi\\b"),
     now: W("aujourd'?\\s?hui|\\bajd\\b|\\bauj\\b|\\btoday\\b|\\btonight\\b|\\bce soir\\b|\\bce matin\\b|\\bce jour\\b|\\bmaintenant\\b|\\bmnt\\b|\\bnow\\b|\\bactuellement\\b|en ce moment|\\bcurrently\\b|\\bthis evening\\b|اليوم|دابا|الليلة|هاد النهار|هاد العشية|الان|حاليا|هذا المساء|\\bly?ou?ma?\\b|\\bdaba\\b|\\blila\\b|\\bl3chiya\\b"),
-    top: W("(?:^|\\s)حسن(?=\\s)|\\bhsen\\b|\\baktar\\b|\\bakthar\\b|اللول|\\blargest\\b|\\blkber\\b|لكبر|الكبر|\\bbiggest\\b|\\bgros\\b|en tete|متصدر|\\bbest-?selling\\b|\\bbestselling\\b|\\ble plus\\b|\\bla plus\\b|\\bles plus\\b|\\bmeilleur\\w*|\\bbest\\b|\\btop\\b|\\bmost\\b|\\ble mieux\\b|\\bnumero (?:un|1)\\b|\\bnumber one\\b|\\bpremier\\b|\\bhighest\\b|\\bstar\\b|\\bcartonne\\b|بزاف|اكثر|كثر|افضل|احسن|اعلى|اكبر|نمرة واحد|الاول|يتصدر|\\bbe?zaf\\b|\\bkt[ea]?r\\b|\\ba7san\\b|\\bafdal\\b|\\bakbar\\b|\\blowel\\b"),
+    top: W("(?:^|\\s)حسن(?=\\s)|\\bhsen\\b|\\baktar\\b|\\bakter\\b|\\bakthar\\b|اللول|\\blargest\\b|\\blkber\\b|لكبر|الكبر|\\bbiggest\\b|\\bgros\\b|en tete|متصدر|\\bbest-?selling\\b|\\bbestselling\\b|\\ble plus\\b|\\bla plus\\b|\\bles plus\\b|\\bmeilleur\\w*|\\bbest\\b|\\btop\\b|\\bmost\\b|\\ble mieux\\b|\\bnumero (?:un|1)\\b|\\bnumber one\\b|\\bpremier\\b|\\bhighest\\b|\\bstar\\b|\\bcartonne\\b|بزاف|اكثر|كثر|افضل|احسن|اعلى|اكبر|نمرة واحد|الاول|يتصدر|\\bbe?zaf\\b|\\bkt[ea]?r\\b|\\ba7san\\b|\\bafdal\\b|\\bakbar\\b|\\blowel\\b"),
     low: W("\\blekher\\b|اللخر|\\bvery little\\b|\\ble moins\\b|\\bla moins\\b|\\bles moins\\b|\\bpire\\b|\\bworst\\b|\\bleast\\b|\\blowest\\b|\\bslowest\\b|\\bfewest\\b|\\bbottom\\b|\\ben bas\\b|\\ben dernier\\b|dernier (?:du|au|en) classement|\\ble dernier (?:produit|plat|article)|\\bmarche (?:le )?moins\\b|ne se vend pas|ne part pas|اقل|اسوا|اخر ترتيب|اخر منتوج|ما كيتباعش|ما كتتباعش|\\bma ?kaytba3ch\\b|\\bma ?kaymchich\\b|\\ba9al\\b|\\b9ell\\b|\\b9lil\\b|\\bakher\\b"),
-    sell: W("\\bpartis?\\b|بيعت|المباعة|بيعها|تباعت|تباعو|\\btba3at\\b|\\btba3o\\b|\\bvendues?\\b|خرجت|خرجات|\\bkanbi3ou\\b|كنبيعو|\\bkatba3\\b|\\bkatmchi\\b|كتمشي|\\bkaychri\\w*|كيشريو\\w*|يشتري\\w*|\\bbuys?\\b|\\bbought\\b|\\bbestselling\\b|best-selling|كياخدو|ياخدو|\\bkaykhodo\\b|\\bvend(?!redi)\\w*|\\bvente\\w*|\\bsell\\w*|\\bsold\\b|\\bseller\\b|\\bcommande\\w*|\\bordered\\b|\\bpart\\b|\\bmarche\\b|\\bpopular\\b|\\bclassement\\b|\\branking\\b|\\bchiffre\\b|\\brevenue\\b|\\bsales\\b|كيتباع|كتتباع|بعنا|\\bb3na\\b|تباع|تباعت|يباع|كيبيع|كنبيع|بيع|ابيع|باع|بعت|مبيع|مطلوب|كيمشي|ترتيب|شيفر|\\bkaytba3\\b|\\btba3t?\\b|\\bkaybi3\\b|\\bkanbi3\\b|\\bbi3\\b|\\bba3\\b|\\bventes?\\b|\\bkaymchi\\b"),
+    sell: W("\\bkaytba3\\b|\\bkattba3\\b|كيتباع|كتتباع|\\bb3t\\b|\\bsold\\b|\\bsell\\b|\\bpartis?\\b|بيعت|المباعة|بيعها|تباعت|تباعو|\\btba3at\\b|\\btba3o\\b|\\bvendues?\\b|خرجت|خرجات|\\bkanbi3ou\\b|كنبيعو|\\bkatba3\\b|\\bkatmchi\\b|كتمشي|\\bkaychri\\w*|كيشريو\\w*|يشتري\\w*|\\bbuys?\\b|\\bbought\\b|\\bbestselling\\b|best-selling|كياخدو|ياخدو|\\bkaykhodo\\b|\\bvend(?!redi)\\w*|\\bvente\\w*|\\bsell\\w*|\\bsold\\b|\\bseller\\b|\\bcommande\\w*|\\bordered\\b|\\bpart\\b|\\bmarche\\b|\\bpopular\\b|\\bclassement\\b|\\branking\\b|\\bchiffre\\b|\\brevenue\\b|\\bsales\\b|كيتباع|كتتباع|بعنا|\\bb3na\\b|تباع|تباعت|يباع|كيبيع|كنبيع|بيع|ابيع|باع|بعت|مبيع|مطلوب|كيمشي|ترتيب|شيفر|\\bkaytba3\\b|\\btba3t?\\b|\\bkaybi3\\b|\\bkanbi3\\b|\\bbi3\\b|\\bba3\\b|\\bventes?\\b|\\bkaymchi\\b"),
     item: W("\\bmakla\\b|ماكلة|\\bmenu item\\b|\\bqu'?\\s?est[- ]ce\\b|ما الذي|ماذا|اصناف|الاصناف|منتجات|المنتجات|عناصر|\\bentries\\b|\\bproduits?\\b|\\barticles?\\b|\\bplats?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\breferences?\\b|\\bboissons?\\b|\\bmeal\\b|\\bthing\\b|\\bce qui\\b|\\bwhat\\b|منتج|منتوج|صنف|طبق|وجبة|حاجة|بلات|سلعة|\\bproduit\\b|\\bplat\\b|\\barticle\\b|\\bsenf\\b|\\b7aja\\b|شنو|اشنو|\\bchno\\b|\\bachno\\b|\\bqu'?est[- ]ce\\b|\\bc'?est quoi\\b|\\bc quoi\\b"),
     client: W("عملاينا|عملاين|\\bvisitors?\\b|عميل|عميلا|العميل|عملايي|\\bclients?\\b|\\bclientes?\\b|\\bcustomers?\\b|\\bhabitues?\\b|\\bregulars?\\b|\\bacheteurs?\\b|زبون|زبناء|زبائن|زبائني|عملاء|عملائي|العملاء|كليان|الكليان|\\bk?l[iy]an\\b|\\bzbo?u?n\\b|\\bzbana\\b|\\blclients\\b"),
     spend: W("\\bachats?\\b|\\bpurchases?\\b|\\btotal spend\\b|ينفق|الانفاق|مشتريات|المشتريات|الشريات|فلوس|\\bflous\\b|\\bkaykhelli\\b|depense\\w*|\\bspends?\\b|\\bspent\\b|\\bfidele\\b|\\bloyal\\b|\\bbig spender\\b|\\bachete le plus\\b|\\bpaie le plus\\b|كيصرف|يصرف|انفق|\\bkayserf\\b|كيخلص|\\bkaykhelles\\b"),
@@ -1098,7 +1103,7 @@
    * margin question, a season, a past period. agent.js owns those. */
   var NOT_OWN = W("je veux (?:gagner|faire|atteindre)|j'?aimerais (?:gagner|faire)|i want to (?:make|earn|hit)|\\bobjectif\\b|\\btarget\\b|\\bgoal\\b|بغيت نربح|اريد ربح|هدفي|\\bhadaf\\b");
   /* An order to the app, not a question: the operation routes own it. */
-  var COMMAND = W("^(?:stp |svp |please |عفاك )?(?:ajoute\\w*|add|supprime\\w*|delete|remove|annule\\w*|cancel|modifie\\w*|change|set|mets|met|envoie\\w*|send|cree\\w*|create|enregistre\\w*|ecris|write|zid|nzid|bdel|beddel|khlli|khalli|7yed|7ayed|lghi|ilghi)\\b|^(?:عفاك )?(?:اجعل|خلي|لغي|حط|دير|زيد|ضيف|حيد|بدل|بدّل|صيفط|ارسل|اضف|احذف|الغ|غير|سجل)(?=\\s|$)|\\b(?:send|envoie\\w*)\\b.{0,30}\\b(?:message|sms|whatsapp)|(?:صيفط|ارسل).{0,30}(?:رسالة|ميساج)");
+  var COMMAND = W("^(?:stp |svp |please |عفاك )?(?:ajoute\\w*|add|retire\\w*|enleve\\w*|n9es|naqes|supprime\\w*|delete|remove|annule\\w*|cancel|modifie\\w*|change|set|mets|met|envoie\\w*|send|cree\\w*|create|enregistre\\w*|ecris|write|zid|nzid|bdel|beddel|khlli|khalli|7yed|7ayed|lghi|ilghi)\\b|^(?:عفاك )?(?:اجعل|خلي|لغي|حط|دير|زيد|ضيف|حيد|بدل|بدّل|صيفط|ارسل|اضف|أضف|احذف|أحذف|الغ|ألغ|غير|سجل|نقص|ازل|أزل)(?=\\s|$)|\\b(?:send|envoie\\w*)\\b.{0,30}\\b(?:message|sms|whatsapp)|(?:صيفط|ارسل).{0,30}(?:رسالة|ميساج)");
   var PAID_OUT = W("دفعت|دفعنا|خلصت|خلصنا|\\bkhlle?st\\b|\\bpaye\\b|\\bpaid\\b|\\bdecaiss\\w*|\\bspent on\\b|\\bsorti de (?:la )?caisse\\b");
   var LATER = W("\\bdemain\\b|\\btomorrow\\b|غدا|غدوة|\\bghda\\b|\\bghedda\\b|apres[- ]demain|la semaine prochaine|next week");
   var HOWTO = W("^(?:comment (?!va\\b|ca va)|how (?:do|to|can|does|should)\\b|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b)|\\bwach kayn\\b|est.ce qu'?il y a");
@@ -1113,12 +1118,12 @@
    * the merchant makes the change with their own rights. An order naming a
    * ticket number stays with the operation lane, which can move an order. */
   var CMD_TARGETS = [
-    { rx: W("\\bpoints?\\b|fidelit|loyalty|نقط|\\bn9at\\b|\\bclients?\\b|\\bcustomers?\\b|زبون|زبناء|كليان|\\bklyan\\b"), page: 'pClients', h: 'clients-directory' },
+    { rx: W("\\bpoints?\\b|fidelit|loyalty|نقط|\\bn9at\\b|\\bclients?\\b|\\bcustomers?\\b|زبون|زبناء|زبائن|نقاط|كلون|الكليون|كليان|\\bklyan\\b"), page: 'pClients', h: 'clients-directory' },
     { rx: W("horaire|\\bheures? d|\\bouverture\\b|\\bfermeture\\b|closing|opening|\\bhours\\b|وقت|ساعات|الاغلاق|الفتح|السدان|\\bsdan\\b|\\bl7ell\\b|\\bwa9t\\b|\\bsa3a\\b"), page: 'pHours', h: 'settings-hours' },
-    { rx: W("employe|serveur|caissier|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|employee|worker|waiter|خدام|موظف|عامل|\\bkhddam\\b|\\bkhdam\\b"), page: 'pTeam', h: 'nav-equipe' },
+    { rx: W("employe|serveur|caissier|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|employee|worker|waiter|خدام|موظف|عامل|نادل|\\bkhddam\\b|\\bkhdam\\b"), page: 'pTeam', h: 'nav-equipe' },
     { rx: W("\\bstock\\b|inventaire|inventory|مخزون|\\bstok\\b"), page: 'pStock', h: 'nav-stock' },
     { rx: W("\\bcommandes?\\b|\\bventes?\\b|\\btickets?\\b|\\borders?\\b|\\bsales?\\b|طلب|طلبات|كوموند|\\bcommande\\b"), page: 'pOrders', h: 'nav-transactions' },
-    { rx: W("\\bplats?\\b|\\bmenu\\b|\\bcarte\\b|\\bdish|\\bprix\\b|\\bprice\\b|produit|product|article|\\bitem\\b|منيو|مينيو|طبق|منتوج|سلعة|ثمن|سعر|تمن|\\btaman\\b|\\bplat\\b"), page: 'pMenu', h: 'nav-menu' },
+    { rx: W("\\bplats?\\b|\\bmenu\\b|\\bcarte\\b|\\bdish|\\bprix\\b|\\bprice\\b|produit|product|article|\\bitem\\b|منيو|مينيو|طبق|منتوج|سلعة|ثمن|سعر|تمن|قائمة|القائمة|درهم|\\b\\d+\\s*(?:dh|mad|dhs|dirhams?)\\b|\\btaman\\b|\\bplat\\b"), page: 'pMenu', h: 'nav-menu' },
   ];
   var CMD_T = {
     fr: 'Je ne modifie pas vos données depuis cette conversation : la modification se fait sur la page, avec vos droits.',
@@ -1163,17 +1168,18 @@
   var LAST_MONTH = W("mois (?:dernier|passe|precedent)|last month|previous month|الشهر (?:الماضي|اللي فات|الفايت|السابق|لي فات)|\\bch(?:h|e)?ar (?:li |l)?fa(?:t|yt)\\b|\\bchhr li fat\\b");
   var CASH_BOX = W("فالدرج|الدرج|الكاسة|\\btiroir\\b|(?:dans|in|en) (?:la |ma |the |my )?(?:caisse|tiroir|drawer|till)\\b|\\bf(?:e|i)? ?(?:sndo9|sendo9|sndoq|snadq)\\b|فالصندوق|في الصندوق|فصندوق|فالكاسة|\\bcash\\b.{0,25}\\b(?:aujourd|today|lyoum|lyouma)|\\bespeces\\b.{0,25}\\b(?:aujourd|today)|كاش اليوم");
   var WEEK_DAYS = W("(?:\\bjours?\\b|\\bdays?\\b|نهار|ايام|يوما|يوم|\\bnhar\\b|\\biyam\\b).{0,30}(?:ouvr|\\bopen|travaill|\\bwork|نعمل|تعمل|نفتح|مفتوح|كنخدمو|نخدمو|كنحلو|خدامين|\\bkhdmo\\b|\\bkn?khdmo\\b|\\bkan7ellou\\b)|(?:ouvert|\\bopen\\b).{0,20}(?:par semaine|per week|a week)");
-  var HRS_WORD = W("combien de temps|how long|time worked|staff time|\\bswa3e3\\b|\\bswaye3\\b|\\bheures?\\b|\\bhours?\\b|ساعات|ساعة|سوايع|\\bsway3\\b|\\bsa3at\\b|\\bsa3a\\b");
-  var WORK_VERB = W("اشتغل\\w*|بوانتاو|\\bbwantaw\\b|\\bkhedmo\\b|\\bkhedma\\b|الخدمة|سجلو|\\bworked\\b|travaill|\\bbosse|\\bworked\\b|\\bwork\\b|خدمو|\\bkhdmo\\b|\\bkhedmo\\b");
+  var HRS_WORD = W("combien de temps|\\bswa3\\b|\\bb ?swa3\\b|بالسوايع|how long|time worked|staff time|\\bswa3e3\\b|\\bswaye3\\b|\\bheures?\\b|\\bhours?\\b|ساعات|ساعة|سوايع|\\bsway3\\b|\\bsa3at\\b|\\bsa3a\\b");
+  var WORK_VERB = W("\\bkhdem\\b|(?:^|\\s)(?:خدم|عمل)(?=\\s)|اشتغل\\w*|بوانتاو|\\bbwantaw\\b|\\bkhedmo\\b|\\bkhedma\\b|الخدمة|سجلو|\\bworked\\b|travaill|\\bbosse|\\bworked\\b|\\bwork\\b|خدمو|\\bkhdmo\\b|\\bkhedmo\\b");
   var PRESENT = W("موجود|حاضر|\\bpresents?\\b|\\best la\\b|\\bsont la\\b|\\bthere\\b|\\bhere\\b|\\bkayn\\b|كاين|\\bici\\b");
   var VISITED = W("\\bhere\\b|\\bdazou\\b|\\bzarouna\\b|\\bjaw\\b|(?:^|\\s)(?:زارونا|زارنا|قدموا|مروا|مرو|دازو|جاو)(?=\\s|$)|\\bvenus?\\b|\\bvenues?\\b|\\bpasse(?:s|e|es)?\\b|\\bcame\\b|\\bcome in\\b|\\bvisit\\w*|\\bja\\b|\\bjaw\\b|\\bdaz\\b|\\bdazo\\b|(?:^|\\s)(?:جا|جاو|جاؤوا|جاءوا|جاووا|جاء|داز|دازو|زار|زارو|زاروا|حضر|حضروا|اجا|اتى|اتوا)(?=\\s|$)");
   var LAST_VISIT = W("last here|last (?:come|came)|\\bakhe?r merr?a\\b|\\bakher mra\\b|\\bdate\\b|تاريخ اخر|شحال هادي ما|\\bch7al hadi ma\\b|how long since|derniere (?:fois|visite)|last (?:time|visit)|\\blast (?:came|come|visited)\\b|\\bvisit(?:ed)? last\\b|\\bcame (?:in )?last\\b|quand (?:est|a|etait)|when did|when was|اخر مرة|اخر زيارة|\\bakhir mra\\b|\\bakher mra\\b|فوقاش|\\bfo9ach\\b|امتى|متى");
   var CONTACT = W("\\bcontact\\w*|تواصل|اتواصل|الاتصال|نتاصل|\\bntasel\\b|\\bnemro\\b|هاتف|\\bjoindre\\b|\\bappeler\\b|\\bnumero\\b|\\btelephone\\b|\\btel\\b|\\bphone\\b|\\bcontact\\b|\\bemail\\b|\\bnemra\\b|رقم|نمرة|تيليفون|الهاتف");
-  var UNIT_WORD = W("قطعة|قطع|القطع|وحدة|وحدات|الوحدات|بياسة|البرودويات|\\bpieces?\\b|\\bunites?\\b|\\b9ta3\\b|\\bl9ta3\\b|\\b7aja\\b|\\barticles?\\b|\\bproduits?\\b|\\bpieces?\\b|\\bunites?\\b|\\bunits?\\b|\\bitems?\\b|\\bplats?\\b|منتوج|منتجات|منتج|سلعة|حاجة|حوايج|\\bmontoj\\b|\\bproduit\\b");
+  var UNIT_WORD = W("طبق\\S*|\\btbe9\\b|\\bdish(?:es)?\\b|قطعة|قطع|القطع|وحدة|وحدات|الوحدات|بياسة|البرودويات|\\bpieces?\\b|\\bunites?\\b|\\b9ta3\\b|\\bl9ta3\\b|\\b7aja\\b|\\barticles?\\b|\\bproduits?\\b|\\bpieces?\\b|\\bunites?\\b|\\bunits?\\b|\\bitems?\\b|\\bplats?\\b|منتوج|منتجات|منتج|سلعة|حاجة|حوايج|\\bmontoj\\b|\\bproduit\\b");
   function ownIntent(q, raw) {
     q = String(q || '');
     var h = function (k) { return LX[k].test(q); };
     if (COMMAND.test(q)) return commandIntent(q);
+    if ((h('sell') || h('revenue')) && /\btotal\b|au total|in total|بالمجموع|المجموع/.test(q) && !FUTURE.test(q) && !h('now') && !UNIT_WORD.test(q) && !CASH_PAY.test(q)) return { route: 'revenue' };
     /* « كيفاش نتاصل ببناني », « how can I contact Bennani »: a client's card. */
     if (CONTACT.test(q) && findClient(raw || q).hit) return { entity: 'client', agg: 'card', contact: true };
     if (NOT_OWN.test(q) || HOWTO.test(q)) return null;
@@ -1197,10 +1203,19 @@
     if (howMuch && CASH_BOX.test(q) && !/combien de temps|how long|\btien[st]?\b|\btenir\b|survi|\bdure\b|شحال من وقت|كم من الوقت/.test(q)) return { entity: 'cash', agg: 'today' };
     if (DAYS_W.test(q) && OPENISH.test(q) && WEEK_W.test(q) && (!h('client') || /نستقبل|كنستقبلو|\bkansta9blo\b|\breceive\b|accueill/.test(q)) && !h('sell')) return { entity: 'hours', agg: 'week' };
     if (WEEK_DAYS.test(q) && /semaine|\bweek\b|سيمانة|السيمانة|الاسبوع|اسبوع|\bsimana\b|\bsmana\b|\bssimana\b/.test(q)) return { entity: 'hours', agg: 'week' };
+    /* « combien d'heures a fait Karim » : one member of the team, by first name. */
+    var member = HRS_WORD.test(q) ? teamRoster().filter(function (m) { var f = norm(String(m && m.name || '').split(/\s+/)[0]); return f.length > 2 && new RegExp('\\b' + f + '\\b').test(q); })[0] : null;
+    if (member && (WORK_VERB.test(q) || h('now'))) return { entity: 'staff', agg: 'hours', who: member };
     if (HRS_WORD.test(q) && (h('staff') || WORK_VERB.test(q)) && !h('open') && !h('close') && !/ouverture|opening|الفتح|semaine|\bweek\b|سيمانة|الاسبوع/.test(q)) return { entity: 'staff', agg: 'hours' };
     if (h('staff') && PRESENT.test(q) && h('now') && !h('count')) return { entity: 'staff', agg: 'today' };
     if (h('client') && (VISITED.test(q) || h('who')) && h('now') && !COUNT_OF.test(q) && !h('gone') && !h('top') && !h('spend') && !h('points')) return { entity: 'client', agg: 'today' };
     if ((LAST_VISIT.test(q) || CONTACT.test(q)) && !h('points') && hit()) return { entity: 'client', agg: 'card', contact: CONTACT.test(q) };
+    /* « When did Nadia last visit? » with no Nadia in the book: say so, rather
+     * than letting the model guess a date. Latin capitals only. */
+    if (LAST_VISIT.test(q) && /\b(?:visit|venu|venue|came|jat|ja|passe)\w*/.test(q)) {
+      var nm = (String(raw || '').match(/(?:^|\s)(?!When\b|Quand\b|Did\b|Last\b)(\p{Lu}[\p{Ll}]{2,})(?=[\s?!.,]|$)/u) || [])[1];
+      if (nm) return { entity: 'client', agg: 'missing', name: nm };
+    }
     if (!money && !past && (COUNT_OF.test(q) || h('count')) && h('sell') && h('now') && UNIT_WORD.test(q)) return { entity: 'product', agg: 'units' };
     if (REFUND_W.test(q) && (howMuch || COUNT_OF.test(q) || h('who')) && !past && !LATER.test(q)) return { entity: 'refunds', agg: 'today' };
     if (!season && !AIM_DAY.test(q) && BEST_DAY.test(q)) return { entity: 'dayrank', agg: 'best', week: /semaine|\bweek\b|سيمانة|الاسبوع|\bsimana\b/.test(q) };
@@ -1298,5 +1313,104 @@
     return true;
   }
 
-  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, staffCount: staffCount, _rank: productRanking, _findClient: findClient };
+  /* « can I afford hiring a new employee » on a real account. The demo model
+   * has a cost structure; a real merchant has what Kiwi actually holds: the
+   * team's salaries (Équipe), the charges and margin entered in Marges, and
+   * the sales journal. Answer from those, say which ones are missing, and
+   * never put an invented salary or margin in front of the merchant. */
+  var HIRE_T = {
+    fr: {
+      cost: function (per, cost, rate, n) { return (n > 1 ? n + ' employés à ' : 'Un employé à ') + fmtMad(per) + (rate == null ? '' : ' net') + ' vous coûte' + (n > 1 ? 'nt' : '') + ' <b>' + fmtMad(cost) + ' par mois</b> ' + (rate == null ? '(charges comprises).' : 'avec les charges sociales patronales (' + rate + ' %).'); },
+      need: function (x, d) { return ' Pour le payer, il faut ' + fmtMad(x) + ' de ventes en plus par mois, soit ' + fmtMad(d) + ' par jour.'; },
+      share: function (p, rev) { return ' C’est ' + p + ' % de vos ventes des 30 derniers jours (' + fmtMad(rev) + ').'; },
+      ask: 'Quel salaire net prévoyez-vous pour ce poste ? Avec ce chiffre je calcule ce qu’il coûte charges comprises et les ventes à ajouter pour le payer.',
+      avg: function (a, k) { return 'Salaire pris : la moyenne de vos ' + k + ' salariés actuels dans Équipe (' + fmtMad(a) + ' net). Donnez-moi le vrai salaire prévu pour un calcul exact.'; },
+      sCost: 'Coût employeur /mois', sNeed: 'Ventes à ajouter /mois', sDay: 'Soit par jour', sBe: 'Nouveau seuil de rentabilité', sBeH: function (b) { return 'aujourd’hui ' + fmtMad(b); },
+      sPace: 'Votre rythme de ventes', sPaceH: 'projection du mois', sPace30: '30 derniers jours', sShare: 'Part de vos ventes', sRev: 'Ventes des 30 derniers jours', sTeam: 'Masse salariale actuelle', sTeamH: function (k) { return k + ' salariés, charges comprises'; },
+      good: function (x) { return 'À votre rythme actuel, vous couvrez ce salaire et il vous reste ' + fmtMad(x) + ' de ventes au-dessus du nouveau seuil chaque mois.'; },
+      warn: function (x, d) { return 'Vous couvrez vos charges actuelles, pas ce salaire en plus : il manque ' + fmtMad(x) + ' de ventes par mois (' + fmtMad(d) + ' par jour). L’embauche se justifie si ce poste fait vendre ce supplément.'; },
+      bad: function (b) { return 'Vous n’atteignez pas encore votre seuil actuel (' + fmtMad(b) + ' par mois) : un salaire de plus agrandirait la perte.'; },
+      open: 'Je ne peux pas encore dire oui ou non : il me manque votre marge et vos charges fixes. Renseignez-les dans Marges, carte « Charges fixes », et je calcule les ventes à ajouter et votre nouveau seuil.',
+      over: 'Ce coût dépasse tout ce que vous avez vendu en 30 jours : même si chaque dirham vendu était du bénéfice, il ne se paierait pas encore.',
+      noSales: 'Aucune vente enregistrée sur les 30 derniers jours : je n’ai rien à comparer à ce coût.',
+      net: 'Le montant donné est lu comme un salaire net ; les charges patronales s’ajoutent. Dites « charges comprises » s’il les inclut déjà.',
+    },
+    en: {
+      cost: function (per, cost, rate, n) { return (n > 1 ? n + ' employees at ' : 'An employee at ') + fmtMad(per) + (rate == null ? '' : ' net') + ' cost' + (n > 1 ? '' : 's') + ' you <b>' + fmtMad(cost) + ' a month</b> ' + (rate == null ? '(charges included).' : 'with employer social charges (' + rate + ' %).'); },
+      need: function (x, d) { return ' To pay for it you need ' + fmtMad(x) + ' more sales a month, ' + fmtMad(d) + ' a day.'; },
+      share: function (p, rev) { return ' That is ' + p + ' % of your sales over the last 30 days (' + fmtMad(rev) + ').'; },
+      ask: 'What net salary do you plan for this job? With it I can work out the cost including charges and the extra sales needed to pay it.',
+      avg: function (a, k) { return 'Salary used: the average of your ' + k + ' salaried staff in Team (' + fmtMad(a) + ' net). Give me the planned salary for an exact figure.'; },
+      sCost: 'Employer cost /month', sNeed: 'Extra sales needed /month', sDay: 'Per day', sBe: 'New break-even', sBeH: function (b) { return 'today ' + fmtMad(b); },
+      sPace: 'Your sales pace', sPaceH: 'this month’s projection', sPace30: 'last 30 days', sShare: 'Share of your sales', sRev: 'Sales, last 30 days', sTeam: 'Current payroll', sTeamH: function (k) { return k + ' salaried, charges included'; },
+      good: function (x) { return 'At your current pace you cover this salary, with ' + fmtMad(x) + ' of sales above the new break-even each month.'; },
+      warn: function (x, d) { return 'You cover your current costs but not this extra salary: you are ' + fmtMad(x) + ' of sales a month short (' + fmtMad(d) + ' a day). The hire pays off if this job brings in that much more.'; },
+      bad: function (b) { return 'You are not yet reaching your current break-even (' + fmtMad(b) + ' a month): one more salary would deepen the loss.'; },
+      open: 'I can’t say yes or no yet: I don’t have your margin and fixed costs. Enter them in Margins, “Fixed costs” card, and I will compute the extra sales needed and your new break-even.',
+      over: 'This cost is more than everything you sold in 30 days: even if every dirham sold were profit, it would not pay for itself yet.',
+      noSales: 'No sales recorded over the last 30 days: I have nothing to set this cost against.',
+      net: 'The amount is read as a net salary; employer charges come on top. Say “charges included” if it already contains them.',
+    },
+    ar: {
+      cost: function (per, cost, rate, n) { return (n > 1 ? n + ' موظفين بأجر ' : 'موظف بأجر ') + fmtMad(per) + (rate == null ? '' : ' صافٍ') + ' يكلّفك <b>' + fmtMad(cost) + ' في الشهر</b> ' + (rate == null ? '(مع التحملات).' : 'مع التحملات الاجتماعية على المشغّل (' + rate + ' %).'); },
+      need: function (x, d) { return ' لتغطيته تحتاج ' + fmtMad(x) + ' مبيعات إضافية في الشهر، أي ' + fmtMad(d) + ' في اليوم.'; },
+      share: function (p, rev) { return ' هذا ' + p + ' % من مبيعاتك في آخر 30 يومًا (' + fmtMad(rev) + ').'; },
+      ask: 'كم الأجر الصافي الذي تنوي دفعه لهذا المنصب؟ به أحسب كلفته مع التحملات والمبيعات التي يجب إضافتها لتغطيته.',
+      avg: function (a, k) { return 'الأجر المعتمد: متوسط أجور موظفيك الـ' + k + ' في صفحة الفريق (' + fmtMad(a) + ' صافٍ). أعطني الأجر الفعلي لحساب دقيق.'; },
+      sCost: 'كلفة المشغّل في الشهر', sNeed: 'مبيعات إضافية في الشهر', sDay: 'أي في اليوم', sBe: 'عتبة المردودية الجديدة', sBeH: function (b) { return 'حاليًا ' + fmtMad(b); },
+      sPace: 'وتيرة مبيعاتك', sPaceH: 'توقع هذا الشهر', sPace30: 'آخر 30 يومًا', sShare: 'نسبة من مبيعاتك', sRev: 'مبيعات آخر 30 يومًا', sTeam: 'كتلة الأجور الحالية', sTeamH: function (k) { return k + ' أجراء، مع التحملات'; },
+      good: function (x) { return 'بوتيرتك الحالية تغطي هذا الأجر، وتبقى مبيعاتك فوق العتبة الجديدة بـ' + fmtMad(x) + ' في الشهر.'; },
+      warn: function (x, d) { return 'تغطي تكاليفك الحالية لكن ليس هذا الأجر الإضافي: ينقصك ' + fmtMad(x) + ' من المبيعات في الشهر (' + fmtMad(d) + ' في اليوم). التوظيف مجدٍ إذا جلب هذا المنصب هذه المبيعات.'; },
+      bad: function (b) { return 'لم تبلغ بعد عتبتك الحالية (' + fmtMad(b) + ' في الشهر): أجر إضافي سيزيد الخسارة.'; },
+      open: 'لا أستطيع أن أجيب بنعم أو لا بعد: تنقصني هوامشك وتكاليفك الثابتة. أدخلها في صفحة الهوامش، بطاقة «التكاليف الثابتة»، فأحسب المبيعات الإضافية وعتبتك الجديدة.',
+      over: 'هذه الكلفة تفوق كل ما بعته في 30 يومًا: حتى لو كان كل درهم مبيع ربحًا صافيًا، لن تغطيها بعد.',
+      noSales: 'لا مبيعات مسجّلة في آخر 30 يومًا: لا شيء أقارن به هذه الكلفة.',
+      net: 'أقرأ المبلغ كأجر صافٍ وتُضاف إليه تحملات المشغّل. قل «مع التحملات» إن كان يشملها.',
+    },
+  };
+  function hire(o) {
+    var t = HIRE_T[o.L] || HIRE_T.fr, K = o.K, B = o.B || {}, q = norm(o.q);
+    var mo = null, be = null;
+    try { mo = K && K.monthly ? K.monthly() : null; } catch (_) { mo = null; }
+    try { be = K && K.breakEven ? K.breakEven() : null; } catch (_) { be = null; }
+    var staff = mo && mo.staff, salaried = staff && staff.salaried > 0 ? staff.salaried : 0;
+    var avg = salaried && staff.base > 0 ? staff.base / salaried : null;
+    var per = o.salary || null, usedAvg = false;
+    if (!per && avg) { per = Math.round(avg); usedAvg = true; }
+    var days = B.salesWindowDays || 30, rev30 = B.revenue > 0 ? B.revenue * 30 / days : 0;
+    var stats = [];
+    if (rev30 > 0) stats.push({ l: t.sRev, v: fmtMad(rev30), h: '' });
+    if (staff && staff.total > 0) stats.push({ l: t.sTeam, v: fmtMad(staff.total), h: t.sTeamH(salaried || staff.members || '') });
+    if (!per) return { text: t.ask, stats: stats, follow: o.follow };
+    var included = /charges? comprises|tout compris|cnss comprise|charges? incluses|charges included|including charges|fully loaded|مع التحملات|بالتحملات/.test(q);
+    var ratePct = mo && mo.socialRate != null ? +mo.socialRate : Math.round((o.uplift - 1) * 10000) / 100;
+    var n = o.n > 0 ? o.n : 1, cost = per * n * (included ? 1 : 1 + ratePct / 100);
+    var text = t.cost(per, cost, included ? null : String(ratePct).replace('.', o.L === 'en' ? '.' : ','), n);
+    stats = [{ l: t.sCost, v: fmtMad(cost), h: '' }].concat(stats);
+    var r = { stats: stats, follow: o.follow, note: usedAvg ? t.avg(per, salaried) : (included ? '' : t.net) };
+    if (be && be.salesNeeded != null && be.contribution > 0) {
+      var extra = cost / be.contribution, need = be.salesNeeded + extra;
+      var perDayDays = be.perDay > 0 ? be.salesNeeded / be.perDay : 30;
+      var pace = be.projection != null ? be.projection : rev30, paceH = be.projection != null ? t.sPaceH : t.sPace30;
+      r.text = text + t.need(extra, extra / perDayDays);
+      r.stats.push({ l: t.sNeed, v: fmtMad(extra), h: t.sDay + ' ' + fmtMad(extra / perDayDays) });
+      r.stats.push({ l: t.sBe, v: fmtMad(need), h: t.sBeH(be.salesNeeded) });
+      if (pace > 0) {
+        r.stats.push({ l: t.sPace, v: fmtMad(pace), h: paceH });
+        r.verdict = pace >= need ? { tone: 'good', text: t.good(pace - need) }
+          : pace >= be.salesNeeded ? { tone: 'warn', text: t.warn(need - pace, (need - pace) / perDayDays) }
+          : { tone: 'bad', text: t.bad(be.salesNeeded) };
+      }
+      return r;
+    }
+    if (rev30 > 0) {
+      var pct = cost / rev30 >= 0.1 ? Math.round(cost / rev30 * 100) : Math.round(cost / rev30 * 1000) / 10;
+      r.text = text + t.share(String(pct).replace('.', o.L === 'en' ? '.' : ','), rev30);
+      r.stats.push({ l: t.sShare, v: String(pct).replace('.', o.L === 'en' ? '.' : ',') + ' %', h: '' });
+    } else r.text = text + ' ' + t.noSales;
+    r.verdict = rev30 > 0 && cost >= rev30 ? { tone: 'bad', text: t.over } : { tone: 'warn', text: t.open };
+    return r;
+  }
+
+  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, _rank: productRanking, _findClient: findClient };
 }());

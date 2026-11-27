@@ -147,6 +147,13 @@ for (const [intent, regs] of Object.entries(BENCH)) {
  * a wrong answer the vocabulary layer once gave or could give. They must not
  * come back carrying the look-alike's figure. */
 const TRAPS = [
+  /* 27 Nov: every real merchant got « I'd rather simulate nothing » for a hire. */
+  { q: 'can i afford hiring a new eployee', lang: 'en', not: /simulate nothing/, must: /salary/, why: 'a real account asks for the salary instead of stopping' },
+  { q: 'can I afford a new employee?', lang: 'en', not: /simulate nothing/, must: /salary/, why: 'afford + employee is a hire question' },
+  { q: 'can i afford another waiter at 3000 dh', lang: 'en', must: /3\s630 MAD/, why: '3 000 net plus 21 % employer charges' },
+  { q: 'est-ce que je peux me permettre d’embaucher un serveur à 3500 dh ?', lang: 'fr', must: /4\s235 MAD/, why: '3 500 net plus 21 % employer charges' },
+  { q: 'واش نقدر نخلص خدام جديد ب 3000 درهم؟', lang: 'ar', must: /3\s630 MAD/, why: 'darija afford-a-worker is a hire' },
+  { q: 'can i afford a waiter at 3000 dh charges included', lang: 'en', must: /3\s000 MAD a month \(charges included\)/, why: 'charges included: no uplift' },
   { q: 'ch7al points 3nd Ahmed Bennani', lang: 'fr', not: /\b88\b/, why: 'another Bennani is not Salma' },
   { q: 'qui travaille demain', lang: 'fr', not: /Karim Alaoui/, why: 'tomorrow is not today’s shift' },
   { q: 'who works tomorrow', lang: 'en', not: /Karim Alaoui/, why: 'tomorrow is not today’s shift' },

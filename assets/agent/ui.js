@@ -1322,7 +1322,7 @@ function partialReply() {
   }
 
 function sHire(q) {
-    if (__state.B.partial) return partialReply();
+    if (__state.B.partial) { const D = window.KiwiAgentData, u = parseAllAmounts(q).filter((v) => v >= 1800)[0], k = __state.hireCount(q); return (D && D.hire && D.hire({ q, L: __state.L, K: __state.realCharges(), B: __state.B, uplift: __state.CNSS_UPLIFT, salary: u || null, n: k != null ? k : 1, follow: [__state.tr().chips.breakeven, __state.tr().chips.charges] })) || partialReply(); }
     const t = __state.tr().hire;
     /* Take the first figure that could plausibly be a monthly salary, not the
      * first number in the string — the leading number is usually the count. */
@@ -1423,6 +1423,7 @@ function sPrice(q) {
   }
 
 function sAfford(q) {
+    if (__state.WORKER_RX.test(__state.norm(q)) || /employ|eploy|\bstaff\b|someone|quelqu.?un|embauch|\bhir(?:e|ing)\b|recrut|khddam|موظف|خدام/.test(__state.norm(q))) return sHire(q);
     if (__state.B.partial) return partialReply();
     const t = __state.tr().afford;
     const A = parseAmount(q);
@@ -2427,18 +2428,19 @@ function decideRoute(rawIn, retry) {
      * route that could hand it to the model as a free guess. */
     /* « je veux gagner 15 000 par mois », « évolution sur 6 mois »: a plan or a
      * comparison across periods, never today's total. */
+    if (/^(?:(?:merci|thanks?|thank\s+you|pour|ton|ta|votre|for|your|aide|help|beaucoup|bcp|a\s+lot|so\s+much|lah|yjazik|bikhir|y3tik|sa7a|الله|يجازيك|بخير|يعطيك|الصحة|شكرا|بزاف|على|المساعدة|choukran|chokran|bzaf)[\s!.,]*)+$/.test(q)) return { kind: 'thanks', raw, q };
     if (__state.GOAL_RX.test(q) && parseAllAmounts(String(raw).replace(/(\d)[,\s](\d{3})\b/g, '$1$2')).some((v) => v >= 500)) return { kind: 'goal', raw, q };
     if (__state.EXPANSION_RX.test(q)) return { kind: 'expansion', raw, q };
     const longTrend = __state.TREND_RX.test(q) && !namedDay(q);
     /* « aide-moi à augmenter les ventes » names the sales but asks for advice. */
-    const growAsk = /(?:augment|boost|increase|grow|amelior)\w*.{0,18}(?:vente|chiffre|sales|revenue)|sell\s+more|vendre\s+plus|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\s+(?:ventes|lmbi3at|lbi3)|\bretain\b|fidelis|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+الزبناء|\bnjib\s+zb|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين/.test(q);
-    const books = /\btva\b|\bvat\b|\bcnss\b|fiches?.?de.?paie|payslip|payroll|\btax(?:es)?\b|\bbilan\b|comptab|ضريب|الضمان\s*الاجتماعي|فيش\s*دو|البيلان|كومبتابل/.test(q) || __state.BREAKEVEN_ASK.test(q);
+    const growAsk = /(?:augment|boost|increase|grow|amelior)\w*.{0,18}(?:vente|chiffre|sales|revenue)|sell\s+more|vendre\s+plus|زيادة\s+المبيعات|نطلع\s+المبيعات|\bntle3\s+(?:ventes|lmbi3at|lbi3)|\bretain\b|fidelis(?:er|e|ez)\b|attirer|bring\s+more|more\s+customers|اجذب|جذب|نجيب\s+الزبناء|\bnjib\s+zb|نخلي\s+الزبناء\s+يرجعو|احافظ\s+علي\s+زباين/.test(q);
+    const books = /توقع|الشهر\s+(?:القادم|الجاي)|next\s+month|mois\s+prochain|left\s+after|reste\b.{0,30}\bapres|صافي\s+دخل|بعد\s+المصاريف|\bkayb9a\b|\btva\b|\bvat\b|\bcnss\b|fiches?.?de.?paie|payslip|payroll|\btax(?:es)?\b|\bbilan\b|comptab|ضريب|الضمان\s*الاجتماعي|فيش\s*دو|البيلان|كومبتابل/.test(q) || __state.BREAKEVEN_ASK.test(q);
     const mine = !longTrend && !growAsk && !books && window.KiwiAgentData && window.KiwiAgentData.intent ? window.KiwiAgentData.intent(q, raw) : null;
     if (mine && mine.entity) return { kind: 'lookup', raw, q, spec: Object.assign(mine, { raw, period: periodWindow(q) }) };
     if (mine) return mine.route === 'day' ? { kind: 'day', raw, q, day: { offset: 0 } } : { kind: mine.route, raw, q, run: mine.route === 'charges' ? () => sCharges() : () => sRevenue() };
     /* A dated closure is a holiday, not a bankruptcy — and STRAIN_RX owns
      * "je vais fermer". The duration is what tells them apart. */
-    if (__state.CLOSE_RX.test(q) && parseDays(q) != null) return { kind: 'season', raw, q };
+    if ((__state.CLOSE_RX.test(q) || __state.EXTRA_DAY_RX.test(q)) && parseDays(q) != null) return { kind: 'season', raw, q };
     if (__state.STRAIN_RX.test(q)) return { kind: 'runway', raw, q };
     if (__state.NEG_RX.test(q)) return { kind: 'negated', raw, q };
     if (__state.IDENTITY_RX.test(q)) return { kind: 'identity', raw, q };
@@ -2493,7 +2495,7 @@ function decideRoute(rawIn, retry) {
     /* "combien de clients" is the client book; "combien de clients aujourd'hui"
      * is today's footfall, which a static 30-day window simply does not hold.
      * Answering the first for the second would be a confident wrong number. */
-    if (__state.CLIENTS_RX.test(q)) {
+    if (__state.CLIENTS_RX.test(q) && !growAsk) {
       return /aujourd[' ]?hui|ce\s+matin|ce\s+soir|\btoday\b|this\s+(?:morning|evening)|اليوم/.test(q)
         ? { kind: 'scoped', raw, q } : { kind: 'clients', raw, q };
     }
@@ -2589,7 +2591,7 @@ function decideRoute(rawIn, retry) {
 function featureCanTake(raw, decided) {
     try {
       const guide = window.KiwiFeatureGuide;
-      if (!guide || !guide.canHandle(raw) || (decided && decided.compose)) return false;
+      if (!guide || !guide.canHandle(raw) || (decided && (decided.compose || (decided.spec && decided.spec.entity === 'command')))) return false;
       if (guide.isPlans && guide.isPlans(raw)) {
         /* « combien coûte mon abonnement » is this merchant's cost; a named plan or « quel abonnement » is the catalogue. */
         const q = __state.norm(raw);
@@ -2601,7 +2603,7 @@ function featureCanTake(raw, decided) {
       if (guide.isPending && guide.isPending()) {
         /* The setup's next answer, unless the merchant asked something else. */
         const asks = /[?؟]\s*$/.test(String(raw)) || /^(?:combien|cb|kom|how many|how much|qui|who|quel|quelle|what|which|شحال|كم|من|chkon|ch7al|chhal|wach|واش|est.ce)/.test(__state.norm(raw));
-        if (asks && decided && decided.kind && !/^(?:help|greet|unclear|llm|feature)$/.test(decided.kind)) { if (guide.drop) guide.drop(); return false; }
+        if (asks && !(decided && /^(?:help|greet|feature)$/.test(decided.kind))) { if (guide.drop) guide.drop(); return false; }
         return !decided || decided.kind !== 'illicit';
       }
       if (!decided || decided.kind === null) return true;

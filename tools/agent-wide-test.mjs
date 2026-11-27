@@ -9,7 +9,7 @@
 // café worth", the model for "open the customers page") fails here.
 //
 // Born 27 Nov 2026 from a 1 092-question set: 603 routed right before the
-// fixes, 973 after. Only the lines that route right are kept, so this guards
+// fixes, 973 after the first round and 1 065 after the second. Only the lines that route right are kept, so this guards
 // the gain; tools/agent-wide.json is the list.
 import fs from 'node:fs';
 import path from 'node:path';
