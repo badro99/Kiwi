@@ -35,9 +35,10 @@ no('tacos pizza', 'Tacos Indien'); // chaque mot doit se trouver
 
 /* Le balisage : une barre par liste longue, chaque ligne cherchable. */
 const delivery = read('assets/delivery.js');
-assert.match(delivery, /data-find-scope><div class="kdl-find-bar" data-find="delivery-prices"/);
-assert.match(delivery, /<tr data-find-row data-find-text=/);
-assert.match(delivery, /data-find-group><th colspan=/);
+/* Trois listes (plats, formules, options), chacune sa barre. */
+for (const k of ['prices', 'formulas', 'choices']) assert.match(delivery, new RegExp(`data-find-scope[^>]*>.*?<div class="kdl-find-bar" data-find="delivery-${k}"`));
+assert.match(delivery, /<div class="kdl-row" data-find-row data-find-text=/);
+assert.match(delivery, /<div class="kdl-grp" data-find-group>/);
 assert.match(delivery, /import\('\/assets\/find-bar\.mjs\?v=\d+'\)/);
 assert.doesNotMatch(delivery, /!it\.archived && num\(it\.price\) != null/, 'un plat sans prix en salle reste dans la grille');
 const ws = read('assets/restaurant-menu-workspace.js');

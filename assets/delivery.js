@@ -167,6 +167,11 @@
     const e = doc().choices[String(choiceId)];
     return e && e.by ? num(e.by[pid]) : null;
   }
+  /* Le supplément d'un choix de formule (« Prépare ton plat › Sauce › Crema
+   * +15 ») : rangé avec les suppléments des options, sous une clé qui nomme la
+   * formule, l'étape et le plat choisi. */
+  const slotKey = (formulaId, slotId, itemId) => 'f:' + formulaId + ':' + slotId + ':' + itemId;
+  const formulaExtraOf = (formulaId, slotId, itemId, pid) => choicePriceOf(slotKey(formulaId, slotId, itemId), pid);
   function setItemPrices(itemId, by) {
     if (!itemId) return;
     const d = doc(), clean = {};
@@ -285,15 +290,27 @@
     filled: { fr: '{n} prix remplis', en: '{n} prices filled', ar: 'تم ملء {n} سعر' },
     products: { fr: 'Prix des produits', en: 'Product prices', ar: 'أسعار المنتجات' },
     productsP: { fr: 'Une case vide : ce produit n\'est pas proposé sur cette plateforme. « Remplir les prix » remplit les cases vides depuis la salle.', en: 'An empty box: this product is not offered on that platform. « Fill prices » fills empty boxes from the dine-in price.', ar: 'خانة فارغة: هذا المنتج غير معروض على هذه المنصة. «ملء الأسعار» يملأ الخانات الفارغة من سعر القاعة.' },
-    choices: { fr: 'Prix des suppléments', en: 'Extra prices', ar: 'أسعار الإضافات' },
-    choicesP: { fr: 'Une case vide garde le prix de la salle.', en: 'An empty box keeps the dine-in price.', ar: 'الخانة الفارغة تحتفظ بسعر القاعة.' },
+    prices: { fr: 'Prix par plateforme', en: 'Prices per platform', ar: 'الأسعار حسب المنصة' },
+    paneItems: { fr: 'Plats', en: 'Dishes', ar: 'الأطباق' },
+    paneFormulas: { fr: 'Formules', en: 'Combos', ar: 'الوجبات' },
+    paneChoices: { fr: 'Options', en: 'Options', ar: 'الخيارات' },
+    formula: { fr: 'Formule', en: 'Combo', ar: 'وجبة' },
+    colItem: { fr: 'Plat', en: 'Dish', ar: 'الطبق' },
+    colChoice: { fr: 'Choix', en: 'Choice', ar: 'الاختيار' },
+    formulasP: { fr: 'Le supplément de chaque choix d\'une formule. Case vide : le même supplément qu\'en salle.', en: 'The extra charged for each choice in a combo. Empty box: the same extra as dine-in.', ar: 'الإضافة على كل اختيار داخل الوجبة. خانة فارغة: نفس إضافة القاعة.' },
+    choicesP: { fr: 'Les options des plats (sauces, cuissons, extras). Case vide : le même prix qu\'en salle.', en: 'Dish options (sauces, doneness, extras). Empty box: the same price as dine-in.', ar: 'خيارات الأطباق (صلصات، طهي، إضافات). خانة فارغة: نفس سعر القاعة.' },
+    noPlat: { fr: 'Allumez une plateforme plus haut pour régler ses prix.', en: 'Turn on a platform above to set its prices.', ar: 'فعّل منصة أعلاه لضبط أسعارها.' },
+    noneFormulas: { fr: 'Aucune formule sur la carte.', en: 'No combo on the menu.', ar: 'لا توجد وجبات في القائمة.' },
+    noneChoices: { fr: 'Aucune option sur la carte.', en: 'No option on the menu.', ar: 'لا توجد خيارات في القائمة.' },
+    findFormulas: { fr: 'Rechercher une formule ou un choix', en: 'Search a combo or a choice', ar: 'ابحث عن وجبة أو اختيار' },
+    findChoices: { fr: 'Rechercher une option', en: 'Search an option', ar: 'ابحث عن خيار' },
     save: { fr: 'Enregistrer', en: 'Save', ar: 'حفظ' },
     cancel: { fr: 'Annuler', en: 'Cancel', ar: 'إلغاء' },
     saved: { fr: 'Livraison enregistrée', en: 'Delivery saved', ar: 'تم حفظ التوصيل' },
     errRate: { fr: 'Une commission va de 0 à 60 %.', en: 'A commission is between 0 and 60 %.', ar: 'العمولة بين 0 و60 %.' },
     priceRow: { fr: 'Prix par plateforme', en: 'Price per platform', ar: 'السعر حسب المنصة' },
     notSold: { fr: 'pas vendu', en: 'not sold', ar: 'غير معروض' },
-    findPh: { fr: 'Rechercher parmi {n} produits', en: 'Search {n} products', ar: 'ابحث في {n} منتج' },
+    findPh: { fr: 'Rechercher parmi {n} plats', en: 'Search {n} dishes', ar: 'ابحث في {n} طبق' },
     priceHint: { fr: 'Case vide : ce produit n\'est pas proposé sur cette plateforme.', en: 'Empty box: this product is not offered on that platform.', ar: 'خانة فارغة: هذا المنتج غير معروض على هذه المنصة.' },
   };
 
@@ -335,17 +352,25 @@
     const shown = Object.keys(PRESETS).map((id) => plats.find((p) => p.id === id) || { id, kind: 'platform', on: false, preset: true, name: PRESETS[id].name, color: PRESETS[id].color, logo: PRESETS[id].logo })
       .concat(plats.filter((p) => !p.preset));
     const h = house(d);
-    const groups = optGroups().filter((g) => g && Array.isArray(g.choices) && g.choices.some((ch) => num(ch.price)));
-    /* Les produits aussi, pas seulement les suppléments (Jon's Burgers, 26 nov.
-       2026) : le même prix que la fiche produit (« Prix par plateforme »). */
-    /* Tous les plats actifs, rangés par section de la carte, même ceux sans
-       prix en salle (« pas tous », Jon's Burgers, 27 nov. 2026). */
+    /* Trois listes de prix, une par onglet : les plats vendus seuls, les
+       suppléments des formules (« Prépare ton plat › Crema +15 ») et les
+       options des plats. Tous les plats actifs, rangés par section de la
+       carte, même ceux sans prix en salle (Jon's Burgers, 27 nov. 2026) ; un
+       plat qui n'existe que dans une formule n'a pas de prix seul, il est sous
+       « Formules ». Toutes les options aussi, même à 0 en salle. */
+    const all = menuItems().filter((it) => it && it.id && !it.archived);
+    const nameOf = new Map(all.map((it) => [String(it.id), String(it.name || '')]));
     const cats = menuCats();
     const catRank = new Map(cats.map((c, i) => [String(c.id), i]));
     const catName = (id) => { const c = cats.find((x) => String(x.id) === String(id)); return c ? String(c.name || '') : ''; };
-    const products = menuItems().filter((it) => it && it.id && !it.archived)
-      .map((it, i) => ({ it, i, r: catRank.has(String(it.catId)) ? catRank.get(String(it.catId)) : 1e6 }))
+    const byCat = (list) => list.map((it, i) => ({ it, i, r: catRank.has(String(it.catId)) ? catRank.get(String(it.catId)) : 1e6 }))
       .sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.it);
+    const products = byCat(all.filter((it) => !it.formulaOnly));
+    const formulas = byCat(all.filter((it) => it.formula && Array.isArray(it.formula.slots) && it.formula.slots.some((sl) => sl && Array.isArray(sl.choices) && sl.choices.length)));
+    const groups = optGroups().filter((g) => g && Array.isArray(g.choices) && g.choices.length);
+    const fCount = formulas.reduce((n, f) => n + f.formula.slots.reduce((m, sl) => m + ((sl && sl.choices) || []).filter((c) => nameOf.has(String(c.itemId))).length, 0), 0);
+    const oCount = groups.reduce((n, g) => n + g.choices.length, 0);
+    const pane = (key, label, n, on) => `<button type="button" class="kdl-seg-b${on ? ' on' : ''}" role="tab" aria-selected="${on}" data-kdl-pane="${key}">${esc(label)}<span>${n}</span></button>`;
     const body = `<div class="kdl-set">
         <div class="kdl-h">${esc(tr(S.platforms))}</div>
         <div class="kdl-list" data-kdl-list>${shown.map(rowFor).join('')}</div>
@@ -360,8 +385,13 @@
             <div class="kf-help">${esc(tr(S.houseP))}</div>
           </div>
         </div>
-        ${products.length ? `<div class="kdl-h">${esc(tr(S.products))}</div><div class="kf-help">${esc(tr(S.productsP))}</div><div class="kdl-find" data-find-scope><div class="kdl-find-bar" data-find="delivery-prices" data-find-ph="${esc(tr(S.findPh).replace('{n}', products.length))}"></div><div class="kdl-choices" data-kdl-products></div></div>` : ''}
-        ${groups.length ? `<div class="kdl-h">${esc(tr(S.choices))}</div><div class="kf-help">${esc(tr(S.choicesP))}</div><div class="kdl-choices" data-kdl-choices></div>` : ''}
+        <div class="kdl-h">${esc(tr(S.prices))}</div>
+        <div class="kdl-px">
+          <div class="kdl-seg" role="tablist" aria-label="${esc(tr(S.prices))}">${[['items', S.paneItems, products.length], ['formulas', S.paneFormulas, fCount], ['choices', S.paneChoices, oCount]].map(([k, l, n], i) => pane(k, tr(l), n, !i)).join('')}</div>
+          <div class="kdl-pane" data-kdl-body="items" data-find-scope><p class="kdl-pane-p">${esc(tr(S.productsP))}</p>${products.length ? `<div class="kdl-find-bar" data-find="delivery-prices" data-find-ph="${esc(tr(S.findPh).replace('{n}', products.length))}"></div>` : ''}<div data-kdl-products></div></div>
+          <div class="kdl-pane" data-kdl-body="formulas" data-find-scope hidden><p class="kdl-pane-p">${esc(tr(S.formulasP))}</p>${fCount ? `<div class="kdl-find-bar" data-find="delivery-formulas" data-find-ph="${esc(tr(S.findFormulas))}"></div>` : ''}<div data-kdl-formulas></div></div>
+          <div class="kdl-pane" data-kdl-body="choices" data-find-scope hidden><p class="kdl-pane-p">${esc(tr(S.choicesP))}</p>${oCount ? `<div class="kdl-find-bar" data-find="delivery-choices" data-find-ph="${esc(tr(S.findChoices))}"></div>` : ''}<div data-kdl-choices></div></div>
+        </div>
       </div>`;
     const saveBtn = `<button class="kb atlas" type="button" data-kdl-save>${esc(tr(S.save))}</button>`;
     let m;
@@ -370,7 +400,7 @@
       m = { el: host.firstElementChild, close() {} };
     } else {
       m = K.modal({
-        tag: tr(S.title), title: tr(S.title), width: 640,
+        tag: tr(S.title), title: tr(S.title), width: 720,
         desc: esc(tr(S.lede)),
         body,
         foot: `<button class="kb ghost" type="button" data-dismiss>${esc(tr(S.cancel))}</button>${saveBtn}`,
@@ -384,40 +414,56 @@
     const pending = {};   // nouvelles plateformes, ajoutées avant d'enregistrer
     const removed = new Set();
 
-    function paintChoices() {
-      const box = q('[data-kdl-choices]');
-      if (!box) return;
-      const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
-      const cur = doc().choices;
-      box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(tr(S.dineIn))}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
-        + groups.map((g) => g.choices.filter((ch) => num(ch.price)).map((ch) => `<tr><td>${esc(g.name)} · ${esc(ch.name)}</td><td class="kdl-base">${num(ch.price)}</td>${on.map((pid) => {
-          const v = cur[ch.id] && cur[ch.id].by ? num(cur[ch.id].by[pid]) : null;
-          return `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="kf-input" data-kdl-choice="${esc(ch.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${num(ch.price)}"></td>`;
-        }).join('')}</tr>`).join('')).join('') + '</tbody></table>' : '';
-    }
-    paintChoices();
+    /* Ce qui est tapé survit à un interrupteur qui repeint les listes ; rien
+       n'est enregistré avant « Enregistrer ». */
     const typed = {};
+    const onIds = () => [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
+    const platName = (pid) => (pending[pid] && pending[pid].name) || labelOf(pid) || pid;
+    /* Une ligne : le nom, le prix en salle, puis une case par plateforme
+       allumée. `kind` : item (prix du plat) ou choice (supplément). */
+    const money = (kind, key, pid, label, ph, plus) => {
+      const k = kind + '|' + key + '|' + pid;
+      const v = k in typed ? num(typed[k]) : (kind === 'item' ? priceOf(key, pid) : choicePriceOf(key, pid));
+      return `<label class="kdl-money${v == null ? ' is-empty' : ''}"><span class="kdl-money-p" aria-hidden="true">${logoHTML(pid, 16)}</span>${plus ? '<i class="kdl-plus">+</i>' : ''}<input type="number" inputmode="decimal" min="0" step="0.5" data-kdl-${kind}="${esc(key)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${esc(ph)}" aria-label="${esc(label + ' · ' + platName(pid))}"><i>MAD</i></label>`;
+    };
+    const head = (first, on) => `<div class="kdl-row kdl-row-h" aria-hidden="true"><span>${esc(first)}</span><span class="kdl-c">${esc(tr(S.dineIn))}</span>${on.map((pid) => `<span class="kdl-c kdl-c-p">${logoHTML(pid, 18)}<b>${esc(platName(pid))}</b></span>`).join('')}</div>`;
+    const row = (name, sub, base, cells) => `<div class="kdl-row" data-find-row data-find-text="${esc(name + ' ' + sub)}"><span class="kdl-nm">${esc(name)}${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="kdl-c kdl-base" data-l="${esc(tr(S.dineIn))}">${esc(base)}</span>${cells}</div>`;
+    const sheet = (on, inner) => on.length ? `<div class="kdl-rows" style="--kdl-n:${on.length}">${inner}</div>` : `<div class="kdl-none">${esc(tr(S.noPlat))}</div>`;
+    const fmt = (n) => (n == null ? '·' : String(n).replace('.', ','));
     function paintProducts() {
-      const box = q('[data-kdl-products]');
-      if (!box) return;
-      const on = [].slice.call(root.querySelectorAll('[data-pid]')).filter((r) => isOn(r.querySelector('[data-kdl-on]'))).map((r) => r.getAttribute('data-pid'));
-      let lastCat = null;
-      const groupRow = (it) => {
+      const box = q('[data-kdl-products]'), on = onIds();
+      let last = null;
+      box.innerHTML = sheet(on, head(tr(S.colItem), on) + products.map((it) => {
         const c = String(it.catId == null ? '' : it.catId);
-        if (c === lastCat) return '';
-        lastCat = c;
-        const name = catName(c);
-        return name ? `<tr class="kdl-grp" data-find-group><th colspan="${on.length + 2}">${esc(name)}</th></tr>` : '';
-      };
-      box.innerHTML = on.length ? `<table class="kdl-tbl"><thead><tr><th></th><th>${esc(tr(S.dineIn))}</th>${on.map((pid) => `<th>${logoHTML(pid, 18)}</th>`).join('')}</tr></thead><tbody>`
-        + products.map((it) => `${groupRow(it)}<tr data-find-row data-find-text="${esc((it.name || '') + ' ' + catName(it.catId))}"><td>${esc(it.name || '')}</td><td class="kdl-base">${num(it.price) == null ? '·' : num(it.price)}</td>${on.map((pid) => {
-          const k = it.id + '|' + pid, v = k in typed ? num(typed[k]) : priceOf(it.id, pid);
-          return `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="kf-input" data-kdl-item="${esc(it.id)}" data-p="${pid}" value="${v == null ? '' : v}" placeholder="${esc(tr(S.notSold))}" aria-label="${esc((it.name || '') + ' · ' + pid)}"></td>`;
-        }).join('')}</tr>`).join('') + '</tbody></table>' : '';
+        const g = c !== last && catName(c) ? `<div class="kdl-grp" data-find-group>${esc(catName(c))}</div>` : '';
+        last = c;
+        return g + row(it.name || '', it.formula ? tr(S.formula) : '', fmt(num(it.price)), on.map((pid) => money('item', it.id, pid, it.name || '', tr(S.notSold), false)).join(''));
+      }).join(''));
     }
-    paintProducts();
+    function paintFormulas() {
+      const box = q('[data-kdl-formulas]'), on = onIds();
+      if (!fCount) { box.innerHTML = `<div class="kdl-none">${esc(tr(S.noneFormulas))}</div>`; return; }
+      box.innerHTML = sheet(on, head(tr(S.colChoice), on) + formulas.map((f) => `<div class="kdl-grp" data-find-group>${esc(f.name || '')}</div>` + f.formula.slots.map((sl) => ((sl && sl.choices) || []).filter((c) => nameOf.has(String(c.itemId))).map((c) => {
+        const key = slotKey(f.id, sl.id, c.itemId), nm = nameOf.get(String(c.itemId)), base = num(c.extra) || 0;
+        return row(nm, sl.label || '', '+' + fmt(base), on.map((pid) => money('choice', key, pid, nm, fmt(base), true)).join(''));
+      }).join('')).join('')).join(''));
+    }
+    function paintChoices() {
+      const box = q('[data-kdl-choices]'), on = onIds();
+      if (!oCount) { box.innerHTML = `<div class="kdl-none">${esc(tr(S.noneChoices))}</div>`; return; }
+      box.innerHTML = sheet(on, head(tr(S.colChoice), on) + groups.map((g) => `<div class="kdl-grp" data-find-group>${esc(g.name || '')}</div>` + g.choices.map((ch) => {
+        const base = num(ch.price) || 0;
+        return row(ch.name || '', '', '+' + fmt(base), on.map((pid) => money('choice', ch.id, pid, ch.name || '', fmt(base), true)).join(''));
+      }).join('')).join(''));
+    }
+    function paintAll() { paintProducts(); paintFormulas(); paintChoices(); }
+    paintAll();
     /* La barre de recherche (assets/find-bar.mjs) se pose d'elle-même. */
     if (q('[data-find]')) import('/assets/find-bar.mjs?v=1').catch(() => {});
+    root.addEventListener('input', (e) => {
+      const lab = e.target.closest && e.target.closest('.kdl-money');
+      if (lab) lab.classList.toggle('is-empty', num(e.target.value) == null);
+    });
 
     root.addEventListener('click', (e) => {
       const sw = e.target.closest('[data-kdl-on],[data-kdl-house]');
@@ -427,7 +473,14 @@
         sw.setAttribute('aria-checked', String(on));
         const card = sw.closest('.kdl-card');
         if (card) card.classList.toggle('is-on', on);
-        if (sw.hasAttribute('data-kdl-on')) { keepTyped(); paintProducts(); paintChoices(); }
+        if (sw.hasAttribute('data-kdl-on')) { keepTyped(); paintAll(); }
+        return;
+      }
+      const tab = e.target.closest('[data-kdl-pane]');
+      if (tab) {
+        const key = tab.getAttribute('data-kdl-pane');
+        root.querySelectorAll('[data-kdl-pane]').forEach((b) => { const on = b === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+        root.querySelectorAll('[data-kdl-body]').forEach((p) => { p.hidden = p.getAttribute('data-kdl-body') !== key; });
         return;
       }
       const add = e.target.closest('[data-kdl-add]');
@@ -445,11 +498,11 @@
         const html = rowFor(tmp).replace(/<span class="kdl-tile kdl-letter"[^>]*>[^<]*<\/span>/, `<span class="kdl-tile kdl-letter" style="width:36px;height:36px;border-radius:9px;background:${color};font-size:20px">${esc(name.charAt(0).toUpperCase())}</span>`);
         q('[data-kdl-list]').insertAdjacentHTML('beforeend', html);
         inp.value = '';
-        paintChoices();
+        keepTyped(); paintAll();
         return;
       }
       const del = e.target.closest('[data-kdl-del]');
-      if (del) { const row = del.closest('[data-pid]'); removed.add(row.getAttribute('data-pid')); row.remove(); paintChoices(); return; }
+      if (del) { const row = del.closest('[data-pid]'); removed.add(row.getAttribute('data-pid')); row.remove(); keepTyped(); paintAll(); return; }
       const fill = e.target.closest('[data-kdl-fill]');
       if (fill) {
         const row = fill.closest('[data-pid]');
@@ -458,7 +511,8 @@
         if (pct == null) { row.querySelector('[data-kdl-pct]').focus(); return; }
         commit(false);
         const n = bulkFill(pid, pct, menuItems(), false);
-        Object.keys(typed).forEach((k) => delete typed[k]);
+        keepTyped();
+        Object.keys(typed).forEach((k) => { if (k.indexOf('item|') === 0) delete typed[k]; });
         paintProducts();
         try { K.toast(tr(S.filled).replace('{n}', n), { type: 'success' }); } catch (_) {}
         return;
@@ -486,7 +540,8 @@
     /* Un interrupteur repeint la grille : ce qui était tapé reste à l'écran,
        rien n'est enregistré avant « Enregistrer ». */
     function keepTyped() {
-      root.querySelectorAll('[data-kdl-item]').forEach((inp) => { typed[inp.getAttribute('data-kdl-item') + '|' + inp.getAttribute('data-p')] = inp.value; });
+      root.querySelectorAll('[data-kdl-item]').forEach((inp) => { typed['item|' + inp.getAttribute('data-kdl-item') + '|' + inp.getAttribute('data-p')] = inp.value; });
+      root.querySelectorAll('[data-kdl-choice]').forEach((inp) => { typed['choice|' + inp.getAttribute('data-kdl-choice') + '|' + inp.getAttribute('data-p')] = inp.value; });
     }
     /* Enregistre ce que la fenêtre montre. `final` : ferme aussi le volet. */
     function commit(final) {
@@ -519,7 +574,9 @@
         if (v == null) delete ch[cid][inp.getAttribute('data-p')]; else ch[cid][inp.getAttribute('data-p')] = v;
       });
       next.choices = Object.assign({}, next.choices);
-      Object.keys(ch).forEach((cid) => { next.choices[cid] = { by: ch[cid], at: now }; });
+      Object.keys(ch).forEach((cid) => {
+        if (JSON.stringify((next.choices[cid] && next.choices[cid].by) || {}) !== JSON.stringify(ch[cid])) next.choices[cid] = { by: ch[cid], at: now };
+      });
       productPrices(next, now);
       Object.keys(pending).forEach((k) => delete pending[k]);
       save(next);
@@ -550,9 +607,34 @@
       + '.kdl-sw.on::after{transform:translateX(14px)}[dir="rtl"] .kdl-sw.on::after{transform:translateX(-14px)}.kdl-sw:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}'
       + '.kdl-link{background:none;border:0;padding:4px 6px;font:inherit;font-size:13px;color:var(--n-500);cursor:pointer}.kdl-link:hover{color:var(--ink)}'
       + '.kdl-add{display:flex;gap:8px;align-items:center}.kdl-add .kf-input{flex:1}.kdl-err{color:var(--danger,#B42318);font-size:13px}'
-      + '.kdl-find{display:grid;gap:12px}.kdl-find-bar:empty{height:48px}'
-      + '.kdl-tbl .kdl-grp th{padding:16px 6px 6px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--n-500)}.kdl-tbl tbody>.kdl-grp:first-child th{padding-top:4px}'
-      + '.kdl-tbl{width:100%;border-collapse:collapse;font-size:13px}.kdl-tbl td,.kdl-tbl th{padding:5px 6px;text-align:start;font-weight:500}.kdl-tbl .kf-input{padding:7px 10px;max-width:96px}.kdl-base{color:var(--n-500)}'
+      /* Les prix : trois onglets, une feuille par onglet. Une ligne = le nom, le
+       * prix en salle en gris, une case par plateforme avec son logo et MAD. */
+      + '.kdl-px{display:grid;gap:14px}'
+      + '.kdl-seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--n-100,rgba(10,15,13,.05));justify-self:start;max-width:100%;overflow-x:auto}'
+      + '.kdl-seg-b{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:999px;background:none;font:inherit;font-size:14px;font-weight:500;color:var(--n-600);cursor:pointer;white-space:nowrap}'
+      + '.kdl-seg-b span{font-size:12px;font-variant-numeric:tabular-nums;color:var(--n-500)}'
+      + '.kdl-seg-b.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(10,15,13,.08),0 0 0 1px var(--n-200)}.kdl-seg-b:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}'
+      + '.kdl-pane{display:grid;gap:12px}.kdl-pane[hidden]{display:none}.kdl-pane-p{margin:0;font-size:13px;line-height:1.5;color:var(--n-600)}'
+      + '.kdl-find-bar:empty{height:48px}'
+      + '.kdl-rows{border:1px solid var(--n-200);border-radius:14px;background:var(--surface);overflow:hidden}'
+      + '.kdl-row{display:grid;grid-template-columns:minmax(0,1fr) 64px repeat(var(--kdl-n,1),minmax(104px,128px));align-items:center;gap:12px;padding:8px 14px;border-top:1px solid var(--n-100,var(--n-200))}'
+      + '.kdl-row-h{position:sticky;top:0;z-index:1;padding-block:10px;border-top:0;background:var(--surface);box-shadow:0 1px 0 var(--n-200);font-size:12px;font-weight:500;color:var(--n-500)}'
+      + '.kdl-c{text-align:end;font-variant-numeric:tabular-nums}.kdl-c-p{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}.kdl-c-p b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.kdl-grp{padding:16px 14px 6px;border-top:1px solid var(--n-200);background:var(--paper);font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink)}.kdl-row-h+.kdl-grp{border-top:0}'
+      + '.kdl-grp+.kdl-row{border-top:0}'
+      + '.kdl-nm{display:grid;gap:1px;min-width:0;font-size:14px;font-weight:500;color:var(--ink)}.kdl-nm small{font-size:12px;font-weight:400;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.kdl-base{font-size:13px;color:var(--n-500)}'
+      + '.kdl-money{display:flex;align-items:center;gap:4px;height:40px;padding:0 10px 0 8px;border:1px solid var(--n-200);border-radius:10px;background:var(--surface);cursor:text;transition:border-color 140ms,box-shadow 140ms}'
+      + '.kdl-money:hover{border-color:var(--n-300)}.kdl-money:focus-within{border-color:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 18%,transparent)}'
+      + '.kdl-money.is-empty{border-style:dashed;background:transparent}.kdl-money.is-empty i{opacity:.45}'
+      + '.kdl-money-p{display:none}'
+      + '.kdl-money input{flex:1;min-width:0;width:100%;height:100%;border:0;padding:0;background:none;font:inherit;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;text-align:end;color:var(--ink);outline:none;-moz-appearance:textfield}'
+      + '.kdl-money input::-webkit-outer-spin-button,.kdl-money input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}'
+      + '.kdl-money input::placeholder{font-weight:400;color:var(--n-400,var(--n-500))}'
+      + '.kdl-money i{font-style:normal;font-size:11px;font-weight:500;color:var(--n-500)}.kdl-money .kdl-plus{font-size:13px}'
+      + '.kdl-none{padding:28px 16px;border:1px dashed var(--n-200);border-radius:14px;text-align:center;font-size:13px;color:var(--n-500)}'
+      /* Téléphone : le nom sur sa ligne, les cases dessous, chacune avec son logo. */
+      + '@media (max-width:640px){.kdl-row{grid-template-columns:repeat(var(--kdl-n,1),minmax(0,1fr));row-gap:6px;padding-block:10px}.kdl-nm,.kdl-base{grid-column:1/-1}.kdl-base{text-align:start;font-size:12px}.kdl-base::before{content:attr(data-l) " "}.kdl-row-h{display:none}.kdl-money-p{display:inline-flex}}'
       + '.kdl-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.kdl-hint{font-size:11.5px;font-weight:400;color:var(--n-500)}.kdl-prices label{display:grid;gap:4px;font-size:12px}.kdl-prices .kdl-lbl{display:flex;align-items:center;gap:6px}'
       + '.kdl-split{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:13px}.kdl-split-i{display:inline-flex;align-items:center;gap:6px}.kdl-split-i b{font-weight:600}.kdl-split-i span{font-variant-numeric:tabular-nums;opacity:.8}'
       + '@media (max-width:640px){.kdl-grid{grid-template-columns:1fr}.kdl-pct{flex:1}}';
@@ -768,7 +850,7 @@
     HOUSE, PRESETS, COLORS,
     doc, store, merge, blank,
     options, option, enabled, platforms, house, labelOf, isChannel,
-    priceOf, choicePriceOf, setItemPrices, setChoicePrices, bulkFill,
+    priceOf, choicePriceOf, slotKey, formulaExtraOf, setItemPrices, setChoicePrices, bulkFill,
     logoHTML, badgeHTML, ensureCSS,
     commissionOf, setCommissions, openSettings,
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },

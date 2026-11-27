@@ -332,8 +332,8 @@
     "sha": "efbec3f29e4f9841"
   },
   "assets/caisse/catalogue.js": {
-    "v": "39",
-    "sha": "fbf79192e300495d"
+    "v": "40",
+    "sha": "f6171a8c6bdb62f7"
   },
   "assets/caisse/closing.js": {
     "v": "2",
@@ -344,8 +344,8 @@
     "sha": "211160cd5f8c3dea"
   },
   "assets/caisse/delivery.js": {
-    "v": "16",
-    "sha": "4eaba0ae6e216705"
+    "v": "17",
+    "sha": "3a3bfc4f305b25e9"
   },
   "assets/caisse/discounts.js": {
     "v": "11",
@@ -616,8 +616,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "13",
-    "sha": "243374359b46859c"
+    "v": "14",
+    "sha": "6a6e55c7045bc1e2"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -1324,8 +1324,8 @@
     "sha": "e6199b1d6a79b435"
   },
   "assets/liquid-lens.js": {
-    "v": "11",
-    "sha": "75f091468ae1fc87"
+    "v": "12",
+    "sha": "d9869db7d4b5ea62"
   },
   "assets/live-link.js": {
     "v": "142",
@@ -1704,8 +1704,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "379",
-    "sha": "b8419d4af2cde9c9"
+    "v": "380",
+    "sha": "7e5496f482b9801b"
   },
   "assets/pages/tables-data.js": {
     "v": "6",

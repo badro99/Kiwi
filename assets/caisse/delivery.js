@@ -109,6 +109,19 @@ function dlvGroups(groups) {
     }),
   }));
 }
+/* Les suppléments d'une formule (« Crema di Fromaggi +15 ») : le prix que le
+   patron a mis pour cette plateforme dans Menu › Livraison › Formules, sinon
+   celui de la salle. */
+function dlvSlots(item, slots) {
+  const c = dlvCur(), D = dlvApi();
+  if (!item || !c || dlvIsHouse(c) || !D || !D.formulaExtraOf || !Array.isArray(slots)) return slots;
+  return slots.map((s) => Object.assign({}, s, {
+    choices: (s.choices || []).map((ch) => {
+      const p = D.formulaExtraOf(item.id, s.id, ch.itemId, c.id);
+      return p == null ? ch : Object.assign({}, ch, { extra: p });
+    }),
+  }));
+}
 /* Une promotion de la carte vise la salle : elle ne s'applique pas au prix
    d'une plateforme, qui a déjà sa propre logique. */
 function dlvNoPromo() { return dlvIsPlatform(); }
@@ -487,7 +500,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=13';
+  s.src = 'assets/delivery.js?v=14';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

@@ -986,7 +986,7 @@
     }
 
     function openCaisseFormula(item, onChosen, initial) {
-      const slots = item.formula.slots.filter(s => s && Array.isArray(s.choices) && s.choices.length);
+      const slots = (fs => typeof dlvSlots === 'function' ? dlvSlots(item, fs) : fs)(item.formula.slots.filter(s => s && Array.isArray(s.choices) && s.choices.length));
       if (!slots.length) return;
       const groups = itemOptGroups(item);
       if (!optVeil) { optVeil = document.createElement('div'); optVeil.className = 'cloture-veil opt-veil'; document.body.appendChild(optVeil); }

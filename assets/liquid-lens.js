@@ -67,6 +67,9 @@
     /* Menu · option group editor, kind and requirement */
     { sel: '.rmw-og-seg', item: '.rmw-og-segi', skin: 'surface',
       active: function (el) { return el.classList.contains('on'); } },
+    /* Menu · Livraison, the three price lists (dishes, combos, options) */
+    { sel: '.kdl-seg', item: '.kdl-seg-b', skin: 'surface',
+      active: function (el) { return el.classList.contains('on'); } },
     /* Stock · new stock movement, in or out */
     { sel: '.mz-mv-seg', item: '.mz-mv-segi', skin: 'surface',
       active: function (el) { return el.classList.contains('on'); } },
@@ -118,6 +121,7 @@
     '.kt-ed-seg[data-kw-lens] .kt-ed-segi.on span{background:transparent;box-shadow:none;}' +
     '.rmw-og-seg[data-kw-lens] .rmw-og-segi.on span{background:transparent;box-shadow:none;}' +
     '.mz-mv-seg[data-kw-lens] .mz-mv-segi.on span{background:transparent;box-shadow:none;}' +
+    '.kdl-seg[data-kw-lens] .kdl-seg-b.on{background:transparent;box-shadow:none;}' +
     '.kt-pd-days[data-kw-lens] .kt-pd-pill.on{background:transparent;box-shadow:none;}' +
     '.bk-lang[data-kw-lens] button.on{background:transparent;box-shadow:none;}' +
     '.bk-date-row[data-kw-lens] .bk-date.on{background:transparent;border-color:transparent;}' +

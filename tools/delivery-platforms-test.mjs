@@ -54,6 +54,19 @@ const newer = D.blank(); newer.prices = { a: { by: { glovo: 2 }, at: 2 } };
 ok(D.merge(older, newer).prices.a.by.glovo === 2 && D.merge(newer, older).prices.a.by.glovo === 2, 'merge keeps the newest price per item');
 ok(D.isChannel('glovo') && D.isChannel('livraison') && !D.isChannel('takeaway'), 'isChannel knows the delivery channels');
 
+/* 2b ── formula supplements per platform (Pasta Corner, 27 nov. 2026: « Crema
+   di Fromaggi +15 » stayed +15 on Glovo because nothing could price it) */
+D.setChoicePrices({ [D.slotKey('f1', 'sl_2', 's2')]: { glovo: 18 } });
+ok(D.formulaExtraOf('f1', 'sl_2', 's2', 'glovo') === 18 && D.formulaExtraOf('f1', 'sl_2', 's2', 'kooul') == null, 'a formula choice has its own price per platform');
+const tillSrc = fs.readFileSync(path.join(ROOT, 'assets/caisse/delivery.js'), 'utf8');
+const slotFn = tillSrc.slice(tillSrc.indexOf('function dlvSlots'), tillSrc.indexOf('/* Une promotion de la carte'));
+const tctx = { window: ctx.window, Object, Array, dlvCur: () => ({ id: 'glovo' }), dlvApi: () => D, dlvIsHouse: () => false };
+vm.createContext(tctx);
+vm.runInContext(slotFn + ';this.dlvSlots = dlvSlots;', tctx);
+const sl = tctx.dlvSlots({ id: 'f1' }, [{ id: 'sl_2', choices: [{ itemId: 's2', extra: 15 }, { itemId: 's3', extra: 15 }] }]);
+ok(sl[0].choices[0].extra === 18 && sl[0].choices[1].extra === 15, 'the till charges the Glovo supplement, the dine-in one when none is set');
+ok(/dlvSlots\(item, fs\)/.test(fs.readFileSync(path.join(ROOT, 'assets/caisse/catalogue.js'), 'utf8')), 'the formula sheet reads its slots through dlvSlots');
+
 /* 3 ── commissions */
 const E = require(path.join(ROOT, 'assets/charges-engine.js'));
 const cdoc = E.normalize({ commissions: { channels: { glovo: 25 }, fees: { glovo: 5 } } });
