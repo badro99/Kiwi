@@ -264,8 +264,8 @@
     "sha": "9c535082fbf9e5f7"
   },
   "assets/caisse-lang.js": {
-    "v": "188",
-    "sha": "93ca0cdf77bdfe90"
+    "v": "189",
+    "sha": "1930688ade8c03d1"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -396,8 +396,8 @@
     "sha": "fad23dd15f196021"
   },
   "assets/caisse/split-tender.js": {
-    "v": "10",
-    "sha": "239c9eacd278055a"
+    "v": "11",
+    "sha": "69f8181b0c993e48"
   },
   "assets/caisse/table-settlement.js": {
     "v": "2",
@@ -2308,16 +2308,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "106",
-    "sha": "f1268c917897edab"
+    "v": "107",
+    "sha": "1abca70c9dfcc331"
   },
   "assets/printer-health.js": {
     "v": "3",
     "sha": "331149bdbb3a9d11"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "28",
-    "sha": "dbb1a1310e130723"
+    "v": "29",
+    "sha": "1d1655a5eba279ec"
   },
   "assets/printer/pairing-ui.js": {
     "v": "19",

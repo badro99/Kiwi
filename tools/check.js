@@ -2018,7 +2018,7 @@ section('Whole-project regressions');
     'orderpro-guest-api-test.mjs',
     'orderpro-guest-hub-test.mjs',
     'orderpro-guestpage-editor-test.mjs',
-    'field-whole-item-split-test.mjs',
+    'field-whole-item-split-test.mjs', 'split-by-amount-test.mjs',
     'field-orderpro-acceptance-test.mjs',
     'field-table-transfer-test.mjs',
     'caisse-table-actions-test.mjs',

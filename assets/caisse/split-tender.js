@@ -118,6 +118,7 @@
         isVrap, sourceLabel,
         total, sourceLines: lines.map(line => ({ ...line })), itemTotals,
         splitMode: 'egal',
+        amountParts: [''],
         numParts: Math.max(2, covers),
         tipMode: '0', customTipPct: 0,
         numConvives: Math.max(2, covers),
@@ -174,11 +175,13 @@
 
     /* ---- setup screen ---- */
     function renderSplitSetup() {
+      ensureSplitAmountMode();
       $$('[data-split-tab]').forEach(tab =>
         tab.classList.toggle('is-active', tab.dataset.splitTab === splitState.splitMode));
 
       $('#split-egal-content').hidden = splitState.splitMode !== 'egal';
       $('#split-article-content').hidden = splitState.splitMode !== 'article';
+      $('#split-montant-content').hidden = splitState.splitMode !== 'montant';
 
       if (splitState.splitMode === 'egal') {
         $('#split-launch').disabled = false;
@@ -187,10 +190,118 @@
         renderPartsChips();
         renderTipChips();
         updateSplitSummary();
+      } else if (splitState.splitMode === 'montant') {
+        renderSplitAmountMode();
       } else {
         renderArticleMode();
       }
       lucide.createIcons();
+    }
+
+    /* ---- Par montant ----
+       « On ne peut pas saisir le montant » (client, 27 nov. 2026) : un convive
+       paie 150 MAD, l'autre le reste. Le caissier tape le montant de chaque
+       part sauf la dernière, qui prend ce qui reste, au centime. Le volet est
+       posé par le script (le gabarit de la caisse est à sa taille maximale). */
+    function splitAmountTr(s) { return (globalThis.window?.KiwiCaisseLang || { tr: x => x }).tr(s); }
+    function ensureSplitAmountMode() {
+      if ($('#split-montant-content')) return;
+      const tr = splitAmountTr;
+      const tabs = $('.split-tabs'), article = $('#split-article-content');
+      if (!tabs || !article) return;
+      tabs.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+      tabs.insertAdjacentHTML('beforeend', `
+          <button class="split-tab" data-split-tab="montant" type="button">
+            <div class="split-tab-icon"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm440 240H120q-33 0-56.5-23.5T40-240v-440h80v440h680v80ZM280-400v-320 320Z"/></svg></div>
+            <div class="split-tab-text">
+              <div class="split-tab-title">${tr('Par montant')}</div>
+              <div class="split-tab-desc">${tr('Chacun paie le montant de son choix')}</div>
+            </div>
+          </button>`);
+      article.insertAdjacentHTML('afterend', '<div id="split-montant-content" hidden></div>');
+      const box = $('#split-montant-content');
+      box.addEventListener('input', (e) => {
+        const input = e.target.closest('[data-split-amount]');
+        if (!input) return;
+        splitState.amountParts[Number(input.dataset.splitAmount)] = input.value;
+        updateSplitAmountSummary();
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || !e.target.closest('[data-split-amount]')) return;
+        e.preventDefault();
+        if (splitAmountAllocation().ok) launchSplitFlow();
+      });
+      box.addEventListener('click', (e) => {
+        if (e.target.closest('[data-split-amount-add]')) {
+          if (splitState.amountParts.length < 7) splitState.amountParts.push('');
+          renderSplitAmountMode(splitState.amountParts.length - 1);
+          return;
+        }
+        const del = e.target.closest('[data-split-amount-del]');
+        if (del) {
+          splitState.amountParts.splice(Number(del.dataset.splitAmountDel), 1);
+          if (!splitState.amountParts.length) splitState.amountParts.push('');
+          renderSplitAmountMode();
+        }
+      });
+    }
+    /* « 150 », « 150,5 », « 1 200 » → centimes ; vide ou illisible → null. */
+    function splitAmountCents(value) {
+      const text = String(value == null ? '' : value).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
+      if (!text || !/^\d+(\.\d{0,2})?$/.test(text)) return null;
+      return Math.round(Number(text) * 100);
+    }
+    function splitAmountAllocation() {
+      const total = minor(splitState.total);
+      const typed = (splitState.amountParts || ['']).map(splitAmountCents);
+      const sum = typed.reduce((s, c) => s + (c || 0), 0);
+      const rest = total - sum;
+      if (typed.some(c => c == null || c <= 0)) return { ok: false, rest, sum, message: 'Saisissez le montant de chaque part' };
+      if (rest <= 0) return { ok: false, rest, sum, message: 'Les montants dépassent l’addition' };
+      return { ok: true, rest, sum, cents: typed.concat(rest), message: '' };
+    }
+    function renderSplitAmountMode(focusIndex) {
+      const tr = splitAmountTr;
+      const box = $('#split-montant-content');
+      if (!box) return;
+      if (!Array.isArray(splitState.amountParts) || !splitState.amountParts.length) splitState.amountParts = [''];
+      const parts = splitState.amountParts;
+      const label = tr('Part');
+      const rows = parts.map((value, i) => `
+          <div class="split-summary-row" style="align-items:center;gap:12px;margin-bottom:8px">
+            <span>${label} ${i + 1}</span>
+            <span style="display:flex;align-items:center;gap:8px;flex:0 0 60%">
+              <input class="split-tip-input" data-split-amount="${i}" inputmode="decimal" autocomplete="off" placeholder="0,00"
+                aria-label="${label} ${i + 1}" value="${kdsEsc(value || '')}" style="text-align:end" />
+              ${parts.length > 1 ? `<button type="button" class="split-chip" data-split-amount-del="${i}" aria-label="${tr('Retirer cette part')}" title="${tr('Retirer cette part')}">×</button>` : ''}
+            </span>
+          </div>`).join('');
+      box.innerHTML = `
+          <div class="split-section-label">${tr('Montant de chaque part')}</div>
+          ${rows}
+          <div class="split-chips">${parts.length < 7 ? `<button type="button" class="split-chip" data-split-amount-add>+ ${tr('Ajouter une part')}</button>` : ''}</div>
+          <div class="split-summary">
+            <div class="split-summary-row"><span>${tr('Total à diviser')}</span><span class="val mono">${fmtMADcents(splitState.total)}</span></div>
+            <div class="split-summary-row"><span>${tr('Déjà saisi')}</span><span class="val mono" id="split-amount-typed">·</span></div>
+            <div class="split-per-person">
+              <span class="lbl">${label} ${parts.length + 1} · ${tr('le reste')}</span>
+              <span class="val mono" id="split-amount-rest">·</span>
+            </div>
+          </div>`;
+      updateSplitAmountSummary();
+      const focus = box.querySelector(`[data-split-amount="${focusIndex == null ? 0 : focusIndex}"]`);
+      if (focus && (focusIndex != null || !parts[0])) setTimeout(() => focus.focus(), 60);
+    }
+    function updateSplitAmountSummary() {
+      const tr = splitAmountTr;
+      const alloc = splitAmountAllocation();
+      const typed = $('#split-amount-typed'), rest = $('#split-amount-rest');
+      if (typed) typed.textContent = fmtMADcents(major(alloc.sum));
+      if (rest) rest.textContent = alloc.rest > 0 ? fmtMADcents(major(alloc.rest)) : '−' + fmtMADcents(major(-alloc.rest));
+      const launch = $('#split-launch');
+      launch.disabled = !alloc.ok;
+      launch.textContent = alloc.ok ? tr('Lancer le split') : tr(alloc.message);
+      launch.title = alloc.ok ? '' : tr(alloc.message);
     }
 
     /* ---- Par article renderers ---- */
@@ -409,9 +520,13 @@
         toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Trop de parts pour ce montant · chaque part doit avoir au moins 0,01 MAD'));
         return;
       }
-      if (splitState.splitMode !== 'egal') {
+      if (splitState.splitMode === 'article') {
         const allocation = splitArticleAllocation();
         if (!allocation.ok) { toast(allocation.message); return; }
+      }
+      if (splitState.splitMode === 'montant') {
+        const allocation = splitAmountAllocation();
+        if (!allocation.ok) { toast(splitAmountTr(allocation.message)); return; }
       }
       const parts = [];
       const tipTotal = Math.round(minor(splitState.total) * effectiveTipPct() / 100 + 1e-9) / 100;
@@ -456,6 +571,30 @@
         for (let i = 0; i < splitState.numParts; i++) {
           parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, lines: shareLines.map((l, k) => ({ ...l, total: major(lineShares[k][i]) })), paid: false, payMethod: null });
         }
+      } else if (splitState.splitMode === 'montant') {
+        /* Chaque part porte sa fraction de chaque plat (comme une part égale),
+           au prorata du montant tapé : le rapport Z garde ses familles et le
+           stock compte la bonne fraction de plat (shareDen, recordSale()). */
+        const bases = splitAmountAllocation().cents.map(major);
+        const entries = Object.entries(splitState.itemTotals);
+        const lineShares = entries.map(([, info]) => shareWeighted(money((info.totalQty || 0) * (info.unitPrice || 0)), bases));
+        const partLabel = splitAmountTr('Montant choisi');
+        bases.forEach((base, i) => {
+          const fraction = base / splitState.total;
+          const pct = Math.max(1, Math.round(fraction * 100));
+          parts.push({
+            base, tip: 0, amount: base, label: partLabel, paid: false, payMethod: null,
+            lines: entries.map(([name, info], k) => {
+              const shareUnitPrice = money((info.unitPrice || 0) * fraction);
+              return {
+                name: `${name} · ${pct} %`, baseName: info.baseName || '',
+                qty: info.totalQty, unit: shareUnitPrice, price: shareUnitPrice,
+                total: lineShares[k][i], cat: lineCat(info.itemId || null, name),
+                itemId: info.itemId || '', shareDen: 1 / fraction,
+              };
+            }),
+          });
+        });
       } else {
         const n = splitState.numConvives;
 

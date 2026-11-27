@@ -24,10 +24,10 @@ ${caisseTestSource.orderDeclarations()}
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const money = v => Math.round(Number(v)*100)/100, minor = v => Math.round(v*100), major = v => v/100;
 const fmtMAD = v => v+' MAD', fmtMADcents = fmtMAD, lineCat = () => 'meal', phoneSessionOf = () => 'visit';
-const effectiveTipPct = () => 0, lucide = {createIcons(){}}, toast = s => window.lastToast = s;
+const kdsEsc = s => String(s), effectiveTipPct = () => 0, lucide = {createIcons(){}}, toast = s => window.lastToast = s;
 const splitState = {splitMode:'article', numConvives:2, numParts:2, activeConvive:1, total:90, tableId:'T7', flow:null,
 itemTotals:{Pasta:{totalQty:1,unitPrice:60,itemId:'pasta'},Water:{totalQty:2,unitPrice:15,itemId:'water'}},perConvive:{}};
-${['remainingQty','conviveTotal','assignUnit','unassignUnit','splitArticleAllocation','renderSplitSetup','renderArticleMode','renderConvivesChips','renderConvivesTabs','renderPool','renderConviveCart','renderPartsChips','renderTipChips','updateSplitSummary','shareMoney','shareWeighted','launchSplitFlow','renderSplitFlow','splitPartLabel'].map(fn).join('\n')}
+${['remainingQty','conviveTotal','assignUnit','unassignUnit','splitArticleAllocation','renderSplitSetup','renderArticleMode','renderConvivesChips','renderConvivesTabs','renderPool','renderConviveCart','renderPartsChips','renderTipChips','updateSplitSummary','shareMoney','shareWeighted','launchSplitFlow','renderSplitFlow','splitPartLabel','splitAmountTr','ensureSplitAmountMode','splitAmountCents','splitAmountAllocation','renderSplitAmountMode','updateSplitAmountSummary'].map(fn).join('\n')}
 ${between("    $('#split-modal').addEventListener('click'", '    // Custom tip percentage input')}
 document.querySelector('#split-modal').classList.add('is-open');
 renderSplitSetup();window.testState = splitState;
@@ -55,5 +55,23 @@ try {
     assert.deepEqual(errors,[]);
     await page.close();
     console.log('✓ Real split UI clicks: '+width+'×'+height+', intact items and blocked incomplete assignment');
+    /* « Par montant » : taper ce que paie un convive, le reste va à la dernière part. */
+    const page2 = await browser.newPage(); await page2.setViewport({width,height});
+    const errors2=[]; page2.on('pageerror', e => errors2.push(String(e)));
+    await page2.setContent('<!doctype html><meta charset="utf-8"><style>'+css+'</style>'+html);
+    await page2.addScriptTag({content:js});
+    await page2.click('[data-split-tab="montant"]');
+    assert.equal(await page2.$eval('#split-launch', e => e.disabled), true, 'nothing typed yet');
+    await page2.click('[data-split-amount="0"]');
+    await page2.keyboard.type('20,50');
+    assert.equal(await page2.$eval('#split-amount-rest', e => e.textContent), '69.5 MAD');
+    assert.equal(await page2.$eval('#split-launch', e => e.disabled), false);
+    await page2.click('#split-launch');
+    assert.deepEqual(await page2.evaluate(() => window.testState.flow.parts.map(p => p.amount)),[20.5,69.5]);
+    const tabs = await page2.$$eval('[data-split-tab]', els => els.map(e => e.getBoundingClientRect()).map(r => r.right));
+    assert.ok(Math.max(...tabs) <= width, 'three split tabs fit the viewport');
+    assert.deepEqual(errors2,[]);
+    await page2.close();
+    console.log('✓ Split by amount: '+width+'×'+height+', typed share plus the rest');
   }
 } finally { await browser.close(); }
