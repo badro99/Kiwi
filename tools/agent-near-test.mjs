@@ -90,10 +90,13 @@ differs('fach kanft7ou lma7al lyoum?', 'fach kanseddo lyouma');                 
 differs('Liquide en caisse hier ?', 'combien de cash dans la caisse');                       // another day
 
 // Nothing close: the model or "not understood" keeps it, and the snap does not loop.
-// The last three snapped to today's cash, the closing time and the menu page
+// The second three snapped to today’s cash, the closing time and the menu page
 // before the unknown-word guard (27 Nov, random questions).
-for (const q of ['qwerty asdf zxcv', 'ما رأيك في الطقس غدا', 'raconte moi une blague',
-  'My butcher scale is not connecting to the till', 'ch7al dyal remises lyom?', 'Montre-moi les achats depuis lundi stp']) {
+for (const q of ['qwerty asdf zxcv', 'ما رأيك في الطقس غدا', 'raconte moi une blague']) {
   assert.ok(/^(llm|unclear|outside) /.test(ask(snap, lang(q), q, true)), `« ${q} » was snapped`); n++;
+}
+for (const q of ['My butcher scale is not connecting to the till', 'ch7al dyal remises lyom?', 'Montre-moi les achats depuis lundi stp']) {
+  const L = lang(q);
+  assert.equal(ask(snap, L, q, true), ask(bare, L, q, false), `« ${q} » was snapped`); n++;
 }
 console.log(`✓ agent near: ${n} checks, ${index.items.length} known questions, v=${rev}`);

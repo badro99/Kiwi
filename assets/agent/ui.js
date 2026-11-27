@@ -2467,7 +2467,7 @@ function decideRoute(rawIn, retry) {
      * them as a comparison across periods. */
     const dNear = namedDay(q) || (qf !== q ? namedDay(qf) : null);
     if (dNear) return { kind: 'day', raw, q, day: dNear };
-    if (__state.TREND_RX.test(q)) { const ps = window.KiwiAgentData && window.KiwiAgentData.period && window.KiwiAgentData.period(q, raw, 1); return ps ? { kind: 'lookup', raw, q, spec: Object.assign(ps, { raw }) } : { kind: 'notrend', raw, q }; }
+    if (__state.TREND_RX.test(q)) { const ps = window.KiwiAgentData && window.KiwiAgentData.period && window.KiwiAgentData.period(q, raw, 1); return ps && ps.entity ? { kind: 'lookup', raw, q, spec: Object.assign(ps, { raw }) } : { kind: 'notrend', raw, q }; }
     /* « effet de Raadan sur mes ventes » répondait par le chiffre d'affaires
        du mois : le mot Ramadan cassé, il ne restait que « ventes ». Une
        saisonnalité mal lue vaut un stock mal commandé. */
@@ -2569,7 +2569,7 @@ function decideRoute(rawIn, retry) {
      * it to a model that invents dirham figures in this exact register. */
     const ownEarly = __state.matchOwnData(q);
     if (ownEarly) return { kind: 'nodata', raw, q, action: ownEarly };
-    if (__state.DARIJA_RX.test(q)) return (!retry && window.KiwiAgentData && window.KiwiAgentData.near && window.KiwiAgentData.near(rawIn, decideRoute)) || { kind: 'unclear', raw, q };
+    if (__state.DARIJA_RX.test(q)) { const ps = window.KiwiAgentData && window.KiwiAgentData.period && window.KiwiAgentData.period(q, raw, 1); if (ps) return ps.entity ? { kind: 'lookup', raw, q, spec: Object.assign(ps, { raw }) } : ps.route === 'day' ? { kind: 'day', raw, q, day: { offset: 0 } } : { kind: 'revenue', raw, q, run: () => sRevenue() }; return (!retry && window.KiwiAgentData && window.KiwiAgentData.near && window.KiwiAgentData.near(rawIn, decideRoute)) || { kind: 'unclear', raw, q }; }
     /* Last resort before giving up: retry once on the spell-corrected form.
      * Only reached when the query as typed matched nothing, so this can only
      * turn a non-answer into an answer, never overwrite a good route. */

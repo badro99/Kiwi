@@ -80,8 +80,8 @@
     "sha": "9f2e1a16520debe9"
   },
   "assets/agent-data.js": {
-    "v": "17",
-    "sha": "15aac78794772f40"
+    "v": "18",
+    "sha": "989a147aba261e12"
   },
   "assets/agent-doc-followup.js": {
     "v": "2",
@@ -104,12 +104,12 @@
     "sha": "30c8de89f6b2d25b"
   },
   "assets/agent.js": {
-    "v": "57",
-    "sha": "2117e96c4a7a2b90"
+    "v": "58",
+    "sha": "65bfaa10da568090"
   },
   "assets/agent/ui.js": {
-    "v": "16",
-    "sha": "635235315d4c8fb3"
+    "v": "17",
+    "sha": "03d70ab8ccb3d10e"
   },
   "assets/ai-image-import.js": {
     "v": "8",

@@ -1559,10 +1559,18 @@
    * tools/agent-period-test.mjs holds it. */
   var PER_CMP = W("compar|par rapport|\\bvs\\b|versus|evolu|tendance|\\btrend|\\bchang|\\bwhy\\b|pourquoi|علاش|\\b3lach\\b|قارن|\\b9aren\\b|baiss|augment|\\bdrop|\\bgrow|\\bfell\\b|الفرق|\\bfar9\\b|previous period|precedente|li 9bel|اللي قبل|لي قبل|\\bbest\\b|\\bworst\\b|meilleur|pire|احسن|اسوا");
   var PER_PAST = W("\\bderni\\w*|\\bpasse\\w*|\\blast\\b|\\bprevious\\b|\\bpast\\b|\\bfat(?:et|t)?\\b|\\bfayt\\w*|فات|فاتت|الماضي|الماضية|الفايت|الفايتة|السابق");
-  var PER_OTHER = W("depense|\\bcharges?\\b|expens\\w*|masarif|مصاريف|مصروف|pourboire|\\btips?\\b|بقشيش|remise|discount|تخفيض|\\bmarge|margin|benefice|profit|\\brbe7\\b|ربح|\\btva\\b|\\bvat\\b|dette|debt|ديون|\\bdin\\b|fournisseur|supplier|مورد|heure|hours|ساعات|\\bsa3at\\b|achat|purchase|مشتريات|stock|annul|cancel|ملغ|livraison|delivery|توصيل|salair|salary|اجور|loyer|\\brent\\b|\\bprix\\b|\\bprice\\b|ثمن|\\btaman\\b|client|customer|زبون|زبناء|زباين|employ|staff|personnel|خدام|موظف|correct|صحيح|\\bs7i7\\b|\\bsa7i7\\b|\\bremember\\b|\\bfactur|فواتير|فاتورة|\\bhow do i\\b|\\bcomment (?:je|on|faire)\\b|كيفاش|\\bkifach\\b");
+  var PER_OTHER = W("\\bchra\\b|\\bchrit\\w*|\\bachat\\w*|السلعة لي شريت|depense|\\bcharges?\\b|expens\\w*|masarif|مصاريف|مصروف|\\bmarge|margin|benefice|profit|\\brbe7\\b|ربح|\\btva\\b|\\bvat\\b|dette|debt|ديون|\\bdin\\b|fournisseur|supplier|مورد|heure|hours|ساعات|\\bsa3at\\b|achat|purchase|مشتريات|stock|annul|cancel|ملغ|salair|salary|اجور|loyer|\\brent\\b|\\bprix\\b|\\bprice\\b|ثمن|\\btaman\\b|client|customer|زبون|زبناء|زباين|employ|staff|personnel|خدام|موظف|correct|صحيح|\\bs7i7\\b|\\bsa7i7\\b|\\bremember\\b|\\bfactur|فواتير|فاتورة|\\bhow do i\\b|\\bcomment (?:je|on|faire)\\b|كيفاش|\\bkifach\\b");
   /* A rate (« par mois »), a span of months, a closure, a cost: not one period read back. */
   var PER_SPAN = W("par mois|per month|a month\\b|monthly|mensuel|chaque mois|every month|kol chh?ar|فالشهر|في الشهر|كل شهر|\\b(?:\\d+|deux|trois|six|douze|two|three|six|twelve)\\s+(?:mois|months)\\b|ستة|اشهر|شهور|\\bferm|\\bclos|نسد|\\bnsed\\b|\\bcout\\w*|\\bcost|يكلف|كيكلف|\\bwill\\b|\\bpace\\b|\\brythme\\b");
   var PER_TICKETS = W("\\btickets?\\b|\\bcommandes?\\b|\\borders?\\b|\\bkomand\\w*|التذاكر|تذاكر|التيكي\\w*|الطلبات|طلبات|كوموند\\w*|nombre de ventes|how many sales|number of sales|عدد المبيعات|\\bbons?\\b");
+  var PER_TIPS = W("pourboire\\w*|\\btips?\\b|بقشيش|البقشيش|\\bbo9chich\\b|\\bbakchich\\b|\\btbrri\\w*");
+  var PER_DISC = W("\\bremises?\\b|\\bdiscounts?\\b|\\breductions?\\b|تخفيض\\w*|التخفيضات|\\bتخفيضات|\\btakhfid\\w*|\\bpromos?\\b");
+  var PER_DELIV = W("livraison\\w*|deliver\\w*|توصيل|التوصيل|\\bglovo\\b|\\bjumia\\b|\\byassir\\b|\\btawsil\\b|\\bliv(?:raison)?\\b");
+  /* « le plus vendu cette semaine » is a ranking with a period: lookup owns it. */
+  var PER_RANK = W("\\bplus vendu|\\bmoins vendu|\\bmost\\b|\\bleast\\b|\\btop\\b|\\bkter\\b|\\bktar\\b|\\ba9al\\b|اكثر|اقل|\\bclasse\\w*|\\brank\\w*|\\bbest.?sell");
+  /* Selling or counting an item, and « mon café » the business, not the drink. */
+  var PER_SELL = W("vendu|\\bsold\\b|\\bsell\\w*|\\bb3na\\b|\\bb3t\\b|\\bbi3\\b|\\bbe3t\\b|بعت|بعنا|كتتباع|تباع|\\btba3\\b|\\bkattba3\\b|combien de|how many|how much|\\bch7al d|\\bchhal d|شحال ديال|شحال من|شحال د|كم من|\\bresume\\b|\\bsummary\\b|\\bdetails?\\b|analy\\w*|\\bt7ellel\\b|تحلل|تفاصيل|ملخص");
+  var PER_VENUE = W("\\b(?:mon|my|ce|au|du|this|our|notre) caf|\\bcafe dyal\\w*|\\bf (?:l)?cafe\\b|\\bf l?9ahwa\\b|\\bl9ahwa dyali|القهوة ديالي|فالقهوة|ف القهوة|\\bcafe ajd\\b|\\bmy cafe|\\bmon cafe");
   var PER_REFUND = W("rembours\\w*|\\brefunds?\\b|\\bretours?\\b|\\breturns?\\b|استرجاع|مرجوع|الريتور");
   var PER_CASH = W("\\bcash\\b|espece\\w*|\\bliquide\\b|نقد|كاش|\\bna9d\\b");
   var PER_CARD = W("\\bcarte\\b|\\bcard\\b|\\btpe\\b|بطاقة|لاكارط|\\bkarta\\b");
@@ -1603,15 +1611,84 @@
     if (/aujourd|\btoday\b|\blyoum\w?\b|\blyom\b|اليوم|ce matin|this morning|\bajd\b/.test(q)) return { id: 'today', from: t0, to: t0 + DAY };
     return null;
   }
+  /* The same dish in the words people type: « 9ahwa », « أتاي », « khobz »,
+     « coffee » for a menu that says Café, Thé à la menthe, Pain. Each family
+     is matched on the question AND on the menu's own names, so an Arabic
+     menu answers an English question too. Round two of the random
+     thousand (27 Nov): « ch7al dyal 9ahwa simana li fatet », « بغيت نشوف
+     شحال بعت من أتاي » got nothing, or the whole day. */
+  var DISH_SYN = {
+    cafe: W("\\bcafes?\\b|\\bcoffees?\\b|\\bl?9ahwa\\b|\\bl?qahwa\\b|\\bl?kahwa\\b|قهوة|قهوه|\\bespresso\\b|\\bexpress\\b|\\bcappuccino\\b|\\bnous ?nous\\b|\\bnoss ?noss\\b|نص نص"),
+    the: W("\\b(?:du|le|de|un|les|des|au|d) thes?\\b|^thes?\\b|\\bteas?\\b|\\bl?atay\\b|\\bataye\\b|اتاي|لاتاي|شاي|اتاي"),
+    pain: W("\\bpains?\\b|\\bbread\\b|\\bl?kh?obz\\b|\\bl?khoubz\\b|خبز|خبزة"),
+    frite: W("\\bfrites?\\b|\\bfries\\b|\\bchips\\b|\\bbtata\\b|بطاطس|بطاطا|فريت"),
+    burger: W("\\bburgers?\\b|برغر|بركر|برگر|بورغر|بيرغر"),
+    tacos: W("\\btacos\\b|\\btakos\\b|تاكوس|طاكوس"),
+    salade: W("\\bsalades?\\b|\\bsalads?\\b|\\bchlada\\b|شلاضة|سلطة|سلاطة"),
+    coca: W("\\bcoca\\b|\\bcoke\\b|\\bcola\\b|كوكا"),
+    jus: W("\\bjus\\b|\\bjuices?\\b|\\b3a?sir\\b|عصير"),
+    eau: W("\\beau\\b|\\bwater\\b|\\bsidi ali\\b|(?:^|\\s)(?:ال)?ماء(?:\\s|$)"),
+    patisserie: W("tiramisu|cheesecake|fondant|\\bcrepes?\\b|\\bflan\\b|\\btartes?\\b|\\bmousse\\b|patisser\\w*|pastr\\w*|\\bgateaux?\\b|\\bcakes?\\b|حلويات|حلوى|حلوة|\\b7lw\\w*|\\b7alwa\\b|\\bhalwa\\b|\\bdesserts?\\b|\\bsweets\\b"),
+    croissant: W("croissants?|كرواسون|كرواصة|كرواسة|\\bkrwasa\\b"),
+    sandwich: W("sandwich\\w*|sandwitch\\w*|سندويش\\w*|سندويتش\\w*|صندويش\\w*"),
+    pizza: W("pizzas?|بيتزا|بيزا"),
+    tajine: W("tajines?|tagines?|طاجين"),
+    viande: W("\\bviandes?\\b|\\bmeat\\b|\\bl7e?m\\b|\\bl7am\\b|\\blhem\\b|لحم"),
+    poulet: W("\\bpoulets?\\b|\\bchicken\\b|\\bdjaj\\b|\\bfarouj\\b|دجاج|فروج"),
+    boisson: W("boissons?|\\bdrinks?\\b|\\bbeverages?\\b|مشروبات|\\bmach?roubat\\b|\\bmchroubat\\b"),
+    glace: W("\\bglaces?\\b|\\bice ?creams?\\b|لاكلاص|لاگلاص|ايس كريم|\\blaglace\\b"),
+    pates: W("\\bpates\\b|\\bpasta\\b|معكرونة|\\bmakarouna\\b"),
+    soupe: W("\\bsoupes?\\b|\\bsoups?\\b|\\bharira\\b|حريرة|شوربة"),
+    couscous: W("couscous|كسكس|\\bseksou\\b"),
+    msemen: W("msemen|msmen|مسمن|ملوي|\\bmlwi\\b|baghrir|بغرير"),
+  };
+  /* « boissons » covers the drinks of a menu that has no such category. */
+  var DISH_UMBRELLA = { boisson: ['coca', 'jus', 'eau', 'the', 'cafe'], patisserie: ['croissant', 'glace'] };
+  var arFold = function (s) { return norm(s).replace(/[\u064b-\u0655\u0670]/g, '').replace(/\u0649/g, '\u064a'); };
+  function dishFamilies(s) {
+    var n = arFold(s), out = [];
+    Object.keys(DISH_SYN).forEach(function (k) { var m = DISH_SYN[k].exec(n); if (m) out.push({ k: k, word: m[0].trim() }); });
+    return out;
+  }
   function productKeys(q) {
-    var qs = ' ' + norm(q).replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ', names = {}, out = [];
+    var qs = ' ' + arFold(q).replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ', names = {}, out = [], label = [];
+    var fam = dishFamilies(q), famKeys = fam.map(function (f) { return f.k; });
+    fam.forEach(function (f) { (DISH_UMBRELLA[f.k] || []).forEach(function (k) { if (famKeys.indexOf(k) < 0) famKeys.push(k); }); });
+    var famHit = function (name) { return dishFamilies(name).some(function (f) { return famKeys.indexOf(f.k) >= 0; }); };
+    var wordHit = function (k) { return k.split(/[^\p{L}\p{N}]+/u).some(function (w) { return w.length > 3 && !/^\d/.test(w) && (qs.indexOf(' ' + w + ' ') >= 0 || qs.indexOf(' ' + w + 's ') >= 0 || (/s$/.test(w) && qs.indexOf(' ' + w.slice(0, -1) + ' ') >= 0)); }); };
     (productRanking(null) || { rows: [] }).rows.forEach(function (r) { names[norm(r.name)] = r.name; });
-    carteItems().concat(catalogProducts()).forEach(function (p) { if (p && p.name) names[norm(p.name)] = p.name; });
-    Object.keys(names).forEach(function (k) {
-      var hit = k.split(/[^\p{L}\p{N}]+/u).some(function (w) { return w.length > 3 && !/^\d/.test(w) && (qs.indexOf(' ' + w + ' ') >= 0 || qs.indexOf(' ' + w + 's ') >= 0 || (/s$/.test(w) && qs.indexOf(' ' + w.slice(0, -1) + ' ') >= 0)); });
-      if (hit) out.push(k);
+    var menu = carteItems();
+    menu.concat(catalogProducts()).forEach(function (p) { if (p && p.name) names[norm(p.name)] = p.name; });
+    /* A category of the menu (« Boissons », « Desserts ») stands for all its items. */
+    var cats = [];
+    try { cats = (window.KiwiMenuStore && window.KiwiMenuStore.categories && window.KiwiMenuStore.categories(venueId())) || []; } catch (_) { cats = []; }
+    cats.forEach(function (c) {
+      if (!c || !c.name || !(wordHit(norm(c.name)) || famHit(c.name))) return;
+      label.push(c.name);
+      menu.forEach(function (it) { if (it && it.catId === c.id && it.name && out.indexOf(norm(it.name)) < 0) out.push(norm(it.name)); });
     });
-    return out.length ? { keys: out, names: out.map(function (k) { return names[k]; }) } : null;
+    var direct = false;
+    Object.keys(names).forEach(function (k) {
+      var w = wordHit(k);
+      if (out.indexOf(k) < 0 && (w || (famKeys.length && famHit(k)))) { out.push(k); label.push(names[k]); direct = direct || w; }
+    });
+    if (out.length) return { keys: out, names: label.length ? label : out.map(function (k) { return names[k]; }), word: fam.length && (out.length > 1 || !direct) ? fam[0].word : '' };
+    return fam.length ? { absent: fam[0].word } : null;
+  }
+  /* « résumé dyal accessoires téléphone », « analyse les médicaments » : the
+     words after « de / dyal / of » when the menu has nothing by that name. */
+  var TOPIC_STOP = W("^(?:pendant|durant|during|over|lors|detail\\w*|resume|summary|recap\\w*|analy\\w*|t7ellel|تحلل|تفاصيل|ملخص|la|le|les|l|de|des|du|d|mes|my|ma|mon|the|a|un|une|en|f|fi|had|hadi|hada|this|that|cette|ce|ces|dyali|dyal|dial|ديال|هاد|هذه|هذا|في|ف|من|mn|men|sur|over|in|for|pour|ventes?|sales?|caisse|chiffre|revenue|takings|journee|jour|day|semaine|week|weekend|mois|month|annee|year|today|yesterday|hier|aujourd\\w*|lyoum\\w*|lyom|simana|smana|chhar|chher|نهار|اليوم|الشهر|السيمانة|الاسبوع|lbi3|البيع|المبيعات|tickets?|commandes?|orders?|cash|carte|card|stp|svp|please|3afak|عفاك|dernier\\w*|last|past|derniers?|akher|اخر|sept|seven|\\d+|jours|days|iyam|ايام|depuis|since|novembre|november|نونبر)$");
+  function topicOf(q) {
+    var m = /(?:^|\s)(?:de la|de l|des|du|de|d|of|on|about|dyal|dial|ديال|les|la|le)\s+(.+)$/.exec(norm(q).replace(/[?؟!.,]/g, ' '));
+    if (!m) return null;
+    var w = [];
+    for (var parts = m[1].split(/\s+/), i = 0; i < parts.length && w.length < 3; i++) {
+      var t = parts[i]; if (!t) continue;
+      if (TOPIC_STOP.test(t)) { if (w.length) break; continue; }
+      w.push(t);
+    }
+    var t2 = w.join(' ');
+    return t2.length >= 3 && !PER_REV.test(t2) && !PER_TICKETS.test(t2) ? t2 : null;
   }
   function periodSpec(q, raw, late) {
     q = String(q || '');
@@ -1622,8 +1699,14 @@
        say so, and give what it does read for that period. Only in place of
        the « two periods » refusal, never ahead of the route that owns it. */
     if (PER_OTHER.test(q)) return late && !/\bhow do i\b|\bcomment (?:je|on|faire)\b|كيفاش|\bkifach\b|\bremember\b|\bfactur|فواتير|فاتورة/.test(q) ? { entity: 'period', what: 'other', per: per } : null;
+    if (PER_RANK.test(q)) return null;
+    var what0 = PER_TIPS.test(q) ? 'tips' : PER_DISC.test(q) ? 'discounts' : PER_DELIV.test(q) ? 'delivery' : null;
+    if (what0) return { entity: 'period', what: what0, per: per };
     var p = productKeys(raw || q);
-    if (p) return { entity: 'period', what: 'product', per: per, keys: p.keys, names: p.names };
+    if (p && p.keys) return { entity: 'period', what: 'product', per: per, keys: p.keys, names: p.names, word: p.word };
+    if (p && p.absent && PER_SELL.test(q) && !PER_VENUE.test(q)) return { entity: 'period', what: 'absent', per: per, topic: p.absent };
+    var topic = PER_TOPIC.test(q) ? topicOf(raw || q) : null;
+    if (topic && !PER_REFUND.test(q) && !PER_CASH.test(q) && !PER_CARD.test(q) && !PER_TICKETS.test(q)) return { entity: 'period', what: 'absent', per: per, topic: topic };
     var what = PER_REFUND.test(q) ? 'refunds'
       : PER_CASH.test(q) && !PER_CARD.test(q) ? 'cash'
       : PER_CARD.test(q) && !PER_CASH.test(q) ? 'card'
@@ -1632,8 +1715,9 @@
     if (!what) return null;
     /* The day card already answers today's and yesterday's takings, with
        the day before and the daily average around them. */
-    if ((per.id === 'today' || per.id === 'yesterday') && (what === 'revenue' || what === 'tickets')) return null;
-    if (what === 'revenue' && per.id === 'month') return null;
+    /* The day card and the month-to-date card answer these, with more around them. */
+    if ((per.id === 'today' || per.id === 'yesterday') && (what === 'revenue' || what === 'tickets')) return per.id === 'today' && late ? { route: 'day' } : null;
+    if (what === 'revenue' && per.id === 'month') return late ? { route: 'revenue' } : null;
     return { entity: 'period', what: what, per: per };
   }
   var PER_T = {
@@ -1651,6 +1735,12 @@
       ref: function (p, n, m) { return n ? '<b>' + n + ' remboursement' + (n > 1 ? 's' : '') + '</b> sur ' + p + ', pour ' + m + '.' : 'Aucun remboursement enregistré sur ' + p + '.'; },
       prod: function (p, w, u, m, n) { return 'Sur ' + p + ' : <b>' + u + ' × ' + w + '</b>, pour ' + m + ', dans ' + n + ' vente' + (n > 1 ? 's' : '') + '.'; },
       prodNone: function (p, w) { return 'Aucun ' + w + ' vendu sur ' + p + ' d’après vos ventes enregistrées.'; },
+      tips: function (p, m, n) { return n ? 'Pourboires sur ' + p + ' : <b>' + m + '</b>, laissés sur ' + n + ' vente' + (n > 1 ? 's' : '') + '.' : 'Aucun pourboire enregistré en caisse sur ' + p + '.'; },
+      disc: function (p, m, n) { return n ? 'Remises sur ' + p + ' : <b>' + m + '</b> accordés sur ' + n + ' vente' + (n > 1 ? 's' : '') + '.' : 'Aucune remise enregistrée sur ' + p + '.'; },
+      deliv: function (p, n, m) { return n ? 'Livraison sur ' + p + ' : <b>' + n + ' commande' + (n > 1 ? 's' : '') + '</b>, pour ' + m + '.' : 'Aucune commande en livraison sur ' + p + '.'; },
+      absent: function (w) { return 'Rien ne s’appelle <b>« ' + w + ' »</b> sur votre carte ni dans vos ventes : la caisse ne le vend pas sous ce nom, je ne peux donc pas le compter. Voici la période en entier.'; },
+      prodMany: function (p, w, u, m, n) { return 'Sur ' + p + ', ' + w + ' : <b>' + fmt(u) + ' unité' + (u > 1 ? 's' : '') + '</b> vendue' + (u > 1 ? 's' : '') + ', pour ' + m + ', dans ' + n + ' vente' + (n > 1 ? 's' : '') + '.'; },
+      colTips: 'Pourboires', colDisc: 'Remises', colDeliv: 'Livraison',
       other: function (p) { return 'Ce chiffre-là, je ne le lis pas par période. Ce que je lis sur ' + p + ' : les ventes, les tickets, espèces et carte, les remboursements et chaque produit.'; },
       colRev: 'Encaissé', colTix: 'Tickets', colBasket: 'Panier moyen', colCash: 'Espèces', colCard: 'Carte', colUnits: 'Unités', colRef: 'Remboursé',
     },
@@ -1668,6 +1758,12 @@
       ref: function (p, n, m) { return n ? '<b>' + n + ' refund' + (n > 1 ? 's' : '') + '</b> for ' + p + ', worth ' + m + '.' : 'No refund recorded for ' + p + '.'; },
       prod: function (p, w, u, m, n) { return 'For ' + p + ': <b>' + u + ' × ' + w + '</b>, worth ' + m + ', across ' + n + ' sale' + (n > 1 ? 's' : '') + '.'; },
       prodNone: function (p, w) { return 'No ' + w + ' sold for ' + p + ', going by your recorded sales.'; },
+      tips: function (p, m, n) { return n ? 'Tips for ' + p + ': <b>' + m + '</b>, left on ' + n + ' sale' + (n > 1 ? 's' : '') + '.' : 'No tip recorded at the till for ' + p + '.'; },
+      disc: function (p, m, n) { return n ? 'Discounts for ' + p + ': <b>' + m + '</b> given on ' + n + ' sale' + (n > 1 ? 's' : '') + '.' : 'No discount recorded for ' + p + '.'; },
+      deliv: function (p, n, m) { return n ? 'Delivery for ' + p + ': <b>' + n + ' order' + (n > 1 ? 's' : '') + '</b>, worth ' + m + '.' : 'No delivery order for ' + p + '.'; },
+      absent: function (w) { return 'Nothing called <b>“' + w + '”</b> is on your menu or in your sales, so the till does not sell it under that name and I cannot count it. Here is the whole period.'; },
+      prodMany: function (p, w, u, m, n) { return 'For ' + p + ', ' + w + ': <b>' + fmt(u) + ' unit' + (u > 1 ? 's' : '') + '</b> sold, worth ' + m + ', across ' + n + ' sale' + (n > 1 ? 's' : '') + '.'; },
+      colTips: 'Tips', colDisc: 'Discounts', colDeliv: 'Delivery',
       other: function (p) { return 'That figure is not one I read by period. What I read for ' + p + ': sales, tickets, cash and card, refunds and each product.'; },
       colRev: 'Taken', colTix: 'Tickets', colBasket: 'Average basket', colCash: 'Cash', colCard: 'Card', colUnits: 'Units', colRef: 'Refunded',
     },
@@ -1679,6 +1775,12 @@
       partial: function (f) { return 'مبيعاتك تبدأ يوم ' + f + '، فقرأت الفترة ابتداء من ذلك اليوم.'; },
       zero: function (p) { return 'لا مبيعات مسجلة في ' + p + '.'; },
       rev: function (p, m, n) { return 'في ' + p + ' دخل لك <b>' + m + '</b> من ' + n + ' ' + (n >= 3 && n <= 10 ? 'عمليات' : 'عملية') + ' بيع.'; },
+      tips: function (p, m, n) { return n ? 'البقشيش في ' + p + ': <b>' + m + '</b>، في ' + n + ' ' + (n >= 3 && n <= 10 ? 'عمليات' : 'عملية') + ' بيع.' : 'لا بقشيش مسجل في الصندوق في ' + p + '.'; },
+      disc: function (p, m, n) { return n ? 'التخفيضات في ' + p + ': <b>' + m + '</b> على ' + n + ' ' + (n >= 3 && n <= 10 ? 'عمليات' : 'عملية') + ' بيع.' : 'لا تخفيض مسجل في ' + p + '.'; },
+      deliv: function (p, n, m) { return n ? 'التوصيل في ' + p + ': <b>' + n + ' ' + (n >= 3 && n <= 10 ? 'طلبات' : 'طلب') + '</b>، بقيمة ' + m + '.' : 'لا طلب توصيل في ' + p + '.'; },
+      absent: function (w) { return 'ما كاين حتى حاجة سميتها <b>«' + w + '»</b> فالمنيو ولا فالمبيعات ديالك، الكاسة ما كتبيعهاش بهاد السمية وما نقدرش نحسبها. ها هي الفترة كاملة.'; },
+      prodMany: function (p, w, u, m, n) { return 'في ' + p + '، ' + w + ': <b>' + fmt(u) + ' وحدة</b> مبيعة، بقيمة ' + m + '، في ' + n + ' ' + (n >= 3 && n <= 10 ? 'عمليات' : 'عملية') + ' بيع.'; },
+      colTips: 'البقشيش', colDisc: 'التخفيضات', colDeliv: 'التوصيل',
       other: function (p) { return 'هذا الرقم لا أقرؤه حسب الفترة. ما أقرؤه عن ' + p + ': المبيعات والتذاكر والنقد والبطاقة والاسترجاع وكل منتج.'; },
       tix: function (p, n, m) { return '<b>' + n + ' ' + (n >= 3 && n <= 10 ? 'تذاكر' : 'تذكرة') + '</b> في ' + p + '، بمجموع ' + m + '.'; },
       cash: function (p, c, m) { return 'نقدا في ' + p + ': <b>' + c + '</b>، من أصل ' + m + ' دخلت في المجموع.'; },
@@ -1699,19 +1801,23 @@
     var rows = salesRows(), first = null;
     rows.forEach(function (e) { var ts = e && +e.ts; if (ts && (first == null || ts < first)) first = ts; });
     if (spec.what === 'other' && (first == null || per.to <= first)) return { text: P.other(esc(lab)) };
+    if (spec.what === 'absent' && (first == null || per.to <= first)) return { text: P.absent(esc(spec.topic)), open: open1(L, 'pMenu', 'nav-menu') };
     if (first == null) return { text: P.none };
     if (per.to <= first) return { text: P.before(esc(lab), dl(first)) };
-    var n = 0, rev = 0, cash = 0, card = 0, rn = 0, rsum = 0, units = 0, urev = 0, un = 0;
+    var by = {}, n = 0, rev = 0, cash = 0, card = 0, rn = 0, rsum = 0, units = 0, urev = 0, un = 0, tip = 0, tn = 0, disc = 0, dn = 0, lv = 0, lvn = 0;
     rows.forEach(function (e) {
       if (!e || !inWin(+e.ts || 0, per)) return;
       var a = +e.amount || 0;
       if (a < 0) { rn++; rsum -= a; return; }
       n++; rev += a;
+      if (+e.tipCents > 0) { tip += e.tipCents / 100; tn++; }
+      if (+e.discountAmountCents > 0) { disc += e.discountAmountCents / 100; dn++; }
+      if (/glovo|yassir|jumia|deliver|livr/i.test(String(e.channel || '') + ' ' + String(e.origin || ''))) { lv += a; lvn++; }
       var m = String(e.method || '');
       if (/cash|esp|نقد|كاش/i.test(m)) cash += a; else if (/card|carte|\bcb\b|tpe|بطاقة/i.test(m)) card += a;
       if (spec.what === 'product' && Array.isArray(e.lines)) {
         var hit = false;
-        e.lines.forEach(function (l) { if (l && spec.keys.indexOf(norm(l.name)) >= 0) { units += +l.qty || 1; urev += +l.total || 0; hit = true; } });
+        e.lines.forEach(function (l) { if (l && spec.keys.indexOf(norm(l.name)) >= 0) { units += +l.qty || 1; urev += +l.total || 0; hit = true; var bk = by[l.name] || (by[l.name] = { u: 0, r: 0 }); bk.u += +l.qty || 1; bk.r += +l.total || 0; } });
         if (hit) un++;
       }
     });
@@ -1720,11 +1826,19 @@
     var base = [{ l: P.colRev, v: fmtMad(rev), h: '' }, { l: P.colTix, v: fmt(n), h: '' }, { l: P.colBasket, v: n ? fmtMad(rev / n) : '—', h: '' }];
     if (spec.what === 'product') {
       var w = esc(spec.names.join(', '));
-      if (!units) return { text: P.prodNone(plab, w), note: note, prov: prov };
+      if (!units) return { text: P.prodNone(plab, spec.word ? esc(spec.word) + ' (' + w + ')' : w), note: note, prov: prov };
+      var items = Object.keys(by).sort(function (a, b) { return by[b].u - by[a].u; });
+      if (items.length > 1 || spec.names.length > 1) {
+        return { text: P.prodMany(plab, esc(spec.word || spec.names.join(', ')), units, fmtMad(urev), un), stats: items.slice(0, 5).map(function (k) { return { l: esc(k), v: '×' + fmt(by[k].u), h: fmtMad(by[k].r) }; }), note: note, prov: prov };
+      }
       return { text: P.prod(plab, w, fmt(units), fmtMad(urev), un), stats: [{ l: P.colUnits, v: fmt(units), h: w }, { l: P.colRev, v: fmtMad(urev), h: '' }], note: note, prov: prov };
     }
     if (spec.what === 'refunds') return { text: P.ref(plab, rn, fmtMad(rsum)), stats: rn ? [{ l: P.colRef, v: fmtMad(rsum), h: '' }] : [], note: note, prov: { mod: 'sales', count: rn, unit: 'entries' }, open: CMD_ORDERS_OPEN(L) };
     if (spec.what === 'other') return { text: P.other(plab), stats: base, note: note, prov: prov };
+    if (spec.what === 'absent') return { text: P.absent(esc(spec.topic)), stats: base, note: note, prov: prov, open: open1(L, 'pMenu', 'nav-menu') };
+    if (spec.what === 'tips') return { text: P.tips(plab, fmtMad(tip), tn), stats: [{ l: P.colTips, v: fmtMad(tip), h: fmt(tn) }, { l: P.colRev, v: fmtMad(rev), h: fmt(n) }], note: note, prov: prov };
+    if (spec.what === 'discounts') return { text: P.disc(plab, fmtMad(disc), dn), stats: [{ l: P.colDisc, v: fmtMad(disc), h: fmt(dn) }, { l: P.colRev, v: fmtMad(rev), h: fmt(n) }], note: note, prov: prov };
+    if (spec.what === 'delivery') return { text: P.deliv(plab, lvn, fmtMad(lv)), stats: [{ l: P.colDeliv, v: fmtMad(lv), h: fmt(lvn) }, { l: P.colRev, v: fmtMad(rev), h: fmt(n) }], note: note, prov: prov };
     if (!n) return { text: P.zero(plab), note: note, prov: prov };
     if (spec.what === 'cash' || spec.what === 'card') {
       return { text: P[spec.what](plab, fmtMad(spec.what === 'cash' ? cash : card), fmtMad(rev)), stats: [{ l: P.colCash, v: fmtMad(cash), h: '' }, { l: P.colCard, v: fmtMad(card), h: '' }, { l: P.colRev, v: fmtMad(rev), h: fmt(n) }], note: note, prov: prov };
@@ -1740,10 +1854,10 @@
    * owns (invoice, expense, charge, caisse) and got a canned simulation.
    * They ask how to use the till, or report a slip. When no product guide
    * covers them, the model answers, which is better than a wrong card. */
-  var SUP_ASK = W("^(?:comment\\b|how\\b(?! (?:much|many|long|often)\\b)|كيف|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b)|\\b(?:can i|could i|is it possible|est.ce que je peux|je peux|on peut|peut.on|possible de|wach n9der|wach nqder|wach momkin|wach imken|wach ymken)\\b|واش نقدر|واش يمكن|واش ممكن|هل يمكن|هل استطيع|wach kayn chi tari9a|كاين شي طريقة|\\bkayn chi tari9a\\b");
-  var SUP_VERB = W("\\b(?:record|enter|add|change|edit|modif\\w*|print|reprint|imprim\\w*|cancel|annul\\w*|undo|delete|supprim\\w*|correct\\w*|fix|update|set|create|cre\\w*|track|suivre|see|check|view|find|send|envoy\\w*|ajout\\w*|enregistr\\w*|saisi\\w*|mettre|remettre|chang\\w*|nsjel|nsejjel|nzid|nbdel|ntba3|ntbe3|nlghi|nsle7|nsl7|nchof|nchouf|nsift|n9leb|nqleb|ndir)\\b|نسجل|نزيد|نضيف|نبدل|نغير|نطبع|نلغي|نحيد|نمسح|نصلح|نشوف|نلقى|نصيفط|نرسل|ندير|نخدم|نتبع|نقلب|نعدل");
+  var SUP_ASK = W("^(?:comment\\b|how\\b(?! (?:much|many|long|often)\\b)|كيف|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b)|\\b(?:can i|could i|is it possible|est.ce que je peux|je peux|on peut|peut.on|possible de|wach n9der|wach nqder|wach momkin|wach imken|wach ymken)\\b|واش نقدر|واش يمكن|واش ممكن|هل يمكن|هل استطيع|^(?:3afak |عافاك )?(?:bghit|bghina|بغيت|بغينا) n|^(?:3afak |عافاك )?(?:bghit|bghina|بغيت|بغينا) ن|^(?:chno|شنو|ach|اش) (?:khassni|khass|خاصني|خاص) n|^(?:chno|شنو|ach) (?:khassni|خاصني) ن|wach kayn chi tari9a|كاين شي طريقة|\\bkayn chi tari9a\\b");
+  var SUP_VERB = W("\\b(?:record|enter|add|change|edit|modif\\w*|print|reprint|imprim\\w*|cancel|annul\\w*|undo|delete|supprim\\w*|correct\\w*|fix|update|set|create|cre\\w*|track|suivre|see|check|view|find|send|envoy\\w*|ajout\\w*|enregistr\\w*|saisi\\w*|mettre|remettre|chang\\w*|nsjel|nsejjel|nzid|nbdel|ntba3|ntbe3|nlghi|nsle7|nsl7|nchof|nchouf|nsift|n9leb|nqleb|ndir)\\b|نسجل|نزيد|نضيف|نبدل|نغير|نطبع|نلغي|نحيد|نمسح|نصلح|نشوف|نلقى|نصيفط|نرسل|ندير|نخدم|نتبع|نقلب|نعدل|نقسم|نحيد|نخرج|نفتح|نسد|نصيفط|\\bn9s?m\\b|\\bn7yed\\b|\\bnkhrej\\b|\\bnft7\\b|\\bnsed\\b|\\bntb3\\b|\\bnkhdem\\b");
   var SUP_SLIP = W("par erreur|by mistake|accidentally|\\bmistake\\b|\\bwrong\\b|\\bmauvais\\w*|\\bplant\\w*|\\bcrash\\w*|\\bbloqu\\w*|\\bfreez\\w*|ne marche|marche pas|doesn.?t work|not working|won.?t open|\\bdeux fois\\b|\\btwice\\b|j.?ai oubli\\w*|\\bi forgot\\b|\\bforgot to\\b|غلطت|بالغلط|غلط|\\bghalat\\b|\\bghlt\\b|ماخدامش|ما خدامش|مكيخدمش|ماكيخدمش|جوج مرات|نسيت|\\bnsit\\b|\\bmakhdamch\\b|ma khdamch");
-  var SUP_NOT = W("\\d{3,}|\\b3amel\\b|\\b3mal\\b|عامل|عمال|(?:seems|looks|is|that.?s|c.?est|ca a l.?air) (?:wrong|faux)|^(?:wrong|faux)\\b|هادشي غلط|غالط|\\bkhdd?am\\b|\\bl?khdam\\b|خدام|سيرفور|\\bserveur|\\bworker|\\bwaiter|staff|نخدم شي|nkhdem chi|\\bcredit|\\bcrédit|\\bloan|\\bpret\\b|financ|banka|banque|\\bbank|قرض|كريدي|تمويل|mbi3at|\\blbi3\\b|\\bventes\\b|\\bsales\\b|المبيعات|مبيعات|chhor|months|\\bmois\\b|afford|permettre|\\bhire|recrut|embauch|salar|employ|\\braise\\b|augment|baiss|\\blower\\b|\\bdrop\\b|%|combien|how much|how many|شحال|\\bch7al\\b|\\bchhal\\b|(?:^|\\s)كم(?=\\s|$)|\\bgrow|more (?:customers|sales|clients)|plus de (?:clients|ventes)|nzid (?:f )?(?:lbi3|lmabi3at|clients|zb)|نزيد (?:ف)?(?:البيع|المبيعات|الزبناء|الكليان)|\\bget more\\b|attir|reduire|reduce|\\bcut\\b|economis|save money|profit|rentab|\\bvaut\\b|\\bworth\\b|ouvrir un|open a (?:second|new|another)|deuxieme|second (?:shop|store|location)");
+  var SUP_NOT = W("\\d{3,}|فالمية|في المية|\\bf? ?l?mia\\b|\\bprix\\b|\\bprice\\b|ثمن|\\btaman\\b|\\b3amel\\b|\\b3mal\\b|عامل|عمال|(?:seems|looks|is|that.?s|c.?est|ca a l.?air) (?:wrong|faux)|^(?:wrong|faux)\\b|هادشي غلط|غالط|\\bkhdd?am\\b|\\bl?khdam\\b|خدام|سيرفور|\\bserveur|\\bworker|\\bwaiter|staff|نخدم شي|nkhdem chi|\\bcredit|\\bcrédit|\\bloan|\\bpret\\b|financ|banka|banque|\\bbank|قرض|كريدي|تمويل|mbi3at|\\blbi3\\b|\\bventes\\b|\\bsales\\b|المبيعات|مبيعات|chhor|months|\\bmois\\b|afford|permettre|\\bhire|recrut|embauch|salar|employ|\\braise\\b|augment|baiss|\\blower\\b|\\bdrop\\b|%|combien|how much|how many|شحال|\\bch7al\\b|\\bchhal\\b|(?:^|\\s)كم(?=\\s|$)|\\bgrow|more (?:customers|sales|clients)|plus de (?:clients|ventes)|nzid (?:f )?(?:lbi3|lmabi3at|clients|zb)|نزيد (?:ف)?(?:البيع|المبيعات|الزبناء|الكليان)|\\bget more\\b|attir|reduire|reduce|\\bcut\\b|economis|save money|profit|rentab|\\bvaut\\b|\\bworth\\b|ouvrir un|open a (?:second|new|another)|deuxieme|second (?:shop|store|location)");
   function supportAsk(q) {
     q = String(q || '');
     if (SUP_NOT.test(q)) return false;

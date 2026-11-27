@@ -29,6 +29,7 @@ const firstOfLast = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime()
 const sale = (ts, amount, method, lines) => ({ ts, amount, method, lines: lines.map(([name, qty, total]) => ({ name, qty, total })) });
 const FEED = [
   sale(t0 + 12 * H, 100, 'cash', [['Tacos XL', 2, 80], ['Coca 33cl', 1, 20]]),
+  Object.assign(sale(t0 + 13 * H, 60, 'card', [['Thé à la menthe', 2, 30], ['Coca 33cl', 2, 30]]), { channel: 'glovo', tipCents: 1000, discountAmountCents: 500 }),
   sale(mon - 5 * DAY + 12 * H, 300, 'card', [['Tacos XL', 3, 120], ['Burger Classic', 3, 180]]),
   sale(mon - 4 * DAY + 13 * H, -50, 'cash', []),
   sale(mon - 3 * DAY + 12 * H, 70, 'cash', [['Frites', 7, 70]]),
@@ -82,6 +83,30 @@ for (const [q, L, want, why] of [
   const f = ask('remboursements la semaine dernière', 'fr');
   ok(/1 remboursement/.test(f.text) && has(f.text, 50), `refunds last week → 1 for 50 MAD → ${f.text.slice(0, 120)}`);
 }
+
+// Round two (27 Nov): the words people type for a dish, a family of the
+// menu, what the menu does not hold, and what each ticket carries besides.
+const units7 = (name) => units(mon, t0 + DAY, name);
+for (const [q, L, must, why] of [
+  ['ch7al b3na mn atay had simana', 'fr', units7('Thé à la menthe') + ' × Thé à la menthe', '« atay » is the mint tea of the menu'],
+  ['بغيت نشوف شحال بعت من أتاي هاد السيمانة', 'ar', units7('Thé à la menthe') + ' × Thé à la menthe', 'أتاي with its hamza'],
+  ['combien de boissons vendues cette semaine', 'fr', (units7('Coca 33cl') + units7('Thé à la menthe')) + ' unités', 'drinks cover Coca and tea though no category says so'],
+  ['ch7al dyal 9ahwa simana li fatet', 'fr', '« 9ahwa »', 'coffee is not on this menu: say so, not the takings'],
+  ['Donne-moi le détail des accessoires téléphone cette semaine', 'fr', '« accessoires telephone »', 'a topic of another trade'],
+  ['combien de pourboires cette semaine', 'fr', '10 MAD', 'tips ride on the ticket'],
+  ['discounts this week', 'en', '5 MAD', 'so do discounts'],
+  ['livraison cette semaine', 'fr', '1 commande', 'a Glovo ticket is a delivery'],
+]) {
+  const r = ask(q, L);
+  ok(r.text.includes(must), `« ${q} » (${why}) should say ${must} → {${r.route}} ${r.text.slice(0, 140)}`);
+}
+for (const [q, L] of [["Who's on shift today?", 'en'], ['Until what time is my cafe open today?', 'en'], ['C’est qui qui travaille au cafe ajd', 'fr'], ['le plat le plus vendu cette semaine', 'fr']]) {
+  const r = ask(q, L);
+  ok(!/Nothing called|Rien ne s’appelle/.test(r.text), `« ${q} » is not a dish the menu lacks → ${r.text.slice(0, 100)}`);
+}
+ok(/^revenue/.test(ask('bghit résumé dyal caisse had chhar', 'fr').route), 'Darija month till → the month card, not « not understood »');
+ok(/^(?:llm|feature)\b/.test(ask('بغيت نطبع جوج نسخ ديال التيكي', 'ar').route), 'a Darija how-to goes to the guide or the model');
+ok(/^price/.test(ask('بغيت نزيد فالثمن ب ١٠ فالمية', 'ar').route), 'a Darija price rise stays a simulation');
 
 // 2. Not a single period: the honest refusal, or the route that owns it.
 for (const [q, L] of [
