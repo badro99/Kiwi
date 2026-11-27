@@ -177,7 +177,7 @@ var SHELL = [
   '/assets/caisse/catalogue.js?v=40',
   '/assets/staff-perms-till.js?v=14',
   '/assets/owner-approval.js?v=1',
-  '/assets/caisse/till-frame.js?v=36',
+  '/assets/caisse/till-frame.js?v=37',
   '/assets/caisse/orders.js?v=2',
   '/assets/caisse/payment.js?v=16',
   '/assets/caisse/split-tender.js?v=11',
@@ -191,6 +191,7 @@ var SHELL = [
   '/assets/caisse/offline.js?v=12',
   '/assets/caisse-app.js?v=63',
   '/assets/caisse-loyalty-reward.js?v=7',
+  '/assets/caisse/card-scan.js?v=1',
   '/assets/caisse-refresh.js?v=10',
   '/assets/till-auto-update.js?v=2',
   /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
@@ -477,7 +478,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=191',
+  '/assets/caisse-lang.js?v=192',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=7',
   '/assets/till-policy-settings.js?v=3',
@@ -576,7 +577,7 @@ var SHELL = [
   '/assets/kit/calm-repaint.js?v=5',
   /* Design 2027, stage 3a: the till's code doors on the kit's pad, loaded
      only when kiwiSkin2027:till is on; precached so that till works offline. */
-  '/assets/icons/material/sprite.till.svg?v=18',
+  '/assets/icons/material/sprite.till.svg?v=19',
   '/assets/kit/tokens-2027.css?v=2',
   '/assets/kit/kit.css?v=71',
   '/assets/pos-boutique-2027.css?v=30',
@@ -627,7 +628,7 @@ var SHELL = [
   '/assets/kit/elements.js?v=4',
   '/assets/kit/layout.js?v=1',
   '/assets/kit/nav.js?v=10',
-  '/assets/kit/till.js?v=45',
+  '/assets/kit/till.js?v=46',
   '/assets/kit/till-frame.js?v=16',
   '/assets/kit/till-attendance.js?v=1',
   '/assets/kit/till-online.js?v=6',
@@ -648,7 +649,7 @@ var SHELL = [
   '/assets/pos-boutique/ticket-owner.js?v=9',
   '/assets/pos-boutique/ticket-scan.js?v=1',
   '/assets/wallet-link.js?v=1',
-  '/assets/wallet-till.js?v=2',
+  '/assets/wallet-till.js?v=3',
   '/assets/wallet-dashboard.js?v=11',
   '/assets/pos-boutique/till-clock.js?v=2',
   '/assets/pos-boutique/old-sales.js?v=2',

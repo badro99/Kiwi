@@ -10,7 +10,8 @@
  *   · flag on: the shipped chips are not drawn and Open the till opens
  *     <k-cash-count mode="open">: the key figure is the counted float,
  *     labelled count.opening_float, 0.00 before any entry; no Expected, no
- *     Difference; count.open waits for an amount;
+ *     Difference; count.open is ready at once, an empty drawer opens at
+ *     0.00 (owner, 2026-11-27);
  *   · the opening is TYPED (owner, 2026-10-16): no denomination rows, the
  *     keypad carries a decimal key, and count.by_denomination is the second
  *     way in; count.back_to_total brings what was counted back as the figure;
@@ -139,7 +140,7 @@ try {
   check(sheet.parts === 0 && !sheet.sumText, 'no Expected and no Difference at open');
   check(sheet.rows === 0 && sheet.dec && !sheet.next, 'the opening is typed: no denomination rows, a decimal key and no Next');
   check(sheet.alt === await t('count.by_denomination'), 'counting note by note is the second way in, one tap away');
-  check(sheet.commit.indexOf(await t('count.open')) >= 0 && sheet.disabled, 'count.open waits for an amount');
+  check(sheet.commit.indexOf(await t('count.open')) >= 0 && !sheet.disabled, 'count.open is ready at once: an empty drawer opens at 0.00 (owner, 2026-11-27)');
   check(sheet.chip === await t('count.same_as_last', { amount: await page.evaluate(() => KiwiKit.money(500, 2)) }) && sheet.chipOn !== 'true', 'the last float is a chip to tap, not preselected');
   check(!sheet.shift, 'nothing is opened while the sheet counts');
 

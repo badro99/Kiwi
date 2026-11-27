@@ -272,8 +272,16 @@
     function tillKitBillLoyalty() {
       const label = tillKitClientLabel();
       const b = $('#rp-client');
-      return { client: label ? { label, on: !!(b && b.classList.contains('is-on')) } : null, reward: tillKitRewardLabel() };
+      const on = !!(b && b.classList.contains('is-on'));
+      /* The store's loyalty card (assets/wallet-till.js marks the page when it
+         is on here): no customer yet → read their card with the camera; a
+         customer on the note → hand them their card on their phone. */
+      const act = label && document.documentElement.hasAttribute('data-wallet-card') ? (on ? 'card' : 'scan') : '';
+      const tr = (x) => (window.KiwiCaisseLang && window.KiwiCaisseLang.tr ? window.KiwiCaisseLang.tr(x) : x);
+      const actLabel = act === 'card' ? tr('Carte Wallet du client') : act === 'scan' ? tr('Scanner une carte') : '';
+      return { client: label ? { label, on, act, actLabel } : null, reward: tillKitRewardLabel() };
     }
+    let tillKitWalletHooked = false;
     function tillKitRewardLabel() {
       const b = $('#rp-reward');
       if (!b || b.hidden) return '';
@@ -1108,6 +1116,9 @@
         case 'comment': counterCommentEdit(); return;   /* commentaire cuisine de la commande (counter-flow.js) */
         case 'client': { const b = $('#rp-client'); if (b && !b.hidden) b.click(); return; }
         case 'reward': { const b = $('#rp-reward'); if (b && !b.hidden) b.click(); return; }
+        /* wallet-till.js owns the card: the scanner, and the card QR for the customer on the note. */
+        case 'client-scan':
+        case 'client-card': window.dispatchEvent(new CustomEvent('kiwi-card-act', { detail: { act: verb === 'client-scan' ? 'scan' : 'card' } })); return;
         case 'split': tillKitOpenSplit(); return;
         case 'discount': tillKitOpenDiscount(); return;
         case 'print': click('[data-action="print-bill"]'); return;
@@ -1132,6 +1143,7 @@
     function tillKitPaint() {
       if (!tillKitOn()) return;
       tillKitWatchClient();
+      if (!tillKitWalletHooked) { tillKitWalletHooked = true; window.addEventListener('kiwi-wallet-state', () => { try { tillKitPaint(); } catch (_) {} }); }
       /* Le volet livré s'est fermé (autre table, autre mode) : l'encaissement
          en cours n'a plus d'addition sous lui. */
       if ($('#rp-active').hidden && !tenderInFlight) {

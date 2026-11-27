@@ -264,8 +264,8 @@
     "sha": "9c535082fbf9e5f7"
   },
   "assets/caisse-lang.js": {
-    "v": "191",
-    "sha": "9f9d982f533f11c6"
+    "v": "192",
+    "sha": "1a4786f88b345230"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -330,6 +330,10 @@
   "assets/caisse-strings.js": {
     "v": "5",
     "sha": "efbec3f29e4f9841"
+  },
+  "assets/caisse/card-scan.js": {
+    "v": "1",
+    "sha": "0fb86f87eec55e63"
   },
   "assets/caisse/catalogue.js": {
     "v": "40",
@@ -408,8 +412,8 @@
     "sha": "a935ac48b8068563"
   },
   "assets/caisse/till-frame.js": {
-    "v": "36",
-    "sha": "a84adca956a26711"
+    "v": "37",
+    "sha": "41cf659683d33261"
   },
   "assets/caisse/workflows-loader.js": {
     "v": "3",
@@ -940,8 +944,8 @@
     "sha": "f4c4fc4f275af9c7"
   },
   "assets/icons/material/sprite.till.svg": {
-    "v": "18",
-    "sha": "5721aafdfe733a57"
+    "v": "19",
+    "sha": "7698177648951476"
   },
   "assets/identity.js": {
     "v": "13",
@@ -1064,8 +1068,8 @@
     "sha": "4355e280bf7ef751"
   },
   "assets/kit/gallery.js": {
-    "v": "5",
-    "sha": "aa071bc6991947f4"
+    "v": "6",
+    "sha": "7060144ce8d955a3"
   },
   "assets/kit/haptics.js": {
     "v": "16",
@@ -1228,8 +1232,8 @@
     "sha": "3338c6a559c9d86c"
   },
   "assets/kit/till.js": {
-    "v": "45",
-    "sha": "4252e8203d5e3f32"
+    "v": "46",
+    "sha": "28ad50c5f14d188c"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",
@@ -2820,8 +2824,8 @@
     "sha": "e1852673a2c8ac31"
   },
   "assets/wallet-till.js": {
-    "v": "2",
-    "sha": "fc1457a9ffea35b7"
+    "v": "3",
+    "sha": "e08bc55b51fc18e9"
   },
   "assets/weather.js": {
     "v": "1",

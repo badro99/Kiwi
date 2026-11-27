@@ -121,16 +121,26 @@
   }, true);
 
   /* ── le QR de caisse ── */
-  var state = { on: null, at: 0, merchant: '' };
+  var state = { on: null, at: 0, merchant: '' }, asking = Object.create(null);
   function merchant() { try { return (window.KiwiClients && window.KiwiClients.bookId && window.KiwiClients.bookId()) || ''; } catch (_) { return ''; } }
   /* La carte est-elle activée ici ? Lu une fois par quart d'heure (route publique). */
   function cardOn(done) {
     var m = merchant();
     if (!m) return done(false);
     if (state.merchant === m && state.on != null && Date.now() - state.at < 15 * 60000) return done(state.on);
+    /* One question in flight per store: the 2027 bill asks on every paint. */
+    if (asking[m]) { asking[m].push(done); return; }
+    asking[m] = [done];
+    var answer = function (ok) { var q = asking[m] || []; delete asking[m]; q.forEach(function (f) { try { f(ok); } catch (_) {} }); };
     fetch('/api/wallet/enroll?merchant=' + encodeURIComponent(m), { cache: 'no-store' })
       .then(function (r) { return r.ok; }, function () { return false; })
-      .then(function (ok) { state = { on: ok, at: Date.now(), merchant: m }; if (ok) loadQr().catch(function () {}); done(ok); });
+      .then(function (ok) {
+        var was = state.on;
+        state = { on: ok, at: Date.now(), merchant: m }; if (ok) loadQr().catch(function () {}); answer(ok);
+        try { document.documentElement.toggleAttribute('data-wallet-card', ok); } catch (_) {}
+        /* The 2027 bill draws its card buttons from isOn(): it repaints when the answer lands. */
+        if (was !== ok) try { window.dispatchEvent(new CustomEvent('kiwi-wallet-state')); } catch (_) {}
+      });
   }
   /* Le lien du QR imprimé sur le reçu : /carte/<boutique>?r=<id serveur de la
      vente>. Seulement pour une vente sans client (sinon le passage est déjà le
@@ -239,7 +249,48 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchNote); else watchNote();
   setTimeout(function () { if (typeof fetch === 'function') cardOn(function () {}); }, 4000);   /* le premier reçu du jour sait déjà si la carte est activée */
 
-  window.KiwiWalletTill = { parseCardScan: parseCardScan, canon: canon, findCard: findCard, looksLikeCard: looksLikeCard, take: take, on: on, offer: offer, chip: chip, cardUrl: cardUrl,
+  /* Is the card on for this store, as last read (null before the first answer)?
+     Asking refreshes a stale answer in the background. */
+  function isOn() {
+    var m = merchant();
+    if (!m) return false;
+    if (typeof fetch === 'function') cardOn(function () {});
+    return state.merchant === m && state.on === true;
+  }
+  /* The 2027 note's card buttons (till-frame.js) ask through one event:
+     'scan' opens the camera scanner (assets/caisse/card-scan.js, loaded the
+     first time from the till's lazy registry), 'card' hands the customer on
+     the note their card, like the chip of the shipped note. */
+  var scanLoad = null;
+  function openScanner() {
+    var go = function () { try { window.KiwiCardScan.open(); } catch (e) { console.warn('[card-scan]', e); } };
+    if (window.KiwiCardScan) return go();
+    var link = document.querySelector('[data-caisse-lazy="card-scan"]');
+    if (!link) return;
+    scanLoad = scanLoad || new Promise(function (ok, ko) { var s = document.createElement('script'); s.src = link.getAttribute('href'); s.onload = ok; s.onerror = ko; document.head.appendChild(s); });
+    scanLoad.then(go, function () { scanLoad = null; toast(tr('Vérifiez la connexion puis réessayez.')); });
+  }
+  if (window.addEventListener) window.addEventListener('kiwi-card-act', function (e) {
+    var act = e && e.detail && e.detail.act;
+    if (act === 'scan') return openScanner();
+    if (act !== 'card') return;
+    try {
+      var S = window.KiwiCaisseSaleClient, id = S && S.current && S.current();
+      var rec = id && window.KiwiClients && window.KiwiClients.get(id);
+      if (rec) offer({ id: rec.id, name: rec.name });
+    } catch (_) {}
+  });
+  /* The card can be switched on or off from the dashboard while a till stays open for days. */
+  if (typeof setInterval === 'function') setInterval(function () { if (typeof fetch === 'function') cardOn(function () {}); }, 15 * 60000 + 1000);
+  /* The counter stand's sign-up page: a new customer scans it and gets a card. */
+  function enrollUrl() {
+    var m = merchant();
+    if (!m) return '';
+    var base = /^https:/.test(location.origin) ? location.origin : 'https://kiwi-os.com';
+    return base + '/carte/' + encodeURIComponent(m);
+  }
+
+  window.KiwiWalletTill = { isOn: isOn, enrollUrl: enrollUrl, loadQr: loadQr, parseCardScan: parseCardScan, canon: canon, findCard: findCard, looksLikeCard: looksLikeCard, take: take, on: on, offer: offer, chip: chip, cardUrl: cardUrl,
     cardSvg: function (url) { return window.KiwiQR ? window.KiwiQR.svg(url, { size: 140, margin: 2, ecl: 'M' }) : ''; },
     _cardState: function (x) { state = { on: x.on, at: Date.now(), merchant: x.merchant }; } };
 })();
