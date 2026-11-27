@@ -961,6 +961,7 @@
   var S = {
     orders: {},        // id → commande telle que le serveur la donne
     cooking: {},       // id → true, purement local
+    mall: false,       // God mode « Mall restaurants » : le client a déjà payé, pas d'étape « Nouvelles »
     since: 0,
     station: 'all',
     stations: [],
@@ -1882,7 +1883,7 @@
   }
   function bucket(o) {
     if (o.status === 'ready' || stationIsReady(o)) return 'pass';
-    return stationIsAccepted(o) || S.cooking[o.id] ? 'cook' : 'new';
+    return stationIsAccepted(o) || S.cooking[o.id] || S.mall ? 'cook' : 'new';   /* centre commercial : payée = en préparation, le minuteur court depuis l'envoi */
   }
   function group(name) {
     return Object.keys(S.orders).map(function (k) { return S.orders[k]; })
@@ -2477,6 +2478,8 @@
         .then(function (cfg) {
           if (!cfg || !cfg.features) return;
           var off = cfg.features.kds === false;
+          var mall = cfg.features.mallRestaurant === true;
+          if (mall !== S.mall) { S.mall = mall; paint(); }
           var ov = $('kds-disabled-overlay');
           if (ov) ov.style.display = off ? 'flex' : 'none';
         }).catch(function () {});
