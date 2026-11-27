@@ -291,7 +291,7 @@ for (const [q, L, want] of [
   ['دير تخفيض 10% للطابلة 5', 'ar', /الكاسة/],
   ['Mes chemises taille M partent vite, préviens-moi quand il en reste cinq.', 'fr', /seuil/],
   ['Could you remind me to order coffee beans when stock is low?', 'en', /threshold/],
-  ['نبهني ملي يبقاو غير 5 ديال الحليب', 'ar', /عتبة|الحد/],
+  ['نبهني ملي يبقاو غير 5 ديال الحليب', 'ar', /حد أدنى/],
   ['rappelle-moi d’appeler le comptable demain', 'fr', /rappel/],
   ['offre le café à la table 6 svp', 'fr', /caisse/],
   ['préviens-moi quand les ventes baissent', 'fr', /point du matin/],
@@ -352,5 +352,54 @@ for (const [q, L] of [
   ['augmente mes prix de 10%', 'fr'],
   ['how much did I sell today', 'en'],
 ]) { const r = ask(q, L); ok(!/1 − |1 - marge|1 − margin/.test(r.text), `« ${q} » is not a price from a cost → {${r.route}}`); }
+
+// 7. The advisor's review of 27 Nov: look-alikes the request families took,
+// and phrasings they missed.
+const NOT_ACT = /ne touche pas aux tickets|don’t touch tickets|ما كنقيسش التيكيات|ni rappel|neither reminders|ما كنصيفطش لا تذكير|TTC × taux|price × rate|Un stock passe sous zéro|Stock drops below zero/;
+for (const [q, L] of [
+  ["rappelle-moi le chiffre d'hier", 'fr'],
+  ['remind me how much i made yesterday', 'en'],
+  ['فكرني شحال بعت البارح', 'ar'],
+  ['fakkarni chhal bi3t lbar7', 'fr'],
+  ['please list refunds by table', 'en'],
+  ['give me the discounts per ticket today', 'en'],
+  ['fais le total des remises par ticket', 'fr'],
+  ['عفاك شحال ديال التخفيض فالتيكي', 'ar'],
+  ['calcule la tva sur mes factures du mois', 'fr'],
+  ['check my vat for all invoices this quarter', 'en'],
+  ['impact negatif des ruptures de stock sur mes ventes', 'fr'],
+  ['mon inventaire a un ecart negatif de 300 dh', 'fr'],
+]) { const r = ask(q, L); ok(!NOT_ACT.test(r.text), `« ${q} » is not a request to act → {${r.route}} ${r.text.slice(0, 110)}`); }
+for (const [q, L] of [
+  ["combien de ventes sans client aujourd'hui", 'fr'],
+]) { const r = ask(q, L); ok(r.route !== 'revenue' || /aujourd/.test(r.text), `« ${q} » is not the sales report → {${r.route}}`); }
+for (const [q, L] of [
+  ['show what i paid suppliers', 'en'],
+]) { const r = ask(q, L); ok(!/orders\./.test(r.text.slice(0, 120)), `« ${q} » is not the orders page → {${r.route}} ${r.text.slice(0, 100)}`); }
+for (const [q, L, bad] of [
+  ['chno kaytba3 bzaf had simana', 'fr', /bzaf/],
+  ['what sold best last night', 'en', /“best/],
+  ["le plat le plus vendu depuis que j'ai été ouvert", 'fr', /Ramadan/],
+]) { const r = ask(q, L); ok(!bad.test(r.text), `« ${q} » names no absent product, no season → {${r.route}} ${r.text.slice(0, 120)}`); }
+for (const [q, L, want] of [
+  ['refund the last ticket please', 'en', /till/],
+  ['rembourse le client de la table 2', 'fr', /caisse/],
+  ['dir remise 10% l tabla 4', 'fr', /caisse/],
+  ['lghi commande dyal tabla 7', 'fr', /caisse/],
+  ['prevenez-moi quand le stock est bas', 'fr', /seuil/],
+  ['je veux une alerte quand le lait est presque fini', 'fr', /seuil/],
+  ['tell me when sales drop', 'en', /morning briefing/],
+  ['3lmni mli ysali lhlib', 'fr', /seuil/],
+  ['sales report with no customer names', 'en', /./],
+  ['rapport des ventes anonyme', 'fr', /./],
+  ['affiche les paiements par carte', 'fr', /Par carte sur aujourd/],
+  ['show card payments', 'en', /By card for today/],
+  ['chkon khless table 3 b carte wla cash?', 'fr', /commandes/],
+  ['Montre-moi les paiements par carte le mois dernier stp', 'fr', /mois dernier/],
+]) {
+  const r = ask(q, L);
+  const report = /report|rapport/.test(q);
+  ok(report ? r.route === 'revenue' : want.test(r.text), `« ${q} » is caught → {${r.route}} ${r.text.slice(0, 120)}`);
+}
 
 console.log(`✓ agent period: ${n} checks (one period read back, two periods refused, how-tos left to the guide)`);
