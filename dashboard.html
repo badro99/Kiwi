@@ -1072,7 +1072,7 @@
 <!-- Client error reporter & observability (fail-soft telemetry) -->
 <script src="assets/err-reporter.js?v=2" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
-<script src="assets/kiwi-env.js?v=11" defer></script>
+<script src="assets/kiwi-env.js?v=12" defer></script>
 <script src="assets/i18n.js?v=65" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
@@ -1086,7 +1086,7 @@
 <script src="assets/material-icons.js?v=7" defer></script>
 <script src="assets/plan-catalog.js?v=1" defer></script>
 <script src="assets/interactive/helpers.js?v=3" defer></script>
-<script src="assets/interactive/handlers.js?v=12" defer></script>
+<script src="assets/interactive/handlers.js?v=13" defer></script>
 <script src="assets/interactive.js?v=74" defer></script>
 <script src="assets/view-link.js?v=2" defer></script>
 <script src="assets/loyalty-product-links.js?v=15" defer></script>
@@ -1209,9 +1209,9 @@
 <script src="assets/color-palette.js?v=9" defer fetchpriority="low"></script>
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
-<script src="assets/escpos.js?v=27" defer fetchpriority="low"></script>
+<script src="assets/escpos.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/printer/transports.js?v=19" defer></script>
-<script src="assets/printer-bridge.js?v=104" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=106" defer fetchpriority="low"></script>
 <!-- Le catalogue boutique : le journal du stock, les échanges avec le serveur et
      le rayon (gros catalogues) en UN fichier, assets/boutique-catalog-till.js
      (cat boutique-catalog-parts.js boutique-catalog-shelf.js, comme la caisse :
@@ -1253,7 +1253,7 @@
      écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement ·
      la caisse LIT le reçu, elle ne le règle pas. -->
 <script src="assets/hours-ui.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/receipt.js?v=42" defer fetchpriority="low"></script>
+<script src="assets/receipt.js?v=43" defer fetchpriority="low"></script>
 
 <!-- Le coût de revient · LA source unique de « combien me coûte ce produit ».
      Le carnet des coûts vit dans son propre document par établissement, jamais
@@ -1281,7 +1281,7 @@
 
 <script src="assets/clients-directory.js?v=51" defer fetchpriority="low"></script>
 <script src="assets/customer-retention.js?v=22" defer fetchpriority="low"></script>
-<script src="assets/pages/dashboard-startup.js?v=360" data-startup="menu"></script>
+<script src="assets/pages/dashboard-startup.js?v=361" data-startup="menu"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
@@ -1308,10 +1308,10 @@
 <!-- Startup owners retain their classic deferred order before DOMContentLoaded.
      The explicit record also preserves critical priorities and offline URLs.
      Optional QR, channel and import/scan tools stay behind the first-use loader. -->
-<script src="assets/pages/dashboard-startup.js?v=360"></script>
+<script src="assets/pages/dashboard-startup.js?v=361"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=17">
 <link rel="stylesheet" href="assets/help-centre.css?v=5">
-<script src="assets/pages/dashboard-loader.js?v=121" defer fetchpriority="low"></script>
+<script src="assets/pages/dashboard-loader.js?v=122" defer fetchpriority="low"></script>
 <script src="assets/trade-workspace-schema.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/trade-workspaces.js?v=24" defer fetchpriority="low"></script>
 <script src="assets/delivery-receivables.js?v=4" defer fetchpriority="low"></script>

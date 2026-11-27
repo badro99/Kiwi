@@ -20,7 +20,7 @@ window.KiwiStockInternal.install('import', (S) => {
       isNew: 'nouveau', issues: (n) => `${n} ligne(s) ignorée(s)`, line: 'Ligne', noName: 'article vide', twice: 'en double dans le fichier', badNum: 'nombre illisible', unitFix: (u) => `unité inconnue, comptée en ${u}`,
       noCols: 'Aucune colonne « article » (ou nom, ingrédient, produit) dans ce fichier.', empty: 'Rien à lire : choisissez un fichier ou collez des lignes.',
       go: (n) => `Importer ${n} article(s)`, done: 'Liste importée', doneDesc: (c, u) => `${c} nouveau(x) · ${u} mis à jour`,
-      retail: 'En boutique, l’import se fait depuis le catalogue (Importer un CSV).', unavailable: 'Import indisponible, rechargez la page.',
+      retail: 'En boutique, l’import se fait depuis le catalogue (Importer un CSV).',
     },
     en: {
       title: 'Import a list of items', tag: 'Stock',
@@ -31,7 +31,7 @@ window.KiwiStockInternal.install('import', (S) => {
       isNew: 'new', issues: (n) => `${n} row(s) skipped`, line: 'Row', noName: 'empty item', twice: 'twice in the file', badNum: 'unreadable number', unitFix: (u) => `unknown unit, counted in ${u}`,
       noCols: 'No “article” column (or nom, ingredient, produit) in this file.', empty: 'Nothing to read: choose a file or paste rows.',
       go: (n) => `Import ${n} item(s)`, done: 'List imported', doneDesc: (c, u) => `${c} new · ${u} updated`,
-      retail: 'In a shop, import from the catalogue (Import a CSV).', unavailable: 'Import unavailable, reload the page.',
+      retail: 'In a shop, import from the catalogue (Import a CSV).',
     },
     ar: {
       title: 'استيراد لائحة أصناف', tag: 'المخزون',
@@ -42,7 +42,7 @@ window.KiwiStockInternal.install('import', (S) => {
       isNew: 'جديد', issues: (n) => `${n} سطر متجاهَل`, line: 'السطر', noName: 'صنف فارغ', twice: 'مكرر في الملف', badNum: 'رقم غير مقروء', unitFix: (u) => `وحدة غير معروفة، تُحتسب بـ${u}`,
       noCols: 'لا يوجد عمود "article" (أو nom أو ingredient أو produit) في هذا الملف.', empty: 'لا شيء للقراءة: اختر ملفاً أو الصق أسطراً.',
       go: (n) => `استيراد ${n} صنف`, done: 'تم استيراد اللائحة', doneDesc: (c, u) => `${c} جديد · ${u} محدَّث`,
-      retail: 'في المتجر، يتم الاستيراد من الكتالوج (استيراد CSV).', unavailable: 'الاستيراد غير متاح، أعد تحميل الصفحة.',
+      retail: 'في المتجر، يتم الاستيراد من الكتالوج (استيراد CSV).',
     },
   };
   const tr = (k, ...a) => { const s = (STR[lang()] || STR.fr)[k]; return typeof s === 'function' ? s(...a) : s; };
@@ -59,21 +59,67 @@ window.KiwiStockInternal.install('import', (S) => {
   };
   const key = (s) => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
 
+  /* Lecture du fichier, propre à l'écran de stock : le lecteur du catalogue
+     (catalog-import.js) n'arrive qu'avec les outils du tableau de bord, et le
+     stock ne dépend pas d'eux. Mêmes règles : UTF-8 strict puis windows-1252
+     (Excel FR), séparateur deviné (, ; tabulation) sur la ligne d'en-tête la
+     plus large, guillemets RFC 4180, apostrophe anti-formule retirée. */
+  function decode(buf) {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (_) {}
+    try { return new TextDecoder('windows-1252').decode(buf); } catch (_) {}
+    try { return new TextDecoder().decode(buf); } catch (_) { return ''; }
+  }
+  function rowsOf(text, delim) {
+    const rows = []; let row = [], field = '', quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (quoted) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false; } else field += c;
+        continue;
+      }
+      if (c === '"') quoted = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); field = ''; rows.push(row); row = []; }
+      else if (c !== '\r') field += c;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+  const headKey = (s) => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  function readCsv(text) {
+    text = String(text == null ? '' : text);
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    if (!text.trim()) return { ok: false };
+    let best = null;
+    [',', ';', '\t'].forEach((d) => {
+      const rows = rowsOf(text, d).map((r) => r.map((c) => String(c).trim().replace(/^'(?=[=+\-@])/, ''))).filter((r) => r.some((c) => c !== ''));
+      if (rows.length && (!best || rows[0].length > best[0].length)) best = rows;
+    });
+    if (!best || best.length < 2) return { ok: false };
+    return { ok: true, header: best[0].map(headKey), rows: best.slice(1) };
+  }
+  /* « 0,054 » (Excel en français) est une décimale : une virgule seule n'est
+     jamais un séparateur de milliers ici. Puis « 1.234,50 », « 1,234.50 »,
+     chiffres arabes, comme le lecteur du catalogue. */
+  function num(s) {
+    let t = String(s).replace(/\s*(?:MAD|DH|DHS)$/i, '').replace(/[\s\u00a0\u202f]/g, '');
+    if (/^-?\d+,\d+$/.test(t)) return Number(t.replace(',', '.'));
+    t = t.replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (c) => String(c.charCodeAt(0) - (c <= '\u0669' ? 0x660 : 0x6f0))).replace(/\u066b/g, '.').replace(/\u066c/g, ',');
+    if (/^-?\d{1,3}(?:\.\d{3})+,\d+$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+    else if (/^-?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(t)) t = t.replace(/,/g, '');
+    else if (/^-?\d+(?:[,.]\d+)?$/.test(t)) t = t.replace(',', '.');
+    else return NaN;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
   /* Texte → plan, sans rien écrire. */
   function analyse(text) {
-    const imp = window.KiwiCatalogImport;
-    const parsed = imp && imp.parse ? imp.parse(text) : { ok: false };
+    const parsed = readCsv(text);
     if (!parsed.ok) return { ok: false, error: 'empty' };
     const idx = {};
     Object.keys(COLS).forEach((k) => { idx[k] = parsed.header.findIndex((h) => COLS[k].includes(h)); });
     if (idx.name < 0) return { ok: false, error: 'noCols' };
-    /* « 0,054 » (Excel en français) est une décimale : une virgule seule n'est
-       jamais un séparateur de milliers ici, le lecteur générique lirait 54. */
-    const num = (s) => {
-      const v = String(s).replace(/\s*(?:MAD|DH|DHS)$/i, '').replace(/[\s  ]/g, '');
-      if (/^-?\d+,\d+$/.test(v)) return Number(v.replace(',', '.'));
-      return imp && imp._num ? imp._num(v) : Number(v);
-    };
     const existing = new Map(getInv().map((it) => [key(it.name), it]));
     const cats = new Map(allCategories().map((c) => [key(c.label), c.id]));
     const rows = [], issues = [], seen = new Set();
@@ -165,13 +211,6 @@ window.KiwiStockInternal.install('import', (S) => {
     const K = window.Kiwi;
     if (!K || !K.modal) return null;
     if (retailCatalog()) { K.toast?.(tr('retail'), { type: 'warn' }); return null; }
-    /* Le lecteur CSV (catalog-import.js) vient avec les outils du tableau de bord. */
-    if (!window.KiwiCatalogImport) {
-      const load = window.KiwiDashboardLoader && window.KiwiDashboardLoader.load;
-      if (!load) { K.toast?.(tr('unavailable'), { type: 'error' }); return null; }
-      load('workspace').then(() => open(), () => K.toast?.(tr('unavailable'), { type: 'error' }));
-      return null;
-    }
     const m = K.modal({
       tag: tr('tag'), title: tr('title'), width: 680,
       body: '<div data-sti-body></div>',
@@ -226,7 +265,7 @@ window.KiwiStockInternal.install('import', (S) => {
       const el = e.target;
       if (!el.matches('[data-sti-file]') || !el.files || !el.files[0]) return;
       const fr = new FileReader();
-      fr.onload = () => { const imp = window.KiwiCatalogImport; use(imp && imp._decode ? imp._decode(fr.result) : new TextDecoder().decode(fr.result)); };
+      fr.onload = () => use(decode(fr.result));
       fr.readAsArrayBuffer(el.files[0]);
     });
     paint();

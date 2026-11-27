@@ -586,7 +586,10 @@
       /* The bar names a tab's own page only. Retention and Campaigns sit
          under the Customers tab but keep their in-page heading: titled
          « Customers », the bar would hide that heading and name the wrong page. */
-      if (page === 'clients' && !clientsOpen()) page = '';
+      /* The directory layer can stay drawn under retention (#cd-table keeps
+         its box), so the page Kiwi says is open decides, not the layer. */
+      var open = currentPage();
+      if (page === 'clients' && (!clientsOpen() || open === 'retention' || open === 'crm')) page = '';
       var text = titles[page] || '';
       if (title.textContent !== text) title.textContent = text;
       var key = text ? 'page' : 'home';

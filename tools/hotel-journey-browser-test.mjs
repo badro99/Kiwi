@@ -435,7 +435,18 @@ for (const locale of LOCALES.filter(l => l === 'fr')) for (const [device, width,
     assert.equal(closed.settlementAmount, 0, 'le solde a été encaissé avant le départ');
     assert.ok(closed.lines.every(l => l.paid), 'Solde nul : chaque ligne est réglée');
     assert.equal(cents - paid, 10500, 'encaissé : la vente de 105 MAD');
-    await click('[data-action="nav-chambres"]');
+    /* Just after the reload the dashboard can still rebuild its shell: a menu
+       or nav click landing in that rebuild is lost (1 run in 3 on main, 27 Nov),
+       and the page never leaves the folios. Navigate again until the rooms are
+       drawn, three tries at most, then judge the room. */
+    page.setDefaultTimeout(6000);
+    for (let i = 0; ; i++) {
+      const drawn = await click('[data-action="nav-chambres"]')
+        .then(() => page.waitForSelector('[data-hx-room-card][data-arg="101"]'))
+        .then(() => true, (err) => { if (i === 2) throw err; return false; });
+      if (drawn) break;
+    }
+    page.setDefaultTimeout(30000);
     await page.waitForSelector('[data-hx-room-card][data-arg="101"].st-sale');
   });
 }

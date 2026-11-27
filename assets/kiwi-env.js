@@ -185,6 +185,17 @@
   document.addEventListener('kiwi-paired', function () { refusedUntil = 0; reads.clear(); bootRetries.clear(); });
   ['pointerdown', 'keydown'].forEach(function (name) { document.addEventListener(name, wake, true); });
   ['kiwi:sale-paid', 'kiwi:order'].forEach(function (name) { window.addEventListener(name, function () { wake(); }); });
+  /* A floor cancellation the owner keeps for approval answers 403
+     owner-approval-required. owner-ask.js (loaded by service-requests.js on the
+     till and the server phone) takes this event and answers with the same
+     request sent again once the owner agrees. No taker: the refusal goes back
+     as it came. */
+  function ownerApproval(input, options, response) {
+    var answer = null;
+    window.dispatchEvent(new CustomEvent('kiwi:owner-approval', { detail: { input: input, init: options, response: response, taken: false,
+      answer: function (pending) { answer = pending; } } }));
+    return answer || response;
+  }
   window.fetch = function (input, options) {
     var url;
     try { url = new URL(typeof input === 'string' ? input : (input.url || String(input)), location.href); }
@@ -219,7 +230,7 @@
         refusedUntil = 0; reads.clear(); bootRetries.clear();
         wake();
       }
-      return response;
+      return response.status === 403 && url.pathname === '/api/order/queue' ? ownerApproval(input, options, response) : response;
     });
     var budgetUrl = new URL(url.href);
     ['since', 'cursor', 'after', 'changeFence', '_', 'ts'].forEach(function (name) { budgetUrl.searchParams.delete(name); });

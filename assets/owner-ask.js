@@ -11,12 +11,13 @@
  * rien de l'attente. Refus, expiration ou demande retirée : il reçoit un refus
  * lisible et rien n'est annulé.
  *
- * Aucun global : la marque posée sur fetch empêche un double emballage.
+ * Aucun global et aucun emballage de fetch : la couche réseau de l'appareil
+ * (kiwi-env.js) annonce le refus par l'événement « kiwi:owner-approval » et ce
+ * module y répond. Chargé deux fois, seul le premier preneur répond (`taken`).
  */
 (function () {
   'use strict';
-  if (typeof window === 'undefined' || typeof window.fetch !== 'function' || window.fetch.kiwiOwnerAsk) return;
-  const nativeFetch = window.fetch;
+  if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
   const SLOTS = ['voidLine', 'editLine', 'cancelTable'];
   const POLL_MS = 2000, MAX_WAIT_MS = 10 * 60000;
   const TEXT = {
@@ -86,7 +87,7 @@
     const t = TEXT[language(merchant)];
     let res, data;
     try {
-      res = await nativeFetch('/api/approvals', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      res = await fetch('/api/approvals', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'request', merchant, kind: ask.kind, ref: ask.ref, amountCents: ask.amountCents }) });
       data = await res.json().catch(() => null);
@@ -100,7 +101,7 @@
       if (withdrawn) return;
       withdrawn = true;
       ui.button.disabled = true;
-      nativeFetch('/api/approvals', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      fetch('/api/approvals', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'withdraw', merchant, id }) }).catch(() => {});
     };
     ui.button.addEventListener('click', withdraw);
@@ -113,7 +114,7 @@
       if (withdrawn) break;
       let status = '';
       try {
-        const r = await nativeFetch('/api/approvals?merchant=' + encodeURIComponent(merchant) + '&id=' + encodeURIComponent(id), { credentials: 'same-origin', cache: 'no-store' });
+        const r = await fetch('/api/approvals?merchant=' + encodeURIComponent(merchant) + '&id=' + encodeURIComponent(id), { credentials: 'same-origin', cache: 'no-store' });
         if (r.status === 403 || r.status === 404) { if (++misses >= 3) break; continue; }   // session perdue : on s'arrête
         const d = await r.json().catch(() => null);
         status = String((d && d.approval && d.approval.status) || '');
@@ -126,9 +127,7 @@
     return { refusal: withdrawn ? t.withdrawn : t.expired };
   }
 
-  async function wrapped(input, init) {
-    const res = await nativeFetch.call(window, input, init);
-    if (res.status !== 403 || busy || !queuePost(input, init)) return res;
+  async function settle(input, init, res) {
     let data = null, body = null;
     try { data = await res.clone().json(); body = JSON.parse(init.body); } catch (_) { return res; }
     if (!data || data.error !== 'owner-approval-required' || !data.ask || !body || !body.merchant) return res;
@@ -143,11 +142,15 @@
       else if (answer.id) body.ownerApproval = answer.id;
       const again = Object.assign({}, init, { body: JSON.stringify(body) });
       delete again.signal;   // le délai de l'appelant a couru pendant l'attente du patron
-      return await nativeFetch(input, again);
+      return await fetch(input, again);   // un second refus repasse ici : `busy` le laisse filer
     } catch (_) {
       return res;
     } finally { busy = false; }
   }
-  wrapped.kiwiOwnerAsk = true;
-  window.fetch = wrapped;
+  window.addEventListener('kiwi:owner-approval', (e) => {
+    const d = e.detail;
+    if (!d || d.taken || busy || !d.response || !queuePost(d.input, d.init)) return;
+    d.taken = true;
+    d.answer(settle(d.input, d.init, d.response));
+  });
 })();

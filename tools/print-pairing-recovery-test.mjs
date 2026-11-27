@@ -24,14 +24,22 @@ await test('stalled roster response and body have a bounded deadline', async () 
   }
 });
 await test('refused and network reprints announce retry and retain the row', async () => {
-  const start = ui.indexOf("            var i18n = window.KiwiI18n, dict");
-  const end = ui.indexOf('            list.appendChild(row);',start);
-  for (const answer of [{status:0,j:null},{status:409,j:{ok:false}},null]) {
-    let removed=false; const btn={}, messages=[];
-    const row={querySelector:selector=>selector==='button'?btn:null,remove:()=>{removed=true;},appendChild:node=>messages.push(node)};
-    vm.runInNewContext(ui.slice(start,end), {row,job:{id:'fixture'},relayMerchantQS:()=>'',relayFetch:()=>answer===null?Promise.reject(Error('offline')):Promise.resolve(answer),say:s=>s,unprintedWhat:()=>'',esc:String,window:{},document:{createElement:()=>({setAttribute(){}})}});
+  /* relayJobRow (pairing-ui.js) draws one relay job with its « Réimprimer » button, for the
+     relay list and the « Tickets non imprimés » view alike: run the function itself. */
+  const start = ui.indexOf('    function relayJobRow(');
+  const end = ui.indexOf('    /* La liste du mode « recovery »', start);
+  assert.ok(start > 0 && end > start, 'relayJobRow is in pairing-ui.js');
+  for (const answer of [{status:0,j:null},{status:409,j:{ok:false}},null,{status:200,j:{ok:true}}]) {
+    let removed=false, done=0; const btn={}, messages=[];
+    const row={className:'',set innerHTML(_){},querySelector:selector=>selector==='button'?btn:selector==='[role="alert"]'?messages[0]||null:null,remove:()=>{removed=true;},appendChild:node=>messages.push(node)};
+    const ctx={relayMerchantQS:()=>'',relayFetch:()=>answer===null?Promise.reject(Error('offline')):Promise.resolve(answer),say:s=>s,unprintedWhat:()=>'',esc:String,window:{},
+      document:{createElement:(tag)=>tag==='div'?row:({setAttribute(){}})},JSON};
+    vm.createContext(ctx); vm.runInContext(ui.slice(start,end), ctx);
+    const out = ctx.relayJobRow({id:'fixture',status:'expired'}, () => { done++; });
+    assert.equal(out, row);
     btn.onclick.call(btn); await new Promise(resolve=>setImmediate(resolve));
-    assert.equal(btn.disabled,false); assert.equal(removed,false);
+    if (answer && answer.j && answer.j.ok) { assert.ok(removed && done === 1, 'an accepted reprint removes the row and reports it'); continue; }
+    assert.equal(btn.disabled,false); assert.equal(removed,false); assert.equal(done,0);
     assert.ok(messages.some(node=>node.textContent && /réessayez/.test(node.textContent)));
   }
 });

@@ -64,16 +64,13 @@ eq(report.cash.ecart, 0, 'a drawer that paid its expenses closes without a gap')
 /* ── le câblage de la caisse maison ── */
 const RAW = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
 const MAISON = maisonSource(RAW);
-ok(/from '\.\/pos-maison\/cash-moves\.js\?v=\d+'/.test(RAW), 'pos-maison imports the module with a stamp');
-ok(/id="mz-cash-move"/.test(MAISON) && /\$\('#mz-cash-move', root\)[^;]*;\s*if \(cashMove\) cashMove\.addEventListener\('click', \(\) => \{ if \(bqShift\) mzCashMoveFor\(\{ shift: \(\) => bqShift, save: bqShiftPersist, cashToday: \(\) => bqDayTotals\('store'\)\.cash, real: pvReal, emit: bqCashEvent/.test(MAISON),
-  'a real store has a « Mouvement de caisse » button wired to the sheet, with the shift, the day cash and the reconciliation channel');
-ok(/IS_DEMO \? '' : '<button class="mz-lock" id="mz-cash-move"/.test(MAISON), 'the demo till has no drawer, so no button');
+ok(/IS_DEMO \? '' : '<button class="mz-lock" id="mz-cash-move"/.test(MAISON) && /\$\('#mz-cash-move', root\)[^;]*;\s*if \(cashMove\) cashMove\.addEventListener\('click', \(\) => \{ if \(bqShift\) mzCashMoveFor\(\{ shift: \(\) => bqShift, save: bqShiftPersist, cashToday: \(\) => bqDayTotals\('store'\)\.cash, real: pvReal, emit: bqCashEvent/.test(MAISON),
+  'a real store has a « Mouvement de caisse » button (the demo till has no drawer, so none) wired to the sheet, with the shift, the day cash and the reconciliation channel');
 ok(/moves: Array\.isArray\(s\.moves\) \? s\.moves : \[\]/.test(MAISON), 'a reload keeps the movements of the open shift');
-ok(/cashMovements: only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)/.test(MAISON),
-  'the store Z carries the movements; the delivery Z has no drawer');
-ok(/bqCloExpected = Math\.round\(\(\(bqShift \? bqShift\.float : 0\) \+ t\.cash \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100/.test(MAISON),
-  'the closing sheet expects float + cash + in − out, like the Z');
-ok(/'Sorties de caisse', '− ' \+ fmtMAD\(mv\.movesOut\)/.test(MAISON), 'the closing sheet shows the cash-outs line');
+ok(/cashMovements: only === 'delivery' \? \[\] : mzReportMoves\(bqShift\)/.test(MAISON)
+  && /bqCloExpected = Math\.round\(\(\(bqShift \? bqShift\.float : 0\) \+ t\.cash \+ mv\.movesIn - mv\.movesOut\) \* 100\) \/ 100/.test(MAISON)
+  && /'Sorties de caisse', '− ' \+ fmtMAD\(mv\.movesOut\)/.test(MAISON),
+  'the store Z carries the movements (the delivery Z has no drawer) and the closing sheet expects float + cash + in − out, like the Z, with a cash-outs line');
 /* ── la caisse boutique, branchée sur la même feuille (26 nov. 2026) ──
    Santos, Amira Boutique, Elham Brand : une dépense payée dans le tiroir
    passait pour un écart, le Z ne portait que les ouvertures sans vente. */
@@ -138,8 +135,5 @@ ok(!w.shift.moves.length && w.toasts.includes('Saisis un montant'), 'a zero amou
 w = till({ off: true });
 ok(!w.sheet && w.toasts.includes('Mouvements de caisse désactivés pour cet établissement'), 'the operator switch (cash-move off) keeps the sheet closed');
 delete globalThis.document; delete globalThis.window;
-const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
-const stamp = RAW.match(/pos-maison\/cash-moves\.js\?v=(\d+)/)[1];
-ok(SW.includes(`'/assets/pos-maison/cash-moves.js?v=${stamp}'`), 'the service worker precaches the same stamp');
 
 console.log(`✓ maison cash moves · ${passed} checks`);

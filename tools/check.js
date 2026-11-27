@@ -2166,7 +2166,7 @@ section('Whole-project regressions');
        /api/print/jobs et le pont du comptoir vient le chercher. */
     'print-relay-test.mjs',
     'bridge-rust-parity-test.mjs',
-    'android-print-bridge-test.mjs', 'android-bridge-jvm-test.mjs', 'print-watch-test.mjs', 'printer-relay-banner-test.mjs',
+    'android-print-bridge-test.mjs', 'android-bridge-wiring-test.mjs', 'android-bridge-jvm-test.mjs', 'print-watch-test.mjs', 'printer-relay-banner-test.mjs',
     'printer-page-test.mjs',
     /* beaucoup de comptoirs tournent encore sur Windows 7 : le binaire du pont
        et ses appels PowerShell doivent y démarrer. */

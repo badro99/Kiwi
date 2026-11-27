@@ -23,13 +23,17 @@ healthy.i18n.en = { name: 'The healthy one', desc: 'Fresh bowl', h: M.hash(healt
 const tajine = { id: 't1', name: 'Tajine poulet', desc: '', i18n: { en: { name: 'Chicken tagine', m: 1 } } };
 const cat = { id: 'c1', name: 'Boissons', i18n: {} };
 cat.i18n.en = { name: 'Drinks', h: M.hash(cat.name, undefined) };
-M.index({ cats: [cat], items: [healthy, tajine] });
+const handCat = { id: 'c2', name: 'Desserts maison', i18n: { en: { name: 'Homemade desserts', m: 1 } } };
+M.index({ cats: [cat, handCat], items: [healthy, tajine] });
 eq(M.fresh(healthy, 'en'), true, 'the machine translation is fresh, so name() would show it');
 eq(M.dish(healthy, 'en'), 'Le healthy', 'a machine-translated dish keeps the owner\'s name');
 eq(M.dish('Le healthy', 'en', 'h1'), 'Le healthy', 'and so does an order line that only carries the label');
 eq(M.dish(tajine, 'en'), 'Chicken tagine', 'a translation the owner wrote by hand is shown');
 eq(M.dish('Tajine poulet', 'en'), 'Chicken tagine', 'also from the line label');
-eq(M.t('Boissons', 'en'), 'Drinks', 'categories keep their translation');
+/* d5f925c3b (Browse, 26 Nov 2026): a category is named as the owner wrote it;
+   only a translation written by hand replaces it, never a machine one. */
+eq(M.t('Boissons', 'en'), 'Boissons', 'a machine-translated category keeps the owner\'s name');
+eq(M.t('Desserts maison', 'en'), 'Homemade desserts', 'a category translated by hand is shown');
 /* Corriger seulement la description ne fait pas du nom de la machine un nom écrit à la main (audit du 26 nov.). */
 {
   const state = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog/state.js'), 'utf8');
@@ -42,4 +46,4 @@ eq(M.t('Boissons', 'en'), 'Drinks', 'categories keep their translation');
   eq(item.i18n.en.name === 'The healthy one' && item.i18n.en.m === 1, false, 'the machine name is not stamped as hand-written');
   eq(M.dish(item, 'en'), 'Le healthy', 'and screens keep the owner\'s name');
 }
-console.log(`✓ menu-dish-name-test : ${checks} contrôles (nom de plat : main du patron seulement ; catégories traduites)`);
+console.log(`✓ menu-dish-name-test : ${checks} contrôles (nom de plat : main du patron seulement, catégories aussi)`);

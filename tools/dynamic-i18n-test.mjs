@@ -23,7 +23,7 @@ const BASE = path.join(ROOT, 'tools/dynamic-i18n-baseline.json');
 // ui(key) reads UI_I18N (menu workspace, menu scan; menu-i18n-test proves every
 // key has EN/AR); ozonLabel(fr) is the Ozon module's FR/EN/AR table; dlvT(key) is the
 // caisse delivery module's FR/EN/AR table (DLV_T, assets/caisse/delivery.js).
-const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel|kkt|kt|dlvT)$/; // kkt, kt : KiwiKit.t par clé (caisse-kitchen.js, pos-boutique/me-menu.js)
+const translated = /^(?:t|tr|dt|mt|ui|translate|translateCore|i18n|L|text|formatMessage|employeePick|ozonLabel|kkt|kt|dlvT|counterTr)$/; // counterTr : KiwiCaisseLang.tr (caisse/counter-flow.js) ; kkt, kt : KiwiKit.t par clé (caisse-kitchen.js, pos-boutique/me-menu.js)
 // An icon helper takes a Material Symbols name (« storefront », « lock »), never text a person reads.
 const iconCall = /^(?:icon|materialIcon|itSvg|logoHTML)$/; // logoHTML(platformId) draws a delivery platform's logo (assets/delivery.js)
 const visibleKeys = /^(?:title|desc|description|message|body|content|html|label|text|confirmText|cancelText|placeholder)$/;

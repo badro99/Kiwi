@@ -36,7 +36,7 @@ const between = (a, b) => { const i = src.indexOf(a); return i < 0 ? '' : src.sl
 
 /* The real helpers, run as they are. */
 const dictSrc = between('const _BQX_PF = {', '\nfunction _bqxPfLang()') ;
-function load(lang) {
+function boot(lang) {
   const f = new Function('window', `
     const _mad = (n) => 'R' + n;
     const _mad2 = (n) => 'D' + n.toFixed(2);
@@ -69,7 +69,7 @@ function fakeForm(v) {
 
 console.log('money · what the merchant types');
 ok('« 149,90 », « 149.90 », « 1 890 », « 29,9 MAD » and Arabic-Indic digits read to the centime', () => {
-  const { _bqxMoneyIn } = load('fr');
+  const { _bqxMoneyIn } = boot('fr');
   assert.equal(_bqxMoneyIn('149,90').n, 149.9);
   assert.equal(_bqxMoneyIn('149.90').n, 149.9);
   assert.equal(_bqxMoneyIn('1 890').n, 1890);
@@ -79,7 +79,7 @@ ok('« 149,90 », « 149.90 », « 1 890 », « 29,9 MAD » and Arabic-Indic dig
   assert.equal(_bqxMoneyIn('0').n, 0);
 });
 ok('an ambiguous or malformed amount is refused, never guessed', () => {
-  const { _bqxMoneyIn } = load('fr');
+  const { _bqxMoneyIn } = boot('fr');
   assert.equal(_bqxMoneyIn('').empty, true);
   assert.equal(_bqxMoneyIn('1.890').bad, true, '1.890 could be 1 890 or 1,89');
   assert.equal(_bqxMoneyIn('1,890').bad, true);
@@ -87,14 +87,14 @@ ok('an ambiguous or malformed amount is refused, never guessed', () => {
   assert.equal(_bqxMoneyIn('-5').bad, true);
 });
 ok('an existing price is shown back to the centime, in the language’s decimal mark', () => {
-  assert.equal(load('fr')._bqxMoneyVal(29.9), '29,90');
-  assert.equal(load('ar')._bqxMoneyVal(29.9), '29,90');
-  assert.equal(load('en')._bqxMoneyVal(29.9), '29.90');
-  assert.equal(load('fr')._bqxMoneyVal(1890), '1890');
-  assert.equal(load('fr')._bqxMoneyVal(0), '', 'a missing price is an empty field, not « 0 »');
+  assert.equal(boot('fr')._bqxMoneyVal(29.9), '29,90');
+  assert.equal(boot('ar')._bqxMoneyVal(29.9), '29,90');
+  assert.equal(boot('en')._bqxMoneyVal(29.9), '29.90');
+  assert.equal(boot('fr')._bqxMoneyVal(1890), '1890');
+  assert.equal(boot('fr')._bqxMoneyVal(0), '', 'a missing price is an empty field, not « 0 »');
 });
 ok('displayed prices keep their centimes and stay whole when whole', () => {
-  const { _bqxPrice } = load('fr');
+  const { _bqxPrice } = boot('fr');
   assert.equal(_bqxPrice(29.9), 'D29.90');
   assert.equal(_bqxPrice(1890), 'R1890');
   assert.equal(_bqxPrice(0.1 + 0.2), 'D0.30');
@@ -102,12 +102,12 @@ ok('displayed prices keep their centimes and stay whole when whole', () => {
 
 console.log('the form · read and checked');
 ok('a valid form returns clean values, centimes included', () => {
-  const { _bqxPfRead } = load('fr');
+  const { _bqxPfRead } = boot('fr');
   const f = _bqxPfRead(fakeForm({ name: '  Jean 501 ', price: '29,90', cost: '12,5', cat: 'c1', kind: 'taille' }));
   assert.deepEqual(f, { name: 'Jean 501', priceMAD: 29.9, cost: 12.5, categoryId: 'c1', kind: 'taille' });
 });
 ok('an empty name, an empty or zero price and a malformed cost are each written under their field', () => {
-  const { _bqxPfRead, _BQX_PF } = load('fr');
+  const { _bqxPfRead, _BQX_PF } = boot('fr');
   const b = fakeForm({ name: ' ', price: '', cost: '12abc' });
   assert.equal(_bqxPfRead(b), null);
   assert.equal(b.nodes['[data-bqx-pf-err="name"]'].hidden, false);
@@ -122,7 +122,7 @@ ok('an empty name, an empty or zero price and a malformed cost are each written 
   assert.equal(bad.nodes['[data-bqx-pf-err="price"]'].textContent, _BQX_PF.fr.moneyBad);
 });
 ok('the purchase cost is required: empty or 0 is refused and says why (owner, 26 Nov 2026)', () => {
-  const { _bqxPfRead, _BQX_PF } = load('fr');
+  const { _bqxPfRead, _BQX_PF } = boot('fr');
   for (const cost of ['', '0']) {
     const b = fakeForm({ name: 'Bougie', price: '45', cost });
     assert.equal(_bqxPfRead(b), null, 'cost ' + JSON.stringify(cost));
@@ -132,7 +132,7 @@ ok('the purchase cost is required: empty or 0 is refused and says why (owner, 26
   assert.ok(_BQX_PF.en.costErr && _BQX_PF.ar.costErr, 'said in English and Arabic too');
 });
 ok('a kind the trade does not list is left alone, not rewritten to the first card', () => {
-  const { _bqxPfRead } = load('fr');
+  const { _bqxPfRead } = boot('fr');
   const f = _bqxPfRead(fakeForm({ name: 'Bougie', price: '45', cost: '20' }));
   assert.equal(f.kind, undefined);
   assert.match(between("handlers['bqx-new-save']", '/* edit / delete product */'), /kind: f\.kind \|\| _bqxCopy\(\)\.defaultKind,/);
@@ -168,7 +168,7 @@ ok('the photo hint says where a photo shows, and a video is offered only where o
 
 console.log('three languages, one voice');
 ok('FR, EN and AR carry the same keys, and no em dash or takings talk', () => {
-  const { _BQX_PF } = load('fr');
+  const { _BQX_PF } = boot('fr');
   const shape = (o) => Object.keys(o).sort().map((k) => (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) ? `${k}{${shape(o[k])}}` : k)).join(',');
   assert.equal(shape(_BQX_PF.en), shape(_BQX_PF.fr));
   assert.equal(shape(_BQX_PF.ar), shape(_BQX_PF.fr));

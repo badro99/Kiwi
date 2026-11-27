@@ -134,8 +134,9 @@ const save = async (name, im) => { if (!shots) return; const d = await page.eval
     return { imgs: window.decode(bytes), q: window.textBytes(bytes).filter((x) => x === 0x3F).length };
   });
   check(r.q === 0, 'kitchen ticket: no « ? » anywhere');
-  /* 19 nov. 2026 (03a1123c9) : la note sous un plat s'imprime en taille normale, derrière « > », plus en double hauteur. */
-  check(r.imgs.length === 2 && r.imgs[0].h === 48 && r.imgs[1].h === 24, `the double-size dish name is two bands tall, its note one band (${r.imgs.map((i) => i.h).join(', ')})`);
+  /* 26 nov. 2026 (f95fad8eb, Jon's Burgers) : la note sous un plat repasse en double hauteur, derrière « > »,
+     pour que la cuisine la lise ; le plat reste en double taille. Les deux tiennent donc deux bandes. */
+  check(r.imgs.length === 2 && r.imgs[0].h === 48 && r.imgs[1].h === 48, `the double-size dish name and its double-height note are both two bands tall (${r.imgs.map((i) => i.h).join(', ')})`);
   await save('kitchen-note-ar', r.imgs[1]);
   check(r.imgs.every((i) => i.ink > 60), 'both lines carry real ink, not a blank image');
   check(r.imgs[0].last > 400, 'the Arabic dish name starts at the right edge');
