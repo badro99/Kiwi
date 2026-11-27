@@ -68,24 +68,23 @@ function over(dst, W, src, ox, oy) {
 }
 
 /* The pass logo when the shop has one: « kiwi × SHOP » inside Apple's 160 × 50 pt
-   box, the Kiwi wordmark, a fine mint cross, the shop's mark in paper white. */
+   box, the Kiwi wordmark, a fading mint hairline, the shop's mark in paper white. */
 async function lockupLogo(merchant, s) {
   const markPng = await shopTile(merchant);
   if (!markPng) return null;
   return cached(`lockup/${await hex(merchant.logoUrl)}@${s}`, async () => {
     const kiwi = await decodePng(kiwiArt('logo@3x.png')), mark = await decodePng(markPng);
     if (!kiwi || !mark) return null;
-    const H = 50 * s, kh = 30 * s, kw = Math.round(kiwi.w * kh / kiwi.h), gap = 9 * s, c = 7 * s;
+    const H = 50 * s, kh = 30 * s, kw = Math.round(kiwi.w * kh / kiwi.h), gap = 11 * s, c = s;
     const room = 160 * s - kw - 2 * gap - c, k = Math.min(28 * s / mark.h, room / mark.w);
     const mw = Math.max(1, Math.round(mark.w * k)), mh = Math.max(1, Math.round(mark.h * k)), W = kw + 2 * gap + c + mw;
     const out = new Uint8Array(W * H * 4);
     over(out, W, fit(kiwi, kw, kh), 0, Math.round((H - kh) / 2));
-    const cx = kw + gap + c / 2, cy = H / 2, t = 1.3 * s;
-    for (let y = Math.floor(cy - c / 2); y <= Math.ceil(cy + c / 2); y++) for (let x = Math.floor(cx - c / 2); x <= Math.ceil(cx + c / 2); x++) {
-      const dx = x + 0.5 - cx, dy = y + 0.5 - cy;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) > c / 2) continue;
-      const d = Math.min(Math.abs(dx - dy), Math.abs(dx + dy)) / Math.SQRT2, a = Math.max(0, Math.min(1, t / 2 + 0.5 - d)) * 0.9;
-      if (a) over(out, W, { w: 1, h: 1, rgba: new Uint8Array([125, 242, 176, Math.round(a * 255)]) }, x, y);
+    /* the hairline: one point wide, mint at its middle, fading to nothing at both ends */
+    const lx = kw + gap, lh = 34 * s, top = Math.round((H - lh) / 2);
+    for (let y = 0; y < lh; y++) {
+      const a = 0.8 * Math.max(0, 1 - Math.abs(y + 0.5 - lh / 2) / (lh / 2));
+      for (let x = 0; x < c; x++) if (a) over(out, W, { w: 1, h: 1, rgba: new Uint8Array([125, 242, 176, Math.round(a * 255)]) }, lx + x, top + y);
     }
     over(out, W, fit(mark, mw, mh), kw + 2 * gap + c, Math.round((H - mh) / 2));
     return encodePng(W, H, out);

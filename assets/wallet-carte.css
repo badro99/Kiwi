@@ -38,12 +38,13 @@ em, i { font-style: normal; }
 .wc-card.is-credited .wc-card-sheen { animation: wc-sheen 1100ms ease-out 200ms; }
 @keyframes wc-sheen { to { transform: translateX(120%); } }
 
-/* Kiwi × the shop: the wordmark, a fine mint cross, then the shop's own mark in
+/* Kiwi × the shop: the wordmark, a fading mint hairline, then the shop's own mark in
    the same paper white (its logo when it has one, else its initial on a paper tile
    beside its name). */
-.wc-lockup { display: flex; align-items: center; gap: 14px; min-height: 40px; margin-bottom: 26px; }
+.wc-lockup { display: flex; align-items: center; gap: 16px; min-height: 40px; margin-bottom: 26px; }
 .wc-lockup-kiwi { display: block; width: auto; height: 26px; flex: none; }
-.wc-lockup-x { flex: none; font-size: 17px; font-weight: 300; line-height: 1; color: var(--c-label); opacity: 0.85; }
+/* A hairline, not a glyph: mint at its heart, fading out at both ends. */
+.wc-lockup-x { flex: none; width: 1px; height: 34px; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--c-label) 80%, transparent) 50%, transparent); }
 .wc-tile { position: relative; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--paper); display: grid; place-items: center; overflow: hidden; box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(10, 15, 13, 0.06); }
 .wc-tile b { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; color: #053B2C; }
 .wc-lockup.has-logo .wc-tile { width: auto; height: auto; background: none; box-shadow: none; border-radius: 0; overflow: visible; }

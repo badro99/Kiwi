@@ -78,7 +78,7 @@
       '.kw-wd input[type=text]{height:40px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.14));padding:0 12px;font:inherit;font-size:14px;background:var(--paper,#F7F5F0);color:inherit}',
       '.kw-wd input[type=color]{width:100%;height:40px;border-radius:10px;border:1px solid var(--line,rgba(10,15,13,.14));padding:3px;background:transparent}',
       '.kw-wd-card{border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 14px 30px -18px rgba(10,15,13,.55)}',
-      '.kw-wd-card .lk{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}.kw-wd-card .lk>img{height:22px;width:auto}.kw-wd-card .lk .x{color:#7DF2B0;font-weight:300;font-size:14px;opacity:.85}.kw-wd-card .tile{position:relative;width:32px;height:32px;border-radius:10px;background:#F7F5F0;display:grid;place-items:center;overflow:hidden;flex:none}.kw-wd-card .tile b{color:#053B2C;font-size:14px}.kw-wd-card .lk.has-logo .tile{width:auto;height:auto;background:none;border-radius:0;overflow:visible}.kw-wd-card .lk.has-logo .tile img{display:block;height:24px;width:auto;max-width:120px}.kw-wd-card .lk.has-logo .n{display:none}.kw-wd-card .lk .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.kw-wd-card .lk{display:flex;align-items:center;gap:12px;font-weight:600;font-size:15px}.kw-wd-card .lk>img{height:22px;width:auto}.kw-wd-card .lk .x{flex:none;width:1px;height:26px;background:linear-gradient(to bottom,transparent,rgba(125,242,176,.8) 50%,transparent)}.kw-wd-card .tile{position:relative;width:32px;height:32px;border-radius:10px;background:#F7F5F0;display:grid;place-items:center;overflow:hidden;flex:none}.kw-wd-card .tile b{color:#053B2C;font-size:14px}.kw-wd-card .lk.has-logo .tile{width:auto;height:auto;background:none;border-radius:0;overflow:visible}.kw-wd-card .lk.has-logo .tile img{display:block;height:24px;width:auto;max-width:120px}.kw-wd-card .lk.has-logo .n{display:none}.kw-wd-card .lk .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.kw-wd-card .h{display:flex;justify-content:space-between;align-items:flex-start;font-weight:600;font-size:14px}.kw-wd-card .l{display:block;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}',
       '.kw-wd-dots{display:grid;grid-template-columns:repeat(var(--n,5),1fr);gap:6px}.kw-wd-dots i{aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 2px var(--ink-c);opacity:.35}.kw-wd-dots i.on{background:var(--ink-c);opacity:1;box-shadow:none}',
       '.kw-wd-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}',
@@ -98,7 +98,7 @@
     card.textContent = '';
     /* Kiwi × the shop, as on the customer's card: wordmark, mint cross, the shop's tile (logo, else its initial). */
     var lock = el('div', 'lk'), brand = el('img'); brand.src = '/assets/kiwi-newlogo-inverse.svg'; brand.alt = 'Kiwi'; lock.appendChild(brand);
-    lock.appendChild(el('span', 'x', '×'));
+    lock.appendChild(el('span', 'x'));
     var tile = el('span', 'tile'), mono = el('b', '', String(doc.name || '').trim().charAt(0).toUpperCase()); tile.appendChild(mono);
     var slug = merchant();
     if (slug) { var lg = el('img'); lg.alt = ''; lg.onload = function () { mono.remove(); lock.classList.add('has-logo'); }; lg.onerror = function () { lg.remove(); }; lg.src = '/api/wallet/strip/logo-' + encodeURIComponent(slug) + '.png'; tile.appendChild(lg); }
