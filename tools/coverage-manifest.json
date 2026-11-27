@@ -614,6 +614,21 @@
       "state": "guest menu"
     },
     {
+      "id": "carte",
+      "shells": [
+        "carte.html"
+      ],
+      "locales": [
+        "fr",
+        "en",
+        "ar"
+      ],
+      "viewports": [
+        "phone"
+      ],
+      "state": "customer loyalty card (stand sign-up, receipt claim, web card)"
+    },
+    {
       "id": "booking",
       "shells": [
         "booking.html"

@@ -324,6 +324,7 @@ for (const accepted of [true, false]) {
   });
   load(c,'assets/pos-boutique.js',['bqMoney','linePromo','promoLabelForTicket','checkout']);
   load(c,'assets/pos-boutique/receipt-doc.js',['receiptPrinterReady','receiptDocInput']);
+  vm.runInContext(fs.readFileSync('assets/wallet-link.js','utf8').replace('export function','function')+'\nglobalThis.walletCard=walletCard;',c); // the import the harness strips
   load(c,'assets/pos-boutique/checkout.js',['printReceiptNow']);
   c.$=(selector,...args)=>selector==='#bq-today'?{textContent:''}:w.$(selector,...args);
   await payActualTicket(w, 22.45).then(async outcome => {

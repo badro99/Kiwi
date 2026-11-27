@@ -103,6 +103,7 @@ async function signUp(page, name, phone) {
 }
 
 await tests.run('fr · stand: a new number gets its card, the same number again is sent to the till', async (t) => {
+  // coverage: surface=carte locale=fr viewport=phone
   const page = await open(t, '/carte/pasta-corner?lang=fr');
   t.step('the button waits for consent; the first name lands on the card as it is typed');
   await page.waitForSelector('#wc-panel form');

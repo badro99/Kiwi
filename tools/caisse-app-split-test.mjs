@@ -66,7 +66,8 @@ const effectiveOrder = [...effectiveHTML.matchAll(/src="([^"?]+)/g)].map(m => m[
 // Inventory is lazy in browsers; for synchronous source tests load it with the
 // declarations and preserve the same expected file order.
 const lazyFiles = lazyURLs.map(url => url.split('?')[0]);
-assert.deepEqual(effectiveOrder.filter(f => !lazyFiles.includes(f)), ['assets/caisse-strings.js', ...LIVE.filter(f => !lazyFiles.includes(f))]);
+// Two optional layers ahead of the core, outside its source: the keyed copy and the Wallet card scan (wallet-till.js).
+assert.deepEqual(effectiveOrder.filter(f => !lazyFiles.includes(f)), ['assets/caisse-strings.js', 'assets/wallet-till.js', ...LIVE.filter(f => !lazyFiles.includes(f))]);
 precached(new URL(registry[0], 'https://kiwi.test/'));
 const copyWindow = {}; vm.runInNewContext(read('assets/caisse-strings.js'), { window: copyWindow });
 assert.deepEqual(Object.keys(copyWindow), ['KiwiCaisseStrings'], 'copy registry installs only the optional table');

@@ -35,7 +35,6 @@ async function unlock(page) {
 
 try {
   await h.S.run('wallet card settings in the dashboard · fr · desktop', async (t) => {
-    // coverage: surface=dashboard locale=fr viewport=desktop
     const posts = [];
     let rev = 4;
     const program = { model: 'visit', visit: { target: 8, reward: 'Café' } };
@@ -68,6 +67,7 @@ try {
     page.on('pageerror', (e) => errors.push(e.message));
 
     t.step('open the real dashboard and the loyalty programme from the customer directory');
+    // coverage: surface=dashboard locale=fr viewport=desktop
     await page.goto(h.base + '/dashboard.html', { waitUntil: 'load', timeout: 60000 });
     await unlock(page);
     await page.waitForFunction(() => window.KiwiClients?.bookId?.() === 'matrix-real' && window.KiwiEnv?.isReal?.());

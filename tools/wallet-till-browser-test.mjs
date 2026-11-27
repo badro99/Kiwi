@@ -27,7 +27,6 @@ const shown = (page, sel) => page.evaluate((s) => { const e = document.querySele
 
 try {
   await h.S.run('wallet card at the restaurant till · fr · tablet', async (t) => {
-    // coverage: surface=caisse-restaurant locale=fr viewport=tablet
     const tokens = [];
     const clients = [{ id: 'recovery', name: 'Nora Recovery', stamps: 3, updated_ts: 1 }, { id: 'accepted', name: 'Sami Accepted', stamps: 7, updated_ts: 1 }];
     const program = { model: 'visit', visit: { target: 10, reward: 'Café' } };
@@ -53,6 +52,7 @@ try {
     page.on('pageerror', (e) => errors.push(e.message));
 
     t.step('boot the paired till and open a takeaway note');
+    // coverage: surface=caisse-restaurant locale=fr viewport=tablet
     await page.goto(h.base + '/kiwi-caisse.html', { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => {
       const screen = document.querySelector('#clockin-screen'), pin = document.querySelector('#pin-screen');
