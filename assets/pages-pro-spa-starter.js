@@ -954,7 +954,7 @@
   /* Un canal de livraison (Glovo, livraison maison…) se filtre comme un moyen :
      « ch-glovo ». La liste vient de qui les déclare (assets/delivery.js répond à
      l'événement), sans que cette page lise un global de plus (27 nov. 2026). */
-  const chanKey = (s) => (s && s.channel ? 'ch-' + String(s.channel).toLowerCase() : '');
+  const chanKey = (s) => { const c = String((s && s.channel) || '').toLowerCase(); return /^[a-z]{2,24}$/.test(c) ? 'ch-' + c : ''; };   /* le format d'un id de canal, rien d'autre */
   const deliveryChannels = () => { const detail = { channels: [], isChannel: null, labelOf: null }; try { document.dispatchEvent(new CustomEvent('kiwi-sales-channels', { detail })); } catch (_) {} return detail; };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('kiwi-delivery-change', () => { if (transactionsOnScreen()) renderRealTransactions('transactions', STARTERS.transactions); });
   const salesMethodHit = (s, chosen) => !chosen.length || chosen.includes(chanKey(s)) || salesMethodKeys(s).some((k) => chosen.includes(k));
@@ -1143,12 +1143,12 @@
       cash: L.cash, card: L.card, delivery: L.delivery,
     }; const dch = deliveryChannels(), vt = String(KV?.getVenueType?.() || vd.type || vd.subtype || '').toLowerCase(), resto = ['restaurant', 'cafe', 'café', 'restauration'].includes(vt) || dch.channels.length > 0;
     /* Au restaurant, « Livraison » se dit par canal : un filtre par option allumée (Glovo, Livraison maison…), plus un canal vu ce jour-là ; aucun s'il n'y a pas de livraison. */
-    const chans = new Map(dch.channels.map((c) => ['ch-' + c.id, c.name])); daySales.forEach((s) => { const k = chanKey(s); if (k && !chans.has(k) && dch.isChannel && dch.isChannel(s.channel)) chans.set(k, (dch.labelOf && dch.labelOf(s.channel)) || s.channel); }); selectedMethods.filter((m) => m.startsWith('ch-') && !chans.has(m)).forEach((m) => chans.set(m, (dch.labelOf && dch.labelOf(m.slice(3))) || m.slice(3)));
+    const chans = new Map(dch.channels.filter((c) => c && /^[a-z]{2,24}$/.test(String(c.id))).map((c) => ['ch-' + c.id, String(c.name || c.id)])); daySales.forEach((s) => { const k = chanKey(s); if (k && !chans.has(k) && dch.isChannel && dch.isChannel(s.channel)) chans.set(k, (dch.labelOf && dch.labelOf(s.channel)) || s.channel); }); selectedMethods.filter((m) => m.startsWith('ch-') && !chans.has(m)).forEach((m) => chans.set(m, (dch.labelOf && dch.labelOf(m.slice(3))) || m.slice(3)));
     chans.forEach((name, k) => { methodLabels[k] = name; });
     const seenMethods = daySales.filter((s) => s.kind !== 'refund').flatMap(salesMethodKeys).filter(salesMethodOk).filter((m) => !(resto && m === 'platform'));   /* Santos, 30/10 : 2 virements invisibles sous tous les filtres ; « platform » se lit par canal */
     const methodButtons = ['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods.filter((m) => !m.startsWith('ch-'))].filter((m) => (apart || resto ? ['cash', 'card'] : ['cash', 'card', 'delivery']).includes(m) || seenMethods.includes(m) || selectedMethods.includes(m))), ...chans.keys()].map((method) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
-      return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method] || L[method] || method)}</button>`;
+      return `<button data-activation=write class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${escS(method)}" aria-pressed="${active}">${escS(methodLabels[method] || L[method] || method)}</button>`;
     }).join('');
     const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(salesAmountFor(s, selectedMethods) * 100)), 0) / 100;
     const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(salesAmountFor(s, selectedMethods) * 100)), 0) / 100;

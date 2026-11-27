@@ -236,6 +236,12 @@ delivOn = []; vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]", ctx)
 check('a channel turned off since keeps its filter while one of its sales is on the page', () => {
   assert.ok(html.includes('data-arg="ch-glovo"')); assert.ok(html.includes('>Glovo</button>'));
 });
+sales = sales.concat([{ id: 'r4', amount: 9, ts: now, method: 'cash', channel: 'x"><img src=x onerror=alert(1)>', lines: [] }, { id: 'r5', amount: 8, ts: now, method: 'cash', channel: 'constructor', lines: [] }]);
+document.dispatchEvent = (e) => { if (e.type !== 'kiwi-sales-channels') return; e.detail.channels.push({ id: 'bad"id', name: 'X' }); e.detail.isChannel = () => true; e.detail.labelOf = () => ''; };
+render();
+check('a channel name that is not an id never becomes a filter or reaches the markup', () => {
+  assert.ok(!html.includes('<img')); assert.ok(!html.includes('bad"id')); assert.ok(!html.includes('data-arg="ch-x'));
+});
 delete ctx.window.KiwiVenue;
 vm.runInContext("salesMethodsByMerchant[auditMerchant()]=[]", ctx);
 tenant = 'empty-merchant'; sales = []; refunds = []; render(); await drain();

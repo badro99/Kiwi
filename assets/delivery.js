@@ -108,7 +108,10 @@
 
   /* ── les options allumées ── */
   function platformOf(id, d) {
-    const p = (d || doc()).platforms[id];
+    const all = (d || doc()).platforms;
+    /* Un id de plateforme, jamais une clé héritée (« constructor ») : la liste des filtres de ventes s'en sert. */
+    if (!isId(id) || !all || !Object.prototype.hasOwnProperty.call(all, id)) return null;
+    const p = all[id];
     if (!p || p.deleted) return null;
     const pre = PRESETS[id];
     return {

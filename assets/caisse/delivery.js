@@ -487,7 +487,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=12';
+  s.src = 'assets/delivery.js?v=13';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

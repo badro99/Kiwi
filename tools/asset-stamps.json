@@ -344,8 +344,8 @@
     "sha": "a9bbfc0cec73aa0a"
   },
   "assets/caisse/delivery.js": {
-    "v": "15",
-    "sha": "5e67b9efa79dbe12"
+    "v": "16",
+    "sha": "4eaba0ae6e216705"
   },
   "assets/caisse/discounts.js": {
     "v": "8",
@@ -612,8 +612,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "12",
-    "sha": "f19db5027dd93594"
+    "v": "13",
+    "sha": "243374359b46859c"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -1588,8 +1588,8 @@
     "sha": "019b0b381221ac8c"
   },
   "assets/pages-pro-spa-starter.js": {
-    "v": "12",
-    "sha": "c1faa76e9dddc400"
+    "v": "13",
+    "sha": "56f48eebcedb9bf1"
   },
   "assets/pages-pro.css": {
     "v": "7",
@@ -1696,8 +1696,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "372",
-    "sha": "3c8f90f0ca703a96"
+    "v": "373",
+    "sha": "675ef5b85582b1fa"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
