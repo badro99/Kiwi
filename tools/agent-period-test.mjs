@@ -177,6 +177,26 @@ for (const [q, L, lead] of [
   ok(lead.test(r.text) && !/rather simulate nothing|plutôt que d'inventer|أفضّل ألّا أحاكي/.test(r.text), `« ${q} » names what it cannot answer yet → {${r.route}} ${r.text.slice(0, 110)}`);
 }
 
+// A ranking reads what it names (27 Nov): « the best selling drinks » ranked
+// the tacos first; « phone accessories » listed the dishes; « pendant le
+// ramadan » ranked everything without a word about the season.
+{
+  const drinks = ask('les boissons les plus vendues cette semaine', 'fr');
+  ok(/Coca 33cl|Thé à la menthe/.test(drinks.text.slice(0, 80)) && !/Tacos XL/.test(drinks.text), `drinks ranking holds only drinks → ${drinks.text.slice(0, 120)}`);
+  const en = ask('the best selling drinks this week', 'en');
+  ok(!/Tacos XL/.test(en.text), `the best selling drinks are drinks → ${en.text.slice(0, 120)}`);
+  const ph = ask('Show me the three slowest selling phone accessories this month.', 'en');
+  ok(/phone accessories/.test(ph.text) && /Nothing called/.test(ph.text), `phone accessories are not on a burger menu → ${ph.text.slice(0, 120)}`);
+  const rm = ask('quel est le plat le plus vendu pendant le ramadan', 'fr');
+  ok(/ramadan/i.test(rm.text), `a ranking « pendant le ramadan » says which window it read → ${rm.text.slice(0, 140)}`);
+  const rd = ask('شنو أكثر طبق كيتباع عندي فرمضان؟', 'ar');
+  ok(/رمضان/.test(rd.text) && !/ما كاين حتى حاجة سميتها/.test(rd.text), `« فرمضان » gets the season note, « عندي » names no product → ${rd.text.slice(0, 140)}`);
+  const bad = ask('le produit le plus vendu', 'fr');
+  ok(!/Rien ne s’appelle/.test(bad.text), `« le produit le plus vendu » names no product → ${bad.text.slice(0, 100)}`);
+  const any = ask('le plat le plus vendu cette semaine', 'fr');
+  ok(/Tacos XL/.test(any.text) && !/Rien ne s’appelle/.test(any.text), `a plain ranking is unchanged → ${any.text.slice(0, 100)}`);
+}
+
 // 2. Not a single period: the honest refusal, or the route that owns it.
 for (const [q, L] of [
   ['compare les ventes de cette semaine avec la semaine dernière', 'fr'],

@@ -458,6 +458,20 @@
       }
       return { text: t.prodNoCarte, open: open1(L, 'pMenu', 'nav-menu') };
     }
+    /* A ranking reads what it names (27 Nov 2026): « the best selling
+       drinks » ranked the tacos first. A family or category of the menu
+       narrows the rows; a thing the menu does not hold is said first. */
+    var lead = '', ask = String((spec && spec.raw) || '');
+    if (ask) {
+      var fam = productKeys(ask), alien = !fam && rankTopic(ask);
+      if (fam && fam.keys) {
+        var only = rows.filter(function (x) { return fam.keys.indexOf(norm(x.name)) >= 0; });
+        if (only.length) rows = only;
+        else return { text: (PER_T[L] || PER_T.fr).rankNone(per ? perName : '', esc(fam.word || fam.names.join(', '))), prov: r.prov, open: open1(L, 'pMenu', 'nav-menu') };
+      } else if (fam && fam.absent) lead = (PER_T[L] || PER_T.fr).rankAbsent(esc(fam.absent));
+      else if (alien) lead = (PER_T[L] || PER_T.fr).rankAbsent(esc(alien));
+      if (!per && RANK_SEASON.test(ask)) lead = (lead ? lead + ' ' : '') + (PER_T[L] || PER_T.fr).season;
+    }
     var bottom = spec.agg === 'bottom';
     var pick = bottom ? rows[rows.length - 1] : rows[0];
     var unitTxt = t.prodUnits(pick.units);
@@ -488,6 +502,7 @@
       open: open1(L, 'pMenu', 'nav-menu'),
     };
     if (!honoured && r.prov && r.prov.limit === 'menu') out.note = t.prodPerMenu(perName);
+    if (lead) out.text = lead + ' ' + out.text;
     return out;
   }
 
@@ -1676,6 +1691,23 @@
     if (out.length) return { keys: out, names: label.length ? label : out.map(function (k) { return names[k]; }), word: fam.length && (out.length > 1 || !direct) ? fam[0].word : '' };
     return fam.length ? { absent: fam[0].word } : null;
   }
+  /* « the slowest selling phone accessories », « le plat le plus vendu pendant
+     le ramadan » (27 Nov 2026): what a ranking names after its verb, and the
+     season it names. A generic word (plat, item, عندي) names nothing. */
+  var RANK_SEASON = W("ramadan|ramdan|رمضان|\\beid\\b|\\baid\\b|العيد|\\bete\\b|\\bsummer\\b|الصيف|\\bhiver\\b|\\bwinter\\b|الشتاء");
+  var RANK_GENERIC = /^(?:items?|products?|produits?|plats?|dish(?:es)?|articles?|things?|choses?|trucs?|ones?|food|menu|carte|عندي|عندنا|3ndi|3andi|ndi|lia|liya|ليا|today|ajd|lyom|ce|cette|this|these|ces|pendant|durant|during|over|in|en|on|at|for|pour|par|by|f|fi|في|ف|depuis|since|le|la|les|the|a|un|une|de|des|du|of|et|and|chez|عند|اليوم|هاد|هذا|هذه)$/;
+  function rankTopic(raw) {
+    var m = /(?:^|\s)(?:selling|sold|sells|sell|vendus?|vendues?|vendu|vend|كيتباع|يتباع|تباع|تتباع|mabi3a|kaytba3|kaytbaa|tayetba3)\s+(.+)$/.exec(norm(raw).replace(/[?؟!.,]/g, ' '));
+    if (!m) return null;
+    var w = [];
+    for (var parts = m[1].split(/\s+/), i = 0; i < parts.length && w.length < 3; i++) {
+      var t = parts[i]; if (!t) continue;
+      if (RANK_GENERIC.test(t) || TOPIC_STOP.test(t) || PER_SHOW_END.test(t) || RANK_SEASON.test(t) || /^\d/.test(t)) break;
+      w.push(t);
+    }
+    var t2 = w.join(' ');
+    return t2.length >= 3 ? t2 : null;
+  }
   /* « résumé dyal accessoires téléphone », « analyse les médicaments » : the
      words after « de / dyal / of » when the menu has nothing by that name. */
   var TOPIC_STOP = W("^(?:pendant|durant|during|over|lors|detail\\w*|resume|summary|recap\\w*|analy\\w*|t7ellel|تحلل|تفاصيل|ملخص|la|le|les|l|de|des|du|d|mes|my|ma|mon|the|a|un|une|en|f|fi|had|hadi|hada|this|that|cette|ce|ces|dyali|dyal|dial|ديال|هاد|هذه|هذا|في|ف|من|mn|men|sur|over|in|for|pour|ventes?|sales?|caisse|chiffre|revenue|takings|journee|jour|day|semaine|week|weekend|mois|month|annee|year|today|yesterday|hier|aujourd\\w*|lyoum\\w*|lyom|simana|smana|chhar|chher|نهار|اليوم|الشهر|السيمانة|الاسبوع|lbi3|البيع|المبيعات|tickets?|commandes?|orders?|cash|carte|card|stp|svp|please|3afak|عفاك|dernier\\w*|last|past|derniers?|akher|اخر|sept|seven|\\d+|jours|days|iyam|ايام|depuis|since|novembre|november|نونبر)$");
@@ -1755,6 +1787,9 @@
       ref: function (p, n, m) { return n ? '<b>' + n + ' remboursement' + (n > 1 ? 's' : '') + '</b> sur ' + p + ', pour ' + m + '.' : 'Aucun remboursement enregistré sur ' + p + '.'; },
       prod: function (p, w, u, m, n) { return 'Sur ' + p + ' : <b>' + u + ' × ' + w + '</b>, pour ' + m + ', dans ' + n + ' vente' + (n > 1 ? 's' : '') + '.'; },
       prodNone: function (p, w) { return 'Aucun ' + w + ' vendu sur ' + p + ' d’après vos ventes enregistrées.'; },
+      rankNone: function (p, w) { return 'Aucune vente de ' + w + (p ? ' sur ' + p : '') + ' dans vos ventes enregistrées, je n’ai donc rien à classer.'; },
+      rankAbsent: function (w) { return 'Rien ne s’appelle <b>« ' + w + ' »</b> sur votre carte ni dans vos ventes, je ne peux donc pas le classer. Voici le classement de tout ce que vous vendez.'; },
+      season: 'Je ne sais pas isoler une saison comme le Ramadan dans vos ventes : ce classement porte sur toute la période enregistrée.',
       tips: function (p, m, n) { return n ? 'Pourboires sur ' + p + ' : <b>' + m + '</b>, laissés sur ' + n + ' vente' + (n > 1 ? 's' : '') + '.' : 'Aucun pourboire enregistré en caisse sur ' + p + '.'; },
       disc: function (p, m, n) { return n ? 'Remises sur ' + p + ' : <b>' + m + '</b> accordés sur ' + n + ' vente' + (n > 1 ? 's' : '') + '.' : 'Aucune remise enregistrée sur ' + p + '.'; },
       deliv: function (p, n, m) { return n ? 'Livraison sur ' + p + ' : <b>' + n + ' commande' + (n > 1 ? 's' : '') + '</b>, pour ' + m + '.' : 'Aucune commande en livraison sur ' + p + '.'; },
@@ -1779,6 +1814,9 @@
       ref: function (p, n, m) { return n ? '<b>' + n + ' refund' + (n > 1 ? 's' : '') + '</b> for ' + p + ', worth ' + m + '.' : 'No refund recorded for ' + p + '.'; },
       prod: function (p, w, u, m, n) { return 'For ' + p + ': <b>' + u + ' × ' + w + '</b>, worth ' + m + ', across ' + n + ' sale' + (n > 1 ? 's' : '') + '.'; },
       prodNone: function (p, w) { return 'No ' + w + ' sold for ' + p + ', going by your recorded sales.'; },
+      rankNone: function (p, w) { return 'No ' + w + ' sold' + (p ? ' for ' + p : '') + ' in your recorded sales, so there is nothing to rank.'; },
+      rankAbsent: function (w) { return 'Nothing called <b>“' + w + '”</b> is on your menu or in your sales, so I cannot rank it. Here is the ranking of everything you sell.'; },
+      season: 'I cannot pick a season such as Ramadan out of your sales: this ranking covers the whole recorded period.',
       tips: function (p, m, n) { return n ? 'Tips for ' + p + ': <b>' + m + '</b>, left on ' + n + ' sale' + (n > 1 ? 's' : '') + '.' : 'No tip recorded at the till for ' + p + '.'; },
       disc: function (p, m, n) { return n ? 'Discounts for ' + p + ': <b>' + m + '</b> given on ' + n + ' sale' + (n > 1 ? 's' : '') + '.' : 'No discount recorded for ' + p + '.'; },
       deliv: function (p, n, m) { return n ? 'Delivery for ' + p + ': <b>' + n + ' order' + (n > 1 ? 's' : '') + '</b>, worth ' + m + '.' : 'No delivery order for ' + p + '.'; },
@@ -1810,6 +1848,9 @@
       ref: function (p, n, m) { return n ? '<b>' + n + ' استرجاع</b> في ' + p + '، بقيمة ' + m + '.' : 'لا استرجاع مسجل في ' + p + '.'; },
       prod: function (p, w, u, m, n) { return 'في ' + p + ': <b>' + u + ' × ' + w + '</b>، بقيمة ' + m + '، في ' + n + ' عملية بيع.'; },
       prodNone: function (p, w) { return 'لم يبع أي ' + w + ' في ' + p + ' حسب مبيعاتك المسجلة.'; },
+      rankNone: function (p, w) { return 'ما تباع حتى ' + w + (p ? ' ف' + p : '') + ' فالمبيعات المسجلة ديالك، ما عندي ما نرتب.'; },
+      rankAbsent: function (w) { return 'ما كاين حتى حاجة سميتها <b>«' + w + '»</b> فالمنيو ولا فالمبيعات ديالك، ما نقدرش نرتبها. ها الترتيب ديال كلشي لي كتبيع.'; },
+      season: 'ما نقدرش نفرز موسم بحال رمضان من المبيعات ديالك: هاد الترتيب على المدة المسجلة كاملة.',
       net: function (p, m, r, x) { return 'في ' + p + ' دخل لك ' + m + ' ورجعت ' + r + '، الصافي <b>' + x + '</b>.'; },
       colRev: 'المحصّل', colTix: 'التذاكر', colBasket: 'متوسط السلة', colCash: 'نقدا', colCard: 'بالبطاقة', colUnits: 'الوحدات', colRef: 'المسترجع', colNet: 'الصافي',
     },

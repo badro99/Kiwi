@@ -2462,7 +2462,7 @@ function decideRoute(rawIn, retry) {
     /* A lookup is stronger than a date: "le plat le plus vendu hier" is a
      * ranking question that happens to mention a day. */
     const look = __state.matchLookup(q, raw);
-    if (look) return { kind: 'lookup', raw, q, spec: look };
+    if (look) return { kind: 'lookup', raw, q, spec: Object.assign(look, { raw: look.raw || raw }) };
     /* Ahead of TREND_RX, which owns "hier" and "yesterday" and would refuse
      * them as a comparison across periods. */
     const dNear = namedDay(q) || (qf !== q ? namedDay(qf) : null);
