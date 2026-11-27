@@ -229,6 +229,7 @@
     "Vendeuse": ["Sales assistant", "بائعة"],
     "Cuisinier": ["Cook", "طباخ"],
     "Équipe": ["Team", "الفريق"],
+    "Suivis et notes": ["Follow-ups and notes", "المتابعات والملاحظات"],
     "Ventes & commandes": ["Sales & orders", "المبيعات والطلبات"],
     "Clients & Marketing": ["Customers & marketing", "العملاء والتسويق"],
     "Terminaux": ["Terminals", "الأجهزة"],

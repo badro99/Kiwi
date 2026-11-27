@@ -55,3 +55,22 @@
 .op-health-table tr.lvl-bad td:first-child{box-shadow:inset 3px 0 0 var(--warn)}.op-health-table tr.lvl-warn td:first-child{box-shadow:inset 3px 0 0 var(--ochre)}.op-health-table tr.lvl-idle td{color:var(--muted)}.op-health-notes{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:3px;font-size:11px;line-height:1.45}.op-health-notes li.bad{color:var(--warn)}.op-health-notes li.warn{color:var(--ochre)}.op-table .op-bad,.op-table small.op-bad{color:var(--warn)}.op-muted{color:var(--muted)}
 .op-board{display:grid;gap:2px;padding-top:6px;padding-bottom:6px}.op-board-item{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px 0;border-top:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:12px;line-height:1.45}.op-board-item:first-child{border-top:0}.op-board-item:hover span:nth-child(2),.op-board-item:focus-visible span:nth-child(2){text-decoration:underline}.op-board-id{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}.op-board-item>span:nth-child(2){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.op-board-meta{grid-column:2;display:flex;gap:5px;flex-wrap:wrap}
 @media(max-width:720px){.op-health-table thead{display:none}.op-health-table,.op-health-table tbody{display:block}.op-health-table tr{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;padding:16px;border-top:1px solid var(--line)}.op-health-table td{padding:0;border:0}.op-health-table td:first-child{grid-column:1/-1}.op-health-table td.num{text-align:start}.op-health-table td[data-label]:before{content:attr(data-label);display:block;font-size:10px;color:var(--muted);margin-bottom:3px}.op-health-table tr.lvl-bad,.op-health-table tr.lvl-warn{box-shadow:inset 3px 0 0 var(--warn)}.op-health-table tr.lvl-warn{box-shadow:inset 3px 0 0 var(--ochre)}.op-health-table tr td:first-child{box-shadow:none!important}}
+
+/* Le lien « Suivis et notes » et la fenêtre « Santé de Kiwi » forment un second groupe, séparé par un filet. */
+.op-navigation a[data-op-followups]{position:relative;margin-top:13px}
+.op-navigation a[data-op-followups]::before{content:'';position:absolute;inset-inline:12px;top:-10px;border-top:1px solid #FFFFFF16}
+.operator-workspace .top-actions #quit:hover{color:var(--warn);border-color:currentColor;background:transparent}
+/* « Encore sur pages.dev » : même famille que .op-card, sur une ligne quand la liste est vide. */
+.operator-workspace .origin-device-card{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin:0 0 24px;padding:14px 20px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:13px;box-shadow:none}
+.operator-workspace .origin-device-card h2{margin:0;font-size:13px;font-weight:600;letter-spacing:-.01em}
+.operator-workspace .origin-device-card>p{margin:0;font-size:12px;color:var(--muted)}
+.operator-workspace .origin-device-card table{flex-basis:100%;margin-top:8px;font-size:12px}
+.operator-workspace .origin-device-card th{font-size:11px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line)}
+.operator-workspace .origin-device-card td{border-bottom:1px solid var(--line)}
+.operator-workspace .origin-device-card tr:last-child td{border-bottom:0}
+@media(max-width:720px){.op-navigation a[data-op-followups]{margin-top:0}.op-navigation a[data-op-followups]::before{display:none}.operator-workspace .origin-device-card{padding:12px 16px;margin-bottom:18px}}
+/* Pastilles d'état : arrondies, avec un point de couleur dans les tableaux. */
+.op-chip{border-radius:999px;padding:3px 9px;gap:6px;font-weight:500}
+td>.op-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75;flex:none}
+/* Téléphone : la barre du bas défile au lieu de couper « Santé de Kiwi », et les boutons du haut défilent au lieu de recouvrir le titre. */
+@media(max-width:720px){.op-navigation{overflow-x:auto;scrollbar-width:none;justify-content:flex-start}.op-navigation::-webkit-scrollbar{display:none}.op-navigation a{flex:0 0 auto;min-width:62px;max-width:92px}.operator-workspace .top-brand{flex:none}.operator-workspace .top-actions{flex:1 1 0;min-width:0;overflow-x:auto;scrollbar-width:none}.operator-workspace .top-actions::-webkit-scrollbar{display:none}.operator-workspace .top-actions button{flex:none}}

@@ -32,8 +32,8 @@
     "sha": "fddb9eb286e8dc9a"
   },
   "assets/admin-legacy.js": {
-    "v": "22",
-    "sha": "015900556a12eb82"
+    "v": "23",
+    "sha": "8236a821f1d9bb8c"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -68,8 +68,8 @@
     "sha": "30d72bdb9e8b18fe"
   },
   "assets/admin-workspace.css": {
-    "v": "5",
-    "sha": "606482db0d68d9bf"
+    "v": "6",
+    "sha": "554f28420b28fb40"
   },
   "assets/admin-workspace.js": {
     "v": "46",
