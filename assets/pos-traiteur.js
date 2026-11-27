@@ -1744,7 +1744,7 @@
       postDay(t.amount, method, `Tranche ${t.pct} % · ${ev.name}`, ref, eventSaleLines(ev, t.amount));
       closeVeil('#tr-veil-pay');
       queueIfOffline('Encaissement tranche');
-      toast(`Tranche ${t.pct} % encaissée, ${fmtMAD(amount)} en ${METHODS[method]}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+      toast(method === 'offert' ? `Tranche ${t.pct} % · ${KiwiPosSale.offer.tr('Ticket offert')}` : `Tranche ${t.pct} % encaissée, ${fmtMAD(amount)} en ${METHODS[method]}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (wasConfirme) toast(`${ev.name} passe en « Acompte reçu », la date est verrouillée`);
       if (dueTotal(ev) <= 0) toast(`${ev.name} est soldé, rien à encaisser le jour J`);
       refreshAll();

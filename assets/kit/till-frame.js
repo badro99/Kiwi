@@ -276,7 +276,12 @@
       html.removeAttribute('data-k-pay-scroll');
       return;
     }
-    if (!layer) { layer = doc.createElement('div'); layer.id = 'kit-pay-layer'; doc.body.appendChild(layer); }
+    if (!layer) { layer = doc.createElement('div'); layer.id = 'kit-pay-layer'; }
+    /* A trade's till (pos-autre…) is a fixed screen at z 90: a layer on <body>
+       at z 40 painted under it, and an iPad in landscape (compact) saw no
+       payment at all. The layer lives in the frame's own screen when it has one. */
+    var host = (api.bill && api.bill.closest && api.bill.closest('.vx-root')) || doc.body;
+    if (layer.parentNode !== host) host.appendChild(layer);
     var pane = api.menuPane ? api.menuPane.getBoundingClientRect() : null;
     var rtl = root.getComputedStyle(html).direction === 'rtl';
     var start = pane ? (rtl ? root.innerWidth - pane.right : pane.left) : 0;

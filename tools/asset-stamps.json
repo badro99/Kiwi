@@ -1216,8 +1216,8 @@
     "sha": "b7e1f27be387dc47"
   },
   "assets/kit/till-frame.js": {
-    "v": "16",
-    "sha": "4bb4f245a64d8be2"
+    "v": "17",
+    "sha": "3120a0bda55d1d9b"
   },
   "assets/kit/till-online.js": {
     "v": "6",
@@ -2024,16 +2024,16 @@
     "sha": "2ec5eb9137ca6e3f"
   },
   "assets/pos-dispatch.js": {
-    "v": "567",
-    "sha": "b50a172efbb47d3f"
+    "v": "568",
+    "sha": "379b7f44c7eab8f0"
   },
   "assets/pos-epicerie.css": {
-    "v": "46",
+    "v": "47",
     "sha": "d6fa42fcbe6f00d8"
   },
   "assets/pos-epicerie.js": {
-    "v": "46",
-    "sha": "7075a935d8e0be60"
+    "v": "47",
+    "sha": "fd055b52d0a3fd21"
   },
   "assets/pos-epicerie/carnet.js": {
     "v": "24",
@@ -2232,12 +2232,12 @@
     "sha": "f1ad796e49d5c590"
   },
   "assets/pos-traiteur.css": {
-    "v": "16",
+    "v": "17",
     "sha": "baeab8e58f73b0e3"
   },
   "assets/pos-traiteur.js": {
-    "v": "16",
-    "sha": "af591673d76c41d2"
+    "v": "17",
+    "sha": "56fbc0b91a99269d"
   },
   "assets/pos-workspaces.css": {
     "v": "5",

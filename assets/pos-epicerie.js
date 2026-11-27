@@ -1054,7 +1054,7 @@
       freshTicket();
       renderTicket(); renderGrid(); renderBadges(); icons();
       queueIfOffline('Vente');
-      toast(`Encaissé · ${fmtMAD2(total)} · ${label}${rendu > 0.0001 ? ` · rendu ${fmtMAD2(rendu)}` : ''}`);
+      toast(method === 'offert' ? `${KiwiPosSale.offer.tr('Ticket offert')} · ${fmtMAD2(total)}` : `Encaissé · ${fmtMAD2(total)} · ${label}${rendu > 0.0001 ? ` · rendu ${fmtMAD2(rendu)}` : ''}`);
       focusScan();
     };
 
