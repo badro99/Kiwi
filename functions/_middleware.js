@@ -20,6 +20,7 @@
 // Changing a variable requires a fresh deployment (not "Retry") to take effect.
 
 import { partnerWebhookOpen } from './_partner-webhooks.js';
+import { walletOpen } from './_wallet-public.js';
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie, staffToken,
   makeSession, sessionCookie, sessionNeedsRefresh, sessionRevocation,
@@ -597,6 +598,7 @@ async function routeRequest(context) {
    * jeux sont coupés. Chemin exact. */
   if (method === 'POST' && path === '/api/order/game') return next();
   if (partnerWebhookOpen(method, path)) return next(); // canaux extérieurs : functions/_partner-webhooks.js
+  if (walletOpen(method, path)) return next(); // carte Wallet des clients : functions/_wallet-public.js
   if ((method === 'POST' && path === '/api/shop/orders') || (method === 'GET' && (path === '/api/shop/catalog' || path === '/api/shop/status'))) return next(); // boutique en ligne : clé storefront vérifiée par chaque handler (GET /api/shop/orders et /api/shop/decide restent derrière la porte)
   /* Le relais d'impression (functions/api/print/*). Le Kiwi Printer Bridge du
    * comptoir n'est pas un navigateur : pas de cookie de porte, jamais. Il

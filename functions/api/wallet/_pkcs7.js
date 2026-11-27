@@ -12,7 +12,7 @@ const OID = {
 };
 
 export function pemToDer(pem) {
-  const b64 = String(pem || '').replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const b64 = String(pem || '').replace(/\\n/g, '\n').replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''); /* env vars often hold literal \n */
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);

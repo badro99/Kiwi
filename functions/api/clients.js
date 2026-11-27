@@ -48,6 +48,8 @@ import { readsIdentityDocuments, withoutDocumentNumber, keepStoredDocument } fro
 import { mayMergeClients, mergeClients } from './_client-merge.js';
 import { spendCentsOf, toCents } from './_spend-cents.js';
 import { sessionGuard } from './_permissions.js';
+import { notifyClientChanged } from './wallet/_notify.js';
+import { revokeClientCards } from './wallet/_store.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
@@ -63,7 +65,7 @@ const { applyPurchase, applyRefund, applyRedemption, voidSaleLoyalty, restoreSal
   str, money, resolveClientId, clientCursorStatements, clientCursorSql,
   missingEventTable: error => /no such table/i.test(String(error && error.message || error)),
 });
-export { voidSaleLoyalty, restoreSaleLoyalty };
+export { voidSaleLoyalty, restoreSaleLoyalty, applyPurchase, phoneTwins }; // applyPurchase + phoneTwins: the Wallet card's receipt claim (functions/api/wallet/enroll.js)
 
 function hospitalityJson(value) {
   const h = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -507,20 +509,22 @@ export async function onRequestPost(context) {
     } catch (_) { return json({ error: 'merge-unavailable' }, 503); }
   }
 
+  /* A balance that moved updates the client's Wallet cards after the answer (functions/api/wallet/_notify.js). */
+  const told = (res, raw) => { const id = raw && (raw.clientId || raw.client_id); if (res.ok && id && context.waitUntil) context.waitUntil(notifyClientChanged(env, merchant, String(id), { baseUrl: new URL(request.url).origin }).catch(() => {})); return res; };
   if (body && body.redemption) {
     if (!await mayRecordReward(request, env, merchant)) return json({ error: 'owner-or-till-required' }, 403);
     if (!operational) return json({ error: 'unauthorized' }, 401);
-    try { return await applyRedemption(env, merchant, body.redemption); }
+    try { return told(await applyRedemption(env, merchant, body.redemption), body.redemption); }
     catch (_) { return json({ error: 'reward-write-failed' }, 503); }
   }
   if (body && body.refund) {
     if (!operational) return json({ error: 'unauthorized' }, 401);
-    try { return await applyRefund(env, merchant, body.refund); }
+    try { return told(await applyRefund(env, merchant, body.refund), body.refund); }
     catch (_) { return json({ error: 'refund-write-failed' }, 503); }
   }
   if (body && body.purchase) {
     if (!operational) return json({ error: 'unauthorized' }, 401);
-    try { return await applyPurchase(env, merchant, body.purchase); }
+    try { return told(await applyPurchase(env, merchant, body.purchase), body.purchase); }
     catch (_) { return json({ error: 'purchase-write-failed' }, 503); }
   }
 
@@ -667,6 +671,7 @@ export async function onRequestDelete(context) {
     ).bind(Date.now(), Date.now(), srv, merchant, id).run();
     try { await erase(true); }
     catch (error) { if (!missingColumn(error)) throw error; await erase(false); }
+    try { await revokeClientCards(env.DB, merchant, id); } catch (_) { /* migration 0040 not applied yet */ }
   } catch (_) {
     return json({ error: 'unmigrated' }, 503);
   }

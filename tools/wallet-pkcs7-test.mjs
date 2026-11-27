@@ -12,6 +12,10 @@ import { spawnSync } from 'node:child_process';
 import { signDetached, pemToDer } from '../functions/api/wallet/_pkcs7.js';
 import { buildPkpass, appleConfigured } from '../functions/api/wallet/_pkpass.js';
 import { WWDR_G4 } from '../functions/api/wallet/_wwdr.js';
+import { walletDb } from './wallet-d1-shim.mjs';
+import { issueCard } from '../functions/api/wallet/_store.js';
+import { encodePng } from '../functions/api/wallet/_png.js';
+import * as service from '../functions/api/wallet/v1/[[path]].js';
 
 let pass = 0;
 const ok = async (name, fn) => { await fn(); pass++; console.log('  ✓', name); };
@@ -90,6 +94,37 @@ try {
     const crypto = await import('node:crypto');
     for (const f of ['pass.json', 'icon.png', 'strip@2x.png']) assert.equal(manifest[f], crypto.createHash('sha1').update(fs.readFileSync(path.join(out, f))).digest('hex'));
     assert.equal(verify('card/signature', 'card/manifest.json').status, 0);
+  });
+  await ok('the download route serves a signed pass with the live balance, logo, icon and strip', async () => {
+    const { DB, sql } = walletDb();
+    /* a 300 × 120 logo: red bar on a white square, so trim has a margin to cut */
+    const w = 300, h = 120, px = new Uint8Array(w * h * 4).fill(255);
+    for (let y = 40; y < 80; y++) for (let x = 60; x < 240; x++) px.set([179, 38, 30, 255], (y * w + x) * 4);
+    const logo = 'data:image/png;base64,' + Buffer.from(await encodePng(w, h, px)).toString('base64');
+    const put = sql.prepare('INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?,?,?,1,1)');
+    put.run('pasta-corner', 'fidelity', JSON.stringify({ model: 'visit', visit: { target: 10, reward: '1 offert' } }));
+    put.run('pasta-corner', 'wallet', JSON.stringify({ on: true, name: 'Pasta Corner', color: '#B3261E', bg: '#FFF8F0', lat: 33.59, lng: -7.6 }));
+    put.run('pasta-corner', 'receipt', JSON.stringify({ look: { logo, logoOn: true } }));
+    sql.prepare("INSERT INTO clients (merchant, id, name, phone, stamps, updated_ts, srv_ts) VALUES ('pasta-corner','c1','Salma Idrissi','0612345678',7,1,1)").run();
+    const env = { DB, WALLET_APPLE_PASS_TYPE_ID: 'pass.com.kiwios.test', APNS_TEAM_ID: 'TEAM', WALLET_APPLE_CERT_PEM: read('leaf.pem'), WALLET_APPLE_KEY_PEM: read('leaf.key'), WALLET_APPLE_WWDR_PEM: read('int.pem') };
+    const card = await issueCard(DB, { merchant: 'pasta-corner', clientId: 'c1', platform: 'apple' });
+    const res = await service.onRequest({ env, waitUntil() {}, params: { path: ['download', card.serial + '.pkpass'] }, request: new Request(`https://kiwi-os.com/api/wallet/v1/download/${card.serial}.pkpass?t=${card.authToken}`) });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('Content-Type'), 'application/vnd.apple.pkpass');
+    fs.writeFileSync(path.join(dir, 'live.pkpass'), new Uint8Array(await res.arrayBuffer()));
+    const out = path.join(dir, 'live');
+    assert.equal(spawnSync('unzip', ['-o', '-q', 'live.pkpass', '-d', out], { cwd: dir }).status, 0);
+    const names = fs.readdirSync(out);
+    for (const n of ['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'strip@3x.png', 'pass.json', 'manifest.json', 'signature']) assert.ok(names.includes(n), n);
+    const p = JSON.parse(fs.readFileSync(path.join(out, 'pass.json'), 'utf8'));
+    assert.equal(p.storeCard.primaryFields[0].value, '7 / 10');
+    assert.equal(p.serialNumber, card.serial);
+    assert.equal(p.locations[0].latitude, 33.59);
+    assert.equal(verify('live/signature', 'live/manifest.json').status, 0);
+    const logoPng = fs.readFileSync(path.join(out, 'logo@2x.png'));
+    assert.equal(logoPng.readUInt32BE(16), 320); assert.equal(logoPng.readUInt32BE(20), 100);
+    const wrong = await service.onRequest({ env, waitUntil() {}, params: { path: ['download', card.serial + '.pkpass'] }, request: new Request(`https://kiwi-os.com/api/wallet/v1/download/${card.serial}.pkpass?t=${'z'.repeat(32)}`) });
+    assert.equal(wrong.status, 404);
   });
 } finally {
   fs.rmSync(dir, { recursive: true, force: true });

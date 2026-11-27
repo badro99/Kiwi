@@ -124,3 +124,10 @@ export async function pointsBar({ value = 0, threshold = 100, color, bg, scale =
   }
   return encodePng(cv.w, cv.h, cv.px);
 }
+
+/* The pass icon when the shop has no logo: one earned stamp on the card colour. */
+export async function stampIcon({ color, bg, size }) {
+  const c = rgb(color), b = rgb(bg), cv = canvas(size, size, b);
+  drawDisc(cv, { cx: size / 2, cy: size / 2, r: size * 0.36 }, { filled: true }, c, b);
+  return encodePng(size, size, cv.px);
+}
