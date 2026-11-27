@@ -249,11 +249,11 @@ await ok('Apple web service: registration needs the card token', async () => {
   assert.equal((await svc(w.env, 'POST', 'log', null, { logs: ['x'] })).status, 200);
 });
 
-await ok('the program logo is served only for a shop with the card on, with Kiwi artwork', async () => {
+await ok("the shop's tile is served only for a shop with the card on: its own logo on paper, decoded once", async () => {
   const w = world();
   const zlib = await import('node:zlib');
   const { encodePng } = await import('../functions/api/wallet/_png.js');
-  const px = new Uint8Array(40 * 20 * 4).fill(255); for (let i = 0; i < 40 * 20; i += 3) px.set([0, 0, 0, 255], i * 4);
+  const px = new Uint8Array(40 * 20 * 4).fill(255); for (let i = 1; i < 40 * 20; i += 3) px.set([0, 0, 0, 255], i * 4);
   const logo = 'data:image/png;base64,' + Buffer.from(await encodePng(40, 20, px)).toString('base64');
   w.sql.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES ('pasta-corner','receipt',?,1,1), ('no-wallet','receipt',?,1,1)").run(JSON.stringify({ look: { logo } }), JSON.stringify({ look: { logo } }));
   const get = (slug) => strip.onRequestGet({ request: new Request(`https://kiwi-os.com/api/wallet/strip/logo-${slug}.png`), params: { path: [`logo-${slug}.png`] }, env: w.env, waitUntil() {} });
@@ -262,7 +262,13 @@ await ok('the program logo is served only for a shop with the card on, with Kiwi
   const before = _logoDecodes();
   const a = await get('pasta-corner'), b = await get('pasta-corner');
   assert.equal(a.status, 200); assert.equal(b.status, 200);
-  assert.equal(_logoDecodes() - before, 0);
+  assert.equal(_logoDecodes() - before, 1, 'two requests, one decode');
+  const { decodePng } = await import('../functions/api/wallet/_png-read.js');
+  const tile = await decodePng(new Uint8Array(await (await get('pasta-corner')).arrayBuffer()));
+  assert.equal(tile.w, 240); assert.equal(tile.h, 240);
+  assert.deepEqual([...tile.rgba.slice(0, 4)], [247, 245, 240, 255], 'paper behind the logo');
+  let ink = 0; for (let q = 0; q < tile.rgba.length; q += 4) if (tile.rgba[q] < 80) ink++;
+  assert.ok(ink > 200, 'the logo keeps its own dark ink, not recoloured to Kiwi');
   void zlib;
 });
 

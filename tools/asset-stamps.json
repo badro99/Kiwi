@@ -1688,8 +1688,8 @@
     "sha": "81d453d087fec9fe"
   },
   "assets/pages/dashboard-loader.js": {
-    "v": "126",
-    "sha": "454faa19e99bea49"
+    "v": "127",
+    "sha": "713f57b1b66bac3c"
   },
   "assets/pages/dashboard-startup.js": {
     "v": "361",
@@ -2784,16 +2784,16 @@
     "sha": "a4a72617d62b67fe"
   },
   "assets/wallet-carte.css": {
-    "v": "5",
-    "sha": "9ddd87f584274cfe"
+    "v": "6",
+    "sha": "80b855d3683eb385"
   },
   "assets/wallet-carte.js": {
-    "v": "6",
-    "sha": "0b5cba4aa8861ee7"
+    "v": "7",
+    "sha": "5cefc8827123810d"
   },
   "assets/wallet-dashboard.js": {
-    "v": "6",
-    "sha": "1b17fc3e95b1d452"
+    "v": "7",
+    "sha": "c8eafa0000a0ee55"
   },
   "assets/wallet-link.js": {
     "v": "1",

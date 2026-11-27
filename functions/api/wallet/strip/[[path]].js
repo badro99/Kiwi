@@ -1,9 +1,9 @@
 // GET /api/wallet/strip/<n>-<target>-<ink>-<bg>@<scale>.png   the stamp strip
 // GET /api/wallet/strip/p<n>-<threshold>-<ink>-<bg>@<scale>.png  the points bar
-// GET /api/wallet/strip/logo-<shop>.png                         Google's program logo
+// GET /api/wallet/strip/logo-<shop>.png                         the shop's tile on the web card
 // The strip URL carries everything it draws, so it is stateless and immutable:
 // the web card and Google's hero image point at it and every CDN may keep it.
-import { stripPng, programLogo } from '../_images.js';
+import { stripPng, shopTile } from '../_images.js';
 import { loadMerchant } from '../_merchant.js';
 
 const RE = /^(p?)(\d{1,7})-(\d{1,7})-([0-9a-f]{6})-([0-9a-f]{6})@([123])\.png$/;
@@ -22,7 +22,8 @@ export async function onRequestGet(context) {
   if (logo && context.env && context.env.DB) {
     const shop = await loadMerchant(context.env.DB, logo[1]);
     if (!shop || !shop.on) return new Response(null, { status: 404 });
-    return png(await programLogo(shop), 3600);
+    const tile = await shopTile(shop);
+    return tile ? png(tile, 3600) : new Response(null, { status: 404 });
   }
   return new Response(null, { status: 404 });
 }

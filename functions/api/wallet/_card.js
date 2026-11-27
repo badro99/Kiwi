@@ -67,7 +67,7 @@ export function passJson({ view, card, merchant, env, baseUrl }) {
     webServiceURL: `${baseUrl}/api/wallet`,
     organizationName: shop,
     description: `Carte fidélité ${shop}`,
-    logoText: shop,
+    logoText: '× ' + shop, // beside the Kiwi wordmark: « kiwi × Santos Store »
     backgroundColor: pal.css.bg, foregroundColor: pal.css.fg, labelColor: pal.css.label,
     sharingProhibited: true,
     barcodes: [{ format: 'PKBarcodeFormatQR', message: 'KIWI-C:' + card.clientId, messageEncoding: 'iso-8859-1', altText: 'Carte fidélité' }],

@@ -115,9 +115,15 @@
     shopName = m.name;
     document.title = m.name + ' · ' + t('title');
     $('wc-shopname').textContent = m.name;
-    $('wc-card-name').textContent = (lang === 'ar' ? 'عند ' : 'chez ') + m.name;
+    $('wc-card-name').textContent = m.name;
+    $('wc-mono').textContent = String(m.name || '').trim().charAt(0).toUpperCase();
     $('wc-card').setAttribute('aria-label', t('title') + ' · ' + m.name);
-    if (m.logo) { $('wc-card-logo').src = m.logo; $('wc-card-logo').hidden = false; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false; }
+    if (m.logo) {
+      var lg = $('wc-card-logo'), tile = lg.parentNode;
+      lg.onload = function () { tile.classList.add('has-logo'); lg.hidden = false; };
+      lg.onerror = function () { tile.classList.remove('has-logo'); lg.hidden = true; };
+      lg.src = m.logo; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false;
+    }
     $('wc-l-client').textContent = t('client');
     $('wc-l-balance').textContent = t(v.model === 'amount' ? 'points' : 'stamps');
     $('wc-l-reward').textContent = t('reward');

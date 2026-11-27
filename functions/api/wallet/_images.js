@@ -2,12 +2,16 @@
 // stamp strip, at 1x/2x/3x. The logo is decoded and fitted once per logo
 // version and kept in the Cache API (and in memory for the isolate's life);
 // strips are cheap and cached the same way by their count.
-import { stampStrip, pointsBar } from './_png.js';
+import { stampStrip, pointsBar, encodePng } from './_png.js';
+import { decodePng, trim, fit, keyOut } from './_png-read.js';
+import { logoBytes } from './_merchant.js';
 import { kiwiArt } from './_kiwi-art.js';
 
 const memo = new Map();
 let decodes = 0;
 export const _logoDecodes = () => decodes; /* tools/wallet-routes-test.mjs: one decode per logo version */
+
+const hex = async (s) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(s)))].slice(0, 10).map((x) => x.toString(16).padStart(2, '0')).join('');
 
 async function cached(key, make) {
   if (memo.has(key)) return memo.get(key);
@@ -47,3 +51,18 @@ export async function passImages({ merchant, view }) {
 }
 
 export async function programLogo() { return kiwiArt('icon@3x.png'); }
+
+/* The shop's own mark for the web card's « Kiwi × shop » tile: its real
+   colours on paper, decoded once per logo version. null when it has none. */
+export async function shopTile(merchant) {
+  const bytes = logoBytes(merchant.logoUrl);
+  if (!bytes) return null;
+  const out = await cached(`tile/${await hex(merchant.logoUrl)}`, async () => {
+    decodes++;
+    const d = await decodePng(bytes);
+    if (!d) return new Uint8Array(0);
+    const f = fit(keyOut(trim(d)), 240, 240, { fill: [247, 245, 240], pad: 22 });
+    return encodePng(f.w, f.h, f.rgba);
+  });
+  return out.length ? out : null;
+}

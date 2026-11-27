@@ -9,7 +9,7 @@
   <title>Carte fidélité · Kiwi</title>
   <link rel="icon" href="/assets/kiwi-favicon-new.svg">
   <link rel="stylesheet" href="/assets/fonts/legacy-faces.css?v=1">
-  <link rel="stylesheet" href="/assets/wallet-carte.css?v=5">
+  <link rel="stylesheet" href="/assets/wallet-carte.css?v=6">
 </head>
 <body>
   <main class="wc" id="wc" aria-live="polite">
@@ -17,13 +17,16 @@
     <section class="wc-stage">
       <article class="wc-card is-loading" id="wc-card" aria-label="">
         <div class="wc-card-sheen" aria-hidden="true"></div>
-        <div class="wc-brand"><img src="/assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
-        <div class="wc-card-head">
-          <img class="wc-card-logo" id="wc-card-logo" alt="" hidden>
+        <div class="wc-lockup">
+          <img class="wc-lockup-kiwi" src="/assets/kiwi-newlogo-inverse.svg" alt="Kiwi">
+          <span class="wc-lockup-x" aria-hidden="true">×</span>
+          <span class="wc-tile" aria-hidden="true"><img class="wc-card-logo" id="wc-card-logo" alt="" hidden><b id="wc-mono"></b></span>
           <span class="wc-card-name" id="wc-card-name"></span>
+        </div>
+        <div class="wc-card-balance">
+          <div><span class="wc-label" id="wc-l-balance"></span><strong id="wc-balance">·</strong></div>
           <span class="wc-card-client"><span class="wc-label" id="wc-l-client"></span><span id="wc-first"></span></span>
         </div>
-        <div class="wc-card-balance"><span class="wc-label" id="wc-l-balance"></span><strong id="wc-balance">·</strong></div>
         <div class="wc-stamps" id="wc-stamps" aria-hidden="true"></div>
         <div class="wc-card-foot">
           <div><span class="wc-label" id="wc-l-reward"></span><span id="wc-reward"></span></div>
@@ -36,6 +39,6 @@
     <footer class="wc-foot" id="wc-foot"></footer>
   </main>
   <script src="/assets/qrcode.js?v=1"></script>
-  <script src="/assets/wallet-carte.js?v=6" defer></script>
+  <script src="/assets/wallet-carte.js?v=7" defer></script>
 </body>
 </html>
