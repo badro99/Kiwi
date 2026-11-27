@@ -47,6 +47,21 @@ function sameHex(a, b) {
   return diff === 0;
 }
 
+/* Les seuls actes qu'une preuve de poste peut couvrir : ceux du catalogue des
+   droits, ceux dont le serveur signe la preuve, le tarif, les deux actes
+   génériques des pavés sans contexte, et la fin de poste. Un nom inventé ne
+   rend ni identité ni preuve d'auteur. */
+export function shiftActAllowed(kind, actionPerm, actKinds) {
+  kind = String(kind || '');
+  return !!kind && (Object.prototype.hasOwnProperty.call(actionPerm || {}, kind) || (actKinds && actKinds.has(kind))
+    || kind === 'price-list' || kind === 'till-op' || kind === 'manager-op' || kind === 'end-shift');
+}
+
+/* Écrire le jeton a échoué alors qu'une preuve de poste vit peut-être sur cet
+   appareil : l'ouverture échoue (503, à réessayer) plutôt que de la laisser
+   vivre derrière une autre personne. */
+export class ShiftRotationError extends Error {}
+
 export function isShiftProof(value) {
   return typeof value === 'string' && value.startsWith(SHIFT_PREFIX) && value.length <= 1024;
 }
@@ -83,7 +98,12 @@ export async function tillShiftProof(request, env, merchant, staff, now = Date.n
   const till = await tillVerification(request, env, merchant);
   if (!till.ok || !till.deviceId || !SAFE_DEVICE.test(till.deviceId)) return '';
   const n = nonce();
-  try { await setDeviceNonce(env, merchant, till.deviceId, n, now); } catch (_) { return ''; }
+  try { await setDeviceNonce(env, merchant, till.deviceId, n, now); } catch (_) {
+    let prior = 'unknown';
+    try { prior = await deviceNonce(env, merchant, till.deviceId); } catch (_) {}
+    if (prior) throw new ShiftRotationError('shift-rotation-failed');
+    return '';
+  }
   if (!employeeRoleOpensDashboard(staff.role)) return '';
   const payload = b64url(JSON.stringify({ m: merchant, d: till.deviceId, id: String(staff.id), n, exp: now + SHIFT_TTL_MS }));
   return SHIFT_PREFIX + payload + '.' + await hmacHex(secret, SCOPE + payload);
@@ -114,6 +134,15 @@ async function staffOnShift(env, merchant, id) {
     if (!acc[merchant] || acc[merchant] !== acc[row.merchant]) return null;
   }
   return { id: String(row.id || ''), name: String(row.name || ''), role: String(row.role || '') };
+}
+
+/* Fin de poste : la caisse se verrouille ou change de personne. La preuve a déjà
+   été jugée valide par verifyStaffCredential ; son jeton tourne, elle meurt. */
+export async function endShift(request, env, merchant, now = Date.now()) {
+  const till = await tillVerification(request, env, slugMerchant(merchant));
+  if (!till.ok || !till.deviceId || !SAFE_DEVICE.test(till.deviceId)) return false;
+  await setDeviceNonce(env, slugMerchant(merchant), till.deviceId, nonce(), now);
+  return true;
 }
 
 /* verifyStaffPin, qui accepte aussi la preuve de poste à la place du code.

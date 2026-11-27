@@ -137,6 +137,29 @@ check('a manager removed from the team loses it at once', !removed.ok && removed
 sqlite.prepare("UPDATE staff_pins SET id = 'pin-mgr' WHERE id = 'pin-mgr-gone'").run();
 check('a four-digit code still goes to the code verifier', (await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', '5678')).ok === true);
 
+console.log('\n3b · Only known acts, an explicit end of shift, and no silent rotation failure');
+const made = await verify({ merchant: 'cafe-atlas', pin: shift, action: { kind: 'anything-goes' } }, await deviceCookie());
+check('an invented act name is refused, with no identity or author proof', made.status === 400 && !made.body.staff && !made.body.actorProof);
+const generic = await verify({ merchant: 'cafe-atlas', pin: shift, action: { kind: 'manager-op' } }, await deviceCookie());
+check('a pad with no act context uses the generic manager act and passes', generic.status === 200 && generic.body.staff && generic.body.staff.name === 'Karim B.');
+const stale = await unlockAsManager(); const live = await unlockAsManager();
+const staleEnd = await verify({ merchant: 'cafe-atlas', pin: stale, action: { kind: 'end-shift' } }, await deviceCookie());
+check('an old pass cannot end the shift that replaced it', staleEnd.status === 401
+  && (await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', live)).ok === true);
+const ended = await verify({ merchant: 'cafe-atlas', pin: live, action: { kind: 'end-shift' } }, await deviceCookie());
+check('locking the till ends the shift on the server at once', ended.status === 200 && ended.body.ended === true
+  && !(await verifyStaffCredential(await reqWith(await deviceCookie()), env, 'cafe-atlas', live)).ok);
+{
+  const failing = { ...env, DB: { ...env.DB, prepare(q) { if (/INSERT INTO store_docs/.test(q)) throw new Error('d1 write down'); return env.DB.prepare(q); } } };
+  const call = async (device) => verifyPost({ request: new Request('https://kiwi.test/api/pin/verify', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await deviceCookie(device), 'CF-Connecting-IP': '10.9.2.' + (++ipN) },
+    body: JSON.stringify({ merchant: 'cafe-atlas', pin: '5678' }) }), env: failing });
+  check('a failed rotation on a till that held a pass fails the unlock (503, retry) instead of leaving the pass alive', (await call(DEVICE)).status === 503);
+  const fresh = await call('term_never_shift_x');
+  check('a till that never held a pass still opens when the rotation fails', fresh.status === 200);
+}
+shift = await unlockAsManager();
+
 console.log('\n4 · Routes that compare a code themselves accept it too');
 const cancel = await cancelPost({ request: new Request('https://kiwi.test/api/sale/cancel', {
   method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: await deviceCookie(), 'CF-Connecting-IP': '10.9.1.1' },
@@ -163,7 +186,7 @@ function loadPerms({ staff, online = true }) {
     addEventListener() {}, fetch: () => Promise.resolve({ ok: false }), CustomEvent: class { constructor(type, o) { this.type = type; this.detail = o && o.detail; } },
   };
   win.window = win;
-  const ctx = vm.createContext({ window: win, document: doc, localStorage: { getItem: () => null, setItem() {} }, fetch: win.fetch,
+  const ctx = vm.createContext({ window: win, document: doc, localStorage: { getItem: () => null, setItem() {} }, fetch: (...a) => win.fetch(...a),
     setInterval: () => ({}), CustomEvent: win.CustomEvent, console });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/staff-perms-till.js'), 'utf8'), ctx);
   const ask = () => { const d = { code: '', name: '' }; doc.dispatchEvent(new win.CustomEvent('kiwi-shift-code', { detail: d })); return d; };
@@ -190,6 +213,18 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
   await tick(); await tick();
   check('a right the person lacks opens the pad instead', approved === null && fell === 2);
   check('a shift change (another person must type their own code) keeps the pad', t.P.shiftApprove('manager', null, { incoming: { name: 'Sara' } }, () => {}, () => {}) === false);
+}
+{
+  const sent = [];
+  const t = loadPerms({ staff: { id: 'pin-mgr', name: 'Karim B.', role: 'Manager', shiftProof: shift } });
+  t.win.fetch = (url, o) => { sent.push(JSON.parse(o.body)); return Promise.resolve({ ok: true }); };
+  t.P.pairedVenue = () => ({ merchant: 'cafe-atlas' });
+  t.win.KiwiStaff = { id: 'pin-cash', name: 'Samira L.', role: 'Caissier' };
+  t.win.document.dispatchEvent({ type: 'kiwi-staff' });
+  check('when someone else takes the till, the old pass is sent back to end the shift', sent.length === 1 && sent[0].action.kind === 'end-shift' && sent[0].pin === shift);
+  t.win.KiwiStaff = null;
+  t.win.document.dispatchEvent({ type: 'kiwi-staff' });
+  check('and it is sent once, not again at the next change', sent.length === 1);
 }
 {
   const t = loadPerms({ staff: { id: 'pin-mgr', name: 'Karim B.', role: 'Manager', shiftProof: shift }, online: false });

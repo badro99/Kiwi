@@ -17,7 +17,7 @@ import { tillSellerProof } from '../_seller.js';
 import { priceListProof } from '../_price-list-sale.js';
 import { decide, Catalog } from '../_permissions.js';
 import { tillActProof, ACT_KINDS } from '../_act-proof.js';
-import { verifyStaffCredential, tillShiftProof, isShiftProof } from '../../auth/_till-shift.js';
+import { verifyStaffCredential, tillShiftProof, isShiftProof, shiftActAllowed, endShift } from '../../auth/_till-shift.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -33,6 +33,7 @@ export async function onRequestPost(context) {
   /* Une preuve de poste ne vaut que pour un geste (functions/auth/_till-shift.js) :
      sans acte, elle rouvrirait la caisse au nom du responsable. */
   if (isShiftProof(pin) && !(body && body.action)) return json({ error: 'shift-needs-action' }, 400);
+  if (isShiftProof(pin) && !shiftActAllowed(body.action.kind, Catalog.ACTION_PERM, ACT_KINDS)) return json({ error: 'shift-unknown-act' }, 400);
 
   // No merchant named ⇒ ask the signed-in account's whole estate. Not a widening:
   // verifyAccountPin derives the store list from the session's own registry and
@@ -49,8 +50,20 @@ export async function onRequestPost(context) {
     return json({ error: verified.error, ...(verified.configured === false ? { configured: false } : {}) }, verified.status);
   }
 
-  let approval = '';
   const action = body && body.action;
+  /* La caisse se verrouille ou change de personne : la preuve meurt ici. */
+  if (isShiftProof(pin) && action.kind === 'end-shift') {
+    try { await endShift(request, env, merchant); } catch (_) { return json({ error: 'shift-unavailable' }, 503); }
+    return json({ ok: true, ended: true });
+  }
+  /* Un code vient d'ouvrir la caisse : le jeton de l'appareil tourne avant la réponse. */
+  let shiftExtra = {};
+  if (merchant && !action && !isShiftProof(pin)) {
+    try { const shiftProof = await tillShiftProof(request, env, merchant, verified.staff); if (shiftProof) shiftExtra = { shiftProof }; }
+    catch (_) { return json({ error: 'shift-unavailable' }, 503); }
+  }
+
+  let approval = '';
   /* Qui peut valider : la règle d'avant (un rôle du tableau de bord) tant que
      la boutique n'a pas configuré ses droits, puis le droit de la personne
      (functions/api/_permissions.js › decide). Un caissier à qui le patron a
@@ -111,7 +124,7 @@ export async function onRequestPost(context) {
     /* Un gérant ou un propriétaire qui OUVRE la caisse avec son code : la preuve
        de poste, que la caisse présentera à la place de son code tant qu'il tient
        la caisse (functions/auth/_till-shift.js). Jamais refaite depuis une preuve. */
-    ...(merchant && !action && !isShiftProof(pin) ? await shiftField(request, env, merchant, verified.staff) : {}),
+    ...shiftExtra,
     ...(approval ? { approval } : {}),
     /* Espèces, tiroir, clôture, remise : la preuve de CE geste (acte, montant,
        sens), valable pour un seul fait (functions/api/_act-proof.js). */
@@ -123,11 +136,4 @@ export async function onRequestPost(context) {
     ...(ruling ? { permission: { id: kindPerm, granted: !!ruling.ok, configured: !!ruling.configured } } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });
-}
-
-async function shiftField(request, env, merchant, staff) {
-  try {
-    const shiftProof = await tillShiftProof(request, env, merchant, staff);
-    return shiftProof ? { shiftProof } : {};
-  } catch (_) { return {}; }
 }

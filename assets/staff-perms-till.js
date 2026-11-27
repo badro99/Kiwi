@@ -218,7 +218,7 @@
     if (!code || !P || (opts && opts.incoming) || typeof approve !== 'function' || typeof fallback !== 'function') return false;
     var till = access === 'till', ask = till ? P.authorizeTill : P.authorizeManager;
     if (typeof ask !== 'function') return false;
-    var second = till ? { needsServer: !!(opts && opts.needsServer), action: authContext || { kind: 'till-op' } } : authContext;   // la preuve ne vaut que pour un geste nommé
+    var second = till ? { needsServer: !!(opts && opts.needsServer), action: authContext || { kind: 'till-op' } } : (authContext || { kind: 'manager-op' });   // la preuve ne vaut que pour un geste nommé
     Promise.resolve(ask.call(P, code, second)).then(function (ok) {
       var who = ok === true ? (till ? (P.lastOperator() || P.lastManager()) : P.lastManager()) : null;
       if (!who || (opts && typeof opts.validate === 'function' && opts.validate(who))) { fallback(); return; }
@@ -229,6 +229,23 @@
   /* Les pavés qui envoient eux-mêmes un code à leur route (annulation de vente,
      pressing, plafond de crédit, Glovo) demandent la preuve par un
      événement : { code, name } rempli ici, vide quand il faut le pavé. */
+  /* La caisse se verrouille ou change de personne : la preuve qu'elle tenait
+     est rendue au serveur, qui la fait mourir tout de suite (fin de poste). */
+  var heldShift = '';
+  function onStaffChange() {
+    var s = window.KiwiStaff, now = s && typeof s.shiftProof === 'string' ? s.shiftProof : '';
+    if (heldShift && heldShift !== now) {
+      var m = merchant(), code = heldShift;
+      if (m && typeof fetch === 'function') {
+        try {
+          fetch('/api/pin/verify', { method: 'POST', credentials: 'same-origin', keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: m, pin: code, action: { kind: 'end-shift' } }) }).catch(function () {});
+        } catch (_) {}
+      }
+    }
+    heldShift = now;
+  }
   function onShiftAsk(e) {
     var d = e && e.detail;
     if (!d || typeof d !== 'object') return;
@@ -286,6 +303,8 @@
       document.addEventListener('click', onClick, true);
       document.addEventListener('kiwi-staff', apply);
       document.addEventListener('kiwi-shift-code', onShiftAsk);
+      document.addEventListener('kiwi-staff', onStaffChange);
+      onStaffChange();
       window.addEventListener('online', sync);
       var timer = setInterval(sync, REFRESH_MS);
       if (timer && typeof timer.unref === 'function') timer.unref();
