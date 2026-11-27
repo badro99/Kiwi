@@ -230,7 +230,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=9';
+  const partUrl = 'assets/agent/ui.js?v=10';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -1758,7 +1758,7 @@
    *    silently dropped. "j'ai augmenté les prix de 10% le mois dernier,
    *    ça a marché ?" was simulated as a fresh decision. `tendance` is
    *    deliberately absent — that belongs to forecast, which is forward. */
-  const TREND_RX = /mois\s+dernier|mois\s+passe|semaine\s+derniere|annee\s+derniere|an\s+dernier|(?:ete|hiver|printemps|automne|ramadan|aid|saison|noel|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s+dernier(?:e)?|\bevolu\w*\b|\bcroissance\b|depuis\s+l[' ]?ouverture|السنة\s*الماضية|العام\s*الماضي|last\s+(?:summer|winter|ramadan|season)|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|امس/;
+  const TREND_RX = /mois\s+dernier|mois\s+passe|\bch(?:h|e)?ar\s+(?:li\s+|l)?fa(?:t|yt)\b|الشهر\s+(?:اللي|لي)\s+فات|الشهر\s+الفايت|semaine\s+derniere|annee\s+derniere|an\s+dernier|(?:ete|hiver|printemps|automne|ramadan|aid|saison|noel|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s+dernier(?:e)?|\bevolu\w*\b|\bcroissance\b|depuis\s+l[' ]?ouverture|السنة\s*الماضية|العام\s*الماضي|last\s+(?:summer|winter|ramadan|season)|\bhier\b|avant[- ]?hier|par\s+rapport\s+a|\bcompare[rz]?\b|comparaison|evolution|historique|meilleur\s+mois|meilleure\s+semaine|(?:ont|a|avait)\s+(?:baiss|augment|chut|monte|progress)|si\s+j[' ]?avais|last\s+(?:month|week|year)|yesterday|\bversus\b|\bvs\b|sur\s+(?:3|6|12)\s+mois|الشهر\s*الماضي|الاسبوع\s*الماضي|امس/;
 
   /* 7. Darija we didn't understand. Measured, not assumed: Qwen3.5-2B was
    *    asked "chhal dayer lyoum f had lqahwa?" and answered with five invented

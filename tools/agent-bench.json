@@ -1322,5 +1322,129 @@
    "شحال بعنا من بلات اليوم",
    "ch7al mn client 3ndi"
   ]
+ },
+ "client.today": {
+  "fr": [
+   "quel client est venu aujourd'hui",
+   "qui sont les clients passés ajd"
+  ],
+  "en": [
+   "which customers came in today"
+  ],
+  "ar": [
+   "من الزبائن الذين جاؤوا اليوم"
+  ],
+  "darija": [
+   "شكون من الكليان جا اليوم"
+  ],
+  "arabizi": [
+   "chkon client ja lyouma"
+  ]
+ },
+ "client.last": {
+  "fr": [
+   "quand est venue Salma Bennani la derniere fois",
+   "numero de Salma Bennani"
+  ],
+  "en": [
+   "when did Salma Bennani last visit"
+  ],
+  "ar": [
+   "متى آخر زيارة لسلمى بناني"
+  ],
+  "darija": [
+   "فوقاش جات سلمى بناني آخر مرة"
+  ],
+  "arabizi": [
+   "imta akhir mra jat salma bennani"
+  ]
+ },
+ "staff.hours": {
+  "fr": [
+   "combien d'heures ont travaillé les employés aujourd'hui"
+  ],
+  "en": [
+   "how many hours did the staff work today"
+  ],
+  "ar": [
+   "كم عدد ساعات عمل الموظفين اليوم"
+  ],
+  "darija": [
+   "شحال من ساعة خدمو الخدامة اليوم"
+  ],
+  "arabizi": [
+   "ch7al mn sa3a khdmo lkhddama lyoum"
+  ]
+ },
+ "units.today": {
+  "fr": [
+   "combien d'articles vendus aujourd'hui"
+  ],
+  "en": [
+   "how many items did we sell today"
+  ],
+  "ar": [
+   "كم منتجا بعنا اليوم"
+  ],
+  "darija": [
+   "شحال من منتوج بعنا اليوم"
+  ],
+  "arabizi": [
+   "ch7al mn produit b3na lyoum"
+  ]
+ },
+ "cash.today": {
+  "fr": [
+   "combien de cash dans la caisse"
+  ],
+  "en": [
+   "how much cash is in the till"
+  ],
+  "ar": [
+   "كم يوجد في الصندوق نقدا اليوم"
+  ],
+  "darija": [
+   "شحال عندي فالصندوق دابا"
+  ],
+  "arabizi": [
+   "ch7al kayn f sndo9 daba"
+  ]
+ },
+ "hours.week": {
+  "fr": [
+   "combien de jours on est ouvert par semaine"
+  ],
+  "en": [
+   "how many days a week are we open"
+  ],
+  "ar": [
+   "كم يوما نعمل في الاسبوع"
+  ],
+  "darija": [
+   "شحال من نهار كنخدمو فالسيمانة"
+  ],
+  "arabizi": [
+   "ch7al mn nhar knkhdmo f simana"
+  ]
+ },
+ "command.edit": {
+  "fr": [
+   "ajoute 20 points à Salma Bennani",
+   "change l'heure de fermeture à 23h",
+   "supprime l'employé Omar"
+  ],
+  "en": [
+   "change closing time to 11",
+   "add a new dish to the menu"
+  ],
+  "ar": [
+   "احذف الموظف عمر"
+  ],
+  "darija": [
+   "بدل وقت الاغلاق للحداش"
+  ],
+  "arabizi": [
+   "zid 10 points l salma"
+  ]
  }
 }

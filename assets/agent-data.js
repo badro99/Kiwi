@@ -816,12 +816,145 @@
     return { text: t.hrShut(sum(now)), stats: stats, prov: prov, open: openBtn };
   }
 
+  /* ═══════════ the day, read from the books ═══════════
+   * Six questions merchants type that used to reach the model: who came,
+   * when a client last came, hours worked, items sold, cash taken, the week's
+   * schedule. Each reads one source and says what it does not count. */
+  var hrs = function (n) { var r = Math.round(n * 10) / 10; return fmt(Math.floor(r)) + (r % 1 ? ',' + Math.round((r % 1) * 10) : '') + ' h'; };
+  var GAP_T = {
+    fr: {
+      seenToday: function (n) { return n ? '<b>' + fmt(n) + ' client' + (n > 1 ? 's' : '') + ' du carnet</b> sont passés aujourd’hui.' : 'Aucun client du carnet n’est passé aujourd’hui.'; },
+      seenNote: 'Seuls les clients identifiés en caisse figurent au carnet ; un passage anonyme n’y est pas.',
+      lastOf: function (name, ago) { return 'Dernier passage de <b>' + name + '</b> : ' + ago + '.'; },
+      contact: 'Ses coordonnées sont sur sa fiche client.',
+      worked: function (h, n) { return 'Votre équipe a pointé <b>' + h + '</b> aujourd’hui, sur ' + fmt(n) + ' personne' + (n > 1 ? 's' : '') + '.'; },
+      workedNone: 'Aucune heure pointée aujourd’hui pour l’instant.',
+      workedNote: 'Heures pointées à la pointeuse, service en cours compris.',
+      units: function (u, n) { return '<b>' + fmt(u) + ' article' + (u > 1 ? 's' : '') + '</b> vendus aujourd’hui, sur ' + fmt(n) + ' vente' + (n > 1 ? 's' : '') + '.'; },
+      unitsNone: 'Aucune vente détaillée enregistrée aujourd’hui.',
+      cash: function (m) { return '<b>' + m + '</b> encaissés en espèces aujourd’hui.'; },
+      cashNote: 'Ventes en espèces enregistrées. Le fond de caisse et les sorties de caisse n’y sont pas : le compte exact se fait à la clôture.',
+      colSales: 'Ventes en espèces', colAll: 'Toutes les ventes', week: 'Votre semaine :',
+    },
+    en: {
+      seenToday: function (n) { return n ? '<b>' + fmt(n) + ' client' + (n > 1 ? 's' : '') + ' from the book</b> came in today.' : 'No client from the book came in today.'; },
+      seenNote: 'Only clients identified at the till are in the book; an anonymous visit is not.',
+      lastOf: function (name, ago) { return '<b>' + name + '</b> last came in ' + ago + '.'; },
+      contact: 'Their contact details are on the client card.',
+      worked: function (h, n) { return 'Your team clocked <b>' + h + '</b> today, across ' + fmt(n) + ' ' + (n > 1 ? 'people' : 'person') + '.'; },
+      workedNone: 'No hours clocked today yet.',
+      workedNote: 'Hours from the time clock, the current shift included.',
+      units: function (u, n) { return '<b>' + fmt(u) + ' item' + (u > 1 ? 's' : '') + '</b> sold today, over ' + fmt(n) + ' sale' + (n > 1 ? 's' : '') + '.'; },
+      unitsNone: 'No itemised sale recorded today.',
+      cash: function (m) { return '<b>' + m + '</b> taken in cash today.'; },
+      cashNote: 'Cash sales recorded. The float and cash paid out are not included: the exact count is made at closing.',
+      colSales: 'Cash sales', colAll: 'All sales', week: 'Your week:',
+    },
+    ar: {
+      seenToday: function (n) { return n ? '<b>' + fmt(n) + ' من زبناء السجل</b> دازو اليوم.' : 'حتى زبون من السجل ما داز اليوم.'; },
+      seenNote: 'السجل فيه غير الزبناء اللي تعرّفو عليهم فالصندوق؛ الزيارة بلا اسم ما كتبانش.',
+      lastOf: function (name, ago) { return 'آخر مرة جا <b>' + name + '</b>: ' + ago + '.'; },
+      contact: 'معلومات الاتصال ديالو كاينة فالبطاقة ديالو.',
+      worked: function (h, n) { return 'الفريق ديالك خدم <b>' + h + '</b> اليوم، على ' + fmt(n) + ' أشخاص.'; },
+      workedNone: 'حتى ساعة ما تسجّلات اليوم مازال.',
+      workedNote: 'الساعات من آلة التسجيل، الخدمة اللي دايرة دابا محسوبة.',
+      units: function (u, n) { return 'تباعو <b>' + fmt(u) + ' منتوج</b> اليوم، ف' + fmt(n) + ' عمليات بيع.'; },
+      unitsNone: 'حتى بيعة مفصّلة ما تسجّلات اليوم.',
+      cash: function (m) { return 'دخلو <b>' + m + '</b> كاش اليوم.'; },
+      cashNote: 'هادي مبيعات الكاش المسجّلة. فلوس الصندوق الأولى والمصاريف اللي خرجو منو ما داخلينش: الحساب المضبوط كيتدار فالإغلاق.',
+      colSales: 'مبيعات الكاش', colAll: 'جميع المبيعات', week: 'الأسبوع ديالك:',
+    },
+  };
+  var gt = function (L) { return GAP_T[L] || GAP_T.fr; };
+  var todayWin = function () { var f = startOfDay(); return { id: 'today', from: f, to: f + DAY }; };
+  function sClientsToday(L) {
+    var t = tr(L), g = gt(L), book = clientBook(), from = startOfDay();
+    if (!book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'clients-directory') };
+    var seen = book.filter(function (c) { return c && +c.lastSeen >= from; }).sort(function (a, b) { return (+b.lastSeen || 0) - (+a.lastSeen || 0); });
+    return {
+      text: g.seenToday(seen.length),
+      stats: seen.slice(0, 6).map(function (c) { return { l: esc(c.name), v: fmtMad(+c.spend || 0), h: '' }; }),
+      note: g.seenNote,
+      prov: { mod: 'clients', count: book.length, unit: 'entries' },
+      open: open1(L, 'pClients', 'clients-directory'),
+    };
+  }
+  function sClientCard(spec, L) {
+    var t = tr(L), g = gt(L), f = findClient(spec.raw || '');
+    if (!f.book.length) return { text: t.cliNoBook, open: open1(L, 'pClients', 'clients-directory') };
+    if (!f.hit) return { text: t.cliWhich, open: open1(L, 'pClients', 'clients-directory') };
+    var c = f.hit, d = daysSince(c.lastSeen);
+    var r = {
+      text: d == null ? t.cliWhich : g.lastOf(esc(c.name), t.cliDaysAgo(d)),
+      stats: [
+        { l: t.cliVisits, v: fmt(+c.visits || 0), h: '' },
+        { l: t.cliSpend, v: fmtMad(+c.spend || 0), h: '' },
+        { l: t.cliPoints, v: fmt(+c.points || 0), h: '' },
+      ],
+      prov: { mod: 'clients', count: f.book.length, unit: 'entries' },
+      open: open1(L, 'pClients', 'clients-directory'),
+    };
+    if (spec.contact) r.note = g.contact;
+    return r;
+  }
+  function sStaffHours(L) {
+    var t = tr(L), g = gt(L), team = teamRoster();
+    if (!team.length) return { text: t.staffNone, open: open1(L, 'pTeam', 'nav-equipe') };
+    var worked = team.filter(function (m) { return m && +m.hoursToday > 0; });
+    var total = worked.reduce(function (a, m) { return a + (+m.hoursToday || 0); }, 0);
+    return {
+      text: worked.length ? g.worked(hrs(total), worked.length) : g.workedNone,
+      stats: worked.slice(0, 6).map(function (m) { return { l: esc(m.name), v: hrs(+m.hoursToday || 0), h: esc(m.role || '') }; }),
+      note: g.workedNote,
+      prov: { mod: 'team', count: team.length, unit: 'entries' },
+      open: open1(L, 'pTeam', 'nav-equipe'),
+    };
+  }
+  function sUnitsToday(L) {
+    var t = tr(L), g = gt(L), win = todayWin();
+    var r = productRanking(win);
+    var units = r && r.src !== 'menu' ? r.rows.reduce(function (a, x) { return a + (+x.units || 0); }, 0) : 0;
+    if (!units) return { text: g.unitsNone, open: open1(L, 'pMenu', 'nav-menu') };
+    return {
+      text: g.units(units, (r.prov && r.prov.count) || 0),
+      stats: r.rows.slice(0, 3).map(function (x) { return { l: esc(x.name), v: '×' + fmt(x.units), h: fmtMad(x.revenue) }; }),
+      prov: r.prov,
+    };
+  }
+  function sCashToday(L) {
+    var g = gt(L), win = todayWin(), cash = 0, all = 0, n = 0;
+    salesRows().forEach(function (e) {
+      if (!e || !inWin(+e.ts || 0, win)) return;
+      var amt = +e.amount || 0; all += amt; n++;
+      if (/cash|esp|especes|نقد|كاش/i.test(String(e.method || ''))) cash += amt;
+    });
+    return {
+      text: g.cash(fmtMad(cash)),
+      stats: [{ l: g.colSales, v: fmtMad(cash), h: '' }, { l: g.colAll, v: fmtMad(all), h: fmt(n) }],
+      note: g.cashNote,
+      prov: { mod: 'sales', count: n, unit: 'entries' },
+    };
+  }
+  function sHoursWeek(L) {
+    var t = tr(L), KH = window.KiwiHours;
+    var openBtn = [{ label: t.openBtn(t.pHours), handler: 'settings-hours' }];
+    if (!KH || !KH.isConfigured()) return { text: t.hrUnset, open: openBtn };
+    return { text: gt(L).week + ' ' + esc(KH.weekText(undefined, L)), open: openBtn };
+  }
+
   /* ═══════════ point d'entrée ═══════════
    * agent.js décide de la route et passe le spec ; ici on ne fait que lire. */
   function reply(spec, L) {
     if (!spec || !spec.entity) return null;
     L = (L === 'en' || L === 'ar') ? L : 'fr';
     try {
+      if (spec.entity === 'command') return sCommand(spec, L);
+      if (spec.entity === 'client' && spec.agg === 'today') return sClientsToday(L);
+      if (spec.entity === 'client' && spec.agg === 'card') return sClientCard(spec, L);
+      if (spec.entity === 'staff' && spec.agg === 'hours') return sStaffHours(L);
+      if (spec.entity === 'product' && spec.agg === 'units') return sUnitsToday(L);
+      if (spec.entity === 'cash') return sCashToday(L);
+      if (spec.entity === 'hours' && spec.agg === 'week') return sHoursWeek(L);
       if (spec.entity === 'product') return sProduct(spec, L);
       if (spec.entity === 'client') {
         if (spec.agg === 'points') return sClientPoints(spec, L);
@@ -855,7 +988,7 @@
     now: W("aujourd'?\\s?hui|\\bajd\\b|\\bauj\\b|\\btoday\\b|\\btonight\\b|\\bce soir\\b|\\bce matin\\b|\\bce jour\\b|\\bmaintenant\\b|\\bmnt\\b|\\bnow\\b|\\bactuellement\\b|en ce moment|\\bcurrently\\b|\\bthis evening\\b|اليوم|دابا|الليلة|هاد النهار|هاد العشية|الان|حاليا|هذا المساء|\\bly?ou?ma?\\b|\\bdaba\\b|\\blila\\b|\\bl3chiya\\b"),
     top: W("\\bbiggest\\b|\\bgros\\b|en tete|متصدر|\\bbest-?selling\\b|\\bbestselling\\b|\\ble plus\\b|\\bla plus\\b|\\bles plus\\b|\\bmeilleur\\w*|\\bbest\\b|\\btop\\b|\\bmost\\b|\\ble mieux\\b|\\bnumero (?:un|1)\\b|\\bnumber one\\b|\\bpremier\\b|\\bhighest\\b|\\bstar\\b|\\bcartonne\\b|بزاف|اكثر|كثر|افضل|احسن|اعلى|اكبر|نمرة واحد|الاول|يتصدر|\\bbe?zaf\\b|\\bkt[ea]?r\\b|\\ba7san\\b|\\bafdal\\b|\\bakbar\\b|\\blowel\\b"),
     low: W("\\ble moins\\b|\\bla moins\\b|\\bles moins\\b|\\bpire\\b|\\bworst\\b|\\bleast\\b|\\blowest\\b|\\bslowest\\b|\\bfewest\\b|\\bbottom\\b|\\ben bas\\b|\\ben dernier\\b|dernier (?:du|au|en) classement|\\ble dernier (?:produit|plat|article)|\\bmarche (?:le )?moins\\b|ne se vend pas|ne part pas|اقل|اسوا|اخر ترتيب|اخر منتوج|ما كيتباعش|ما كتتباعش|\\bma ?kaytba3ch\\b|\\bma ?kaymchich\\b|\\ba9al\\b|\\b9ell\\b|\\b9lil\\b|\\bakher\\b"),
-    sell: W("\\bbestselling\\b|best-selling|كياخدو|ياخدو|\\bkaykhodo\\b|\\bvend\\w*|\\bvente\\w*|\\bsell\\w*|\\bsold\\b|\\bseller\\b|\\bcommande\\w*|\\bordered\\b|\\bpart\\b|\\bmarche\\b|\\bpopular\\b|\\bclassement\\b|\\branking\\b|\\bchiffre\\b|\\brevenue\\b|\\bsales\\b|كيتباع|كتتباع|تباع|تباعت|يباع|كيبيع|كنبيع|بيع|ابيع|باع|بعت|مبيع|مطلوب|كيمشي|ترتيب|شيفر|\\bkaytba3\\b|\\btba3t?\\b|\\bkaybi3\\b|\\bkanbi3\\b|\\bbi3\\b|\\bba3\\b|\\bventes?\\b|\\bkaymchi\\b"),
+    sell: W("\\bbestselling\\b|best-selling|كياخدو|ياخدو|\\bkaykhodo\\b|\\bvend\\w*|\\bvente\\w*|\\bsell\\w*|\\bsold\\b|\\bseller\\b|\\bcommande\\w*|\\bordered\\b|\\bpart\\b|\\bmarche\\b|\\bpopular\\b|\\bclassement\\b|\\branking\\b|\\bchiffre\\b|\\brevenue\\b|\\bsales\\b|كيتباع|كتتباع|بعنا|\\bb3na\\b|تباع|تباعت|يباع|كيبيع|كنبيع|بيع|ابيع|باع|بعت|مبيع|مطلوب|كيمشي|ترتيب|شيفر|\\bkaytba3\\b|\\btba3t?\\b|\\bkaybi3\\b|\\bkanbi3\\b|\\bbi3\\b|\\bba3\\b|\\bventes?\\b|\\bkaymchi\\b"),
     item: W("\\bqu'?\\s?est[- ]ce\\b|ما الذي|ماذا|اصناف|الاصناف|منتجات|المنتجات|عناصر|\\bentries\\b|\\bproduits?\\b|\\barticles?\\b|\\bplats?\\b|\\bitems?\\b|\\bproducts?\\b|\\bdish(?:es)?\\b|\\breferences?\\b|\\bboissons?\\b|\\bmeal\\b|\\bthing\\b|\\bce qui\\b|\\bwhat\\b|منتج|منتوج|صنف|طبق|وجبة|حاجة|بلات|سلعة|\\bproduit\\b|\\bplat\\b|\\barticle\\b|\\bsenf\\b|\\b7aja\\b|شنو|اشنو|\\bchno\\b|\\bachno\\b|\\bqu'?est[- ]ce\\b|\\bc'?est quoi\\b|\\bc quoi\\b"),
     client: W("عميل|عميلا|العميل|عملايي|\\bclients?\\b|\\bclientes?\\b|\\bcustomers?\\b|\\bhabitues?\\b|\\bregulars?\\b|\\bacheteurs?\\b|زبون|زبناء|زبائن|زبائني|عملاء|عملائي|العملاء|كليان|الكليان|\\bk?l[iy]an\\b|\\bzbo?un\\b|\\bzbana\\b|\\blclients\\b"),
     spend: W("\\bachats?\\b|\\bpurchases?\\b|\\btotal spend\\b|ينفق|الانفاق|مشتريات|المشتريات|الشريات|فلوس|\\bflous\\b|\\bkaykhelli\\b|depense\\w*|\\bspends?\\b|\\bspent\\b|\\bfidele\\b|\\bloyal\\b|\\bbig spender\\b|\\bachete le plus\\b|\\bpaie le plus\\b|كيصرف|يصرف|انفق|\\bkayserf\\b|كيخلص|\\bkaykhelles\\b"),
@@ -888,18 +1021,73 @@
    * margin question, a season, a past period. agent.js owns those. */
   var NOT_OWN = W("je veux (?:gagner|faire|atteindre)|j'?aimerais (?:gagner|faire)|i want to (?:make|earn|hit)|\\bobjectif\\b|\\btarget\\b|\\bgoal\\b|بغيت نربح|اريد ربح|هدفي|\\bhadaf\\b");
   /* An order to the app, not a question: the operation routes own it. */
-  var COMMAND = W("^(?:stp |svp |please |عفاك )?(?:ajoute\\w*|add|supprime\\w*|delete|remove|annule\\w*|cancel|modifie\\w*|change|set|mets|met|envoie\\w*|send|cree\\w*|create|enregistre\\w*|ecris|write|zid|nzid|زيد|ضيف|حيد|بدل|صيفط|ارسل|اضف|احذف|الغ|غير|سجل)\\b|\\b(?:send|envoie\\w*|صيفط|ارسل)\\b.{0,30}\\b(?:message|sms|whatsapp|رسالة|ميساج)");
+  var COMMAND = W("^(?:stp |svp |please |عفاك )?(?:ajoute\\w*|add|supprime\\w*|delete|remove|annule\\w*|cancel|modifie\\w*|change|set|mets|met|envoie\\w*|send|cree\\w*|create|enregistre\\w*|ecris|write|zid|nzid)\\b|^(?:عفاك )?(?:زيد|ضيف|حيد|بدل|بدّل|صيفط|ارسل|اضف|احذف|الغ|غير|سجل)(?=\\s|$)|\\b(?:send|envoie\\w*)\\b.{0,30}\\b(?:message|sms|whatsapp)|(?:صيفط|ارسل).{0,30}(?:رسالة|ميساج)");
   var PAID_OUT = W("دفعت|دفعنا|خلصت|خلصنا|\\bkhlle?st\\b|\\bpaye\\b|\\bpaid\\b|\\bdecaiss\\w*|\\bspent on\\b|\\bsorti de (?:la )?caisse\\b");
   var LATER = W("\\bdemain\\b|\\btomorrow\\b|غدا|غدوة|\\bghda\\b|\\bghedda\\b|apres[- ]demain|la semaine prochaine|next week");
+  var HOWTO = W("^(?:comment (?!va\\b|ca va)|how (?:do|to|can|does|should)\\b|كيفاش|كيفاه|\\bkifa?c?h\\b|\\bkifash\\b)|\\bwach kayn\\b|est.ce qu'?il y a");
   var FUTURE = W("\\bvais\\b|\\bva (?:faire|gagner|vendre)\\b|\\bwill\\b|غادي ن|\\bghadi n|prevision|forecast|\\bprevoir\\b");
   var MONEY_TALK = W("\\bmarges?\\b|\\bmargin\\b|benefice|\\bprofit|rentab|break.?even|\\bseuil\\b|\\bgagn\\w*|\\bearn\\w*|\\bincome\\b|\\bnet\\b|ربح|ارباح|\\brba7\\b|\\bargent\\b|\\bcash\\b|tresorerie|\\bmoney\\b|\\bflous\\b|فلوس|\\bcouter\\b|\\bcoute\\b|\\bcost\\b|\\bbaiss\\w*|\\bhausse\\b|augment\\w*|\\bdrop\\w*|\\bcompar\\w*");
   var SEASON = W("\\bramadan\\b|\\bramdan\\b|\\baid\\b|\\beid\\b|\\bete\\b|\\bsummer\\b|\\bhiver\\b|\\bwinter\\b|\\bsaison\\w*|\\bseason\\w*|رمضان|العيد|الصيف|الشتاء|موسم");
   var OTHER_DAY = W("\\bhier\\b|\\byesterday\\b|avant[- ]hier|البارح|البارحة|(?:^|\\s)امس|\\blbare7\\b|\\blundi\\b|\\bmardi\\b|\\bmercredi\\b|\\bjeudi\\b|\\bvendredi\\b|\\bsamedi\\b|\\bdimanche\\b|\\bjanvier\\b|\\bfevrier\\b|\\bmars\\b|\\bavril\\b|\\bmai\\b|\\bjuin\\b|\\bjuillet\\b|\\baout\\b|\\bseptembre\\b|\\boctobre\\b|\\bnovembre\\b|\\bdecembre\\b|\\bsemaine\\b|\\bweek\\b|\\blast\\b|dernier|derniere|passee?\\b|الماضي|الاسبوع");
   var COUNT_OF = W("\\bcount\\b|\\b3adad\\b|\\bnombre\\b|combien d|\\bcb d|how many|number of|nombre d|\\bnbr? d|عدد|(?:^|\\s)كم(?=\\s)|شحال من|شحال ديال|\\b(?:ch|sh)(?:7|h)h?al (?:mn|d)\\b");
+  /* An order to change data (« change closing time to 11 », « ajoute 20
+   * points à Salma ») used to come back as a reading of that data. The
+   * assistant never writes to the books: it says so and opens the page where
+   * the merchant makes the change with their own rights. An order naming a
+   * ticket number stays with the operation lane, which can move an order. */
+  var CMD_TARGETS = [
+    { rx: W("\\bpoints?\\b|fidelit|loyalty|نقط|\\bn9at\\b|\\bclients?\\b|\\bcustomers?\\b|زبون|زبناء|كليان|\\bklyan\\b"), page: 'pClients', h: 'clients-directory' },
+    { rx: W("horaire|\\bheures? d|\\bouverture\\b|\\bfermeture\\b|closing|opening|\\bhours\\b|وقت|ساعات|الاغلاق|الفتح|\\bsa3a\\b"), page: 'pHours', h: 'settings-hours' },
+    { rx: W("employe|serveur|caissier|\\bstaff\\b|\\bequipe\\b|\\bteam\\b|employee|worker|waiter|خدام|موظف|عامل|\\bkhddam\\b|\\bkhdam\\b"), page: 'pTeam', h: 'nav-equipe' },
+    { rx: W("\\bstock\\b|inventaire|inventory|مخزون|\\bstok\\b"), page: 'pStock', h: 'nav-stock' },
+    { rx: W("\\bcommandes?\\b|\\bventes?\\b|\\btickets?\\b|\\borders?\\b|\\bsales?\\b|طلب|طلبات|كوموند|\\bcommande\\b"), page: 'pOrders', h: 'nav-transactions' },
+    { rx: W("\\bplats?\\b|\\bmenu\\b|\\bcarte\\b|\\bdish|\\bprix\\b|\\bprice\\b|produit|product|article|\\bitem\\b|منيو|طبق|منتوج|سلعة|ثمن|\\bplat\\b"), page: 'pMenu', h: 'nav-menu' },
+  ];
+  var CMD_T = {
+    fr: 'Je ne modifie pas vos données depuis cette conversation : la modification se fait sur la page, avec vos droits.',
+    en: 'I don’t change your data from this conversation: the change is made on the page, with your own access.',
+    ar: 'ما كنبدّلش المعطيات ديالك من هاد المحادثة: التعديل كيتدار فالصفحة، بالصلاحيات ديالك.',
+  };
+  function commandIntent(q) {
+    if (/\b(?:commande|order|ticket|طلب|cmd)\s*(?:n[o°]?\s*)?#?\d/.test(q)) return null;
+    /* Not data changes: a new sale or payment link (the action lane opens
+     * them), a « what if » with a percentage, a text to write, a message to
+     * the staff (refused by its own route). */
+    if (/nouvelle vente|new sale|lien de paiement|payment link|%|^(?:write|ecris|redige)/.test(q)) return null;
+    if (/\b(?:send|envoie\w*)\b|صيفط|ارسل/.test(q) && CMD_TARGETS[2].rx.test(q)) return null;
+    var send = /\b(?:send|envoie\w*)\b|صيفط|ارسل/.test(q) && /message|sms|whatsapp|رسالة|ميساج/.test(q);
+    for (var i = 0; i < CMD_TARGETS.length; i++) if (send || CMD_TARGETS[i].rx.test(q)) return { entity: 'command', target: CMD_TARGETS[send ? 0 : i], send: send };
+    return null;
+  }
+  var CMD_SEND_T = {
+    fr: 'Je n’envoie pas de message depuis cette conversation : l’envoi se fait depuis le carnet clients, avec le consentement de chaque client.',
+    en: 'I don’t send messages from this conversation: sending is done from the client book, with each client’s consent.',
+    ar: 'ما كنصيفطش الرسائل من هاد المحادثة: الإرسال كيتدار من سجلّ الزبناء، بموافقة كل زبون.',
+  };
+  var CMD_ORDERS = { fr: 'les commandes', en: 'orders', ar: 'الطلبات' };
+  function sCommand(spec, L) {
+    var target = spec.target;
+    if (target.page === 'pOrders') return { text: CMD_T[L] || CMD_T.fr, open: [{ label: tr(L).openBtn(CMD_ORDERS[L] || CMD_ORDERS.fr), handler: target.h }] };
+    if (spec.send) return { text: CMD_SEND_T[L] || CMD_SEND_T.fr, open: open1(L, 'pClients', 'clients-directory') };
+    /* A shop sells products, a restaurant a menu: the item page follows. */
+    if (target.h === 'nav-menu' && !window.KiwiMenuStore && window.KiwiBoutiqueCatalog) target = { page: 'pStock', h: 'nav-catalogue' };
+    return { text: CMD_T[L] || CMD_T.fr, open: open1(L, target.page, target.h) };
+  }
+  var LAST_MONTH = W("mois (?:dernier|passe|precedent)|last month|previous month|الشهر (?:الماضي|اللي فات|الفايت|السابق|لي فات)|\\bch(?:h|e)?ar (?:li |l)?fa(?:t|yt)\\b|\\bchhr li fat\\b");
+  var CASH_BOX = W("(?:dans|in|en) (?:la |ma |the |my )?(?:caisse|tiroir|drawer|till)\\b|\\bf(?:e|i)? ?(?:sndo9|sendo9|sndoq|snadq)\\b|فالصندوق|في الصندوق|فصندوق|فالكاسة|\\bcash\\b.{0,25}\\b(?:aujourd|today|lyoum|lyouma)|\\bespeces\\b.{0,25}\\b(?:aujourd|today)|كاش اليوم");
+  var WEEK_DAYS = W("(?:\\bjours?\\b|\\bdays?\\b|نهار|ايام|يوما|يوم|\\bnhar\\b|\\biyam\\b).{0,30}(?:ouvr|\\bopen|travaill|\\bwork|نعمل|تعمل|نفتح|مفتوح|كنخدمو|نخدمو|كنحلو|خدامين|\\bkhdmo\\b|\\bkn?khdmo\\b|\\bkan7ellou\\b)|(?:ouvert|\\bopen\\b).{0,20}(?:par semaine|per week|a week)");
+  var HRS_WORD = W("\\bheures?\\b|\\bhours?\\b|ساعات|ساعة|سوايع|\\bsway3\\b|\\bsa3at\\b|\\bsa3a\\b");
+  var WORK_VERB = W("travaill|\\bbosse|\\bworked\\b|\\bwork\\b|خدمو|\\bkhdmo\\b|\\bkhedmo\\b");
+  var PRESENT = W("موجود|حاضر|\\bpresents?\\b|\\best la\\b|\\bsont la\\b|\\bthere\\b|\\bhere\\b|\\bkayn\\b|كاين|\\bici\\b");
+  var VISITED = W("\\bvenus?\\b|\\bvenues?\\b|\\bpasse(?:s|e|es)?\\b|\\bcame\\b|\\bcome in\\b|\\bvisit\\w*|\\bja\\b|\\bjaw\\b|\\bdaz\\b|\\bdazo\\b|(?:^|\\s)(?:جا|جاو|جاؤوا|جاءوا|جاووا|جاء|داز|دازو|زار|زارو|زاروا|حضر|حضروا|اجا|اتى|اتوا)(?=\\s|$)");
+  var LAST_VISIT = W("derniere (?:fois|visite)|last (?:time|visit)|\\blast (?:came|come|visited)\\b|\\bvisit(?:ed)? last\\b|\\bcame (?:in )?last\\b|quand (?:est|a|etait)|when did|when was|اخر مرة|اخر زيارة|\\bakhir mra\\b|\\bakher mra\\b|فوقاش|\\bfo9ach\\b|امتى|متى");
+  var CONTACT = W("\\bnumero\\b|\\btelephone\\b|\\btel\\b|\\bphone\\b|\\bcontact\\b|\\bemail\\b|\\bnemra\\b|رقم|نمرة|تيليفون|الهاتف");
+  var UNIT_WORD = W("\\barticles?\\b|\\bproduits?\\b|\\bpieces?\\b|\\bunites?\\b|\\bunits?\\b|\\bitems?\\b|\\bplats?\\b|منتوج|منتجات|منتج|سلعة|حاجة|حوايج|\\bmontoj\\b|\\bproduit\\b");
   function ownIntent(q, raw) {
     q = String(q || '');
     var h = function (k) { return LX[k].test(q); };
-    if (NOT_OWN.test(q) || COMMAND.test(q)) return null;
+    if (COMMAND.test(q)) return commandIntent(q);
+    if (NOT_OWN.test(q) || HOWTO.test(q)) return null;
     /* Money paid out is a cost, not the takings that the day card shows. */
     if (PAID_OUT.test(q) && /combien|\bcb\b|how much|كم|شحال|\bch7al\b|\bchhal\b/.test(q) && !/\breste\b|\bleft\b|\bremain|بقا|باقي|\bb9a\b/.test(q)) return { route: 'charges' };
     var later = LATER.test(q);
@@ -907,6 +1095,16 @@
     if (later && (h('shift') || h('staff')) && h('who')) return { entity: 'staff', agg: 'later' };
     var money = MONEY_TALK.test(q) || FUTURE.test(q), season = SEASON.test(q), past = OTHER_DAY.test(q);
     var hit = function () { var f = findClient(raw || q); return f && f.hit; };
+    /* Last month is a past period: agent.js answers that it keeps no history. */
+    if (LAST_MONTH.test(q)) return null;
+    var howMuch = /combien|\bcb\b|how much|how many|كم|شحال|\bch7al\b|\bchhal\b|\bwhat'?s in\b/.test(q);
+    if (howMuch && CASH_BOX.test(q) && !/combien de temps|how long|\btien[st]?\b|\btenir\b|survi|\bdure\b|شحال من وقت|كم من الوقت/.test(q)) return { entity: 'cash', agg: 'today' };
+    if (WEEK_DAYS.test(q) && /semaine|\bweek\b|سيمانة|السيمانة|الاسبوع|اسبوع|\bsimana\b|\bsmana\b|\bssimana\b/.test(q)) return { entity: 'hours', agg: 'week' };
+    if (HRS_WORD.test(q) && (h('staff') || WORK_VERB.test(q)) && !h('open') && !h('close') && !/ouverture|opening|الفتح|semaine|\bweek\b|سيمانة|الاسبوع/.test(q)) return { entity: 'staff', agg: 'hours' };
+    if (h('staff') && PRESENT.test(q) && h('now') && !h('count')) return { entity: 'staff', agg: 'today' };
+    if (h('client') && VISITED.test(q) && h('now') && !COUNT_OF.test(q) && !h('gone')) return { entity: 'client', agg: 'today' };
+    if ((LAST_VISIT.test(q) || CONTACT.test(q)) && !h('points') && hit()) return { entity: 'client', agg: 'card', contact: CONTACT.test(q) };
+    if (!money && !past && COUNT_OF.test(q) && h('sell') && h('now') && UNIT_WORD.test(q)) return { entity: 'product', agg: 'units' };
     /* Opening hours. Holidays stay with agent.js's exception route. */
     if (!h('notHours')) {
       if (h('close') && !h('sell') && (h('when') || (h('now') && /fermeture|closing|اغلاق|السد/.test(q)))) return { entity: 'hours', agg: 'close' };

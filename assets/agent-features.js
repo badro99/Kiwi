@@ -88,39 +88,39 @@
   var DEFS = {
     caisse: { label: L('Caisse adaptée au métier', 'Trade-specific till', 'صندوق مناسب للنشاط'),
       summary: L('La caisse reprend le vocabulaire et le flux de votre activité, tout en alimentant le même journal de ventes que le tableau de bord.', 'The till follows your trade’s vocabulary and workflow while writing to the same sales journal as the dashboard.', 'يتبع الصندوق لغة ومسار نشاطك ويسجل في نفس دفتر المبيعات.'),
-      steps: L('Connecter la caisse → choisir les accès employés → faire une vente test', 'Pair the till → choose staff access → run a test sale', 'ربط الصندوق ← تحديد دخول الموظفين ← تنفيذ بيع تجريبي'), keywords: 'caisse pos comptoir encaissement till checkout', nav: 'terminaux' },
+      steps: L('Connecter la caisse → choisir les accès employés → faire une vente test', 'Pair the till → choose staff access → run a test sale', 'ربط الصندوق ← تحديد دخول الموظفين ← تنفيذ بيع تجريبي'), keywords: 'caisse pos comptoir encaissement till checkout appairer jumeler pairing tablette ipad صندوق كاسة', nav: 'terminaux' },
     payments: { label: L('Paiements et partage', 'Payments and split tender', 'الدفع وتقسيم المبلغ'),
       summary: L('Espèces, carte, paiement partagé et crédit client sont conservés avec leur ventilation réelle sur le ticket.', 'Cash, card, split tender and customer credit retain their real breakdown on the receipt.', 'يحفظ النقد والبطاقة والدفع المقسم ودين العميل بتفاصيله الحقيقية.'),
-      steps: L('Configurer les moyens → connecter le terminal carte → tester chaque combinaison', 'Configure methods → connect the card terminal → test each combination', 'ضبط طرق الدفع ← ربط جهاز البطاقة ← اختبار كل تركيبة'), keywords: 'paiement paye cash carte split partage credit client dette tender', nav: 'reglements' },
+      steps: L('Configurer les moyens → connecter le terminal carte → tester chaque combinaison', 'Configure methods → connect the card terminal → test each combination', 'ضبط طرق الدفع ← ربط جهاز البطاقة ← اختبار كل تركيبة'), keywords: 'paiement paye cash carte split partage credit client dette tender diviser addition separer خلاص كارط الدفع', nav: 'reglements' },
     inventory: { label: L('Inventaire traçable', 'Traceable inventory', 'مخزون قابل للتتبع'),
       summary: L('Chaque réception, vente, ajustement et annulation devient un mouvement append-only : le stock se reconstruit sans écraser l’historique.', 'Every receipt, sale, adjustment and reversal becomes an append-only movement, so stock is rebuilt without erasing history.', 'كل استلام وبيع وتعديل وإلغاء يصبح حركة محفوظة دون مسح التاريخ.'),
-      steps: L('Importer ou créer les articles → saisir les soldes initiaux → régler les seuils et fournisseurs', 'Import or create items → enter opening balances → set thresholds and suppliers', 'استيراد أو إنشاء المنتجات ← إدخال الرصيد الأولي ← ضبط الحدود والموردين'), keywords: 'stock inventaire inventory rupture reapprovisionnement mouvement lot fournisseur ingredient', nav: 'stock' },
+      steps: L('Importer ou créer les articles → saisir les soldes initiaux → régler les seuils et fournisseurs', 'Import or create items → enter opening balances → set thresholds and suppliers', 'استيراد أو إنشاء المنتجات ← إدخال الرصيد الأولي ← ضبط الحدود والموردين'), keywords: 'stock inventaire inventory rupture reapprovisionnement mouvement lot fournisseur ingredient produit article ajouter creer importer quantite مخزون ستوك سلعة منتوج منتج montoj sel3a', nav: 'stock' },
     scanner: { label: L('Scan continu mobile', 'Continuous mobile scanning', 'المسح المستمر بالهاتف'),
       summary: L('La caméra lit les codes en continu, retrouve prix, stock et promotion, puis permet de créer immédiatement un produit inconnu.', 'The camera continuously reads codes, shows price, stock and promotion, and can immediately create an unknown product.', 'تقرأ الكاميرا الرموز باستمرار وتعرض السعر والمخزون والعرض وتسمح بإنشاء منتج غير معروف.'),
       steps: L('Autoriser la caméra Safari → vérifier les codes-barres → faire un encaissement et une impression test', 'Allow the camera in Safari → verify barcodes → run a checkout and print test', 'السماح للكاميرا في Safari ← التحقق من الرموز ← اختبار البيع والطباعة'), keywords: 'scan scanner camera iphone code barre barcode produit inconnu douchette', nav: 'inventory', trades: ['boutique', 'epicerie', 'pharmacie', 'librairie', 'fleuriste', 'autre'] },
     offline: { label: L('Mode local et synchronisation', 'Local-first and sync', 'العمل المحلي والمزامنة'),
       summary: L('Les opérations prises en charge restent utilisables sans réseau et sont rejouées avec des identifiants idempotents dès le retour de la connexion.', 'Supported operations keep working without a network and replay with idempotent IDs when connectivity returns.', 'تستمر العمليات المدعومة دون شبكة وتُزامن بمعرّفات تمنع التكرار عند عودة الاتصال.'),
-      steps: L('Installer la caisse → ouvrir une fois en ligne → vérifier l’indicateur de synchronisation', 'Install the till → open once online → verify the sync indicator', 'تثبيت الصندوق ← فتحه مرة متصلاً ← التحقق من مؤشر المزامنة'), keywords: 'offline hors ligne sans internet synchronisation sync reseau connexion', nav: 'terminaux' },
+      steps: L('Installer la caisse → ouvrir une fois en ligne → vérifier l’indicateur de synchronisation', 'Install the till → open once online → verify the sync indicator', 'تثبيت الصندوق ← فتحه مرة متصلاً ← التحقق من مؤشر المزامنة'), keywords: 'offline hors ligne sans internet synchronisation sync reseau connexion انترنت كونيكسيون internet', nav: 'terminaux' },
     receipts: { label: L('Tickets, reçus et impression', 'Receipts and printing', 'التذاكر والطباعة'),
       summary: L('Le même moteur produit l’aperçu, le reçu thermique et l’impression système ; l’apparence se règle une fois dans le tableau de bord.', 'One engine produces the preview, thermal receipt and system print; appearance is configured once in the dashboard.', 'ينتج محرك واحد المعاينة والوصل الحراري والطباعة ويُضبط الشكل مرة واحدة.'),
-      steps: L('Renseigner l’identité légale → choisir le modèle → connecter l’imprimante Bluetooth → imprimer un test', 'Enter legal identity → choose a template → connect the Bluetooth printer → print a test', 'إدخال الهوية القانونية ← اختيار النموذج ← ربط طابعة Bluetooth ← طباعة اختبار'), keywords: 'ticket recu facture impression imprimer imprimante bluetooth etiquette printer receipt', nav: 'terminaux' },
+      steps: L('Renseigner l’identité légale → choisir le modèle → connecter l’imprimante Bluetooth → imprimer un test', 'Enter legal identity → choose a template → connect the Bluetooth printer → print a test', 'إدخال الهوية القانونية ← اختيار النموذج ← ربط طابعة Bluetooth ← طباعة اختبار'), keywords: 'ticket recu facture impression imprimer imprimante bluetooth etiquette printer receipt print طابعة طباعة نطبع تيكي فاتورة tabi3a ntb3 tiki', nav: 'terminaux' },
     clients: { label: L('Clients et fidélité', 'Customers and loyalty', 'العملاء والولاء'),
       summary: L('Les fiches, consentements, visites, dépenses et avantages suivent le client entre la caisse et le tableau de bord.', 'Profiles, consent, visits, spend and rewards follow the customer between till and dashboard.', 'تنتقل الملفات والموافقات والزيارات والمصاريف والمكافآت بين الصندوق ولوحة التحكم.'),
-      steps: L('Choisir le modèle de fidélité → définir la récompense → identifier un client test en caisse', 'Choose the loyalty model → set the reward → identify a test customer at checkout', 'اختيار نظام الولاء ← تحديد المكافأة ← تعريف عميل تجريبي في الصندوق'), keywords: 'client fidelite points recompense crm habitue loyalty customer', nav: 'clients' },
+      steps: L('Choisir le modèle de fidélité → définir la récompense → identifier un client test en caisse', 'Choose the loyalty model → set the reward → identify a test customer at checkout', 'اختيار نظام الولاء ← تحديد المكافأة ← تعريف عميل تجريبي في الصندوق'), keywords: 'client fidelite points recompense crm habitue loyalty customer carte stamps tampons زبون كليان الوفاء نقط klyan zboun', nav: 'clients' },
     team: { label: L('Équipe et accès', 'Team and access', 'الفريق والصلاحيات'),
       summary: L('Chaque rôle reçoit uniquement les pages et chiffres autorisés, avec son propre accès caisse et son planning.', 'Each role receives only authorised pages and figures, with its own till access and schedule.', 'يحصل كل دور فقط على الصفحات والأرقام المسموحة مع دخوله وجدوله.'),
-      steps: L('Créer les rôles → ajouter l’équipe → attribuer accès et planning → tester un compte employé', 'Create roles → add staff → assign access and schedule → test an employee account', 'إنشاء الأدوار ← إضافة الفريق ← تحديد الصلاحيات والجدول ← اختبار حساب موظف'), keywords: 'equipe employe staff role acces pin planning paie', nav: 'equipe' },
+      steps: L('Créer les rôles → ajouter l’équipe → attribuer accès et planning → tester un compte employé', 'Create roles → add staff → assign access and schedule → test an employee account', 'إنشاء الأدوار ← إضافة الفريق ← تحديد الصلاحيات والجدول ← اختبار حساب موظف'), keywords: 'equipe employe staff role acces pin planning paie salaire payer serveur caissier employee pointage موظف خدام خدامة فريق khdam khddam', nav: 'equipe' },
     hours: { label: L('Horaires partagés', 'Shared opening hours', 'ساعات العمل المشتركة'),
       summary: L('Une seule fiche alimente réservations, commande en ligne, caisse, rapport et réponses de l’assistant.', 'One schedule feeds reservations, online ordering, till, reports and assistant answers.', 'جدول واحد يغذي الحجوزات والطلب والصندوق والتقارير وإجابات المساعد.'),
-      steps: L('Saisir la semaine → ajouter Ramadan, Aïd ou congés → vérifier un créneau test', 'Enter the week → add Ramadan, Eid or holidays → verify a test slot', 'إدخال الأسبوع ← إضافة رمضان أو العيد أو العطل ← اختبار موعد'), keywords: 'horaire ouverture fermeture ramadan conge open hours', nav: 'equipe' },
+      steps: L('Saisir la semaine → ajouter Ramadan, Aïd ou congés → vérifier un créneau test', 'Enter the week → add Ramadan, Eid or holidays → verify a test slot', 'إدخال الأسبوع ← إضافة رمضان أو العيد أو العطل ← اختبار موعد'), keywords: 'horaire ouverture fermeture ramadan conge open hours closing ساعات الفتح الاغلاق', nav: 'equipe' },
     reporting: { label: L('Rapport journalier et ventes', 'Daily report and sales', 'التقرير اليومي والمبيعات'),
       summary: L('Les ventes validées alimentent le chiffre, les moyens de paiement, les articles et les clôtures sans ressaisie.', 'Validated sales feed revenue, payment methods, items and closures without re-entry.', 'تغذي المبيعات المؤكدة الإيرادات وطرق الدفع والمنتجات والإغلاقات دون إعادة إدخال.'),
-      steps: L('Faire une vente test → vérifier le journal → contrôler le rapport Z', 'Run a test sale → verify the journal → check the Z report', 'تنفيذ بيع تجريبي ← التحقق من السجل ← مراجعة تقرير Z'), keywords: 'rapport journalier ventes chiffre transaction cloture z report sales', nav: 'transactions' },
+      steps: L('Faire une vente test → vérifier le journal → contrôler le rapport Z', 'Run a test sale → verify the journal → check the Z report', 'تنفيذ بيع تجريبي ← التحقق من السجل ← مراجعة تقرير Z'), keywords: 'rapport journalier chiffre transaction cloture z report export excel exporter rapport تقرير', nav: 'transactions' },
 
-    tables: { label: L('Plan de salle et tables', 'Floor plan and tables', 'خريطة القاعة والطاولات'), summary: L('Ouvrez les tables, suivez leur état et gardez chaque addition attachée au bon service.', 'Open tables, track their state and keep each bill attached to the right service.', 'افتح الطاولات وتتبع حالتها واربط كل فاتورة بالخدمة الصحيحة.'), steps: L('Dessiner les zones → créer les tables → tester ouverture, déplacement et règlement', 'Draw areas → create tables → test open, move and settle', 'رسم المناطق ← إنشاء الطاولات ← اختبار الفتح والنقل والدفع'), keywords: 'table salle terrasse addition plan floor', nav: 'tables' },
-    menu: { label: L('Carte, options et stations', 'Menu, options and stations', 'القائمة والخيارات والمحطات'), summary: L('Produits, variantes, suppléments et routage cuisine restent communs au tableau de bord et à la caisse.', 'Products, variants, add-ons and kitchen routing stay shared between dashboard and till.', 'تتشارك لوحة التحكم والصندوق المنتجات والخيارات وتوجيه المطبخ.'), steps: L('Créer les catégories → ajouter produits et options → affecter les stations → publier', 'Create categories → add products and options → assign stations → publish', 'إنشاء الفئات ← إضافة المنتجات والخيارات ← تعيين المحطات ← النشر'), keywords: 'menu carte produit plat option supplement station recette tarif prix', nav: 'menu' },
+    tables: { label: L('Plan de salle et tables', 'Floor plan and tables', 'خريطة القاعة والطاولات'), summary: L('Ouvrez les tables, suivez leur état et gardez chaque addition attachée au bon service.', 'Open tables, track their state and keep each bill attached to the right service.', 'افتح الطاولات وتتبع حالتها واربط كل فاتورة بالخدمة الصحيحة.'), steps: L('Dessiner les zones → créer les tables → tester ouverture, déplacement et règlement', 'Draw areas → create tables → test open, move and settle', 'رسم المناطق ← إنشاء الطاولات ← اختبار الفتح والنقل والدفع'), keywords: 'table salle terrasse addition plan floor طاولة طابلة tabla', nav: 'tables' },
+    menu: { label: L('Carte, options et stations', 'Menu, options and stations', 'القائمة والخيارات والمحطات'), summary: L('Produits, variantes, suppléments et routage cuisine restent communs au tableau de bord et à la caisse.', 'Products, variants, add-ons and kitchen routing stay shared between dashboard and till.', 'تتشارك لوحة التحكم والصندوق المنتجات والخيارات وتوجيه المطبخ.'), steps: L('Créer les catégories → ajouter produits et options → affecter les stations → publier', 'Create categories → add products and options → assign stations → publish', 'إنشاء الفئات ← إضافة المنتجات والخيارات ← تعيين المحطات ← النشر'), keywords: 'menu carte produit plat option supplement station recette tarif prix article dish ajouter creer منيو المنيو طبق بلات قائمة plat', nav: 'menu' },
     kds: { label: L('Écran de production', 'Production screen', 'شاشة الإنتاج'), summary: L('Les commandes avancent par station et statut jusqu’à la remise, sans réimprimer la même information.', 'Orders move by station and status through hand-off without reprinting the same information.', 'تتحرك الطلبات حسب المحطة والحالة حتى التسليم دون إعادة طباعة.'), steps: L('Créer les stations → router les articles → connecter l’écran → tester une commande', 'Create stations → route items → connect the screen → test an order', 'إنشاء المحطات ← توجيه المنتجات ← ربط الشاشة ← اختبار طلب'), keywords: 'kds cuisine ecran preparation production four barista', nav: 'kds' },
-    reservations: { label: L('Réservations', 'Reservations', 'الحجوزات'), summary: L('Les créneaux respectent les horaires de l’établissement et restent liés au client et à la capacité.', 'Slots respect business hours and stay linked to the customer and capacity.', 'تحترم المواعيد ساعات العمل وترتبط بالعميل والسعة.'), steps: L('Régler les horaires → définir la capacité → créer une réservation test', 'Set opening hours → define capacity → create a test booking', 'ضبط الساعات ← تحديد السعة ← إنشاء حجز تجريبي'), keywords: 'reservation reserver booking rdv rendez vous creneau', nav: 'reservations' },
+    reservations: { label: L('Réservations', 'Reservations', 'الحجوزات'), summary: L('Les créneaux respectent les horaires de l’établissement et restent liés au client et à la capacité.', 'Slots respect business hours and stay linked to the customer and capacity.', 'تحترم المواعيد ساعات العمل وترتبط بالعميل والسعة.'), steps: L('Régler les horaires → définir la capacité → créer une réservation test', 'Set opening hours → define capacity → create a test booking', 'ضبط الساعات ← تحديد السعة ← إنشاء حجز تجريبي'), keywords: 'reservation reserver booking rdv rendez vous creneau حجز reservi', nav: 'reservations' },
 
     'pressing-orders': { label: L('Dépôts et commandes', 'Drop-offs and orders', 'الإيداعات والطلبات'), summary: L('Chaque dépôt relie client, pièces, traitements, échéance, acompte et solde dans un seul bon.', 'Each drop-off links customer, garments, treatments, due date, deposit and balance in one order.', 'يربط كل إيداع العميل والقطع والمعالجة والموعد والتسبيق والرصيد في طلب واحد.'), steps: L('Créer les services → faire un dépôt test → imprimer ticket et étiquettes', 'Create services → run a test drop-off → print receipt and labels', 'إنشاء الخدمات ← تجربة إيداع ← طباعة التذكرة والملصقات'), keywords: 'depot commande pressing acompte solde piece vetement', nav: 'pressing-orders' },
     'pressing-workshop': { label: L('Atelier et flux', 'Workshop workflow', 'الورشة وسير العمل'), summary: L('Les commandes avancent de la réception au traitement puis au prêt, avec les promesses dépassées en tête de file.', 'Orders move from intake through treatment to ready, with passed promise dates first in the queue.', 'تنتقل الطلبات من الاستلام إلى المعالجة ثم الجاهزية، مع المواعيد المتجاوزة في المقدمة.'), steps: L('Faire un dépôt test → suivre son état dans l’atelier → le marquer prêt', 'Run a test drop-off → follow its status in the workshop → mark it ready', 'تجربة إيداع ← متابعة حالته في الورشة ← تحديده جاهزًا'), keywords: 'atelier flux traitement lavage repassage detacher pret retard', nav: 'pressing-workshop' },
@@ -229,11 +229,13 @@
 
   function scoreFeature(f, q) {
     var hay = norm([f.key, f.nav, f.keywords, pick(f.label, 'fr'), pick(f.label, 'en'), pick(f.label, 'ar')].join(' '));
-    var words = norm(q).split(/[^a-z0-9\u0600-\u06ff]+/).filter(function (x) { return x.length > 2; });
+    var words = norm(q).split(/[^a-z0-9\u0600-\u06ff]+/).filter(function (x) { return x.length > 2; })
+      .map(function (x) { return x.length > 4 ? x.replace(/s$/, '') : x; });
     var score = 0;
     words.forEach(function (w) { if (hay.indexOf(w) >= 0) score += w.length > 7 ? 3 : 1; });
     if (f.key === 'scanner' && /scan|camera|barcode|code.?barre|iphone/.test(norm(q))) score += 8;
-    if (f.key === 'payments' && /split|partag|credit client|cash|carte/.test(norm(q))) score += 6;
+    if (f.key === 'payments' && /split|partag|credit client|cash|carte/.test(norm(q)) && !/fidel|loyal|points/.test(norm(q))) score += 6;
+    if (f.key === 'clients' && /fidel|loyal|points|wallet|نقط|ولاء/.test(norm(q))) score += 6;
     if (f.key === 'receipts' && /imprim|ticket|recu|etiquette|bluetooth/.test(norm(q))) score += 6;
     if (f.key === 'offline' && /hors ligne|offline|sans internet|synchron/.test(norm(q))) score += 8;
     if (f.key === 'pressing-services' && /prix|tarif|nom|renomm|service|traitement/.test(norm(q))) score += 7;
@@ -249,12 +251,16 @@
   function matchFeature(raw, t) {
     var fs = features(t); var ranked = fs.map(function (f, i) { return { f: f, score: scoreFeature(f, raw), i: i }; })
       .filter(function (x) { return x.score > 0; }).sort(function (a, b) { return b.score - a.score || a.i - b.i; });
-    return ranked.length && ranked[0].score >= 3 ? ranked[0].f : null;
+    /* « comment ajouter un produit » names one short word; a how-to verb on
+     * a Kiwi object is enough to pick the feature. */
+    var need = HOWTO_VERB.test(norm(raw)) || /\b(?:dans|avec|sur|in|on|with|f|b) kiwi\b|فكيوي|في كيوي/.test(norm(raw)) ? 1 : 3;
+    return ranked.length && ranked[0].score >= need ? ranked[0].f : null;
   }
 
   var LIST_RX = /(?:quelles?|what|which|ما|شنو).{0,24}(?:fonction|feature|outil|module|kiwi)|(?:tout|all).{0,12}(?:fonction|feature)|que (?:peut|sait) faire kiwi|what can kiwi do|fonctionnalites/;
   var SETUP_RX = /configur|parametr|integr|mise en place|mettre en place|onboard|setup|set up|ضبط|اعداد|تهيئ/;
-  var GUIDE_RX = /^(?:comment|how|ou |where|peut.?on|puis.?je|can (?:i|we)|explique|tell me|a quoi|what is|comment fonctionne|كيف|اين|هل يمكن)|\b(?:activer|utiliser|imprimer|scanner|connecter|configurer|integrer)\b/;
+  var HOWTO_VERB = /\b(?:ajout\w*|cre(?:e|er)|modifi\w*|supprim\w*|imprim\w*|connect\w*|activ\w*|configur\w*|scann?\w*|export\w*|install\w*|jumel\w*|appair\w*|divis\w*|separ\w*|pai\w*|pay|use|utilis\w*|ger(?:er|e)|set ?up|setup|parametr\w*|mettre en place|add|create|edit|delete|print|connect|enable|export|install|pair|split|nzid|nzidou|ndir|ntb3|nrbet|nfa3el|n9sem)\b|نزيد|نضيف|نطبع|نربط|نفعل|نقسم|نصاوب|ندير/;
+  var GUIDE_RX = /^(?:comment|how|ou |where|كيفاش|كيفاه|كيف |\bkifa?c?h\b|\bkifash\b|wach n9der|واش نقدر|est.ce que je peux|peut.?on|puis.?je|can (?:i|we)|explique|tell me|a quoi|what is|comment fonctionne|كيف|اين|هل يمكن|kifa?c?h|كيفاش)|\b(?:activer|utiliser|imprimer|scanner|connecter|configurer|integrer)\b/;
   var CANCEL_RX = /annul|arrete|stop|cancel|إلغاء|توقف/;
 
   function setupQuestions(t, l) {
@@ -434,15 +440,67 @@
     state.pending = null; return out;
   }
 
+  /* Kiwi's own offers: public prices from the landing (CLAUDE.md §7). */
+  var PLAN_RX = /\bkiwi\s+(?:basic|plus|pro|ultra|ultimate)\b|\b(?:basic|plus|pro|ultra|ultimate)\b.{0,25}\b(?:plan|offre|abonnement|formule|forfait|coute|cost|price|prix)\b|\b(?:mon|ma|my|quel|quelle|which|what)\s+(?:plan|offre|forfait|abonnement|formule|subscription)\b|\babonnement\b|\bsubscription\b|\bforfait\b|(?:prix|tarifs?|price|pricing|cout)\s+(?:de\s+|of\s+)?kiwi\b|\bkiwi\b.{0,12}\b(?:coute|cost|price|prix|tarif)|اشتراك|الاشتراك|الباقة|باقة|\babonnma\b|عرض كيوي|ثمن كيوي|بشحال كيوي/;
+  var PLANS = [
+    { id: 'basic', name: 'Kiwi Basic', m: 150, y: 99, fr: 'caisse simple : codes-barres, stock, reçus, carnet de crédit, rapport du jour, caisse hors ligne, un établissement', en: 'simple till: barcodes, stock, receipts, credit book, daily report, offline till, one location', ar: 'صندوق بسيط: الباركود، المخزون، الوصولات، دفتر الكريدي، تقرير اليوم، العمل بلا انترنت، محل واحد' },
+    { id: 'plus', name: 'Kiwi Plus', m: 300, y: 249, fr: 'Basic + boutique : tailles et couleurs, retours et avoirs, promotions, fidélité, fiches clients, marges', en: 'Basic + shop: sizes and colours, returns and credit notes, promotions, loyalty, customer records, margins', ar: 'Basic + المحل: المقاسات والألوان، الإرجاع، العروض، الوفاء، ملفات الزبناء، الهوامش' },
+    { id: 'pro', name: 'Kiwi Pro', m: 399, y: 349, fr: 'Plus + restaurant : plan de salle, prise de commande serveur, écran cuisine, carte multilingue, réservations, recettes et coût matière, accès employés, planning et paie', en: 'Plus + restaurant: floor plan, waiter ordering, kitchen screen, multilingual menu, bookings, recipes and food cost, staff access, scheduling and payroll', ar: 'Plus + المطعم: خريطة القاعة، طلبات النادل، شاشة المطبخ، قائمة بعدة لغات، الحجز، الوصفات وتكلفة المواد، دخول الموظفين، التوقيت والأجور' },
+    { id: 'ultra', name: 'Kiwi Ultra', m: 1499, y: null, fr: 'Pro + établissements illimités, pilotage multi-sites, multi-pays, API, chargé de compte', en: 'Pro + unlimited locations, multi-site control, multi-country, API, account manager', ar: 'Pro + محلات بلا حدود، تسيير عدة فروع، عدة دول، API، مسؤول حساب' },
+    { id: 'ultimate', name: 'Kiwi Ultimate', m: null, y: null, fr: 'sur devis, périmètre sur mesure', en: 'on quote, bespoke scope', ar: 'حسب الطلب' },
+  ];
+  var PLAN_T = {
+    fr: { mo: function (m, y) { return m == null ? 'sur devis' : m + ' MAD/mois' + (y ? ' (' + y + ' MAD/mois en annuel)' : ''); }, lead: 'Les offres Kiwi :', mine: function (n) { return 'Votre offre actuelle : <b>' + n + '</b>.'; }, one: function (n, p) { return '<b>' + n + '</b> · ' + p + '.'; } },
+    en: { mo: function (m, y) { return m == null ? 'on quote' : m + ' MAD/month' + (y ? ' (' + y + ' MAD/month billed yearly)' : ''); }, lead: 'Kiwi’s plans:', mine: function (n) { return 'Your current plan: <b>' + n + '</b>.'; }, one: function (n, p) { return '<b>' + n + '</b> · ' + p + '.'; } },
+    ar: { mo: function (m, y) { return m == null ? 'حسب الطلب' : m + ' درهم/الشهر' + (y ? ' (' + y + ' درهم/الشهر سنوياً)' : ''); }, lead: 'عروض كيوي:', mine: function (n) { return 'عرضك الحالي: <b>' + n + '</b>.'; }, one: function (n, p) { return '<b>' + n + '</b> · ' + p + '.'; } },
+  };
+  function currentPlan() {
+    /* getPlan() already reads the merchant's config plan for a real merchant. */
+    try { return String((window.KiwiVenue && window.KiwiVenue.getPlan && window.KiwiVenue.getPlan()) || '').toLowerCase(); } catch (_) { return ''; }
+  }
+  function plansReply(raw, l) {
+    var q = norm(raw), t = PLAN_T[l] || PLAN_T.fr;
+    var named = PLANS.filter(function (p) { return new RegExp('\\b' + p.id + '\\b').test(q); });
+    var mine = PLANS.filter(function (p) { return p.id === currentPlan(); })[0];
+    var asksMine = /\b(?:mon|ma|my|j'?ai|i have|je suis)\b|عندي|ديالي|\b3ndi\b|\bdyali\b/.test(q);
+    var rows = named.length === 1 && !asksMine ? [{ l: named[0].name, v: named[0][l] || named[0].fr, h: '' }]
+      : (named.length ? named : PLANS).map(function (p) { return { l: p.name, v: t.mo(p.m, p.y), h: p[l] || p.fr }; });
+    var text = asksMine && mine ? t.mine(mine.name) : named.length === 1 ? t.one(named[0].name, t.mo(named[0].m, named[0].y)) : t.lead;
+    return { text: text, stats: rows };
+  }
+  function isPlans(raw) { return PLAN_RX.test(norm(raw)); }
+  /* « wach kayn mode hors ligne », « is there a kitchen screen » ask whether Kiwi has it. */
+  var EXISTS_RX = /\bwach kayn\b|واش كاين|كاين شي|est.ce qu'?il y a|\by a.t.il\b|\bil y a\b.{0,10}\b(?:un|une)\b|\bis there\b|\bdo you have\b|\bdoes kiwi\b|\bkiwi (?:a|fait|gere|peut)\b|\bca existe\b/;
+  /* A how-to about a Kiwi feature outranks a simulation that shares a word
+   * with it: « how do I add an employee » is the team page, not a hire. */
+  function isHowTo(raw) {
+    var q = norm(raw);
+    /* « can I add a worker » is a hiring question; only an explicit « how »,
+     * « is there » or a question naming Kiwi is about the product. */
+    var how = /^(?:comment\b|how\b|كيفاش|كيفاه|كيف\b|kifa?c?h\b|kifash\b)/.test(q) || EXISTS_RX.test(q) || /kiwi/.test(q);
+    return how && (HOWTO_VERB.test(q) || EXISTS_RX.test(q) || /kiwi/.test(q)) && !!matchFeature(raw, trade());
+  }
+
   function canHandle(raw) {
     var q = norm(raw), t = trade();
     if (state.pending && state.pending.trade === t) return true;
-    if (LIST_RX.test(q) || SETUP_RX.test(q)) return true;
-    return GUIDE_RX.test(q) && !!matchFeature(raw, t);
+    if (LIST_RX.test(q) || SETUP_RX.test(q) || PLAN_RX.test(q)) return true;
+    return (GUIDE_RX.test(q) || EXISTS_RX.test(q)) && !!matchFeature(raw, t);
   }
+  /* A setup in progress takes the next message as its answer, unless that
+   * message is a question of its own: a plan, or how to use another feature. */
+  function isNewQuestion(raw) {
+    var q = norm(raw);
+    if (PLAN_RX.test(q)) return true;
+    if (!isHowTo(raw)) return false;
+    var f = matchFeature(raw, trade());
+    return !(state.pending.kind === 'feature' && f && f.key === state.pending.featureKey);
+  }
+  function drop() { state.pending = null; }
   function reply(raw, opts) {
     var l = (opts && opts.lang) || lang(raw); if (l !== 'en' && l !== 'ar') l = 'fr';
     var q = norm(raw), t = trade();
+    if (state.pending && isNewQuestion(raw)) state.pending = null;
     if (state.pending && state.pending.trade === t) {
       if (state.pending.kind === 'feature') {
         var pendingFeature = features(t).find(function (x) { return x.key === state.pending.featureKey; });
@@ -450,6 +508,7 @@
       }
       return setupReply(raw, t, l);
     }
+    if (PLAN_RX.test(q)) return plansReply(raw, l);
     if (SETUP_RX.test(q)) {
       var sf = matchFeature(raw, t);
       /* A named feature gets its detailed prerequisites first; the merchant can
@@ -473,9 +532,10 @@
   }
 
   window.KiwiFeatureGuide = {
-    trade: trade, features: features, canHandle: canHandle, reply: reply,
+    trade: trade, features: features, canHandle: canHandle, reply: reply, isPlans: isPlans, isHowTo: isHowTo,
     promptContext: promptContext, assistantSubtitle: assistantSubtitle,
     isPending: function () { return !!state.pending; },
+    drop: drop,
     _test: { match: matchFeature, reset: function () { state.pending = null; state.trade = ''; } },
   };
 }());

@@ -30,7 +30,8 @@ const REPORT = process.argv.includes('--report');
 /* ── the fixture business: every answer below is known ──
  * Numbers are chosen so no two facts share a value: 420 MAD over 4 tickets
  * (basket 105), 9 people in the team (2 on shift), 5 clients in the book,
- * 7 items on the menu and in the catalogue, Salma has 88 points. */
+ * 7 items on the menu and in the catalogue, Salma has 88 points and came
+ * 2 days ago, Kenza came today, 8 h clocked, 14 items sold, 270 MAD in cash. */
 const noon = (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d.getTime(); })();
 const DAY = 864e5;
 const FEED = [
@@ -46,7 +47,7 @@ const BOOK = [
   { name: 'Youssef Idrissi', spend: 2600, visits: 18, points: 51, lastSeen: noon - 60 * DAY },
   { name: 'Leila Amrani', spend: 900, visits: 6, points: 12, lastSeen: noon - 4 * DAY },
   { name: 'Mehdi Fassi', spend: 600, visits: 4, points: 8, lastSeen: noon - 8 * DAY },
-  { name: 'Kenza Lahlou', spend: 300, visits: 2, points: 4, lastSeen: noon - 11 * DAY },
+  { name: 'Kenza Lahlou', spend: 300, visits: 2, points: 4, lastSeen: noon - 3600e3 },
 ];
 const ITEMS = ['Tacos XL', 'Burger Classic', 'Salade César', 'Frites', 'Coca 33cl', 'Thé à la menthe', 'Tiramisu'];
 const PRODUCTS = ITEMS.map((name, i) => ({ id: 'p' + i, name }));
@@ -105,6 +106,13 @@ const FACT = {
   'basket.avg': /\b105\b/,
   'clients.count': /\b5\b/,
   'menu.count': /\b7\b/,
+  'client.today': /Kenza Lahlou/,
+  'client.last': (s) => /Salma Bennani/.test(s) && /\b2\b|٢/.test(s.split('\n')[0]),
+  'staff.hours': /\b8 h\b/,
+  'units.today': /\b14\b/,
+  'cash.today': /\b270\b/,
+  'hours.week': /tous les jours/,
+  'command.edit': /ne modifie pas|don’t change|ما كنبدّلش/,
 };
 const holds = (f, s) => (typeof f === 'function' ? f(s) : f.test(s));
 /* The UI language a writer of each register would have set. */
@@ -155,6 +163,16 @@ const TRAPS = [
   { q: 'ajoute un plat au menu', lang: 'fr', not: /compte <?b?>?7|compte 7/, why: 'an order, not a question' },
   { q: 'متوسط أرباح المقاهي', lang: 'ar', route: 'market', why: 'the sector’s average stays refused' },
   { q: 'ما هو متوسط السلة', lang: 'ar', must: /\b105\b/, why: 'the average ticket is not market data' },
+  { q: 'ajoute 20 points à Salma Bennani', lang: 'fr', not: /\b88\b/, why: 'an order to change data, not a reading of it' },
+  { q: 'change closing time to 11', lang: 'en', not: /23:00/, why: 'an order to change data, not a reading of it' },
+  { q: 'annule la commande 12', lang: 'fr', route: 'operation', why: 'an order number belongs to the operation lane' },
+  { q: 'ما هي ساعات العمل', lang: 'ar', not: /\b8 h\b/, why: 'opening hours, not hours worked' },
+  { q: 'ch7al kan CA chhar li fat', lang: 'fr', route: 'notrend', why: 'last month is not this month' },
+  { q: 'combien de clients sont venus aujourd’hui', lang: 'fr', not: /Kenza Lahlou/, why: 'walk-ins are not in the book; the count is not the book' },
+  { q: 'how do I add an employee', lang: 'en', route: 'feature', why: 'a how-to, not a hiring simulation' },
+  { q: 'واش نقدر نزيد خدام', lang: 'ar', route: 'hire', why: 'can I afford a worker is a simulation' },
+  { q: 'c quoi kiwi pro', lang: 'fr', must: /399/, why: 'the plan’s real price' },
+  { q: 'kifach nzid mbi3at', lang: 'fr', route: 'advice', why: '« how do I sell more » is advice, not a feature' },
 ];
 const traps = [];
 for (const t of TRAPS) {

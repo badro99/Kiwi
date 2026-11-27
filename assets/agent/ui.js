@@ -2577,7 +2577,14 @@ function featureCanTake(raw, decided) {
     try {
       const guide = window.KiwiFeatureGuide;
       if (!guide || !guide.canHandle(raw)) return false;
-      if (guide.isPending && guide.isPending()) return !decided || decided.kind !== 'illicit';
+      if (guide.isPlans && guide.isPlans(raw)) return !decided || !/^(?:illicit|charges)$/.test(decided.kind);
+      if (guide.isHowTo && guide.isHowTo(raw)) return !decided || !decided.kind || /^(?:help|greet|price|stock|clients|advice|hire|lookup|llm|unclear|day|revenue|meta)$/.test(decided.kind);
+      if (guide.isPending && guide.isPending()) {
+        /* The setup's next answer, unless the merchant asked something else. */
+        const asks = /[?؟]\s*$/.test(String(raw)) || /^(?:combien|cb|kom|how many|how much|qui|who|quel|quelle|what|which|شحال|كم|من|chkon|ch7al|chhal|wach|واش|est.ce)/.test(__state.norm(raw));
+        if (asks && decided && decided.kind && !/^(?:help|greet|unclear|llm|feature)$/.test(decided.kind)) { if (guide.drop) guide.drop(); return false; }
+        return !decided || decided.kind !== 'illicit';
+      }
       if (!decided || decided.kind === null) return true;
       if (decided.kind === 'help' || decided.kind === 'greet') return true;
       if (decided.kind === 'price') {
