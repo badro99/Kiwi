@@ -96,6 +96,14 @@ await ok('a sale id without its random part (computable from a ticket number) is
   assert.equal(r.status, 410); assert.equal(r.body.error, 'receipt-unusable');
 });
 
+await ok('a receipt whose shop hash is short (live-link does not zero-pad it) still credits', async () => {
+  const w = world();
+  const id = 'sale-ref-a1b2c3d-856f-e05a-4a18-ae36-d2d316c27799';   /* 7 hex digits: 1 sale in 16 */
+  addSale(w, id, { ref: '43099' });
+  const r = await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0659595959', consent: true, r: id });
+  assert.equal(r.status, 200); assert.equal(r.body.credited, true);
+});
+
 await ok('a voided, foreign or week-old receipt is refused', async () => {
   const w = world();
   addSale(w, 'sale-ref-2c3d4e5f-856f-e05a-4a18-ae36-d2d316c27702', { voided: true });

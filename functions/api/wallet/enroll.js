@@ -24,10 +24,10 @@ import { stripPath } from './_offers.js';
 
 const WEEK = 7 * 86400_000;
 /* A receipt QR is proof only when its sale id carries the till's random part
-   (live-link.js: FNV of the shop + the last 32 characters of a random id). An id
-   built from a ticket number alone could be computed, so it is never accepted;
-   the till prints the QR only for ids of this shape. */
-export const RANDOM_SALE_ID = /^sale-ref-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+   (live-link.js: FNV of the shop, not zero-padded, + the last 32 characters of a
+   random id). An id built from a ticket number alone could be computed, so it
+   is never accepted; the till prints the QR only for ids of this shape. */
+export const RANDOM_SALE_ID = /^sale-ref-[0-9a-f]{1,8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 
 async function clientById(env, merchant, id) {

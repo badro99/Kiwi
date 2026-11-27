@@ -696,8 +696,8 @@
     "sha": "43d0c87422fc61c2"
   },
   "assets/escpos.js": {
-    "v": "26",
-    "sha": "5a3868d6596e5461"
+    "v": "27",
+    "sha": "7b543bafd27978f7"
   },
   "assets/exchange-queue.js": {
     "v": "1",
@@ -1820,16 +1820,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "416",
+    "v": "418",
     "sha": "779406d0c59205cb"
   },
   "assets/pos-boutique.js": {
-    "v": "416",
-    "sha": "ca07d675538483f9"
+    "v": "418",
+    "sha": "ed1b2e55b2c6dd9e"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "69",
-    "sha": "71fcb9f578ebf4bb"
+    "v": "71",
+    "sha": "50774e020d6491db"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "4",
@@ -1848,8 +1848,8 @@
     "sha": "ed17a4acad2cb58c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "310",
-    "sha": "4e3dd2d16b4c8302"
+    "v": "312",
+    "sha": "bc5dcde9e70d8f4c"
   },
   "assets/pos-boutique/cheque-sheet.js": {
     "v": "2",
@@ -1860,12 +1860,12 @@
     "sha": "988b88c659f6ff5e"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "227",
-    "sha": "ade8d8050feaf648"
+    "v": "229",
+    "sha": "6cdd3148b9a26535"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "72",
-    "sha": "76e158d5ba455c40"
+    "v": "74",
+    "sha": "d735b1cb26cdd205"
   },
   "assets/pos-boutique/exch-cut.js": {
     "v": "7",
@@ -1888,8 +1888,8 @@
     "sha": "2c1bd059df2c7c2c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "310",
-    "sha": "2e24a905fc74e6fd"
+    "v": "312",
+    "sha": "5dce6e6f06a99a20"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "27",
@@ -1944,8 +1944,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "310",
-    "sha": "94dd3571c2f92d12"
+    "v": "312",
+    "sha": "740d49dcf04b1984"
   },
   "assets/pos-boutique/search.js": {
     "v": "21",
@@ -2004,8 +2004,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "553",
-    "sha": "30409c4e8e055f9a"
+    "v": "555",
+    "sha": "f61d8f5de4334316"
   },
   "assets/pos-epicerie.css": {
     "v": "44",
@@ -2076,16 +2076,16 @@
     "sha": "3b1ecc2cbfa231cd"
   },
   "assets/pos-maison.css": {
-    "v": "276",
+    "v": "278",
     "sha": "395c4e8545c0bf32"
   },
   "assets/pos-maison.js": {
-    "v": "276",
-    "sha": "781376cccbbd0481"
+    "v": "278",
+    "sha": "daad6e395b1f01b3"
   },
   "assets/pos-maison/avance-restock.js": {
-    "v": "45",
-    "sha": "1e1f064c7ec36ddd"
+    "v": "47",
+    "sha": "9f7d1558fc4b0207"
   },
   "assets/pos-maison/avoir-sheet.js": {
     "v": "9",
@@ -2100,8 +2100,8 @@
     "sha": "64bf43e6710c5268"
   },
   "assets/pos-maison/checkout.js": {
-    "v": "189",
-    "sha": "de0dce1ec4fc820b"
+    "v": "191",
+    "sha": "55ffd70896a664ce"
   },
   "assets/pos-maison/client-fiche.js": {
     "v": "8",
@@ -2124,12 +2124,12 @@
     "sha": "af6c63e77deac006"
   },
   "assets/pos-maison/gift-exchange-entry.js": {
-    "v": "20",
-    "sha": "8f5b8482d7506650"
+    "v": "22",
+    "sha": "d4163e7542a10a5f"
   },
   "assets/pos-maison/gift-exchange.js": {
-    "v": "20",
-    "sha": "5aee308ce7461362"
+    "v": "22",
+    "sha": "33f5c5f487a00805"
   },
   "assets/pos-maison/grid-pager.js": {
     "v": "1",
@@ -2144,8 +2144,8 @@
     "sha": "f824a4017ddc2f23"
   },
   "assets/pos-maison/inventory.js": {
-    "v": "189",
-    "sha": "edee343356ada6a7"
+    "v": "191",
+    "sha": "8ad827cb20842993"
   },
   "assets/pos-maison/kit-2027.js": {
     "v": "14",
@@ -2160,8 +2160,8 @@
     "sha": "f505c28b4b344afc"
   },
   "assets/pos-maison/sales.js": {
-    "v": "189",
-    "sha": "c1cb685d22ced775"
+    "v": "191",
+    "sha": "d669bf6dcd5bb650"
   },
   "assets/pos-maison/ticket-remise.js": {
     "v": "9",
@@ -2380,8 +2380,8 @@
     "sha": "1f4a2677c0859a8f"
   },
   "assets/receipt.js": {
-    "v": "40",
-    "sha": "81ad1f83a52ae3b0"
+    "v": "41",
+    "sha": "04e382049106358d"
   },
   "assets/reception-view.js": {
     "v": "3",
@@ -2790,6 +2790,14 @@
   "assets/wallet-carte.js": {
     "v": "1",
     "sha": "e4ae3f21849b212a"
+  },
+  "assets/wallet-link.js": {
+    "v": "1",
+    "sha": "e1852673a2c8ac31"
+  },
+  "assets/wallet-till.js": {
+    "v": "1",
+    "sha": "67b01e73c2a19d65"
   },
   "assets/weather.js": {
     "v": "1",

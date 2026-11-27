@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=416'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=310';
-import { offerRegister } from './inventory.js?v=310';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=418'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=312';
+import { offerRegister } from './inventory.js?v=312';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { ticketRemise } from './ticket-remise.js?v=8';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
@@ -11,7 +11,7 @@ import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=5';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=72').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=74').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -439,6 +439,7 @@ import('./exch-combined.js?v=72').then((m) => { CX_NOTE = m; }).catch(() => {});
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Ticket vidé, articles remis en stock'));
     };
     $('#bq-tk-client', el).onclick = openClientModal;
+    if (window.KiwiWalletTill) { window.KiwiWalletTill.on('boutique', (rec) => { const c = clById(rec.id); if (!c || !state.ticket) return; ticketOwner.setCustomer(state.ticket, c.id); if (state.view !== 'vente') switchView('vente'); toast(`${c.name} · ${c.points} ${tr('pts')}`); renderTicket(); icons(); }); window.KiwiWalletTill.chip($('#bq-tk-client', el), t.client && t.client !== 'passage' && clById(t.client), { wide: true }); }   /* carte Wallet : scan et QR de caisse (assets/wallet-till.js) */
     const rwBtn = $('#bq-reward-toggle', el);
     if (rwBtn) rwBtn.onclick = () => {
       if (t.reward && t.reward.clientId === t.client) {
@@ -1456,6 +1457,7 @@ import('./exch-combined.js?v=72').then((m) => { CX_NOTE = m; }).catch(() => {});
      supermarket lane. Resolves EAN-13 or any old/alphanumeric code registered on
      an article. Unknown → offer to register it on a product (no reprint). */
   function commitEan(raw) {
+    if (window.KiwiWalletTill && window.KiwiWalletTill.take(raw)) return;
     if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) {
       toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Terminez la fenêtre ouverte avant de scanner'));
       return;

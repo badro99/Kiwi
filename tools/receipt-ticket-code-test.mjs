@@ -24,7 +24,9 @@ function realm() {
   });
   vm.runInContext(read('assets/escpos.js'), context);
   vm.runInContext(read('assets/barcode.js'), context);
+  vm.runInContext(read('assets/qrcode.js'), context);
   vm.runInContext(read('assets/receipt.js'), context);
+  window.KiwiReceipt.__qr = (u) => window.KiwiQR.svg(u, { size: 140, margin: 2, ecl: 'M' });
   return window.KiwiReceipt;
 }
 
@@ -105,6 +107,47 @@ ok('the exact number finds its day inside the return window, and only there', ()
   assert.equal(scan.ticketDayIn(SALES, ' 43015 ', day, '2026-11-20', '2026-11-26'), '2026-11-24');
   assert.equal(scan.ticketDayIn(SALES, '40001', day, '2026-11-20', '2026-11-26'), '', 'too old');
   assert.equal(scan.ticketDayIn(SALES, '4301', day, '2026-11-20', '2026-11-26'), '', 'partial number does not jump');
+});
+
+/* The Wallet card (docs/superpowers/specs/2026-11-27-wallet-loyalty-card-design.md):
+   a receipt with no client on it carries a QR to /carte/<shop>?r=<sale>, which
+   signs the customer up and credits this visit. Printed with the printer's own
+   QR command (GS ( k, model 2), never as a picture. */
+const CARD = 'https://kiwi-os.com/carte/santos-store?r=sale-ref-0a1b2c3d-856f-e05a-4a18-ae36-d2d316c27700';
+const gsk = (bytes, i, len, cn, fn) => bytes[i] === 0x1D && bytes[i + 1] === 0x28 && bytes[i + 2] === 0x6B && bytes[i + 3] === (len & 0xFF) && bytes[i + 4] === (len >> 8) && bytes[i + 5] === cn && bytes[i + 6] === fn;
+const qrStore = (bytes, text) => {
+  const data = [...Buffer.from(text, 'latin1')];
+  return bytes.findIndex((v, i) => gsk(bytes, i, data.length + 3, 49, 80) && bytes[i + 7] === 48 && data.every((d, j) => bytes[i + 8 + j] === d));
+};
+const qrPrint = (bytes) => bytes.findIndex((v, i) => gsk(bytes, i, 3, 49, 81) && bytes[i + 7] === 48);
+
+ok('a receipt given a card link prints it as a QR the phone scans, under a line that says what it is', () => {
+  const doc = R.build(SALE, { ticketCode: true, cardUrl: CARD, cardSvg: R.__qr(CARD) });
+  assert.equal(doc.cardUrl, CARD);
+  const bytes = Array.from(R.escpos(doc));
+  const at = qrStore(bytes, CARD);
+  assert.ok(at > 0, 'GS ( k 49 80 48 <link>: the link is stored');
+  assert.ok(bytes.findIndex((v, i) => gsk(bytes, i, 4, 49, 65) && bytes[i + 7] === 50) > 0, 'model 2');
+  assert.ok(qrPrint(bytes) > at, 'then printed');
+  assert.ok(code128At(bytes, '43015') < at, 'below the return code');
+  assert.ok(Buffer.from(bytes).toString('latin1').includes('carte fid'), 'the line above names it');
+  const html = R.html(doc);
+  assert.ok(/kr-card-qr[^>]*>\s*<svg/.test(html), 'the system-print ticket draws the same QR');
+});
+
+ok('no card link, no QR; a refund slip never carries one', () => {
+  assert.equal(qrPrint(Array.from(R.escpos(R.build(SALE, { ticketCode: true })))), -1);
+  const refund = R.build({ ...SALE, kind: 'refund', of: '43015' }, { cardUrl: CARD });
+  assert.ok(!refund.cardUrl);
+  assert.equal(qrPrint(Array.from(R.escpos(refund))), -1);
+  assert.ok(!R.html(refund).includes('kr-card-qr'));
+});
+
+ok('only a drawn QR is put in the ticket: markup that is not an svg is dropped', () => {
+  const doc = R.build(SALE, { cardUrl: CARD, cardSvg: '<img src=x onerror=alert(1)>' });
+  assert.equal(doc.cardSvg, '');
+  assert.ok(!R.html(doc).includes('onerror'));
+  assert.ok(qrStore(Array.from(R.escpos(doc)), CARD) > 0, 'the printer still prints its own QR');
 });
 
 console.log(`receipt-ticket-code: ${n} checks passed`);

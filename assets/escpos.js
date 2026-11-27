@@ -219,6 +219,21 @@
     return this.raw([ESC, 0x61, 0]); // back to left
   };
 
+  /* QR via GS ( k, model 2 : the printer draws it itself, sharp at any size,
+     no picture to rasterise. ECC M; `module` = dot size of one square (1-16).
+     Used by the receipt for the Wallet loyalty-card link (receipt.js › cardUrl). */
+  Builder.prototype.qr = function (text, opts) {
+    opts = opts || {};
+    var data = encodeCp1252(String(text || '')), len = data.length + 3;
+    this.raw([ESC, 0x61, 1]);                                            // center
+    this.raw([GS, 0x28, 0x6B, 4, 0, 49, 65, 50, 0]);                     // model 2
+    this.raw([GS, 0x28, 0x6B, 3, 0, 49, 67, Math.max(1, Math.min(16, opts.module || 6))]); // module size
+    this.raw([GS, 0x28, 0x6B, 3, 0, 49, 69, 49]);                        // error correction M
+    this.raw([GS, 0x28, 0x6B, len & 0xFF, len >> 8, 49, 80, 48]).raw(data); // store
+    this.raw([GS, 0x28, 0x6B, 3, 0, 49, 81, 48]);                        // print
+    return this.raw([ESC, 0x61, 0]);
+  };
+
   Builder.prototype.bytes = function () { var u = new Uint8Array(this._); if (this.lost) u.unsupportedLines = this.lost; return u; };
 
   // ── helpers ────────────────────────────────────────────────────────────────

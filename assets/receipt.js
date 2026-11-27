@@ -616,7 +616,7 @@
         whatsapp: cfg.msg.whatsapp,
       },
       qr: qrFor(cfg),
-      ticketCode: (!refund && opts.ticketCode && str(sale.ref, 40)) || '', /* N° en Code 128 pour les retours, sur demande (boutique) */
+      ticketCode: (!refund && opts.ticketCode && str(sale.ref, 40)) || '', cardUrl: (!refund && str(opts.cardUrl, 300)) || '', cardSvg: (!refund && opts.cardUrl && /^<svg[\s>]/.test(String(opts.cardSvg || '')) && String(opts.cardSvg).slice(0, 60000)) || '', /* N° en Code 128 pour les retours (boutique) ; QR de la carte fidélité Wallet (assets/wallet-till.js › cardUrl) */
       /* Le mot qui marque une réimpression. `copy: true` demande celui de la
        * langue du ticket — un caissier arabophone imprimait « DUPLICATA » parce
        * que l'appelant écrivait le mot français en dur, sur un reçu par ailleurs
@@ -817,9 +817,9 @@
 
   /* ═══════════════════ les mots ═══════════════════ */
   var DICT = {
-    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', owed: 'Total dû', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.', share: 'part', takeaway: 'À emporter' },
-    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', owed: 'Balance due', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway' },
-    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', owed: 'المبلغ المستحق', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ' },
+    fr: { __lang: 'fr', article: 'Article', receipt: 'REÇU', refund: 'REMBOURSEMENT', no: 'N°', date: 'Date', time: 'Heure', cashier: 'Caissier', terminal: 'Terminal', client: 'Client', owed: 'Total dû', points: 'Points', subtotal: 'Sous-total', discount: 'Remise', promo: 'Promotion', saved: 'Vous avez économisé', ht: 'Total HT', vat: 'TVA', total: 'TOTAL', totalRefund: 'TOTAL REMBOURSÉ', tip: 'Pourboire', paid: 'Payé', received: 'Reçu', change: 'Rendu', origin: 'Ticket d’origine', reason: 'Motif', thanks: 'Merci de votre visite', copy: 'DUPLICATA', report: 'RAPPORT DE VENTES', period: 'Période', count: 'Ventes', avg: 'Panier moyen', ref: 'Réf.', share: 'part', takeaway: 'À emporter', card: 'Votre carte fidélité : scannez' },
+    en: { __lang: 'en', article: 'Item', receipt: 'RECEIPT', refund: 'REFUND', no: 'No.', date: 'Date', time: 'Time', cashier: 'Cashier', terminal: 'Terminal', client: 'Customer', owed: 'Balance due', points: 'Points', subtotal: 'Subtotal', discount: 'Discount', promo: 'Promotion', saved: 'You saved', ht: 'Net', vat: 'VAT', total: 'TOTAL', totalRefund: 'TOTAL REFUNDED', tip: 'Tip', paid: 'Paid', received: 'Received', change: 'Change', origin: 'Original receipt', reason: 'Reason', thanks: 'Thank you for your visit', copy: 'DUPLICATE', report: 'SALES REPORT', period: 'Period', count: 'Sales', avg: 'Average basket', ref: 'Ref.', share: 'share', takeaway: 'Takeaway', card: 'Your loyalty card: scan me' },
+    ar: { __lang: 'ar', article: 'منتج', receipt: 'وصل', refund: 'استرجاع', no: 'رقم', date: 'التاريخ', time: 'الساعة', cashier: 'الصندوق', terminal: 'الجهاز', client: 'الزبون', owed: 'المبلغ المستحق', points: 'نقاط', subtotal: 'المجموع الفرعي', discount: 'تخفيض', promo: 'عرض', saved: 'وفّرت', ht: 'المجموع دون ض.ق.م', vat: 'ض.ق.م', total: 'المجموع', totalRefund: 'المبلغ المسترجع', tip: 'إكرامية', paid: 'المدفوع', received: 'المستلم', change: 'الباقي', origin: 'الوصل الأصلي', reason: 'السبب', thanks: 'شكراً على زيارتكم', copy: 'نسخة', report: 'تقرير المبيعات', period: 'الفترة', count: 'عدد المبيعات', avg: 'معدل السلة', ref: 'مرجع', share: 'جزء', takeaway: 'للأخذ', card: 'بطاقة الوفاء ديالك: سكاني' },
   };
   function dict(l) { return DICT[l] || (ext.country && ext.country.dict(l)) || DICT.fr; }
 
@@ -1035,7 +1035,7 @@
       if (doc.acompte.until && doc.acompte.remaining > 0) row('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { row(T.received, moneyMAD(doc.cash.received, doc)); row(T.change, moneyMAD(doc.cash.change, doc)); }
-    if (doc.ticketCode) b.feed(1).barcode(doc.ticketCode, { format: 'code128', height: 56, module: doc.paper === '58' || doc.paper === '57' || doc.paper === '44' ? 1 : 2 });
+    if (doc.ticketCode) b.feed(1).barcode(doc.ticketCode, { format: 'code128', height: 56, module: doc.paper === '58' || doc.paper === '57' || doc.paper === '44' ? 1 : 2 }); if (doc.cardUrl) b.feed(1).align('center').line(T.card).qr(doc.cardUrl, { module: cols >= 40 ? 6 : 4 }).align('left');
 
     /* — le pied — */
     b.align('center').feed(1);
@@ -1206,7 +1206,7 @@
       if (doc.acompte.until && doc.acompte.remaining > 0) R('Pièce gardée jusqu’au', doc.acompte.until);
     }
     if (doc.cash) { R(T.received, moneyMAD(doc.cash.received, doc)); R(T.change, moneyMAD(doc.cash.change, doc)); }
-    if (doc.ticketCode && window.KiwiBarcode && window.KiwiBarcode.svg) out.push('<div class="kr-c kr-tcode">' + window.KiwiBarcode.svg(doc.ticketCode, { format: 'code128', height: 44 }) + '</div>');
+    if (doc.ticketCode && window.KiwiBarcode && window.KiwiBarcode.svg) out.push('<div class="kr-c kr-tcode">' + window.KiwiBarcode.svg(doc.ticketCode, { format: 'code128', height: 44 }) + '</div>'); if (doc.cardUrl && doc.cardSvg) out.push('<div class="kr-c kr-card-qr">' + doc.cardSvg + '<div class="kr-xs">' + esc(T.card) + '</div></div>');
 
     out.push('<div class="kr-rule"></div>');
     P('kr-c kr-thanks', doc.foot.thanks || T.thanks);
@@ -1264,7 +1264,7 @@
       '.kr-code{unicode-bidi:isolate;direction:ltr;}',
       '.kr-total{font-weight:700;font-size:14px;margin:1.4mm 0;}',
       '.kr-thanks{margin-top:1mm;}',
-      '.kr-qr{word-break:break-all;}',
+      '.kr-qr{word-break:break-all;}.kr-card-qr svg{display:block;width:34mm;height:auto;margin:2mm auto 1mm;}',
       '.kr-kiwi{margin-top:3mm;letter-spacing:.14em;opacity:.6;}', '.kr-tcode{margin:2mm 0 0;}.kr-tcode svg{display:block;margin:0 auto;max-width:100%;height:auto;}',
     ].join('');
     document.head.appendChild(st);

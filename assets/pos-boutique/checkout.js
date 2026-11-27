@@ -1,8 +1,8 @@
-import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=310';
+import { tr, $, esc, fmtMAD, icons, moveCaretEnd, artOf, colorDot, useKiwiCl, fmtDayY, fmtValidUntil, barcode, $$, shelf, colorLabel, renderExchNote, renderGrid, rayonOf, fmtDT, clById, clientList, lookupScan, commitEan } from './sales.js?v=312';
 import { exchangeQueue, nextExchange, exchStartToast } from '../exchange-queue.js?v=1'; import { mountExchCut, cutFields } from './exch-cut.js?v=7'; import { mzSaleDiscount } from '../pos-maison/sale-discount.js?v=1';
-import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=310';
+import { invSetModal, openInvProduct, intake, intakeReset, intakeTake } from './inventory.js?v=312';
 import { ticketDayIn, isTicketScan } from './ticket-scan.js?v=1';
-import { _bqKey, syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=416';
+import { _bqKey, syncReturnSales, saleClient, root, state, retDayKey, retShiftDay, SALES, activeAvoirs, AVOIRS, findSale, toast, whenLabel, P, switchView, issueAvoir, stableCreditIssueId, creditErrorDetail, persistAvoirs, recordReturn, refreshOps, persistStock, stockAdd, persistDay, openVeil, closeVeil, newSaleId, variantStock, IS_DEMO, colorKey, showStockIssue, queueIfOffline, renderBadges, nextStandaloneTicketNumber, releaseTicketNumber, firstName, STAFF, bqSaveProvisional, bqPaymentMethod, bqPost, bqPaymentParts, headSubVente, pvPaired, merchantSlug, payExistingBalance, renderAll, creditIntent, creditRequest, creditFromServer, avoirExpired, refreshRemoteAvoirs, BY_EAN, lineUnit } from '../pos-boutique.js?v=418';
 import { retainDays, windowDays, outsideWindow, windowSentence } from './return-window.js?v=11';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { windowHits, showMoreHits, moreHitsButton } from './ret-window.js?v=2';
@@ -12,10 +12,10 @@ import '../money-cents.js?v=7';
 import { ozonOffer, ozonConnected, ozonCities, ozonLabel } from './ozon.js?v=14';
 import { bqDeliveryCard } from './delivery-card.js?v=11';
 import { receiptPrinterReady, receiptDocInput, waReceiptTotals } from './receipt-doc.js?v=5';
-import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6';
+import { retailModes, heldUntilText, accountOptionHtml, accountStep, avanceOptionHtml, avanceStep, dropOffMethods } from '../retail-avance.js?v=6'; import { walletCard } from '../wallet-link.js?v=1';
 const M = globalThis.KiwiMoney;
 let CX = null, CQ = null;   /* chargés à part (ils importent la caisse, pas l'inverse) : l'échange groupé (essai Amira Boutique) et le chèque reçu, qui rejoint le portefeuille (cheque-sheet.js ; absent, il s'encaisse comme avant) */
-import('./exch-combined.js?v=72').then((m) => { CX = m; }).catch(() => {});
+import('./exch-combined.js?v=74').then((m) => { CX = m; }).catch(() => {});
 import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
 
 
@@ -654,7 +654,7 @@ import('./cheque-sheet.js?v=2').then((m) => { CQ = m; }).catch(() => {});
        boutique marocaine sans une seule mention légale. */
     const K = window.KiwiReceipt;
     if (K) {
-      const doc = K.build(receiptDocInput(opts, parts, (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '', { merchant: merchantSlug(), clById }), { ticketCode: true }); /* le N° en Code 128 : un retour commence par un scan */
+      const doc = K.build(receiptDocInput(opts, parts, (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '', { merchant: merchantSlug(), clById }), { ticketCode: true, ...walletCard(opts.sale) }); /* le N° en Code 128 : un retour commence par un scan ; le QR de la carte Wallet si personne n'est sur la vente */
       /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
          avec son numéro, même si l'enseigne change de pied de page demain.
          persistDay() À NOUVEAU, et c'est tout l'intérêt : la vente a été écrite
