@@ -3,7 +3,11 @@
 // Apple devices get an empty APNs push on the Pass Type ID topic and come back
 // for the new pass; Google objects are patched in place. A replayed sync that
 // leaves the balance where it was touches no card and sends nothing.
-import { apnsConfigured, apnsJwt, apnsHost } from '../push/_dispatch.js';
+import { apnsConfigured, apnsJwt } from '../push/_dispatch.js';
+
+/* Wallet has no sandbox: a pass listens to production APNs only, whatever
+   APNS_SANDBOX says for the app's own pushes. */
+const PASS_APNS_HOST = 'https://api.push.apple.com';
 import { loadMerchant } from './_merchant.js';
 import { cardView } from './_card.js';
 import { balanceKey, stripPath } from './_offers.js';
@@ -13,7 +17,7 @@ import { googleConfigured, patchGoogleObject, objectId, loyaltyObject } from './
 export async function sendPassPush(env, pushToken) {
   if (!apnsConfigured(env) || !env.WALLET_APPLE_PASS_TYPE_ID) return 'skipped';
   const type = env.WALLET_APNS_PUSH_TYPE || 'background';
-  const res = await fetch(`${apnsHost(env)}/3/device/${pushToken}`, {
+  const res = await fetch(`${PASS_APNS_HOST}/3/device/${pushToken}`, {
     method: 'POST',
     headers: { authorization: 'bearer ' + await apnsJwt(env), 'apns-topic': env.WALLET_APPLE_PASS_TYPE_ID, 'apns-push-type': type, 'apns-priority': type === 'background' ? '5' : '10' },
     body: '{}',

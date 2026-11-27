@@ -50,6 +50,15 @@ await ok('a new stamp sends one empty push on the pass topic', async () => {
   assert.match(push.init.headers.authorization, /^bearer [\w-]+\.[\w-]+\.[\w-]+$/);
 });
 
+await ok('a pass push goes to production APNs even when the app pushes use the sandbox', async () => {
+  calls = []; resetApnsJwtCache();
+  const w = await world({ ...APNS, APNS_SANDBOX: '1' });
+  stamps(w, 3);
+  await notifyClientChanged(w.env, 'pasta-corner', 'c1');
+  const push = calls.find((c) => c.url.includes('/3/device/'));
+  assert.equal(push.url, 'https://api.push.apple.com/3/device/' + 'ab'.repeat(32), 'Wallet has no sandbox: passes only listen to production');
+});
+
 await ok('the same balance again sends nothing', async () => {
   const w = await world(APNS);
   stamps(w, 3);
