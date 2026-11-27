@@ -2569,7 +2569,7 @@ function decideRoute(rawIn, retry) {
      * it to a model that invents dirham figures in this exact register. */
     const ownEarly = __state.matchOwnData(q);
     if (ownEarly) return { kind: 'nodata', raw, q, action: ownEarly };
-    if (__state.DARIJA_RX.test(q)) return { kind: 'unclear', raw, q };
+    if (__state.DARIJA_RX.test(q)) return (!retry && window.KiwiAgentData && window.KiwiAgentData.near && window.KiwiAgentData.near(rawIn, decideRoute)) || { kind: 'unclear', raw, q };
     /* Last resort before giving up: retry once on the spell-corrected form.
      * Only reached when the query as typed matched nothing, so this can only
      * turn a non-answer into an answer, never overwrite a good route. */
@@ -2584,8 +2584,8 @@ function decideRoute(rawIn, retry) {
      * the model — it has never seen this shop and can only deflect or invent. */
     const own = __state.matchOwnData(q);
     if (own) return { kind: 'nodata', raw, q, action: own };
-    if (__state.isNoise(q)) return { kind: 'unclear', raw, q };
-    return { kind: null, raw, q };
+    if (__state.isNoise(q)) return (!retry && window.KiwiAgentData && window.KiwiAgentData.near && window.KiwiAgentData.near(rawIn, decideRoute)) || { kind: 'unclear', raw, q };
+    return (!retry && window.KiwiAgentData && window.KiwiAgentData.near && window.KiwiAgentData.near(rawIn, decideRoute)) || { kind: null, raw, q };
   }
 
 function featureCanTake(raw, decided) {

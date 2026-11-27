@@ -1412,5 +1412,110 @@
     return r;
   }
 
-  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, _rank: productRanking, _findClient: findClient };
+  /* Le sens proche. Quand aucune règle ne reconnaît une question, on cherche
+   * la question connue la plus proche (tools/agent-bench.json et
+   * tools/agent-wide.json, rangés dans assets/agent/near.json par
+   * tools/build-agent-near.mjs) et on répond comme si c'était elle. Fait
+   * maison, sans modèle ni appel réseau : trigrammes de lettres et mots pondérés
+   * (TF-IDF), vote des 5 voisins. Ne prend la main que si le vote est net, si la
+   * question ne porte ni montant, ni nom propre, ni ordre de modification, et si
+   * les mots qui changent la réponse concordent (période, plus/moins,
+   * ouverture/fermeture, comment, unités/tickets/argent, équipe/clients,
+   * horaires, caisse) et s'ils partagent au moins un mot rare. Mesuré sur 690
+   * questions jamais vues : 574 → 600 réponses justes, sans rien perdre sur le
+   * banc ni ses pièges (tools/agent-near-test.mjs). */
+  var NEAR_URL = 'assets/agent/near.json?v=e3db6678f0';
+  var NEAR = { docs: null, df: null, n: 0, loading: false, busy: false }, NEAR_RARE = 0.03;
+  var NEAR_SLOTS = [
+    ['t', /\b(aujourd|hui|ajd|auj|today|tonight|lyoum|lyouma|liyoum|lyom|daba|now|maintenant)\b|اليوم|ليوم|دابا|هاد ليله/],
+    ['y', /\b(hier|yesterday|lbare7|lbar7|lbareh|bare7)\b|البارح|امس/],
+    ['d', /\b(demain|tomorrow|ghda|ghedda|ghadda)\b|غدا|غدوه/],
+    ['w', /\b(semaine\w*|week\w*|hebdo\w*|simana|smana)\b|سيمان|اسبوع/],
+    ['m', /\b(mois|month\w*|chhar|chher|ch7ar|chhor)\b|شهر|اشهر|شهور/],
+    ['a', /\b(annee|year|l3am)\b|العام|سنه/],
+    ['-', /\b(moins|least|worst|9el|9ell|9lil|bottom|pire)\b|اقل|(?:^|\s)قل(?:\s|$)|اسوا|اضعف/],
+    ['+', /\b(plus|most|best|kter|ktar|akter|ktr|top|meilleur|mieux)\b|اكثر|احسن|افضل|كثر/],
+    ['o', /ouv[er]|open|start|demarr|commenc|ft7|fte7|ftah|7ell|t7el|t7al|يفتح|نفتح|تفتح|محلول|حال/],
+    ['c', /ferm|clos|\b\w{0,4}(sedd?|sd)[aou]\w*|سد|يغلق|نغلق|تغلق/],
+    ['h', /\b(comment|kifach|kif|kifash)\b|\bhow\b(?!\s+(much|many|long))|كيف/],
+    ['U', /\b(unit\w*|piece\w*|article\w*|l9ta3|l9et3a|items?)\b|قطع|وحد|منتج|منتوج/],
+    ['O', /\b(commande\w*|orders?|tickets?|tikiy\w*|bons?)\b|طلب|تذكر|تيكي/],
+    ['M', /\b(montant|chiffre|revenu\w*|flous|recette|argent|money|dh|mad|ca)\b|فلوس|مال|درهم|مداخيل|مدخول/],
+    ['S', /\b(employ\w*|salari\w*|staff|serveur\w*|khdd?am\w*|equipe|team|personnel|mowadaf\w*|waiters?|workers?|nass|gens)\b|موظف|خدام|عمال|فريق/],
+    ['C', /\b(clients?|clientele|customers?|zbo?u?n\w*|chaland\w*)\b|زبون|زبنا|زباين|عملا|عميل|كليا/],
+    ['T', /\b(heure\w*|hours?|time|sa3a\w*|mawa9it|horaire\w*|wa9t\w*|w9t|schedule)\b|ساع|مواقيت|وقت/],
+    ['K', /\b(cash|caisse|sndo9|sando9|tiroir|drawer|till|especes|liquide)\b|صندوق|كاش|الكاسه|نقد/]
+  ];
+  var NEAR_EDIT = /\b(supprim\w*|retir\w*|enlev\w*|ajout\w*|rajout\w*|change\w*|modifi\w*|mets|met|remove|delete|add|set|zid|nzid|n9es|7yed|bdel)\b|احذف|حذف|زيد|بدل|غير|نقص|ضيف|اضف|ازل/;
+  function nearNorm(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[ً-ٰٟـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
+      .replace(/[’'`]/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/(\p{L})\1{2,}/gu, '$1$1').replace(/\s+/g, ' ').trim();
+  }
+  function nearFeats(s) {
+    var f = new Map(), words = nearNorm(s).split(' ');
+    var add = function (k) { f.set(k, (f.get(k) || 0) + 1); };
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i]; if (!w) continue;
+      w = /^[؀-ۿ]+$/.test(w) ? w.replace(/^(و|ف|ب|ل|ك)?(ال)(?=..)/, '').replace(/^(كن|كي|كا|تن|غا|غن)(?=...)/, '') : w.length > 3 ? w.replace(/[sx]$/, '') : w;
+      add('w:' + w);
+      var p = ' ' + w + ' ';
+      for (var j = 0; j + 3 <= p.length; j++) add('c:' + p.slice(j, j + 3));
+    }
+    return f;
+  }
+  function nearVec(f) {
+    var v = new Map(), n = 0;
+    f.forEach(function (c, k) { var x = (1 + Math.log(c)) * (Math.log((NEAR.n + 1) / ((NEAR.df.get(k) || 0) + 1)) + 1); v.set(k, x); n += x * x; });
+    n = Math.sqrt(n) || 1; v.forEach(function (x, k) { v.set(k, x / n); });
+    return v;
+  }
+  function nearCos(a, b) { var s = 0; a.forEach(function (x, k) { var y = b.get(k); if (y) s += x * y; }); return s; }
+  function nearSlots(q) { var n = nearNorm(q); return NEAR_SLOTS.filter(function (p) { return p[1].test(n); }).map(function (p) { return p[0]; }).join(''); }
+  function nearLang(q) {
+    if (/[؀-ۿ]/.test(q)) return 'ar';
+    if (/[a-z][379]|[379][a-z]|\b(chhal|ch7al|wach|daba|lyoum|lyouma|chno|chkon|fin|dyal|dial|3ndi|kayn)\b/i.test(q)) return 'az';
+    return /\b(the|my|how|what|is|do|i|can|you|show|open|who|which|when)\b/i.test(q) ? 'en' : 'fr';
+  }
+  function nearIndex(j) {
+    var docs = (j && j.items || []).map(function (it) { return { q: it[0], label: j.labels[it[1]], f: nearFeats(it[0]) }; });
+    NEAR.df = new Map(); NEAR.n = docs.length;
+    docs.forEach(function (d) { d.f.forEach(function (_, k) { NEAR.df.set(k, (NEAR.df.get(k) || 0) + 1); }); });
+    docs.forEach(function (d) { d.v = nearVec(d.f); d.slots = nearSlots(d.q); d.lang = nearLang(d.q); d.words = Array.from(d.f.keys()).filter(function (k) { return k[1] === ':' && k[0] === 'w'; }); delete d.f; });
+    NEAR.docs = docs;
+  }
+  function nearLoad() {
+    if (NEAR.docs || NEAR.loading || typeof fetch !== 'function' || typeof location === 'undefined') return;
+    NEAR.loading = true;
+    fetch(NEAR_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j) nearIndex(j); })
+      .catch(function () {}).then(function () { NEAR.loading = false; });
+  }
+  /* decide: the router itself, passed in. Returns its decision for the
+   * nearest known question, or null when nothing is close enough. */
+  function nearSnap(raw, decide) {
+    if (!NEAR.docs) { nearLoad(); return null; }
+    var q = String(raw || ''), nq = nearNorm(q);
+    if (NEAR.busy || !nq || /\d{2,}/.test(q) || /\s[A-Z][a-z]{2,}/.test(q) || /\bchez\s+(?!moi|nous)\w/.test(nq)) return null;
+    if (NEAR_EDIT.test(nq) && !/\b(comment|how|kifach|kif)\b|كيف/.test(nq)) return null;
+    var v = nearVec(nearFeats(q)), sims = NEAR.docs.map(function (d) { return [nearCos(v, d.v), d]; });
+    sims.sort(function (a, b) { return b[0] - a[0]; });
+    var vote = new Map();
+    sims.slice(0, 5).forEach(function (s) { vote.set(s[1].label, (vote.get(s[1].label) || 0) + s[0]); });
+    var win = null, ws = 0;
+    vote.forEach(function (s, l) { if (s > ws) { ws = s; win = l; } });
+    if (ws / 5 < 0.15) return null;
+    var slots = nearSlots(q), lang = nearLang(q), best = null;
+    /* At least one shared word that carries meaning: rare in the index, and
+     * not a day or a "how". « ça va aujourd'hui » shares only « aujourd'hui »
+     * with today's takings; the weather shares only « كيف » with a how-to. */
+    var meant = function (k) { return k.length > 4 && v.has(k) && NEAR.df.get(k) < NEAR.n * NEAR_RARE && !NEAR_SLOTS.some(function (p) { return 'tydwmah'.indexOf(p[0]) >= 0 && p[1].test(k.slice(2)); }); };
+    for (var i = 0; i < sims.length && !best; i++) { var d = sims[i][1]; if (d.label === win && d.lang === lang && d.slots === slots && d.words.some(meant)) best = d; }
+    if (!best) return null;
+    NEAR.busy = true;
+    try { var out = decide(best.q); if (out && out.kind != null && out.kind !== 'unclear') { out.snapped = best.q; return out; } } catch (_) {} finally { NEAR.busy = false; }
+    return null;
+  }
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(nearLoad, { timeout: 10000 });
+
+  window.KiwiAgentData = { reply: reply, intent: ownIntent, otherShop: otherShop, hire: hire, staffCount: staffCount, near: nearSnap, nearIndex: nearIndex, _rank: productRanking, _findClient: findClient };
 }());
