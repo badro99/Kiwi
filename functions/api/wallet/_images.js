@@ -31,7 +31,7 @@ async function cached(key, make) {
 
 /* The disc colour: the brand colour when it shows on the card, else the text colour. */
 export function stripColors(merchant) {
-  return { color: '#7df2b0', bg: '#053b2c', key: '7df2b0-053b2c' };
+  return { color: '#7df2b0', bg: '#031a13', key: '7df2b0-031a13' };
 }
 
 export function stripPng({ view, colors, scale }) {

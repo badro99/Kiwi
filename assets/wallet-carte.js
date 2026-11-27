@@ -131,7 +131,8 @@
     $('wc-first').textContent = v.firstName || '';
     $('wc-l-client').hidden = !v.firstName;
     var balance = Math.min(v.balance || 0, v.target);
-    $('wc-balance').textContent = v.model === 'amount' ? String(v.balance || 0) : balance + ' / ' + v.target;
+    var bal = $('wc-balance'); bal.textContent = v.model === 'amount' ? String(v.balance || 0) : String(balance);
+    if (v.model !== 'amount') { var of = document.createElement('span'); of.className = 'of'; of.textContent = ' / ' + v.target; bal.appendChild(of); }
     $('wc-reward').textContent = v.rewardLabel || t('gift');
     $('wc-left').textContent = v.ready ? t('readyShort') : t(v.model === 'amount' ? 'pointsN' : 'stampsN', { n: Math.max(0, v.target - (v.balance || 0)) });
     var box = $('wc-stamps');

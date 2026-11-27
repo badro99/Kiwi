@@ -115,7 +115,7 @@ await ok('a Google card is patched with the new balance, and told when the rewar
   assert.equal(patch.init.headers.Authorization, 'Bearer ya29.test');
   const body = JSON.parse(patch.init.body);
   assert.equal(body.loyaltyPoints.balance.string, '10 / 10');
-  assert.match(body.heroImage.sourceUri.uri, /\/api\/wallet\/strip\/10-10-7df2b0-053b2c@3\.png$/);
+  assert.match(body.heroImage.sourceUri.uri, /\/api\/wallet\/strip\/10-10-7df2b0-031a13@3\.png$/);
   assert.equal(body.messages[0].messageType, 'TEXT_AND_NOTIFY');
   assert.equal(body.notifyPreference, 'NOTIFY_ON_UPDATE', 'a new balance is announced, not just stored');
   const tokenCall = calls.find((c) => c.url.includes('oauth2'));

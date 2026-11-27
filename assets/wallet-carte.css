@@ -5,7 +5,7 @@
 :root {
   --paper: #F7F5F0; --ink: #0A0F0D; --muted: #5B635F; --line: rgba(10, 15, 13, 0.1);
   --atlas: #0B6E4F; --spring: cubic-bezier(0.34, 1.45, 0.5, 1);
-  --c-bg: #053B2C; --c-fg: #F7F5F0; --c-label: #7DF2B0; --c-ink: #7DF2B0;
+  --c-bg: #031A13; --c-fg: #F7F5F0; --c-label: #7DF2B0; --c-ink: #7DF2B0;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -25,23 +25,35 @@ em, i { font-style: normal; }
 /* ── the card ───────────────────────────────────────────────────────────── */
 .wc-stage { perspective: 1100px; }
 .wc-card {
-  position: relative; overflow: hidden; border-radius: 20px; padding: 18px 18px 20px;
-  background: radial-gradient(ellipse at 10% 0%, #0B6E4F, transparent 70%), repeating-linear-gradient(120deg, transparent 0 3px, rgba(247,245,240,.025) 3px 4px), #053B2C; color: var(--c-fg);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 22px 48px -22px rgba(10, 15, 13, 0.55), 0 4px 12px -4px rgba(10, 15, 13, 0.22);
+  /* « Nuit »: near-black forest green, one tight atlas light top left, a breath of mint bottom right. */
+  position: relative; overflow: hidden; border-radius: 24px; padding: 18px 18px 20px;
+  background-color: #031A13;
+  background-image: radial-gradient(70% 42% at 8% 0%, rgba(11, 110, 79, 0.70), transparent 60%), radial-gradient(40% 30% at 100% 100%, rgba(125, 242, 176, 0.05), transparent 70%), linear-gradient(168deg, #05271D, #02110C 58%, #010A07);
+  color: var(--c-fg);
+  box-shadow: 0 1px 0 rgba(247, 245, 240, 0.10) inset, 0 40px 60px -32px rgba(2, 17, 12, 0.70), 0 12px 24px -12px rgba(2, 17, 12, 0.45), 0 2px 4px rgba(2, 17, 12, 0.20);
   transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transform-style: preserve-3d;
   transition: transform 310ms var(--spring);
   animation: wc-rise 620ms var(--spring) both;
 }
 .wc-card.is-loading { opacity: 0.65; }
+/* Foil edge: a 1 px gradient rim, brightest where the light falls; it turns with the tilt. */
+.wc-card::before { content: ""; position: absolute; inset: 0; padding: 1px; border-radius: inherit; pointer-events: none; z-index: 2;
+  background: linear-gradient(calc(135deg + var(--ry, 0deg) * 6), rgba(125, 242, 176, 0.55), rgba(247, 245, 240, 0.10) 30%, rgba(125, 242, 176, 0) 55%, rgba(125, 242, 176, 0.30));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+/* Fine grain over the face, blended in, never a pattern. */
+.wc-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0; opacity: 0.55; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E"); }
+.wc-card > :not(.wc-card-sheen) { position: relative; z-index: 1; }
 @keyframes wc-rise { from { opacity: 0; transform: translateY(26px) scale(0.96); } to { opacity: 1; transform: none; } }
-.wc-card-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.22) 48%, transparent 64%); transform: translateX(-120%); }
+.wc-card-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.10) 48%, transparent 64%); transform: translateX(-120%); }
 .wc-card.is-credited .wc-card-sheen { animation: wc-sheen 1100ms ease-out 200ms; }
 @keyframes wc-sheen { to { transform: translateX(120%); } }
 
 /* Kiwi × the shop: the wordmark, a fading mint hairline, then the shop's own mark in
    the same paper white (its logo when it has one, else its initial on a paper tile
    beside its name). */
-.wc-lockup { display: flex; align-items: center; justify-content: center; gap: 18px; min-height: 44px; margin: 4px 0 26px; }
+.wc-lockup { display: flex; align-items: center; justify-content: center; gap: 18px; min-height: 44px; margin: 4px 0 22px; padding-bottom: 18px; }
+.wc-lockup::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(125, 242, 176, 0.22), transparent); }
 .wc-lockup-kiwi { display: block; width: auto; height: 26px; flex: none; }
 /* A hairline, not a glyph: mint at its heart, fading out at both ends. */
 .wc-lockup-x { flex: none; width: 1px; height: 34px; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--c-label) 80%, transparent) 50%, transparent); }
@@ -53,38 +65,43 @@ em, i { font-style: normal; }
 .wc-lockup.is-square .wc-tile img { height: 44px; }
 .wc-lockup.has-logo .wc-tile b, .wc-lockup.has-logo .wc-card-name { display: none; }
 .wc-card-name { font-weight: 600; font-size: 17px; letter-spacing: -0.015em; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wc-card-client { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; font-size: 15px; padding-bottom: 4px; }
-.wc-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-label); }
+.wc-card-client { display: flex; flex-direction: column; align-items: flex-end; font-weight: 500; font-size: 15px; padding-bottom: 6px; }
+.wc-label { display: block; font-size: 10px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(247, 245, 240, 0.52); margin-bottom: 3px; }
+html[dir="rtl"] .wc-label { letter-spacing: 0; font-size: 11.5px; }
 .wc-card-balance { margin: 0 0 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 /* Numbers read left to right in every language; a shop's own words keep their own direction. */
 #wc-balance { direction: ltr; unicode-bidi: isolate; text-align: start; }
 html[dir="rtl"] #wc-balance { text-align: right; }
 #wc-reward, #wc-first, .wc-card-name { unicode-bidi: plaintext; }
-.wc-card-balance strong { display: block; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.wc-card-balance strong { display: block; font-size: 44px; font-weight: 500; letter-spacing: -0.035em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.wc-card-balance strong .of { font-weight: 400; color: rgba(247, 245, 240, 0.42); }
 
-.wc-stamps { display: grid; grid-template-columns: repeat(var(--per-row, 5), 1fr); gap: 10px 8px; padding: 6px 2px; }
-.wc-stamp { position: relative; aspect-ratio: 1; border-radius: 50%; background: color-mix(in srgb, var(--c-ink) 14%, var(--c-bg)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c-ink) 38%, var(--c-bg)); }
-.wc-stamp.is-reward::after { content: ""; position: absolute; inset: 26%; background: var(--c-ink); -webkit-mask: url("/assets/icons/material/redeem.svg") center / contain no-repeat; mask: url("/assets/icons/material/redeem.svg") center / contain no-repeat; }
-.wc-stamp.is-on { background: var(--c-ink); box-shadow: none; }
-.wc-stamp.is-on::before { content: ""; position: absolute; inset: 22%; background: var(--c-bg); -webkit-mask: url("/assets/icons/material/check.svg") center / contain no-repeat; mask: url("/assets/icons/material/check.svg") center / contain no-repeat; }
+.wc-stamps { display: grid; grid-template-columns: repeat(var(--per-row, 5), 1fr); gap: 12px; padding: 6px 2px; }
+/* Empty stamps are wells pressed into the card; a stamp is a minted mint coin. */
+.wc-stamp { position: relative; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(100% 100% at 50% 100%, rgba(125, 242, 176, 0.06), rgba(2, 17, 12, 0.5) 70%); box-shadow: inset 0 2px 4px rgba(2, 17, 12, 0.85), inset 0 0 0 1px rgba(125, 242, 176, 0.20), 0 1px 0 rgba(247, 245, 240, 0.07); }
+.wc-stamp.is-reward { box-shadow: inset 0 2px 3px rgba(2, 17, 12, 0.8), inset 0 0 0 1px rgba(125, 242, 176, 0.55), 0 1px 0 rgba(247, 245, 240, 0.06); }
+.wc-stamp.is-reward::after { content: ""; position: absolute; inset: 30%; background: var(--c-ink); -webkit-mask: url("/assets/icons/material/redeem.svg") center / contain no-repeat; mask: url("/assets/icons/material/redeem.svg") center / contain no-repeat; }
+.wc-stamp.is-on { background: radial-gradient(120% 120% at 30% 20%, #B4F7D2, #7DF2B0 45%, #4FBF8A); box-shadow: inset 0 1px 0 rgba(247, 245, 240, 0.55), 0 6px 14px -6px rgba(125, 242, 176, 0.45); }
+.wc-stamp.is-on::before { content: ""; position: absolute; inset: 30%; background: #02110C; -webkit-mask: url("/assets/icons/material/check.svg") center / contain no-repeat; mask: url("/assets/icons/material/check.svg") center / contain no-repeat; }
 .wc-stamp.is-on.is-reward::after { display: none; }
 .wc-stamp.is-on.is-reward::before { -webkit-mask-image: url("/assets/icons/material/redeem.svg"); mask-image: url("/assets/icons/material/redeem.svg"); }
 .wc-stamp.is-new { animation: wc-pop 310ms var(--spring) both; animation-delay: calc(var(--i, 0) * 90ms + 280ms); }
 @keyframes wc-pop { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-.wc-bar { grid-column: 1 / -1; height: 14px; border-radius: 7px; background: color-mix(in srgb, var(--c-ink) 16%, var(--c-bg)); overflow: hidden; }
-.wc-bar > span { display: block; height: 100%; width: var(--fill, 0%); background: var(--c-ink); border-radius: inherit; transition: width 700ms var(--spring); }
+.wc-bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(247, 245, 240, 0.10); overflow: hidden; margin: 8px 0 4px; }
+.wc-bar > span { display: block; height: 100%; width: var(--fill, 0%); background: linear-gradient(90deg, #0B6E4F, #7DF2B0); border-radius: inherit; transition: width 700ms var(--spring); }
 
-.wc-card-foot { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 14px; font-weight: 600; font-size: 14px; }
+.wc-card-foot { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 16px; font-weight: 500; font-size: 15px; }
+#wc-reward { color: var(--c-label); }
 .wc-card-foot > div:last-child { text-align: end; }
 .wc-qr { margin: 22px auto 0; width: 200px; perspective: 900px; }
 .wc-qr-plate { position: relative; display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 0; background: none; cursor: pointer; transform-style: preserve-3d; transition: transform 620ms var(--spring); -webkit-tap-highlight-color: transparent; }
 .wc-qr-plate.is-flipped { transform: rotateY(180deg); }
 .wc-qr-face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 22px; padding: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.wc-qr-face.is-art { background: radial-gradient(circle at 30% 20%, #0A5A40, #032A1F 72%); box-shadow: inset 0 0 0 1px rgba(125, 242, 176, 0.28), inset 0 1px 0 rgba(247, 245, 240, 0.08), 0 18px 34px -18px rgba(0, 0, 0, 0.7); }
+.wc-qr-face.is-art { background: #02110C; border-radius: 20px; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(125, 242, 176, 0.16), 0 1px 0 rgba(247, 245, 240, 0.07); }
 .wc-qr-face.is-plain { background: var(--paper); transform: rotateY(180deg); }
 .wc-qr-face svg { display: block; width: 100%; height: 100%; }
 .wc-qr-plate:focus-visible { outline: 2px solid var(--c-label); outline-offset: 4px; border-radius: 22px; }
-.wc-qr-cap { margin-top: 12px; text-align: center; font-size: 12.5px; letter-spacing: 0.01em; color: color-mix(in srgb, var(--c-fg) 72%, transparent); }
+.wc-qr-cap { margin-top: 12px; text-align: center; font-size: 11px; letter-spacing: 0.04em; color: rgba(247, 245, 240, 0.5); }
 
 /* ── the panel under the card ──────────────────────────────────────────── */
 .wc-panel { display: flex; flex-direction: column; gap: 14px; animation: wc-fade 420ms ease both 180ms; }

@@ -94,7 +94,7 @@
     var target = model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target);
     target = Math.max(2, Math.min(12, Number(target) || 10));
     var reward = model === 'amount' ? (cfg.amount && cfg.amount.reward) : model === 'product' ? (cfg.product && cfg.product.reward) : (cfg.visit && cfg.visit.reward);
-    card.style.background = 'radial-gradient(ellipse at top left,#0B6E4F,#053B2C 75%) #053B2C'; card.style.color = '#F7F5F0'; card.style.setProperty('--ink-c', '#7DF2B0');
+    card.style.background = 'radial-gradient(70% 42% at 8% 0%,rgba(11,110,79,.7),transparent 60%),linear-gradient(168deg,#05271D,#02110C 58%,#010A07) #031A13'; card.style.color = '#F7F5F0'; card.style.setProperty('--ink-c', '#7DF2B0');
     card.textContent = '';
     /* Kiwi × the shop, as on the customer's card: wordmark, mint cross, the shop's tile (logo, else its initial). */
     var lock = el('div', 'lk'), brand = el('img'); brand.src = '/assets/kiwi-newlogo-inverse.svg'; brand.alt = 'Kiwi'; lock.appendChild(brand);

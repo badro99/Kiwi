@@ -40,7 +40,7 @@ export const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.m
 
 /* Wallet surfaces always use the Kiwi product palette. */
 export function palette() {
-  const bg = [5, 59, 44], brand = [125, 242, 176], fg = [247, 245, 240], label = brand;
+  const bg = [3, 26, 19],   /* « Nuit », the flat middle of the web card's gradient */ brand = [125, 242, 176], fg = [247, 245, 240], label = brand;
   return { bg, brand, fg, label, css: { bg: css(bg), fg: css(fg), label: css(label) } };
 }
 

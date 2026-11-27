@@ -86,7 +86,7 @@ try {
 
     t.step('the preview card wears Kiwi riad, never the shop old colours, and the programme stamps');
     const card = await page.$eval('.kiwi-modal .kw-wd-card', (c) => ({ bg: getComputedStyle(c).backgroundColor, text: c.textContent, dots: c.querySelectorAll('.kw-wd-dots i').length }));
-    assert.equal(card.bg, 'rgb(5, 59, 44)', "Kiwi's riad, not the shop's #112233");
+    assert.equal(card.bg, 'rgb(3, 26, 19)', "Kiwi's Nuit green, not the shop's #112233");
     assert.match(card.text, /Matrix Café/);
     assert.equal(card.dots, 8, 'one dot per stamp of « 8 visites »');
 
