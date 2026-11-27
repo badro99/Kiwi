@@ -2784,12 +2784,12 @@
     "sha": "a4a72617d62b67fe"
   },
   "assets/wallet-carte.css": {
-    "v": "13",
-    "sha": "721787e7730c7b65"
+    "v": "16",
+    "sha": "3cd3ac8866024ee1"
   },
   "assets/wallet-carte.js": {
-    "v": "11",
-    "sha": "54f5ffb5c7555c3c"
+    "v": "13",
+    "sha": "a8e177b64a1f5eb7"
   },
   "assets/wallet-dashboard.js": {
     "v": "11",

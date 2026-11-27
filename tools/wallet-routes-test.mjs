@@ -301,6 +301,9 @@ await ok('the web card shows the live balance to its token holder only', async (
   const b = await r.json();
   assert.equal(b.card.text, '4 / 10'); assert.equal(b.card.firstName, 'Salma'); assert.equal(b.merchant.name, 'Pasta Corner');
   assert.match(b.card.strip, /^\/api\/wallet\/strip\/4-10-7df2b0-031a13@2\.png$/);
+  const first = w.sql.prepare("SELECT MIN(created_ts) AS t FROM wallet_cards WHERE merchant = 'pasta-corner'").get().t;
+  assert.equal(b.card.since, first, 'member since: the first card this client got here');
+  assert.equal(e.body.card.since, first, 'the sign-up answer carries it too');
   assert.equal((await get(`s=${serial}&t=${'x'.repeat(32)}`)).status, 401);
 });
 

@@ -20,6 +20,12 @@ export async function issueCard(db, { merchant, clientId, platform, now = Date.n
   return { serial, authToken, created: true };
 }
 
+/* « Member since »: the first card this client was given at this shop (ms), or 0. */
+export async function memberSince(db, merchant, clientId) {
+  const r = await db.prepare('SELECT MIN(created_ts) AS t FROM wallet_cards WHERE merchant = ? AND client_id = ?').bind(merchant, clientId).first();
+  return Number(r && r.t) || 0;
+}
+
 export const cardBySerial = (db, serial) =>
   db.prepare('SELECT * FROM wallet_cards WHERE serial = ?').bind(String(serial || '')).first();
 

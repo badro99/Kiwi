@@ -18,7 +18,7 @@ import { applyPurchase, phoneTwins, nextSrvTs } from '../clients.js';
 import { loadMerchant } from './_merchant.js';
 import { cardView } from './_card.js';
 import { offersFor } from './_offers.js';
-import { claimSale, releaseClaim, useTillToken, randomId } from './_store.js';
+import { claimSale, releaseClaim, useTillToken, randomId, memberSince } from './_store.js';
 import { notifyClientChanged } from './_notify.js';
 import { stripPath } from './_offers.js';
 
@@ -115,7 +115,9 @@ export async function onRequestPost(context) {
     const c = await clientById(env, m.slug, clientId);
     const view = cardView({ fidelity: m.fidelity, client: c || {} });
     const card = { model: view.model, balance: view.balance, target: view.target, remaining: view.remaining, ready: view.ready, rewardLabel: view.rewardLabel, item: view.item || '', perMad: view.perMad || 0, text: view.text, firstName: view.firstName };
-    return json({ ok: true, ...extra, card, offers: await offersFor(env, { merchant: m, clientId, view, baseUrl: origin }) });
+    const offers = await offersFor(env, { merchant: m, clientId, view, baseUrl: origin });
+    card.since = await memberSince(env.DB, m.slug, clientId);   /* after offersFor: the web card it issues may be the first */
+    return json({ ok: true, ...extra, card, offers });
   };
 
   if (body.t) {

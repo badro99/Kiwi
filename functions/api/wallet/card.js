@@ -2,7 +2,7 @@
 // /carte page (phones without Wallet, and every phone before the certificates
 // exist). The token is the card's own; nothing else about the shop's book leaks.
 import { json } from '../../auth/_lib.js';
-import { cardBySerial } from './_store.js';
+import { cardBySerial, memberSince } from './_store.js';
 import { sameToken } from './_pass.js';
 import { loadMerchant } from './_merchant.js';
 import { cardView } from './_card.js';
@@ -21,6 +21,6 @@ export async function onRequestGet(context) {
   if (!view) return json({ error: 'gone' }, 410);
   return json({
     merchant: { slug: m.slug, name: m.name, color: m.color, bg: m.bg, address: m.address, phone: m.phone, logo: m.logoUrl ? `/api/wallet/strip/logo-${m.slug}.png` : '' },
-    card: { ...view, strip: stripPath(view, m, 2), qr: 'KIWI-C:' + card.client_id, platform: card.platform },
+    card: { ...view, strip: stripPath(view, m, 2), qr: 'KIWI-C:' + card.client_id, platform: card.platform, since: await memberSince(env.DB, card.merchant, card.client_id) },
   });
 }

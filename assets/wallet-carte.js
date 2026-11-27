@@ -24,7 +24,7 @@
       receiptBad: "Ce ticket ne peut plus être ajouté (plus de deux jours, ou annulé). Votre carte, elle, vous attend.",
       credited: 'Tampon ajouté. Votre carte se met à jour toute seule.',
       show: 'Montrez ce code en caisse', home: "Pour la garder : bouton Partager, puis « Sur l'écran d'accueil ».",
-      client: 'Client', stamps: 'Tampons', points: 'Points', reward: 'Récompense', left: 'Il reste', readyShort: 'Prête', gift: 'Offerte',
+      client: 'Client', stamps: 'Tampons', points: 'Points', reward: 'Récompense', left: 'Il reste', readyShort: 'Prête', gift: 'Offerte', since: 'Membre depuis', stateL: 'Statut',
       stampsN: '{n} tampons', pointsN: '{n} points', badPhone: 'Entrez un numéro valide, par exemple 06 12 34 56 78.', nameReq: 'Entrez votre prénom.',
       busy: 'Trop d’essais. Réessayez dans un moment.', error: 'Connexion impossible. Réessayez.', none: "Ce commerce n'a pas de carte fidélité ici.",
       expired: 'Ce code a expiré. Demandez-en un nouveau en caisse.', foot: 'Carte gérée par Kiwi', taking: 'Un instant…',
@@ -45,7 +45,7 @@
       receiptBad: 'This receipt can no longer be added (over two days old, or cancelled). Your card is still waiting for you.',
       credited: 'Stamp added. Your card updates itself.',
       show: 'Show this code at the till', home: 'To keep it: Share button, then “Add to Home Screen”.',
-      client: 'Customer', stamps: 'Stamps', points: 'Points', reward: 'Reward', left: 'To go', readyShort: 'Ready', gift: 'Free',
+      client: 'Customer', stamps: 'Stamps', points: 'Points', reward: 'Reward', left: 'To go', readyShort: 'Ready', gift: 'Free', since: 'Member since', stateL: 'Status',
       stampsN: '{n} stamps', pointsN: '{n} points', badPhone: 'Enter a valid number, for example 06 12 34 56 78.', nameReq: 'Enter your first name.',
       busy: 'Too many tries. Try again in a moment.', error: 'Could not connect. Try again.', none: 'This shop has no loyalty card here.',
       expired: 'This code has expired. Ask for a new one at the till.', foot: 'Card run by Kiwi', taking: 'One moment…',
@@ -66,7 +66,7 @@
       receiptBad: 'هاد التيكي ما بقاش ممكن يتزاد (فاتو عليه جوج أيام ولا تلغى). ولكن البطاقة ديالك كتسناك.',
       credited: 'تزاد الختم. البطاقة ديالك كتتجدد بوحدها.',
       show: 'وري هاد الرمز فالكاشة', home: 'باش تحتافظ بيها: زر المشاركة، من بعد «إضافة إلى الشاشة الرئيسية».',
-      client: 'الزبون', stamps: 'الأختام', points: 'النقاط', reward: 'الهدية', left: 'باقي', readyShort: 'واجدة', gift: 'فابور',
+      client: 'الزبون', stamps: 'الأختام', points: 'النقاط', reward: 'الهدية', left: 'باقي', readyShort: 'واجدة', gift: 'فابور', since: 'معانا من', stateL: 'الحالة',
       stampsN: '{n} أختام', pointsN: '{n} نقطة', badPhone: 'دخّل رقم صحيح، بحال 06 12 34 56 78.', nameReq: 'دخّل الاسم ديالك.',
       busy: 'بزاف ديال المحاولات. عاود من بعد شوية.', error: 'ما قدرناش نتاصلو. عاود مرة أخرى.', none: 'هاد المحل ما عندوش بطاقة الوفاء هنا.',
       expired: 'هاد الرمز سالا. طلب واحد جديد فالكاشة.', foot: 'بطاقة كيسيّرها Kiwi', taking: 'لحظة…',
@@ -127,7 +127,7 @@
     $('wc-l-client').textContent = t('client');
     $('wc-l-balance').textContent = t(v.model === 'amount' ? 'points' : 'stamps');
     $('wc-l-reward').textContent = t('reward');
-    $('wc-l-left').textContent = t('left');
+    $('wc-l-left').textContent = v.ready ? t('stateL') : t('left');
     $('wc-first').textContent = v.firstName || '';
     $('wc-l-client').hidden = !v.firstName;
     var balance = Math.min(v.balance || 0, v.target);
@@ -153,6 +153,12 @@
     if (shown >= 0 && balance > shown) { var c = $('wc-card'); c.classList.remove('is-credited'); void c.offsetWidth; c.classList.add('is-credited'); }
     shown = balance;
     $('wc-card').classList.remove('is-loading');
+    $('wc-card').classList.toggle('is-ready', !!v.ready);
+    if (v.since) {
+      var since = '';
+      try { since = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' }).format(new Date(v.since)); } catch (_) {}
+      if (since) { $('wc-meta').textContent = t('since') + ' · ' + since; $('wc-meta').hidden = false; }
+    }
     if (opts.qr && window.KiwiQR) {
       var plate = document.createElement('button');
       plate.type = 'button'; plate.className = 'wc-qr-plate'; plate.setAttribute('aria-label', t('show'));
@@ -191,7 +197,12 @@
   (function tilt() {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var card = $('wc-card');
-    function lean(x, y) { card.style.setProperty('--ry', (x * 7).toFixed(2) + 'deg'); card.style.setProperty('--rx', (-y * 7).toFixed(2) + 'deg'); }
+    function lean(x, y) {
+      card.style.setProperty('--ry', (x * 7).toFixed(2) + 'deg'); card.style.setProperty('--rx', (-y * 7).toFixed(2) + 'deg');
+      /* the light slides the other way from the lean, as on a real card */
+      card.style.setProperty('--lx', (50 - x * 110).toFixed(1) + '%'); card.style.setProperty('--ly', (10 - y * 60).toFixed(1) + '%');
+      card.classList.add('is-live');
+    }
     card.addEventListener('pointermove', function (e) { var r = card.getBoundingClientRect(); lean((e.clientX - r.left) / r.width - 0.5, (e.clientY - r.top) / r.height - 0.5); });
     card.addEventListener('pointerleave', function () { lean(0, 0); });
     window.addEventListener('deviceorientation', function (e) { if (e.gamma == null) return; lean(Math.max(-1, Math.min(1, e.gamma / 30)) * 0.5, Math.max(-1, Math.min(1, (e.beta - 45) / 30)) * 0.5); });
