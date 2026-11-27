@@ -73,19 +73,22 @@ export async function serialsUpdatedSince(db, deviceId, since) {
   return { serials: rows.map((x) => x.serial), lastUpdated: rows.length ? String(rows[rows.length - 1].updated_ts) : '' };
 }
 
-export async function claimSale(db, merchant, saleId, clientId, now = Date.now()) {
-  const r = await db.prepare('INSERT OR IGNORE INTO wallet_claims (merchant, sale_id, client_id, claimed_ts) VALUES (?,?,?,?)')
-    .bind(merchant, saleId, clientId, now).run();
-  return !!(r.meta && r.meta.changes);
+/* One statement: the receipt is claimed only while this client has fewer than
+   `perDay` claims in the last 24 h, so two scans at the same instant cannot
+   both pass the cap. 'claimed', 'taken' (the receipt already has an owner) or
+   'limit'. */
+export async function claimSale(db, merchant, saleId, clientId, now = Date.now(), perDay = Infinity) {
+  const cap = Number.isFinite(perDay) ? perDay : 1e9;
+  const r = await db.prepare(`INSERT OR IGNORE INTO wallet_claims (merchant, sale_id, client_id, claimed_ts)
+    SELECT ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM wallet_claims WHERE merchant = ? AND client_id = ? AND claimed_ts > ?) < ?`)
+    .bind(merchant, saleId, clientId, now, merchant, clientId, now - 86400_000, cap).run();
+  if (r.meta && r.meta.changes) return 'claimed';
+  const owned = await db.prepare('SELECT 1 AS x FROM wallet_claims WHERE merchant = ? AND sale_id = ?').bind(merchant, saleId).first();
+  return owned ? 'taken' : 'limit';
 }
 
 export const releaseClaim = (db, merchant, saleId) =>
   db.prepare('DELETE FROM wallet_claims WHERE merchant = ? AND sale_id = ?').bind(merchant, saleId).run();
-
-export async function claimsToday(db, merchant, clientId, now = Date.now()) {
-  const r = await db.prepare('SELECT COUNT(*) AS n FROM wallet_claims WHERE merchant = ? AND client_id = ? AND claimed_ts > ?').bind(merchant, clientId, now - 86400_000).first();
-  return Number((r && r.n) || 0);
-}
 
 const TILL_TTL = 10 * 60_000;
 export async function mintTillToken(db, merchant, clientId, now = Date.now()) {

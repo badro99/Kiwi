@@ -18,7 +18,7 @@ import { applyPurchase, phoneTwins, nextSrvTs } from '../clients.js';
 import { loadMerchant } from './_merchant.js';
 import { cardView } from './_card.js';
 import { offersFor } from './_offers.js';
-import { claimSale, releaseClaim, claimsToday, useTillToken, randomId } from './_store.js';
+import { claimSale, releaseClaim, useTillToken, randomId } from './_store.js';
 import { notifyClientChanged } from './_notify.js';
 import { stripPath } from './_offers.js';
 
@@ -56,10 +56,12 @@ async function usableSale(env, merchant, saleId, now) {
   return used || claimed ? { already: true } : { sale };
 }
 
-/* 'credited', 'taken' (another scan won the race) or 'failed'. A purchase that
-   could not be recorded gives the receipt back, so it can be claimed again. */
+/* 'credited', 'taken' (another scan won the race), 'limit' (this number's two
+   claims a day) or 'failed'. A purchase that could not be recorded gives the
+   receipt back, so it can be claimed again. */
 async function creditSale(env, merchant, sale, clientId, now) {
-  if (!await claimSale(env.DB, merchant, sale.id, clientId, now)) return 'taken';
+  const claim = await claimSale(env.DB, merchant, sale.id, clientId, now, CLAIMS_A_DAY);
+  if (claim !== 'claimed') return claim;
   const cents = sale.amount_cents != null ? Number(sale.amount_cents) : Number(sale.amount) * 100;
   let items = [];
   try { items = (JSON.parse(sale.lines || '[]') || []).map((l) => ({ name: l.n, qty: l.q, total: l.t })); } catch (_) {}
@@ -97,10 +99,14 @@ export async function onRequestPost(context) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   /* Keyed on the address AND the shop: a café's Wi-Fi or a carrier's shared
      address puts many real customers behind one IP. */
-  const budget = await spendBudget(env, 'ip:' + ip + '@' + str(body && body.merchant, 64), 'wallet-enroll', 60, 3600_000, now);
+  /* The same canonical slug loadMerchant reads, so "Pasta-Corner " and
+     "pasta-corner" spend one budget; anything else is refused before it counts. */
+  const slug = String((body && body.merchant) || '').trim().toLowerCase().slice(0, 64);
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return json({ error: 'no-card' }, 404);
+  const budget = await spendBudget(env, 'ip:' + ip + '@' + slug, 'wallet-enroll', 60, 3600_000, now);
   if (!budget.ok) return json({ error: 'rate-limited' }, 429, { 'Retry-After': String(budget.retryAfter) });
 
-  const m = await loadMerchant(env.DB, body && body.merchant);
+  const m = await loadMerchant(env.DB, slug);
   const probe = m && m.on ? cardView({ fidelity: m.fidelity, client: {} }) : null;
   if (!probe) return json({ error: 'no-card' }, 404);
   /* The card as the customer will see it travels with the offers, so the page
@@ -139,10 +145,10 @@ export async function onRequestPost(context) {
     const u = await usableSale(env, m.slug, str(body.r, 120), now);
     if (u.error) return json({ error: u.error }, 410);
     if (u.already) return json({ ok: true, already: true });
-    if (twin && await claimsToday(env.DB, m.slug, twin.id, now) >= CLAIMS_A_DAY) return json({ error: 'claim-limit' }, 429);
     const clientId = twin ? twin.id : await createClient(env, m.slug, { name: name || 'Client', phone, consent: true, now });
     const result = await creditSale(env, m.slug, u.sale, clientId, now);
     if (result === 'taken') return twin ? json({ ok: true, already: true }) : issue(clientId);
+    if (result === 'limit') return json({ error: 'claim-limit' }, 429);
     if (result === 'failed') return twin ? json({ error: 'credit-failed' }, 503) : issue(clientId);
     if (twin) {
       if (context.waitUntil) context.waitUntil(notifyClientChanged(env, m.slug, clientId, { baseUrl: origin }).catch(() => {}));

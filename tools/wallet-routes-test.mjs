@@ -197,6 +197,18 @@ await ok('a receipt is good for 48 hours, and one number claims at most two a da
   }
 });
 
+await ok('the limits count the shop by its canonical name, and the claim cap holds under simultaneous scans', async () => {
+  const w = world();
+  for (let i = 0; i < 30; i++) await post(w, { merchant: i % 2 ? 'Pasta-Corner ' : 'pasta-corner', name: 'N', phone: '06' + String(20000000 + i), consent: true }, { ip: '10.7.7.7' });
+  assert.equal((await post(w, { merchant: 'PASTA-CORNER', name: 'N', phone: '0629999999', consent: true }, { ip: '10.7.7.7' })).status, 429, 'case and spaces do not open a second budget');
+  const ids = ['sale-ref-b5c6d7e8-856f-e05a-4a18-ae36-d2d316c27720', 'sale-ref-c6d7e8f9-856f-e05a-4a18-ae36-d2d316c27721', 'sale-ref-d7e8f90a-856f-e05a-4a18-ae36-d2d316c27722', 'sale-ref-e8f90a1b-856f-e05a-4a18-ae36-d2d316c27723'];
+  ids.forEach((id, i) => addSale(w, id, { ref: '4320' + i }));
+  await post(w, { merchant: 'pasta-corner', name: 'Z', phone: '0675757575', consent: true }, { ip: '10.8.8.1' });
+  const all = await Promise.all(ids.map((id, i) => post(w, { merchant: 'pasta-corner', name: 'Z', phone: '0675757575', consent: true, r: id }, { ip: '10.8.8.' + (i + 2) })));
+  assert.equal(all.filter((r) => r.body.credited).length, 2, JSON.stringify(all.map((r) => r.body)));
+  assert.equal(all.filter((r) => r.body.error === 'claim-limit').length, 2);
+});
+
 await ok('a nameless sign-up is refused before the number is looked up', async () => {
   const w = world();
   await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true });

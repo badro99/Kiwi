@@ -44,9 +44,11 @@ await ok('devices register once, list changed serials, and unregister', async ()
 });
 
 await ok('a receipt credits one card, once', async () => {
-  assert.equal(await S.claimSale(DB, 'pasta-corner', 'sale-ref-1', 'c1', T), true);
-  assert.equal(await S.claimSale(DB, 'pasta-corner', 'sale-ref-1', 'c2', T), false);
-  assert.equal(await S.claimSale(DB, 'other-shop', 'sale-ref-1', 'c2', T), true);
+  assert.equal(await S.claimSale(DB, 'pasta-corner', 'sale-ref-1', 'c1', T), 'claimed');
+  assert.equal(await S.claimSale(DB, 'pasta-corner', 'sale-ref-1', 'c2', T), 'taken');
+  assert.equal(await S.claimSale(DB, 'other-shop', 'sale-ref-1', 'c2', T), 'claimed');
+  assert.equal(await S.claimSale(DB, 'pasta-corner', 'sale-ref-2', 'c1', T, 1), 'limit', 'c1 already has one claim today');
+  assert.equal(await S.claimSale(DB, 'pasta-corner', 'sale-ref-2', 'c1', T + 86400_001, 1), 'claimed', 'a day later the cap is free again');
 });
 
 await ok('a till QR token works once and expires after ten minutes', async () => {
