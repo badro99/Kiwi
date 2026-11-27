@@ -106,7 +106,7 @@
         source = { kind: 'table', label: kkt('kds.source.table', { table: String(o.table == null ? '' : o.table) }) };
         if (o.course === 'suite') chips.push(kkt('kds.suite'));
         if (o.server) chips.push(String(o.server));
-      } if (o.service) chips.unshift(o.service === 'surplace' ? 'Sur place' : 'À emporter'); if (o.pager && typeof mallPagerLabel === 'function') chips.unshift(mallPagerLabel(o.pager)); /* demandé à l'encaissement, bipeur (counter-flow.js) */
+      } if (o.service) { const svc = o.service === 'surplace' ? 'Sur place' : 'À emporter'; if (source.kind === 'takeaway') source.label = svc; else chips.unshift(svc); }   /* la réponse donnée au paiement remplace « À emporter » au lieu de s'y ajouter */ if (o.pager && typeof mallPagerLabel === 'function') chips.unshift(mallPagerLabel(o.pager)); /* demandé à l'encaissement, bipeur (counter-flow.js) */
       const tk = { id: String(o.num), number: ticketNo(o), minutes: Math.floor(kdsElapsed(o) / 60), source, chips, items }; if (o.comment) tk.note = String(o.comment); /* allergies, demandes */
       if (lane === 'pass') { tk.doneAt = o.readyAt || ''; tk.serve = false; tk.recall = !o.pickedUp; }
       else if (Array.isArray(o.following) && o.following.length) {

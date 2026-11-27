@@ -213,6 +213,7 @@ await ok('kitchen screen: the empty « Nouvelles » column is gone, « En prépa
     assert.match(read(f), /nb\.style\.display = \(typeof mallOn === 'function' && mallOn\(\) && !newList\.length\) \? 'none' : ''/, f);
   }
   assert.match(read('assets/caisse-shell.css'), /\.kit-col-cooking \{ flex: 1;/);
+  assert.match(read('assets/caisse-kitchen/kds-board.js'), /if \(source\.kind === 'takeaway'\) source\.label = svc; else chips\.unshift\(svc\);/, 'sur place / à emporter replaces the source, never shown twice');
 });
 
 console.log(`\n✓ mall restaurants: ${n} checks · off changes nothing, on pays first, hands out bipeurs, prints the kitchen after the receipt`);
