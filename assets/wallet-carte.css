@@ -41,7 +41,7 @@ em, i { font-style: normal; }
 /* Kiwi × the shop: the wordmark, a fading mint hairline, then the shop's own mark in
    the same paper white (its logo when it has one, else its initial on a paper tile
    beside its name). */
-.wc-lockup { display: flex; align-items: center; gap: 16px; min-height: 40px; margin-bottom: 26px; }
+.wc-lockup { display: flex; align-items: center; justify-content: center; gap: 18px; min-height: 44px; margin: 4px 0 26px; }
 .wc-lockup-kiwi { display: block; width: auto; height: 26px; flex: none; }
 /* A hairline, not a glyph: mint at its heart, fading out at both ends. */
 .wc-lockup-x { flex: none; width: 1px; height: 34px; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--c-label) 80%, transparent) 50%, transparent); }
@@ -52,7 +52,7 @@ em, i { font-style: normal; }
 /* A near-square mark (a round badge, a script logo) carries less ink per pixel of height: let it stand taller. */
 .wc-lockup.is-square .wc-tile img { height: 44px; }
 .wc-lockup.has-logo .wc-tile b, .wc-lockup.has-logo .wc-card-name { display: none; }
-.wc-card-name { font-weight: 600; font-size: 17px; letter-spacing: -0.015em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-card-name { font-weight: 600; font-size: 17px; letter-spacing: -0.015em; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wc-card-client { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; font-size: 15px; padding-bottom: 4px; }
 .wc-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-label); }
 .wc-card-balance { margin: 0 0 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
@@ -60,7 +60,6 @@ em, i { font-style: normal; }
 #wc-balance { direction: ltr; unicode-bidi: isolate; text-align: start; }
 html[dir="rtl"] #wc-balance { text-align: right; }
 #wc-reward, #wc-first, .wc-card-name { unicode-bidi: plaintext; }
-html[dir="rtl"] .wc-card-name { text-align: right; }
 .wc-card-balance strong { display: block; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
 
 .wc-stamps { display: grid; grid-template-columns: repeat(var(--per-row, 5), 1fr); gap: 10px 8px; padding: 6px 2px; }

@@ -39,7 +39,7 @@
     /* Intégrations → Glovo : le panneau du patron (adresses, carte, fermeture), au premier clic. */
     glovo: { dependencies: [], scripts: ['assets/channel-glovo.js?v=1'] },
     /* Programme de fidélité → « Carte Wallet » : la section se pose dans la fenêtre ouverte. */
-    wallet: { dependencies: [], scripts: ['assets/wallet-dashboard.js?v=9'] },
+    wallet: { dependencies: [], scripts: ['assets/wallet-dashboard.js?v=10'] },
   });
   const pending = new Map(), scripts = new Map(), ready = new Set();
   function script(url, module) {
