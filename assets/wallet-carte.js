@@ -9,7 +9,7 @@
   'use strict';
   var T = {
     fr: {
-      title: 'Votre carte fidélité', intro: 'La carte se range dans votre téléphone et se met à jour toute seule.',
+      title: 'Votre carte fidélité', kicker: 'Carte fidélité', toWin: 'À gagner', readyHero: 'Votre récompense est prête', intro: 'La carte se range dans votre téléphone et se met à jour toute seule.',
       offerVisit: '{reward} au bout de {n} passages.', offerProduct: '{reward} au bout de {n} × {item}.', offerAmount: '{reward} dès {n} points.',
       earn: '{p} point par dirham dépensé.', earnFrac: '1 point tous les {d} dirhams dépensés.', rewardAny: 'Une récompense',
       readyPts: 'Ajoutez-la à votre téléphone : vos points arriveront dessus après chaque achat.',
@@ -30,7 +30,7 @@
       expired: 'Ce code a expiré. Demandez-en un nouveau en caisse.', foot: 'Carte gérée par Kiwi', taking: 'Un instant…',
     },
     en: {
-      title: 'Your loyalty card', intro: 'The card lives in your phone and updates itself.',
+      title: 'Your loyalty card', kicker: 'Loyalty card', toWin: 'To win', readyHero: 'Your reward is ready', intro: 'The card lives in your phone and updates itself.',
       offerVisit: '{reward} after {n} visits.', offerProduct: '{reward} after {n} × {item}.', offerAmount: '{reward} at {n} points.',
       earn: '{p} point per dirham spent.', earnFrac: '1 point for every {d} dirhams spent.', rewardAny: 'A reward',
       readyPts: 'Add it to your phone: your points land on it after every purchase.',
@@ -51,7 +51,7 @@
       expired: 'This code has expired. Ask for a new one at the till.', foot: 'Card run by Kiwi', taking: 'One moment…',
     },
     ar: {
-      title: 'بطاقة الوفاء ديالك', intro: 'البطاقة كتبقى فتيليفونك وكتتجدد بوحدها.',
+      title: 'بطاقة الوفاء ديالك', kicker: 'بطاقة الوفاء', toWin: 'غادي تربح', readyHero: 'الهدية ديالك واجدة', intro: 'البطاقة كتبقى فتيليفونك وكتتجدد بوحدها.',
       offerVisit: '{reward} من بعد {n} زيارات.', offerProduct: '{reward} من بعد {n} × {item}.', offerAmount: '{reward} ملي توصل {n} نقطة.',
       earn: '{p} نقطة على كل درهم.', earnFrac: 'نقطة على كل {d} دراهم.', rewardAny: 'هدية',
       readyPts: 'زيدها لتيليفونك: النقاط غادي توصلها مع كل شرية.',
@@ -114,26 +114,31 @@
     opts = opts || {};
     shopName = m.name;
     document.title = m.name + ' · ' + t('title');
-    $('wc-shopname').textContent = m.name;
+    $('wc-shopname').textContent = t('kicker');
     $('wc-card-name').textContent = m.name;
     $('wc-mono').textContent = String(m.name || '').trim().charAt(0).toUpperCase();
     $('wc-card').setAttribute('aria-label', t('title') + ' · ' + m.name);
     if (m.logo) {
       var lg = $('wc-card-logo'), lock = lg.parentNode.parentNode;   /* .wc-lockup: the logo replaces the initial and the name */
-      lg.onload = function () { lock.classList.add('has-logo'); lock.classList.toggle('is-square', lg.naturalWidth < lg.naturalHeight * 1.6); lg.hidden = false; $('wc-shoplogo').parentNode.classList.add('has-logo'); };
-      lg.onerror = function () { lock.classList.remove('has-logo'); lg.hidden = true; $('wc-shoplogo').hidden = true; };
-      lg.src = m.logo; $('wc-shoplogo').src = m.logo; $('wc-shoplogo').hidden = false;
+      lg.onload = function () { lock.classList.add('has-logo'); lock.classList.toggle('is-square', lg.naturalWidth < lg.naturalHeight * 1.6); lg.hidden = false; };
+      lg.onerror = function () { lock.classList.remove('has-logo'); lg.hidden = true; };
+      lg.src = m.logo;
     }
     $('wc-l-client').textContent = t('client');
-    $('wc-l-balance').textContent = t(v.model === 'amount' ? 'points' : 'stamps');
-    $('wc-l-reward').textContent = t('reward');
+    /* Before the first visit, and once the reward is earned, the reward itself is the headline. */
+    var hero = !!(opts.preview || v.ready), unit = t(v.model === 'amount' ? 'points' : 'stamps');
+    $('wc-card').classList.toggle('is-hero', hero);
+    $('wc-card').classList.toggle('is-preview', !!opts.preview);
+    $('wc-l-balance').textContent = opts.preview ? t('toWin') : v.ready ? t('readyHero') : unit;
+    $('wc-hero').textContent = v.rewardLabel || t('gift');
+    $('wc-l-reward').textContent = hero ? unit : t('reward');
     $('wc-l-left').textContent = v.ready ? t('stateL') : t('left');
     $('wc-first').textContent = v.firstName || '';
     $('wc-l-client').hidden = !v.firstName;
     var balance = Math.min(v.balance || 0, v.target);
     var bal = $('wc-balance'); bal.textContent = v.model === 'amount' ? String(v.balance || 0) : String(balance);
-    if (v.model !== 'amount') { var of = document.createElement('span'); of.className = 'of'; of.textContent = ' / ' + v.target; bal.appendChild(of); }
-    $('wc-reward').textContent = v.rewardLabel || t('gift');
+    var of = document.createElement('span'); of.className = 'of'; of.textContent = ' / ' + v.target; bal.appendChild(of);
+    $('wc-reward').textContent = hero ? (v.model === 'amount' ? (v.balance || 0) : balance) + ' / ' + v.target : (v.rewardLabel || t('gift'));
     $('wc-left').textContent = v.ready ? t('readyShort') : t(v.model === 'amount' ? 'pointsN' : 'stampsN', { n: Math.max(0, v.target - (v.balance || 0)) });
     var box = $('wc-stamps');
     box.textContent = '';
@@ -254,8 +259,7 @@
 
   function form(m, program, receipt) {
     var p = panel();
-    p.appendChild(el('h1', 'wc-h', t('title')));
-    p.appendChild(el('p', 'wc-offer', offerLine(program)));
+    p.appendChild(el('h1', 'wc-h wc-offer', offerLine(program)));
     p.appendChild(el('p', 'wc-p', t('intro')));
     if (receipt === 'ok') note(p, t(pts(program) ? 'receiptOkPts' : 'receiptOk'));
     else if (receipt === 'used') note(p, t('receiptUsed'), true);
@@ -270,7 +274,7 @@
     [l1, l2, l3, go, el('div', 'wc-err')].forEach(function (n) { f.appendChild(n); });
     p.appendChild(f);
     var preview = { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel, perMad: program.perMad, firstName: '' };
-    name.addEventListener('input', function () { preview.firstName = name.value.trim().split(/\s+/)[0] || ''; paintCard(m, preview); });
+    name.addEventListener('input', function () { preview.firstName = name.value.trim().split(/\s+/)[0] || ''; paintCard(m, preview, { preview: true }); });
     /* The button stays live: a tap without the box ticked says why, instead of a grey button that explains nothing. */
     consent.addEventListener('change', function () { var x = f.querySelector('.wc-err'); if (x && consent.checked) x.textContent = ''; });
     f.addEventListener('submit', function (e) {
@@ -296,7 +300,7 @@
     fetch(q).then(function (res) { return res.json().then(function (b) { return { res: res, body: b }; }); }).then(function (r) {
       if (!r.res.ok) { fail(panel(), r.res, r.body); return; }
       var m = r.body.merchant, program = r.body.program;
-      paintCard(m, { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel, perMad: program.perMad });
+      paintCard(m, { model: program.model, balance: 0, target: program.target, rewardLabel: program.rewardLabel, perMad: program.perMad }, { preview: true });
       if (qs.get('t') && !fresh) {
         var p = panel(); p.appendChild(el('p', 'wc-p', t('taking')));
         post({ merchant: m.slug, t: qs.get('t') }).then(function (x) {
