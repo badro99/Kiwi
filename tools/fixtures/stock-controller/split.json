@@ -521,8 +521,6 @@
     "assets/stock/import.js": {
       "globals": [
         "Kiwi",
-        "KiwiCatalogImport",
-        "KiwiDashboardLoader",
         "KiwiInventory",
         "KiwiRestaurantRecipes",
         "KiwiStockInternal"

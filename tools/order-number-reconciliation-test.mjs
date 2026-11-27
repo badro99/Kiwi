@@ -14,7 +14,8 @@ function check(label, condition) {
 }
 
 check('a local table order waits for its permanent number before paper is frozen',
-  /order\.canonicalNumberPromise = relayToKitchen\(order\);[\s\S]{0,120}order\.canonicalNumberPromise\.then\(\(\) => printKitchenTickets\(order, items\)\)/.test(page));
+  /* …and a number that fails still prints the ticket (the second handler). */
+  /order\.canonicalNumberPromise = relayToKitchen\(order\);[\s\S]{0,120}order\.canonicalNumberPromise\.then\(\(\) => printKitchenTickets\(order, items\), \(\) => printKitchenTickets\(order, items\)\)/.test(page));
 check('a recovered server echo replaces the private local counter',
   /if \(o\.number != null && String\(o\.number\)\.trim\(\)\) known\.opNum = o\.number;/.test(page));
 check('the takeaway editor title uses the same public number resolver',

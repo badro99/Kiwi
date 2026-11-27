@@ -37,6 +37,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { suite, secret, InfraError } from './browser-trace.mjs';
+import { waitCodePad, typeCode } from './till-code-pad.mjs';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -343,9 +344,9 @@ async function pairTill(t, page, m, vertical) {
 async function unlockTill(t, page, m, vertical) {
   t.step(`${m.label}: staff code on the till`);
   for (let attempt = 0; ; attempt++) {
-    await page.waitForSelector('[data-cpp="1"]', { visible: true, timeout: 45000 });
+    const pad = await waitCodePad(page, 45000);   // the 2027 kit pad or the shipped one (tools/till-code-pad.mjs)
     await sleep(1500);
-    try { await typeDigits(page, '[data-cpp="%"]', m._pin); break; } catch (e) {
+    try { await typeCode(page, pad, m._pin); break; } catch (e) {
       if (attempt >= 1) throw e;
       t.step(`${m.label}: keypad redrawn, code again`);
     }

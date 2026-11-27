@@ -762,10 +762,10 @@
       try { local = (K && typeof K.recoverList === 'function') ? K.recoverList() : []; } catch (_) {}
       local.forEach(function (x) {
         var row = document.createElement('div'); row.className = 'kpr-relay-row';
-        row.innerHTML = '<span>' + esc(say('Non imprimé') + ' · ' + unprintedWhat({ kind: x.type, id: '', created_ts: x.createdAt }) + (x.label ? ' · ' + x.label : '')) + '</span><button type="button">' + esc(say('Réimprimer')) + '</button>';
+        row.innerHTML = '<span>' + esc(tr('Non imprimé') + ' · ' + unprintedWhat({ kind: x.type, id: '', created_ts: x.createdAt }) + (x.label ? ' · ' + x.label : '')) + '</span><button type="button">' + esc(tr('Réimprimer')) + '</button>';
         row.querySelector('button').onclick = function () {
           var reply = null; try { reply = K.reprintDropped(x.id); } catch (_) {}
-          if (reply && reply.accepted) { row.remove(); tell(); } else this.textContent = say('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.');
+          if (reply && reply.accepted) { row.remove(); tell(); } else this.textContent = tr('Réimpression non confirmée. Vérifiez la connexion et le pont, puis réessayez.');
         };
         list.appendChild(row);
       });

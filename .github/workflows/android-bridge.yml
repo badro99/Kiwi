@@ -21,12 +21,14 @@ on:
       - 'bridge/android/**'
       - 'tools/android-bridge-jvm-test.mjs'
       - 'tools/android-print-bridge-test.mjs'
+      - 'tools/android-bridge-wiring-test.mjs'
       - '.github/workflows/android-bridge.yml'
   pull_request:
     paths:
       - 'bridge/android/**'
       - 'tools/android-bridge-jvm-test.mjs'
       - 'tools/android-print-bridge-test.mjs'
+      - 'tools/android-bridge-wiring-test.mjs'
 
 permissions:
   contents: read
@@ -48,7 +50,7 @@ jobs:
       - name: Java du pont contre de fausses imprimantes
         run: node tools/android-bridge-jvm-test.mjs
       - name: Garde-fous du source
-        run: node tools/android-print-bridge-test.mjs
+        run: node tools/android-print-bridge-test.mjs && node tools/android-bridge-wiring-test.mjs
       - name: L'APK se construit
         run: |
           echo "sdk.dir=$ANDROID_HOME" > bridge/android/local.properties

@@ -17,7 +17,9 @@
  *  · Kitchen starts at once (direct): read by kdsViewStatus.
  */
 function counterFlow() {
-  try { return (window.KiwiCounterFlow && window.KiwiCounterFlow.get()) || {}; } catch (_) { return {}; }
+  /* Through KiwiDiscountPolicy.counterFlow (discount-policy.js, the same reader as
+     KiwiCounterFlow.get): the till already reads that global, so no new link. */
+  try { const P = window.KiwiDiscountPolicy; return (P && P.counterFlow && P.counterFlow()) || {}; } catch (_) { return {}; }
 }
 /* The two small sheets of this file, styled once (no stylesheet to grow). */
 function counterStyle() {
@@ -200,10 +202,10 @@ function counterAskType() {
     veil.setAttribute('role', 'dialog');
     veil.setAttribute('aria-modal', 'true');
     veil.setAttribute('data-cf-type', '');
-    const pick = (key, label, path) => '<button type="button" class="cf-pick" data-cf-pick="' + key + '"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="' + path + '"/></svg><span></span></button>';
+    const paths = { surplace: 'M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T360-446v366h-80Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z', emporter: 'M240-80q-33 0-56.5-23.5T160-160v-480q0-33 23.5-56.5T240-720h80q0-66 47-113t113-47q66 0 113 47t47 113h80q33 0 56.5 23.5T800-640v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-480h-80v80q0 17-11.5 28.5T600-520q-17 0-28.5-11.5T560-560v-80H400v80q0 17-11.5 28.5T360-520q-17 0-28.5-11.5T320-560v-80h-80v480Zm160-560h160q0-33-23.5-56.5T480-800q-33 0-56.5 23.5T400-720ZM240-160v-480 480Z' };
+    const pick = (key) => '<button type="button" class="cf-pick" data-cf-pick="' + key + '"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="' + paths[key] + '"/></svg><span></span></button>';
     veil.innerHTML = '<div class="cf-sheet"><h3 class="cf-title"></h3><div class="cf-picks">'
-      + pick('surplace', 'Sur place', 'M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T360-446v366h-80Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z')
-      + pick('emporter', 'À emporter', 'M240-80q-33 0-56.5-23.5T160-160v-480q0-33 23.5-56.5T240-720h80q0-66 47-113t113-47q66 0 113 47t47 113h80q33 0 56.5 23.5T800-640v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-480h-80v80q0 17-11.5 28.5T600-520q-17 0-28.5-11.5T560-560v-80H400v80q0 17-11.5 28.5T360-520q-17 0-28.5-11.5T320-560v-80h-80v480Zm160-560h160q0-33-23.5-56.5T480-800q-33 0-56.5 23.5T400-720ZM240-160v-480 480Z')
+      + ['surplace', 'emporter'].map(pick).join('')
       + '</div><button type="button" class="cf-btn" data-cf="cancel"></button></div>';
     veil.querySelector('.cf-title').textContent = counterTr('Sur place ou à emporter ?');
     veil.querySelector('[data-cf-pick="surplace"] span').textContent = counterTr('Sur place');

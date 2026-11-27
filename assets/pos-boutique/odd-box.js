@@ -53,6 +53,8 @@ export function mountOddBox(bar, d) {
 
 function open(d, tr) {
   const { $, esc, fmtMAD } = d;
+  /* The unit every boutique amount prints (fmtMAD: « 120,00 MAD » in every language). */
+  const unit = fmtMAD(0).split(' ').pop();
   const el = $('#bq-approvem', d.root);
   if (!el) return;
   let cents = 0, rayon = '';
@@ -63,7 +65,7 @@ function open(d, tr) {
       <div class="odd-head"><span class="odd-ic"><i data-icon="sell"></i></span>
         <div><h3 class="modal-title">${esc(tr('Article sans étiquette'))}</h3>
         <p class="odd-sub">${esc(tr('Tapez le prix convenu. La pièce passe sur le ticket, le stock ne bouge pas.'))}</p></div></div>
-      <div class="odd-amount" aria-live="polite"><b id="odd-val">0</b><span>${esc(tr('MAD'))}</span></div>
+      <div class="odd-amount" aria-live="polite"><b id="odd-val">0</b><span>${esc(unit)}</span></div>
       <div class="odd-pad" role="group" aria-label="${esc(tr('Prix'))}">
         ${['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'].map((k) => `<button type="button" data-odd-key="${k}"${k === 'del' ? ` aria-label="${esc(tr('Effacer'))}"` : ''}>${k === 'del' ? '<i data-icon="backspace"></i>' : k}</button>`).join('')}
       </div>

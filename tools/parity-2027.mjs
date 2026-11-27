@@ -113,7 +113,7 @@ const FLOWS = [
     steps: [...DINE_OPEN, S('Harira'), S('^Envoyer'), { sel: '.cplan-tbl[data-table="T7"]', optional: true }, CASH] },
   { name: 'dine-in · order, send, add a dish, send again',
     steps: [...DINE_OPEN, S('Harira'), S('^Envoyer'), { sel: '.cplan-tbl[data-table="T7"]', optional: true },
-      { off: [S('^Ajouter des articles')], on: [S('^Ajouter|^Plus d.articles')] }, S('Taktouka'), S('^Envoyer')] },
+      { off: [S('^Ajouter des articles')], on: [S('^Ajouter(?! un commentaire)|^Plus d.articles')] }, S('Taktouka'), S('^Envoyer')] },
   { name: 'dine-in · send two dishes, then take one back (kitchen told)',
     steps: [...DINE_OPEN, S('Harira'), S('Zaalouk'), S('^Envoyer'), { sel: '.cplan-tbl[data-table="T7"]', optional: true },
       { off: [{ sel: '[data-table-void]' }], on: [{ sel: 'li[data-line]' }, S('^−$|^-$|Retirer|Moins|Annuler')] }] },

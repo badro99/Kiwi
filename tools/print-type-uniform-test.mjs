@@ -4,9 +4,9 @@
  * grand et petit mélangés sur le même papier. Le propriétaire veut un papier
  * « parfaitement homogène ». La règle tenue ici, octet par octet :
  *  - tout est imprimé en gras (ESC E 1), et le gras ne s'éteint jamais ;
- *  - bon de cuisine : deux tailles seulement, grand (poste, table, plat) et
- *    normal (heure, choix, options, notes, « À suivre »), chaque détail sous
- *    un plat commençant par le même « > » ;
+ *  - bon de cuisine : grand (poste, table, plat), double hauteur pour le
+ *    détail d'un plat (choix, options, notes : Jon's Burgers, 26 nov.) et
+ *    normal (heure, « À suivre »), chaque détail commençant par le même « > » ;
  *  - reçu client : enseigne en grand, TOTAL en double hauteur, le reste normal.
  *   node tools/print-type-uniform-test.mjs
  */
@@ -51,8 +51,18 @@ ok('kitchen ticket: bold from the first line to the cut, never switched off', ()
   assert.ok(kitchen.bold.length > 0);
   assert.deepEqual([...new Set(kitchen.bold)], [1]);
 });
-ok('kitchen ticket: two sizes only, big and normal', () => {
-  assert.deepEqual([...new Set(kitchen.size)].sort(), [0x00, 0x11]);
+/* Jon's Burgers, 26 nov. 2026 (f95fad8eb) : options, choix et notes sous un plat en
+   double hauteur, pour que la cuisine les lise. Trois tailles, chacune son rôle :
+   grand (poste, table, plat), double hauteur (le détail d'un plat), normal (le reste). */
+ok('kitchen ticket: three sizes, each with its role: big, double height, normal', () => {
+  assert.deepEqual([...new Set(kitchen.size)].sort((a, b) => a - b), [0x00, 0x01, 0x11]);
+});
+ok('kitchen ticket: every detail under a dish is in double height, and size goes back to normal after it', () => {
+  const b = Buffer.from(E.kitchenTicket({ paper: '80', title: 'C', items: [{ qty: 1, name: 'Burger', note: 'sans oignon' }], following: [{ qty: 1, name: 'Frites' }] }));
+  const txt = b.toString('latin1'), at = txt.indexOf('> sans oignon');
+  const sizeBefore = (i) => { for (let j = i; j >= 0; j--) if (b[j] === 0x1d && b[j + 1] === 0x21) return b[j + 2]; return null; };
+  assert.equal(sizeBefore(at), 0x01);
+  assert.equal(sizeBefore(txt.indexOf('Frites')) === 0x01, false);
 });
 ok('kitchen ticket: every detail under a dish starts with the same « > », flush left', () => {
   for (const s of ['> Granola & Fruit', '> Orange Juice', '> Espresso · Hot', '> sans jambon', '> bien chaude']) {
@@ -111,12 +121,12 @@ function printed(items) {
     return { where, size };
   };
 }
-ok('Le Gourmand prints dish big, then option, choices and note at one normal size', () => {
+ok('Le Gourmand prints dish big, then option, choices and note at one double-height size', () => {
   const ticket = printed(gourmand), dish = ticket('1× Le Gourmand'), granola = ticket('> Granola & Fruit'),
     juice = ticket('> Orange Juice'), espresso = ticket('> Espresso · Hot'), note = ticket('> sans jambon');
   assert.equal(dish.size, 0x11);
   assert.ok(dish.where < granola.where && granola.where < juice.where && juice.where < espresso.where && espresso.where < note.where);
-  assert.deepEqual([granola.size, juice.size, espresso.size, note.size], [0, 0, 0, 0]);
+  assert.deepEqual([granola.size, juice.size, espresso.size, note.size], [1, 1, 1, 1]);
 });
 
 console.log(`print-type-uniform: ${passed} passed`);

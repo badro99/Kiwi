@@ -468,7 +468,7 @@ console.log('\n--- Section 1: Pasta Corner Menu Resolution & Configurator I18N -
   const payload = ctx.buildLinesPayload([testCartLine], 'order-pasta-01');
   ok(payload.length === 4, 'Formula expands to 1 parent + 3 child part lines');
   ok(payload[0].id === 'it_26' && payload[0].kind === 'formula' && payload[0].formulaName === 'Prépare ton Plat', 'Parent formula line identified');
-  ok(payload[0].optionChoices[0].choiceId === 'oc_59' && payload[0].optionChoices[0].label === 'Supplément Parmigiano', 'Parent retains standalone add-ons with localized labels');
+  ok(payload[0].optionChoices[0].choiceId === 'oc_59' && payload[0].optionChoices[0].label === 'Extra Parmigiano', 'Parent retains standalone add-ons, named as the owner wrote them (a machine translation never renames, d5f925c3b)');
   ok(payload[1].id === 'it_6' && payload[1].kind === 'formula-part' && payload[1].slotLabel === 'Choose your Pasta', 'Child part 1 carries it_6 and slotLabel');
   ok(payload[2].id === 'it_14' && payload[2].kind === 'formula-part' && payload[2].slotLabel === 'Choose your Sauce', 'Child part 2 carries it_14 and preserved slotLabel');
   ok(payload[3].id === 'it_21' && payload[3].kind === 'formula-part' && payload[3].slotLabel === 'Extras', 'Child part 3 carries it_21 and slotLabel');

@@ -32,6 +32,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { suite, secret, InfraError } from './browser-trace.mjs';
+import { waitCodePad, typeCode, codePadShowing } from './till-code-pad.mjs';
 
 const ROOT = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let puppeteer;
@@ -208,7 +209,11 @@ async function createMerchant(t, ctx, m) {
     const r = await fetch('/api/config?merchant=' + encodeURIComponent(slug), { credentials: 'same-origin' });
     return r.ok;
   }, { timeout: 15000 }, m.slug);
-  const n = stack.db.prepare("UPDATE merchant_config SET status = 'active', plan = 'pro' WHERE merchant = ?").run(m.slug).changes;
+  /* skin2027: false keeps these tills on the shipped design (since 26 Nov 2026
+   * 2027 is every store's default, functions/_middleware.js staffSkinOn). This
+   * suite proves the ledger, which is the same under both looks; the 2027
+   * screens run the same flows in tools/parity-2027.mjs. */
+  const n = stack.db.prepare("UPDATE merchant_config SET status = 'active', plan = 'pro', features = json_set(COALESCE(features, '{}'), '$.skin2027', json('false')) WHERE merchant = ?").run(m.slug).changes;
   if (!n) throw new Error(`${m.label}: store ${m.slug} was not created`);
   // Le wizard a pu lancer une lecture avant la création du commerce.
   // Recharger ce contexte authentifié conserve le garde réel et son serveur.
@@ -241,9 +246,9 @@ async function unlockTill(t, page, m) {
   /* The keypad can be drawn twice while the paired till boots: wait for it to
    * hold still, and start the code again if it is redrawn under the fingers. */
   for (let attempt = 0; ; attempt++) {
-    await page.waitForSelector('[data-cpp="1"]', { visible: true, timeout: 45000 });
+    const pad = await waitCodePad(page, 45000);   // the 2027 kit pad or the shipped one (tools/till-code-pad.mjs)
     await sleep(1500);
-    try { await typeDigits(page, '[data-cpp="%"]', m._pin); break; } catch (e) {
+    try { await typeCode(page, pad, m._pin); break; } catch (e) {
       if (attempt >= 1) throw e;
       t.step(`${m.label}: keypad redrawn, code again`);
     }
@@ -1029,9 +1034,10 @@ await scenario('boutique · a shift left open overnight files today under today'
   /* The shift is still open, so the till skips its opening float: only the
      staff code stands between the reload and the sale screen. */
   t.step('boutique: staff code after the reload');
-  const gate = await until(bq, () => ({ ok: !!document.querySelector('[data-cpp="1"]')?.offsetWidth || !!document.querySelector('#bq-today')?.offsetWidth,
-    keypad: !!document.querySelector('[data-cpp="1"]')?.offsetWidth }), null, 45000);
-  if (gate.keypad) { await sleep(1500); await typeDigits(bq, '[data-cpp="%"]', BOUT._pin); }
+  const gate = await until(bq, () => ({ ok: !!document.querySelector('#bq-today')?.offsetWidth || !!document.querySelector('[data-cpp="1"]')?.offsetWidth
+    || !!document.querySelector('#cp-pin-screen k-pin-pad')?.shadowRoot?.querySelector('[data-key="1"]')?.getBoundingClientRect().width }), null, 45000);
+  const pad = await codePadShowing(bq);
+  if (pad) { await sleep(1500); await typeCode(bq, pad, BOUT._pin); }
   await bq.waitForSelector('#bq-today', { visible: true, timeout: 30000 });
   await until(bq, () => ({ ok: document.querySelectorAll('[data-bq-item]').length >= 3 }), null, 30000);
   await sleep(1500);

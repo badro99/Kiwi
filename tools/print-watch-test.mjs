@@ -237,8 +237,8 @@ function job(id, ageMs, status = 'queued', extra = {}) {
   for (let i = apk.indexOf(Buffer.from([0x50, 0x4b, 3, 4])); i >= 0 && i < apk.length; i = apk.indexOf(Buffer.from([0x50, 0x4b, 3, 4]), i + 4)) {
     const nameLen = apk.readUInt16LE(i + 26), extra = apk.readUInt16LE(i + 28);
     if (apk.toString('latin1', i + 30, i + 30 + nameLen) !== 'AndroidManifest.xml') continue;
-    const body = apk.subarray(i + 30 + nameLen + extra, i + 30 + nameLen + extra + apk.readUInt32LE(i + 18));
-    manifest = apk.readUInt16LE(i + 8) === 8 ? zlib.inflateRawSync(body) : body;
+    const entry = apk.subarray(i + 30 + nameLen + extra, i + 30 + nameLen + extra + apk.readUInt32LE(i + 18));
+    manifest = apk.readUInt16LE(i + 8) === 8 ? zlib.inflateRawSync(entry) : entry;
     break;
   }
   ok(manifest && ['utf16le', 'utf8'].some((enc) => manifest.includes(Buffer.from(watch.ANDROID_BRIDGE_LATEST, enc))), 'the published APK is the version the server offers');

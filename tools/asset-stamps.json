@@ -32,8 +32,8 @@
     "sha": "fddb9eb286e8dc9a"
   },
   "assets/admin-legacy.js": {
-    "v": "20",
-    "sha": "9cbe535b97c2bd07"
+    "v": "21",
+    "sha": "96a0009502c5b103"
   },
   "assets/admin-origin-devices.js": {
     "v": "1",
@@ -340,8 +340,8 @@
     "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/counter-flow.js": {
-    "v": "2",
-    "sha": "675cfeb60de9f191"
+    "v": "4",
+    "sha": "a9bbfc0cec73aa0a"
   },
   "assets/caisse/delivery.js": {
     "v": "14",
@@ -956,8 +956,8 @@
     "sha": "9dc65de4388af6b0"
   },
   "assets/interactive/handlers.js": {
-    "v": "12",
-    "sha": "d4ea1552dae94c1c"
+    "v": "13",
+    "sha": "0755283dce7034f8"
   },
   "assets/interactive/helpers.js": {
     "v": "3",
@@ -1220,8 +1220,8 @@
     "sha": "7b0a46f98e56c876"
   },
   "assets/kit/till.js": {
-    "v": "38",
-    "sha": "821ff7d332f94f9f"
+    "v": "39",
+    "sha": "a3baeabd3befac01"
   },
   "assets/kit/tokens-2027.css": {
     "v": "2",
@@ -1240,8 +1240,8 @@
     "sha": "11612511deeed35c"
   },
   "assets/kiwi-env.js": {
-    "v": "11",
-    "sha": "f3b17f7269cd068f"
+    "v": "12",
+    "sha": "870f5b39a5dca663"
   },
   "assets/kiwi-health.css": {
     "v": "2",
@@ -1572,8 +1572,8 @@
     "sha": "7f930c23a234d11c"
   },
   "assets/owner-ask.js": {
-    "v": "3",
-    "sha": "d7b082f6b768011d"
+    "v": "4",
+    "sha": "7dc486a08291a1a5"
   },
   "assets/pages-pro-boutique.js": {
     "v": "75",
@@ -1692,8 +1692,8 @@
     "sha": "369b3f53c9ea0038"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "360",
-    "sha": "c88e0e81347a6a3e"
+    "v": "361",
+    "sha": "8cc4faa21983ce84"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -1820,16 +1820,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "416",
+    "v": "417",
     "sha": "779406d0c59205cb"
   },
   "assets/pos-boutique.js": {
-    "v": "416",
-    "sha": "ca07d675538483f9"
+    "v": "417",
+    "sha": "266feb6366341b5a"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "69",
-    "sha": "71fcb9f578ebf4bb"
+    "v": "70",
+    "sha": "51a7f077ece93e24"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "4",
@@ -1848,8 +1848,8 @@
     "sha": "ed17a4acad2cb58c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "310",
-    "sha": "4e3dd2d16b4c8302"
+    "v": "311",
+    "sha": "0cdd741b0f355856"
   },
   "assets/pos-boutique/cheque-sheet.js": {
     "v": "2",
@@ -1860,12 +1860,12 @@
     "sha": "988b88c659f6ff5e"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "227",
-    "sha": "ade8d8050feaf648"
+    "v": "228",
+    "sha": "c10bf0abed0045c8"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "72",
-    "sha": "76e158d5ba455c40"
+    "v": "73",
+    "sha": "8b89d36fded1efd9"
   },
   "assets/pos-boutique/exch-cut.js": {
     "v": "7",
@@ -1888,8 +1888,8 @@
     "sha": "2c1bd059df2c7c2c"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "310",
-    "sha": "2e24a905fc74e6fd"
+    "v": "311",
+    "sha": "51a2e854831100b4"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "27",
@@ -1908,8 +1908,8 @@
     "sha": "d07364f9158181ed"
   },
   "assets/pos-boutique/odd-box.js": {
-    "v": "4",
-    "sha": "0f909a1e4eebfc5d"
+    "v": "5",
+    "sha": "15a827a6dff9c757"
   },
   "assets/pos-boutique/old-sales.js": {
     "v": "2",
@@ -1944,8 +1944,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "310",
-    "sha": "94dd3571c2f92d12"
+    "v": "311",
+    "sha": "d4a69e88ed944221"
   },
   "assets/pos-boutique/search.js": {
     "v": "21",
@@ -2004,8 +2004,8 @@
     "sha": "ef209c258602a98a"
   },
   "assets/pos-dispatch.js": {
-    "v": "553",
-    "sha": "30409c4e8e055f9a"
+    "v": "554",
+    "sha": "8b31d7df32dd2752"
   },
   "assets/pos-epicerie.css": {
     "v": "44",
@@ -2300,8 +2300,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "104",
-    "sha": "1cc480f37e6835e6"
+    "v": "106",
+    "sha": "f1268c917897edab"
   },
   "assets/printer-health.js": {
     "v": "3",
@@ -2312,8 +2312,8 @@
     "sha": "dbb1a1310e130723"
   },
   "assets/printer/pairing-ui.js": {
-    "v": "18",
-    "sha": "d428767d2e9c2e02"
+    "v": "19",
+    "sha": "25e74f8f84d39271"
   },
   "assets/printer/print-diag.js": {
     "v": "2",
@@ -2516,8 +2516,8 @@
     "sha": "7b3cc9b0eb9c9e0f"
   },
   "assets/service-requests.js": {
-    "v": "5",
-    "sha": "5efca48f3af20f54"
+    "v": "6",
+    "sha": "782b4fb00bd66b9e"
   },
   "assets/simple-food-cost.js": {
     "v": "29",
@@ -2552,8 +2552,8 @@
     "sha": "ee6edfc997c55697"
   },
   "assets/stock.js": {
-    "v": "153",
-    "sha": "43165b39fce6b2ac"
+    "v": "154",
+    "sha": "20df09a3efb48d51"
   },
   "assets/stock/alerts.js": {
     "v": "6",
@@ -2568,8 +2568,8 @@
     "sha": "802b0269cbd00e8c"
   },
   "assets/stock/import.js": {
-    "v": "1",
-    "sha": "75f502a17562c8a1"
+    "v": "2",
+    "sha": "45f6c568f59d1341"
   },
   "assets/stock/intake.js": {
     "v": "23",
@@ -2708,8 +2708,8 @@
     "sha": "6145873b12f5e69b"
   },
   "assets/till-policy-settings.js": {
-    "v": "1",
-    "sha": "3e48ecdddf61765f"
+    "v": "2",
+    "sha": "7ed9229d8261221b"
   },
   "assets/till-price-list.js": {
     "v": "4",

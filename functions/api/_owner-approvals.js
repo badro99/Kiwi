@@ -36,48 +36,10 @@ const REMINT_MS = 2 * 60000;
 export const MAX_PENDING = 20;
 export const MAX_PER_MINUTE = 10;
 
-const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS owner_approvals (
-    id TEXT PRIMARY KEY,
-    merchant TEXT NOT NULL,
-    kind TEXT NOT NULL,
-    ref TEXT NOT NULL DEFAULT '',
-    label TEXT NOT NULL DEFAULT '',
-    amount_cents INTEGER NOT NULL DEFAULT 0,
-    requested_by TEXT NOT NULL DEFAULT '',
-    requested_by_id TEXT NOT NULL DEFAULT '',
-    terminal TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_ts INTEGER NOT NULL,
-    decided_ts INTEGER,
-    decided_by TEXT NOT NULL DEFAULT '',
-    granted_ts INTEGER,
-    used_ts INTEGER
-  )`,
-  'CREATE INDEX IF NOT EXISTS idx_owner_approvals_merchant ON owner_approvals (merchant, created_ts)',
-  `CREATE TABLE IF NOT EXISTS owner_approval_settings (
-    merchant TEXT PRIMARY KEY,
-    cash_out INTEGER NOT NULL DEFAULT 0,
-    cancel INTEGER NOT NULL DEFAULT 0,
-    manager_fallback INTEGER NOT NULL DEFAULT 1,
-    min_cents INTEGER NOT NULL DEFAULT 0,
-    updated_ts INTEGER NOT NULL DEFAULT 0
-  )`,
-  `CREATE TABLE IF NOT EXISTS owner_approval_devices (
-    merchant TEXT NOT NULL,
-    token TEXT NOT NULL,
-    lang TEXT NOT NULL DEFAULT '',
-    created_ts INTEGER NOT NULL,
-    PRIMARY KEY (merchant, token)
-  )`,
-];
-
-const ready = new WeakMap();
+/* The three tables come from migration 0038, inside the production floor
+   (functions/_schema-version.js): nothing is created at request time. */
 export async function ensureApprovalTables(db) {
   if (!db) throw new Error('db-unavailable');
-  if (ready.get(db)) return;
-  for (const sql of SCHEMA) await db.prepare(sql).bind().run();
-  ready.set(db, true);
 }
 
 export const DEFAULT_SETTINGS = Object.freeze({ cashOut: false, cancel: false, managerFallback: true, minCents: 0 });

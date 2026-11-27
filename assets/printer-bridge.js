@@ -998,7 +998,7 @@
     if (pairingLoad) return pairingLoad;
     pairingLoad = new Promise(function (resolve, reject) {
       var script = document.createElement('script');
-      script.src = '/assets/printer/pairing-ui.js?v=18';
+      script.src = '/assets/printer/pairing-ui.js?v=19';
       function failed() {
         pairingLoad = null;
         script.remove();

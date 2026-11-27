@@ -419,11 +419,17 @@ let saleApproval, lineApproval;
     step++;
     return reply({ ok: true, approval: { status: hold || step < 2 ? 'pending' : 'approved' } });
   };
-  const win = { fetch: server };
-  const context = { window: win, document, location: { href: 'https://kiwi.test/kiwi-serveur.html' }, localStorage: { getItem: () => null },
+  /* La vraie couche réseau du téléphone (kiwi-env.js) devant le serveur scripté :
+     c'est elle qui annonce le refus, owner-ask.js n'emballe plus fetch. */
+  const win = Object.assign(new EventTarget(), { fetch: server });
+  document.addEventListener = () => {};
+  document.dispatchEvent = () => true;
+  const context = { window: win, document, navigator: {}, location: { href: 'https://kiwi.test/kiwi-serveur.html', origin: 'https://kiwi.test', hostname: 'kiwi.test', protocol: 'https:', pathname: '/kiwi-serveur.html', search: '' },
+    localStorage: { getItem: () => null }, CustomEvent, EventTarget, URLSearchParams, Map, Set, Error,
     setTimeout: (f) => { Promise.resolve().then(f); return 0; }, Response, URL, JSON, Object, Promise, Date, String, Number };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets/owner-ask.js'), 'utf8'), context, { filename: 'assets/owner-ask.js' });
-  ok('L1 le module emballe fetch une seule fois', win.fetch !== server && win.fetch.kiwiOwnerAsk === true);
+  context.fetch = (...a) => win.fetch(...a);
+  for (const f of ['assets/kiwi-env.js', 'assets/owner-ask.js', 'assets/owner-ask.js']) vm.runInNewContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), context, { filename: f });
+  ok('L1 le module n\'emballe pas fetch : il répond à l\'événement de la couche réseau, une fois même chargé deux fois', win.fetch !== server && !win.fetch.kiwiOwnerAsk);
   const controller = new AbortController();
   const res = await win.fetch('/api/order/queue', { method: 'POST', signal: controller.signal, body: JSON.stringify({ merchant: SHOP, voidLine: { lineId: 'line-k1', qty: 1 } }) });
   const out = await res.json();

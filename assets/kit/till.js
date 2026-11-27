@@ -840,7 +840,7 @@
       var shares = '<ul class="sh" role="radiogroup" aria-label="' + esc(t('split.title', { amount: money(b.total || 0) })) + '">' + sh.map(function (c, i) {
         var done = paid.indexOf(i + 1) >= 0, on = i === self.__pick && open(i);
         return '<li role="none"><button type="button" class="srow k-body" role="radio" aria-checked="' + on + '" data-share="' + i + '"' + (done || !c ? ' aria-disabled="true"' : '') + '>' +
-          '<span class="sl">' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + numHtml(money(fromCents(c))) + '</span>' +
+          '<span class="sl"><span>' + th('split.share_n', { n: i + 1 }) + ' · <span class="k-num">' + numHtml(money(fromCents(c))) + '</span></span>' +
           (lock && self.parts[i].label ? '<span class="k-foot k-ink2 sd">' + esc(self.parts[i].label) + '</span>' : '') + '</span>' + (done ? icon('task_alt', 20, 'k-accent-ink') : '') + '</button></li>';
       }).join('') + '</ul>';
       var mid = this.__mode === 'equal'

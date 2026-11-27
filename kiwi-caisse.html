@@ -78,7 +78,7 @@
   <!-- Client error reporter & observability (fail-soft telemetry) -->
   <script src="assets/err-reporter.js?v=2"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
-  <script src="assets/kiwi-env.js?v=11"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <script src="assets/kiwi-env.js?v=12"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
   <!-- À qui appartient le service en mémoire. Sans defer, avant le script en
        ligne : une caisse dépairée ou réappairée en plein service se verrouille,
        et aucun appel /api/* ne part ailleurs avec les données du service
@@ -115,7 +115,7 @@
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=26" defer></script>
   <script src="assets/printer/transports.js?v=19" defer></script>
-  <script src="assets/printer-bridge.js?v=104" defer></script>
+  <script src="assets/printer-bridge.js?v=106" defer></script>
   <script src="assets/caisse-hardware.js?v=16" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -218,7 +218,7 @@
         js("assets/kit/elements.js?v=4") +
         js("assets/kit/layout.js?v=1") +
         js("assets/kit/nav.js?v=10") +
-        js("assets/kit/till.js?v=38") +
+        js("assets/kit/till.js?v=39") +
         js("assets/kit/till-frame.js?v=16") +
         js("assets/kit/till-attendance.js?v=1") +
         js("assets/kit/till-online.js?v=6") +
@@ -237,7 +237,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=553" defer></script>
+  <script src="assets/pos-dispatch.js?v=554" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=10" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=3" defer></script>
@@ -418,7 +418,7 @@
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=51" defer></script>
-  <script src="assets/service-requests.js?v=5" defer></script>
+  <script src="assets/service-requests.js?v=6" defer></script>
   <script src="assets/caisse-menu-availability.js?v=12" defer></script>
   <script src="assets/caisse-pairs.js?v=4" defer></script>
   <script src="assets/caisse-doctor.js?v=1" defer></script>
@@ -2022,7 +2022,7 @@
   <link href="assets/caisse/inventory.js?v=10" data-caisse-lazy="inventory">
   <link rel="preload" as="script" href="assets/caisse/offline.js?v=12" data-caisse-script>
   <link rel="preload" as="script" href="assets/caisse/receipts.js?v=7" data-caisse-script>
-  <link rel="preload" as="script" href="assets/caisse/closing.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/caisse/delivery.js?v=14" data-caisse-script><link rel="preload" as="script" href="assets/caisse/counter-flow.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-recovery.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-refund.js?v=2" data-caisse-script>
+  <link rel="preload" as="script" href="assets/caisse/closing.js?v=2" data-caisse-script><link rel="preload" as="script" href="assets/caisse/delivery.js?v=14" data-caisse-script><link rel="preload" as="script" href="assets/caisse/counter-flow.js?v=4" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-recovery.js?v=1" data-caisse-script><link rel="preload" as="script" href="assets/caisse-cash-refund.js?v=2" data-caisse-script>
   <script src="assets/caisse/workflows-loader.js?v=3"></script>
   <script src="assets/caisse-app.js?v=61"></script>
 </body>
