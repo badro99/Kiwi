@@ -1155,7 +1155,21 @@
   var STOCKISH = W("\\bstock\\b|\\breste\\b|\\bleft\\b|\\blow\\b|\\bruns? out\\b|rupture|epuise|\\bcommander\\b|re-?order|\\border more\\b|\\border\\b|بقا|يبقاو|بقاو|يسالي|يخلاص|المخزون|الستوك|\\bb9a\\b|\\bb9aw\\b|\\bysali\\b|\\btsali\\b");
   var HOWTO_ASK = W("^(?:comment|how|kifach|kifash|كيفاش|كيف)\\b|\\bhow (?:do|can|to)\\b|\\bcomment (?:on |je |faire)|est-ce que (?:je|on) peu|\\bje peux\\b|\\bcan i\\b|\\bwach n9(?:e)?d(?:e)?r\\b|واش نقدر");
   var BRIEF_WATCH = W("\\bventes?\\b|\\bsales\\b|chiffre|revenue|annul\\w*|cancel\\w*|remises?|discounts?|marge|margin|المبيعات|البيع|الإلغاء|الالغاء|التخفيض|الهامش|\\blbi3\\b|\\blmbi3at\\b");
+  /* « تقرير المبيعات بلا أسماء الزبناء »: the sales, without the client book.
+     « علاش المخزون بالسالب »: the reason, not a bare page. « la TVA sur ce
+     reçu me paraît bizarre »: the formula, the receipt is not visible here. */
+  var NO_NAMES = W("(?:\\bsans\\b|\\bwithout\\b|\\bbla\\b|(?:^|\\s)بلا|بدون|من غير)\\s+(?:les\\s+|the\\s+|l\\s*)?(?:\\S+\\s+){0,2}?(?:noms?\\b|names?\\b|asami|اسماء|أسماء|clients?\\b|customers?\\b|الزبناء|الزبائن|الكليان)");
+  var SALES_REPORT = W("rapport|\\breport\\b|bilan|resume|summary|تقرير|التقرير|رابور|\\bventes?\\b|\\bsales\\b|المبيعات|\\blbi3\\b|\\blmbi3at\\b");
+  var NEG_STOCK = W("negati\\w*|\\bminus\\b|sous zero|below zero|en dessous de zero|(?:^|\\s)(?:بالسالب|السالب|سالب)(?=\\s|$|[?؟])|تحت الصفر|\\bbe?ssaleb\\b");
+  var STOCK_W = W("\\bstocks?\\b|inventaire|inventory|مخزون|المخزون|ستوك|الستوك|\\bstok\\b");
+  var COUNT_ASK = W("combien|how many|\\bchhal\\b|\\bch7al\\b|شحال|\\bliste\\b|\\blist\\b|\\bquels\\b|\\bwhich\\b");
+  var VAT_W = W("\\btva\\b|\\bvat\\b|الضريبة|الضريبه|\\bdariba\\b");
+  var RECEIPT_W = W("\\brecus?\\b|\\btickets?\\b|\\breceipts?\\b|\\bfactures?\\b|\\binvoices?\\b|فاتورة|الفاتورة|التيكي|تيكي|الوصل");
+  var CHECK_W = W("verif\\w*|\\bcheck\\w*|bizarre|\\bfaux\\b|\\bwrong\\b|calcul\\w*|غالط|راجع|\\bweird\\b|\\boff\\b|incorrect|\\bjuste\\b|\\bcorrect\\b|\\bghalet\\b|\\bm9lob\\b");
   function actIntent(q) {
+    if (NO_NAMES.test(q) && SALES_REPORT.test(q)) return { route: 'revenue' };
+    if (NEG_STOCK.test(q) && STOCK_W.test(q) && !COUNT_ASK.test(q)) return { entity: 'command', negstock: true };
+    if (VAT_W.test(q) && RECEIPT_W.test(q) && CHECK_W.test(q)) return { entity: 'command', vat: true };
     if (HOWTO_ASK.test(q) || /\b(?:commande|order|ticket|طلب|cmd)\s*(?:n[o°]?\s*)?#?\d/.test(q)) return null;
     if (REMIND.test(q)) return { entity: 'command', remind: true, stock: STOCKISH.test(q), watch: !STOCKISH.test(q) && BRIEF_WATCH.test(q) };
     if (TILL_EDIT.test(q) && (COMMAND.test(q) || /\b(?:stp|svp|please)\b|عفاك|\b3afak\b|^(?:apply|applique\w*|fais|offre|offer|give|donne)\b/.test(q))) return { entity: 'command', till: true };
@@ -1181,20 +1195,28 @@
   var CMD_ACT_T = {
     fr: { till: 'Je ne touche pas aux tickets depuis cette conversation : une remise, une annulation ou un remboursement se fait à la caisse, sur le ticket concerné, avec les droits de la personne qui encaisse.',
       remind: 'Je n’envoie ni rappel ni notification depuis cette conversation, je ne réponds que quand vous me posez une question.',
+      negstock: 'Un stock passe sous zéro quand la caisse a vendu plus d’unités que le stock n’en comptait : le plus souvent une livraison pas encore saisie, ou un comptage qui date. Saisissez la réception ou recomptez l’article dans le Stock, et le chiffre redevient juste.',
+      vat: 'Je ne vois pas ce reçu depuis cette conversation. Sur un prix TTC, la TVA qu’il contient se calcule ainsi : TTC × taux ÷ (100 + taux). À 20 %, un ticket de 120 MAD TTC contient 20 MAD de TVA ; à 10 %, un ticket de 110 MAD en contient 10.',
       watch: 'Je n’envoie ni rappel ni notification depuis cette conversation. Mais le point du matin du tableau de bord signale de lui-même une baisse des ventes, des annulations ou des remises qui grimpent, et une marge qui recule.',
       stock: 'Je n’envoie ni rappel ni notification depuis cette conversation. Pour le stock, chaque article a un seuil d’alerte, son minimum : réglez-le au niveau voulu et le point du matin du tableau de bord signale l’article dès qu’il passe dessous.' },
     en: { till: 'I don’t touch tickets from this conversation: a discount, a cancellation or a refund is done at the till, on that ticket, with the rights of whoever is serving.',
       remind: 'I keep neither reminders nor notifications from this conversation, I only answer when you ask me something.',
+      negstock: 'Stock drops below zero when the till has sold more units than stock had counted: most often a delivery not entered yet, or an old count. Enter the delivery or recount the item in Stock and the figure is right again.',
+      vat: 'I can’t see that receipt from this conversation. On a price including VAT, the VAT inside it is: price × rate ÷ (100 + rate). At 20%, a receipt of 120 MAD including VAT holds 20 MAD of VAT; at 10%, one of 110 MAD holds 10.',
       watch: 'I send neither reminders nor notifications from this conversation. But the dashboard’s morning briefing flags on its own a drop in sales, cancellations or discounts going up, and a margin that slips.',
       stock: 'I send neither reminders nor notifications from this conversation. For stock, each item has a reorder threshold, its minimum: set it where you want and the dashboard’s morning briefing flags the item as soon as it drops below.' },
     ar: { till: 'ما كنقيسش التيكيات من هاد المحادثة: التخفيض ولا الإلغاء ولا الإرجاع كيتدار فالكاسة، على التيكي نيت، بالصلاحيات ديال لي كيخلّص.',
       remind: 'ما كنصيفطش لا تذكير لا إشعار من هاد المحادثة، كنجاوب غير ملي كتسولني.',
+      negstock: 'المخزون كيهبط تحت الصفر ملي الكاسة كتبيع وحدات كثر من لي كانو محسوبين فالمخزون: غالبا سلعة وصلات وما تسجلاتش، ولا جرد قديم. سجل الاستلام ولا عاود حساب المنتوج فالمخزون، والرقم يرجع مضبوط.',
+      vat: 'ما كنشوفش هاد التيكي من هاد المحادثة. فثمن فيه الضريبة (TTC)، الضريبة لي داخلاه كتحسب هكا: الثمن × النسبة ÷ (100 + النسبة). ب 20٪، تيكي ديال 120 درهم فيه 20 درهم ديال الضريبة، وب 10٪، تيكي ديال 110 فيه 10.',
       watch: 'ما كنصيفطش لا تذكير لا إشعار من هاد المحادثة. ولكن ملخص الصباح فلوحة التحكم كينبهك بوحدو إلا نقصو المبيعات، ولا طلعو الإلغاءات ولا التخفيضات، ولا تراجع الهامش.',
       stock: 'ما كنصيفطش لا تذكير لا إشعار من هاد المحادثة. ولكن فالمخزون، كل منتوج عندو عتبة ديال التنبيه، يعني الحد الأدنى ديالو: حطها فالمستوى لي بغيتي، وملخص الصباح فلوحة التحكم كينبهك على المنتوج غير يهبط تحتها.' },
   };
   function sCommand(spec, L) {
     var A = CMD_ACT_T[L] || CMD_ACT_T.fr;
     if (spec.till) return { text: A.till, open: CMD_ORDERS_OPEN(L) };
+    if (spec.negstock) return { text: A.negstock, open: open1(L, 'pStock', 'nav-stock') };
+    if (spec.vat) return { text: A.vat };
     if (spec.remind) return spec.stock ? { text: A.stock, open: open1(L, 'pStock', 'nav-stock') } : { text: spec.watch ? A.watch : A.remind };
     var target = spec.target;
     if (target.page === 'pOrders') return { text: CMD_T[L] || CMD_T.fr, open: [{ label: tr(L).openBtn(CMD_ORDERS[L] || CMD_ORDERS.fr), handler: target.h }] };

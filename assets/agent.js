@@ -1524,8 +1524,8 @@
    * never steals "show my margin" — that has no navigable target. */
   const ACTION_VERB = /take\s+me\s+to|bring\s+me\s+to|emmene|\b7ell?\b|\bsir\b|\bwerini\b|\bwarini\b|سير|اذهب|ارني|اريني|\bpage\b|صفحة|ouvr|montr|affich|afich|open|show|go to|display|navigate|\bva\s+(?:dans|a|sur|au|aux)\b|\ballez\s+(?:dans|a)\b|cr[ée]er?|create|gener|nouvelle|new |\bhell\b|\bhal\b|\bftah\b|\bwri\b|\bwerri\b|اعرض|اظهر|افتح|انتقل|انشي|حل|وري/;
   const NAV_TARGETS = [
-    { rx: /liste\s+des\s+produits|product\s+list|catalogue|\bl?menu\b|\bcarte\b|modificateur|قايمة|منيو|مينيو/, h: 'nav-menu', key: 'menu' },
-    { rx: /transaction|\bles\s+ventes\b(?!\s+d[eu']|\s+des)|commande|orders?\b|طلبات|معاملات|ترانزاكسيون|\bpage\s+(?:des\s+)?ventes\b|sales\s+page|\brapports?\b|\breports?\b|تقارير|التقارير|الرابورات|رابور/, h: 'nav-transactions', key: 'transactions' },
+    { rx: /liste\s+des\s+produits|product\s+list|catalogue|\bl?menu\b|(?<!(?:\bpar|\ben|\bou|\bwla|\bwela|\bor|\bb|\bcash|\bespeces|\bliquide)\s+)\bcarte\b(?!\s+(?:bancaire|de\s+credit|bleue|visa|ou\s+(?:cash|especes|liquide)|wla\s+cash))|modificateur|قايمة|منيو|مينيو/, h: 'nav-menu', key: 'menu' },
+    { rx: /transaction|\bkhl?ess\b|\bkhelles\b|\bkhalles\b|(?:^|\s)خلص(?=\s|$)|\b(?:a|ont|qui)\s+paye\b|\bpaid\b|\b(?:cash|especes|liquide)\s+(?:ou|wla|wela|or)\s+(?:carte|card)\b|\bpaye\s+(?:en|par)\s+carte\b|\bles\s+ventes\b(?!\s+d[eu']|\s+des)|commande|orders?\b|طلبات|معاملات|ترانزاكسيون|\bpage\s+(?:des\s+)?ventes\b|sales\s+page|\brapports?\b|\breports?\b|تقارير|التقارير|الرابورات|رابور/, h: 'nav-transactions', key: 'transactions' },
     { rx: /\bclients?\b|\bcustomers?\b|كليان|الكليون|كليون|زبائن|زباين|زبناء|الزبناء/, h: 'clients-directory', key: 'clients' },
     { rx: /terminaux|terminal|\btpe\b|lecteur|اجهزة|جهاز/, h: 'nav-terminaux', key: 'terminaux' },
     { rx: /reglement|settlement|versement|تسوي/, h: 'nav-reglements', key: 'reglements' },

@@ -308,4 +308,32 @@ for (const [q, L] of [
   ['quand est-ce que je dois commander du stock ?', 'fr'],
 ]) { const r = ask(q, L); ok(!ACT_TXT.test(r.text), `« ${q} » is not a request to act → {${r.route}} ${r.text.slice(0, 100)}`); }
 
+// 5. The word that names the thing (27 Nov 2026): « cash wla carte » is a
+// payment, not the menu; « sans les noms des clients » asks for the sales,
+// not the client book; « pourquoi le stock est négatif » wants the reason,
+// not a bare « I open the stock »; a VAT check on a receipt I cannot see gets
+// the formula, not the accounting tour.
+{
+  const t7 = ask('Chkon khless facture dyal table 7, cash wla carte?', 'fr');
+  ok(!/carte\b.{0,3}\./.test(t7.text.slice(0, 120)) && /commandes/.test(t7.text), `« cash wla carte » is a payment, its page is the orders → {${t7.route}} ${t7.text.slice(0, 140)}`);
+  const pc = ask('qui a payé la table 4 en carte ?', 'fr');
+  ok(/commandes/.test(pc.text), `« payé en carte » opens the orders → {${pc.route}} ${pc.text.slice(0, 120)}`);
+  const mn = ask('montre-moi la carte', 'fr');
+  ok(/carte/.test(mn.text) && !/commandes/.test(mn.text), `« montre-moi la carte » is still the menu → {${mn.route}} ${mn.text.slice(0, 100)}`);
+  for (const [q, L] of [
+    ['عطيني تقرير المبيعات بلا أسماء الزبناء', 'ar'],
+    ['un rapport des ventes sans les noms des clients', 'fr'],
+    ['sales report without customer names', 'en'],
+  ]) { const r = ask(q, L); ok(r.route === 'revenue', `« ${q} » asks for the sales → {${r.route}} ${r.text.slice(0, 100)}`); }
+  for (const [q, L, want] of [
+    ['علاش المخزون ديال الحليب بالسالب؟', 'ar', /تحت الصفر|بالسالب/],
+    ['pourquoi mon stock de lait est négatif ?', 'fr', /livraison/],
+    ['why is my milk stock negative', 'en', /delivery/],
+  ]) { const r = ask(q, L); ok(want.test(r.text) && r.text.length > 80, `« ${q} » gets the reason → {${r.route}} ${r.text.slice(0, 140)}`); }
+  for (const [q, L, want] of [
+    ['La TVA sur ce reçu me paraît bizarre, tu peux vérifier le calcul ?', 'fr', /TTC/],
+    ['can you check the VAT on this receipt, it looks wrong', 'en', /including/],
+  ]) { const r = ask(q, L); ok(want.test(r.text) && !/Je suis aussi votre comptable/.test(r.text), `« ${q} » gets the VAT formula → {${r.route}} ${r.text.slice(0, 140)}`); }
+}
+
 console.log(`✓ agent period: ${n} checks (one period read back, two periods refused, how-tos left to the guide)`);
