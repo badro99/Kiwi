@@ -1,6 +1,6 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=278';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=191';
-import { invSetModal, offerRegister } from './inventory.js?v=191';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=279';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=192';
+import { invSetModal, offerRegister } from './inventory.js?v=192';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=14';
@@ -2408,7 +2408,6 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
      supermarket lane. Resolves EAN-13 or any old/alphanumeric code registered on
      an article. Unknown → offer to register it on a product (no reprint). */
   function commitEan(raw) {
-    if (window.KiwiWalletTill && window.KiwiWalletTill.take(raw)) return;
     /* A douchette keeps firing while the payment (or any other) window is open.
        The item would land on a ticket that is already being charged and leave
        with the customer uncharged: refuse, exactly as pos-boutique does. */
@@ -2416,6 +2415,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
       toast('Terminez la fenêtre ouverte avant de scanner');
       return;
     }
+    if (window.KiwiWalletTill && window.KiwiWalletTill.take(raw)) return;
     const code = normScan(raw);
     if (!code) return;
     const hit = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.resolveScan(code) : null;

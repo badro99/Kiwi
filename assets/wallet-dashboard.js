@@ -113,7 +113,7 @@
     d.title = doc.name || slug;
     add('n', doc.name || slug);
     add('l', T.fr.standLine);
-    var q = d.createElement('div'); q.className = 'q'; q.innerHTML = svg; box.appendChild(q);   /* dessin de qrcode.js, depuis un lien construit ici */
+    var q = d.createElement('div'); q.className = 'q'; if (svg) q.appendChild(d.importNode(new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement, true)); box.appendChild(q);   /* dessin de qrcode.js, sans texte */
     add('a', T.ar.standLine).dir = 'rtl';
     add('u', T.fr.standSub);
     add('u', url.replace('https://', ''));

@@ -107,7 +107,7 @@
     $('wc-first').textContent = v.firstName || '';
     $('wc-l-client').hidden = !v.firstName;
     var balance = Math.min(v.balance || 0, v.target);
-    $('wc-balance').textContent = v.model === 'amount' ? (v.balance || 0) + ' pts' : balance + ' / ' + v.target;
+    $('wc-balance').textContent = v.model === 'amount' ? String(v.balance || 0) : balance + ' / ' + v.target;
     $('wc-reward').textContent = v.rewardLabel || t('gift');
     $('wc-left').textContent = v.ready ? t('readyShort') : t(v.model === 'amount' ? 'pointsN' : 'stampsN', { n: Math.max(0, v.target - (v.balance || 0)) });
     var box = $('wc-stamps');
@@ -125,7 +125,7 @@
         box.appendChild(d);
       }
     }
-    if (shown >= 0 && balance > shown) { var c = $('wc-card'); c.classList.remove('is-credited'); void c.offsetWidth; c.classList.add('is-credited'); try { navigator.vibrate && navigator.vibrate(18); } catch (_) {} }
+    if (shown >= 0 && balance > shown) { var c = $('wc-card'); c.classList.remove('is-credited'); void c.offsetWidth; c.classList.add('is-credited'); }
     shown = balance;
     $('wc-card').classList.remove('is-loading');
     if (opts.qr && window.KiwiQR) {

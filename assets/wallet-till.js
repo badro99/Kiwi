@@ -21,7 +21,10 @@
  * Spec : docs/superpowers/specs/2026-11-27-wallet-loyalty-card-design.md. */
 (function () {
   'use strict';
-  var tr = function (s) { try { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; } catch (_) { return s; } };
+  var tr = function (s, vars) {
+    var out = s; try { out = window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(s) : s; } catch (_) {}
+    return String(out).replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] != null ? String(vars[k]) : m; });
+  };
 
   /* ── lire une carte ── */
   function parseCardScan(code) {
@@ -81,7 +84,7 @@
     var S = window.KiwiCaisseSaleClient;
     if (S && S.available && S.available()) { S.attach(rec); return true; }
     var P = window.KiwiPosSale;
-    if (P && P.attachClient && P.isReal && P.isReal()) { P.attachClient(rec); toast(tr('Carte de {name} sur la vente').replace('{name}', rec.name || '')); return true; }
+    if (P && P.attachClient && P.isReal && P.isReal()) { P.attachClient(rec); toast(tr('Carte de {name} sur la vente', { name: rec.name || '' })); return true; }
     toast(tr('Ouvrez une note avant de scanner la carte'));
     return true;
   }
@@ -170,7 +173,7 @@
     style();
     var veil = document.createElement('div'); veil.className = 'kw-wt-veil';
     var sheet = document.createElement('div'); sheet.className = 'kw-wt-sheet'; sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true');
-    var h = document.createElement('h2'); h.textContent = tr('Carte fidélité de {name}').replace('{name}', rec.name || '');
+    var h = document.createElement('h2'); h.textContent = tr('Carte fidélité de {name}', { name: rec.name || '' });
     var p = document.createElement('p'); p.textContent = tr('Un instant…');
     var qr = document.createElement('div'); qr.className = 'kw-wt-qr'; qr.hidden = true;
     var x = document.createElement('button'); x.type = 'button'; x.className = 'kw-wt-x'; x.setAttribute('aria-label', tr('Fermer')); x.appendChild(icon('close'));
