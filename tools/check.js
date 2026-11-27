@@ -2425,7 +2425,7 @@ section('Whole-project regressions');
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs', 'r16-invoice-export-test.mjs', 'cx17-ui-test.mjs', 'r16-pairing-notices-test.mjs', 'r16-catalog-quantity-paths-test.mjs', 'r16-settings-modifiers-browser-test.mjs',
     'receipt-logo-print-test.mjs', 'receipt-ref-counter-test.mjs', 'receipt-line-shade-test.mjs', 'search-pill-test.mjs',
-    'receipt-voucher-print-test.mjs', 'receipt-ticket-code-test.mjs', 'wallet-zip-test.mjs', 'wallet-pkcs7-test.mjs', 'wallet-strip-test.mjs', 'wallet-card-test.mjs', 'wallet-store-test.mjs', 'wallet-routes-test.mjs', 'wallet-notify-test.mjs', 'wallet-logo-test.mjs',
+    'receipt-voucher-print-test.mjs', 'receipt-ticket-code-test.mjs', 'wallet-zip-test.mjs', 'wallet-pkcs7-test.mjs', 'wallet-strip-test.mjs', 'wallet-card-test.mjs', 'wallet-store-test.mjs', 'wallet-routes-test.mjs', 'wallet-notify-test.mjs', 'wallet-logo-test.mjs', 'wallet-carte-browser-test.mjs',
     'receipt-pay-lines-test.mjs', 'receipt-owed-total-test.mjs',
     'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',

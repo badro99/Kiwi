@@ -1,0 +1,93 @@
+/* /carte : la carte de fidélité d'un commerce, pour son client.
+   La page porte les couleurs Kiwi (papier, encre, Inter Tight) ; la carte
+   porte celles du commerce (--c-bg, --c-fg, --c-label, --c-ink posés par
+   assets/wallet-carte.js). Ressort maison : cubic-bezier(0.34, 1.45, 0.5, 1). */
+:root {
+  --paper: #F7F5F0; --ink: #0A0F0D; --muted: #5B635F; --line: rgba(10, 15, 13, 0.1);
+  --atlas: #0B6E4F; --spring: cubic-bezier(0.34, 1.45, 0.5, 1);
+  --c-bg: #053B2C; --c-fg: #FFFFFF; --c-label: #7DF2B0; --c-ink: #F7F5F0;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body { font: 400 16px/1.45 "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: clip; }
+html[dir="rtl"] body { font-family: "IBM Plex Sans Arabic", "Inter Tight", system-ui, sans-serif; }
+em, i { font-style: normal; }
+
+.wc { max-width: 440px; margin: 0 auto; padding: max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom)); min-height: 100dvh; display: flex; flex-direction: column; gap: 22px; }
+.wc-top { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.wc-shoplogo { height: 32px; width: 32px; border-radius: 9px; object-fit: cover; }
+.wc-shopname { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+
+/* ── the card ───────────────────────────────────────────────────────────── */
+.wc-stage { perspective: 1100px; }
+.wc-card {
+  position: relative; overflow: hidden; border-radius: 20px; padding: 18px 18px 20px;
+  background: var(--c-bg); color: var(--c-fg);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 22px 48px -22px rgba(10, 15, 13, 0.55), 0 4px 12px -4px rgba(10, 15, 13, 0.22);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transform-style: preserve-3d;
+  transition: transform 420ms var(--spring), background-color 300ms ease, color 300ms ease;
+  animation: wc-rise 620ms var(--spring) both;
+}
+.wc-card.is-loading { opacity: 0.65; }
+@keyframes wc-rise { from { opacity: 0; transform: translateY(26px) scale(0.96); } to { opacity: 1; transform: none; } }
+.wc-card-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.22) 48%, transparent 64%); transform: translateX(-120%); }
+.wc-card.is-credited .wc-card-sheen { animation: wc-sheen 1100ms ease-out 200ms; }
+@keyframes wc-sheen { to { transform: translateX(120%); } }
+
+.wc-card-head { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+.wc-card-logo { max-height: 30px; max-width: 120px; object-fit: contain; }
+.wc-card-name { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-card-client { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; font-size: 14px; }
+.wc-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-label); }
+.wc-card-balance { margin: 16px 0 12px; }
+/* Numbers read left to right in every language; a shop's own words keep their own direction. */
+#wc-balance { direction: ltr; unicode-bidi: isolate; text-align: start; }
+html[dir="rtl"] #wc-balance { text-align: right; }
+#wc-reward, #wc-first, .wc-card-name { unicode-bidi: plaintext; }
+.wc-card-balance strong { display: block; font-size: 30px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+
+.wc-stamps { display: grid; grid-template-columns: repeat(var(--per-row, 5), 1fr); gap: 10px 8px; padding: 6px 2px; }
+.wc-stamp { position: relative; aspect-ratio: 1; border-radius: 50%; background: color-mix(in srgb, var(--c-ink) 14%, var(--c-bg)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c-ink) 38%, var(--c-bg)); }
+.wc-stamp.is-reward::after { content: ""; position: absolute; inset: 15%; border-radius: 50%; box-shadow: inset 0 0 0 3px var(--c-ink); }
+.wc-stamp.is-on { background: var(--c-ink); box-shadow: none; }
+.wc-stamp.is-on::before { content: ""; position: absolute; inset: 22%; background: var(--c-bg); -webkit-mask: url("/assets/icons/material/check.svg") center / contain no-repeat; mask: url("/assets/icons/material/check.svg") center / contain no-repeat; }
+.wc-stamp.is-on.is-reward::after { display: none; }
+.wc-stamp.is-new { animation: wc-pop 520ms var(--spring) both; animation-delay: calc(var(--i, 0) * 90ms + 280ms); }
+@keyframes wc-pop { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.wc-bar { grid-column: 1 / -1; height: 14px; border-radius: 7px; background: color-mix(in srgb, var(--c-ink) 16%, var(--c-bg)); overflow: hidden; }
+.wc-bar > span { display: block; height: 100%; width: var(--fill, 0%); background: var(--c-ink); border-radius: inherit; transition: width 700ms var(--spring); }
+
+.wc-card-foot { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 14px; font-weight: 600; font-size: 14px; }
+.wc-card-foot > div:last-child { text-align: end; }
+.wc-qr { margin: 18px auto 0; width: 176px; padding: 10px; background: #FFFFFF; border-radius: 14px; }
+.wc-qr svg { display: block; width: 100%; height: auto; }
+.wc-qr-cap { margin-top: 6px; text-align: center; font-size: 12px; color: var(--muted); }
+
+/* ── the panel under the card ──────────────────────────────────────────── */
+.wc-panel { display: flex; flex-direction: column; gap: 14px; animation: wc-fade 420ms ease both 180ms; }
+@keyframes wc-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.wc-h { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; }
+.wc-p { margin: 0; color: var(--muted); }
+.wc-note { padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--atlas) 9%, var(--paper)); color: var(--ink); font-weight: 500; }
+.wc-note.is-warn { background: rgba(179, 38, 30, 0.08); }
+.wc-field { display: flex; flex-direction: column; gap: 6px; }
+.wc-field span { font-size: 13px; font-weight: 600; }
+.wc-field input { height: 52px; border-radius: 14px; border: 1px solid var(--line); background: #FFFFFF; padding: 0 14px; font: inherit; font-size: 17px; color: var(--ink); outline: none; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.wc-field input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas) 18%, transparent); }
+.wc-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--muted); }
+.wc-check input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--atlas); flex: none; }
+.wc-btn { display: flex; align-items: center; justify-content: center; gap: 10px; height: 54px; border-radius: 16px; border: 0; padding: 0 18px; font: inherit; font-size: 16px; font-weight: 600; text-decoration: none; cursor: pointer; transition: transform 160ms var(--spring), opacity 160ms ease; }
+.wc-btn:active { transform: scale(0.98); }
+.wc-btn[disabled] { opacity: 0.5; cursor: default; }
+.wc-btn-main { background: #0A0F0D; color: #F7F5F0; }
+.wc-btn-alt { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.wc-btn .wc-ico { width: 22px; height: 22px; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+.wc-err { color: #B3261E; font-size: 14px; font-weight: 500; min-height: 1.2em; }
+.wc-foot { margin-top: auto; text-align: center; font-size: 12px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-card, .wc-panel, .wc-stamp.is-new, .wc-card.is-credited .wc-card-sheen { animation: none; }
+  .wc-card { transform: none; transition: none; }
+}

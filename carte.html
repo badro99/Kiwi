@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta name="robots" content="noindex, nofollow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#F7F5F0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Carte fidélité · Kiwi</title>
+  <link rel="icon" href="/assets/kiwi-favicon-new.svg">
+  <link rel="stylesheet" href="/assets/fonts/legacy-faces.css?v=1">
+  <link rel="stylesheet" href="/assets/wallet-carte.css?v=1">
+</head>
+<body>
+  <main class="wc" id="wc" aria-live="polite">
+    <header class="wc-top"><img class="wc-shoplogo" id="wc-shoplogo" alt="" hidden><span class="wc-shopname" id="wc-shopname"></span></header>
+    <section class="wc-stage">
+      <article class="wc-card is-loading" id="wc-card" aria-label="">
+        <div class="wc-card-sheen" aria-hidden="true"></div>
+        <div class="wc-card-head">
+          <img class="wc-card-logo" id="wc-card-logo" alt="" hidden>
+          <span class="wc-card-name" id="wc-card-name"></span>
+          <span class="wc-card-client"><span class="wc-label" id="wc-l-client"></span><span id="wc-first"></span></span>
+        </div>
+        <div class="wc-card-balance"><span class="wc-label" id="wc-l-balance"></span><strong id="wc-balance">·</strong></div>
+        <div class="wc-stamps" id="wc-stamps" aria-hidden="true"></div>
+        <div class="wc-card-foot">
+          <div><span class="wc-label" id="wc-l-reward"></span><span id="wc-reward"></span></div>
+          <div><span class="wc-label" id="wc-l-left"></span><span id="wc-left"></span></div>
+        </div>
+        <div class="wc-qr" id="wc-qr" hidden></div>
+      </article>
+    </section>
+    <section class="wc-panel" id="wc-panel"></section>
+    <footer class="wc-foot" id="wc-foot"></footer>
+  </main>
+  <script src="/assets/qrcode.js?v=1"></script>
+  <script src="/assets/wallet-carte.js?v=1" defer></script>
+</body>
+</html>

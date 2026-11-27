@@ -2783,6 +2783,14 @@
     "v": "2",
     "sha": "a4a72617d62b67fe"
   },
+  "assets/wallet-carte.css": {
+    "v": "1",
+    "sha": "cc922a2df021eb54"
+  },
+  "assets/wallet-carte.js": {
+    "v": "1",
+    "sha": "e4ae3f21849b212a"
+  },
   "assets/weather.js": {
     "v": "1",
     "sha": "e586c803c9e3e1e2"
