@@ -785,5 +785,7 @@
     return null;
   }
 
-  window.KiwiAgentData = { reply: reply, _rank: productRanking, _findClient: findClient };
+  /* The headcount the model may state: the Équipe roster (27 Nov, a restaurant got a made-up figure). */
+  function staffCount() { var n = teamRoster().length; return n || null; }
+  window.KiwiAgentData = { reply: reply, staffCount: staffCount, _rank: productRanking, _findClient: findClient };
 }());

@@ -999,6 +999,45 @@ section('Collaboration · draft + tools + corroboration');
   t('drawer received a valid non-empty title', drawerCalled && typeof drawerCalled.title === 'string' && drawerCalled.title.length > 0, JSON.stringify(drawerCalled && drawerCalled.title));
 }
 
+/* ── Headcount from the real roster ──────────────────────────────────────────
+ * 27 Nov: a restaurant asked how many employees it had and got a number the
+ * small model made up. "How many employees", "nombre d'employés", "combien de
+ * personnes travaillent chez moi", darija "شحال من خدام" all missed the roster
+ * lookup and fell to the model, whose context then read "null employés". Every
+ * phrasing must be answered from the roster, and the model must be told the
+ * real count. */
+section('Headcount answered from the real roster');
+{
+  const nine = Array.from({ length: 9 }, (_, i) => ({ id: 'm' + i, name: 'Membre ' + i, role: i < 4 ? 'Serveur' : 'Cuisine', hoursToday: 0 }));
+  const mk = (lang) => load({
+    lang, role: 'owner',
+    env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Burger test', subtype: 'restaurant' }) },
+    sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+    globals: { KiwiTeam: { roster: () => nine } },
+  });
+  const cases = { fr: ['Combien d\'employés j\'ai ?', 'nombre d\'employés', 'Combien de personnes travaillent chez moi ?', 'nombre de salariés'],
+    en: ['How many employees do I have?', 'How many people work for me?', 'how many workers do I have'],
+    ar: ['شحال من خدام عندي', 'كم عدد الموظفين عندي؟'] };
+  for (const [lang, qs] of Object.entries(cases)) {
+    const w = mk(lang);
+    for (const q of qs) {
+      const out = flatten(w.KiwiAgentAsk(q));
+      t(`"${q}" is answered from the roster: 9`, out !== '[[LLM]]' && /\b9\b|٩/.test(out), out.slice(0, 160));
+    }
+  }
+  /* What the model is told: the roster's headcount, not "you have no headcount". */
+  const w = mk('fr');
+  t('the roster headcount is known to the assistant', w.KiwiAgentData.staffCount() === 9, String(w.KiwiAgentData.staffCount()));
+  const sp = String(w.KiwiAgent.prompt('fr'));
+  t('the model is told the team has 9 people', /9 personnes/.test(sp), sp.slice(0, 400));
+  t('and is no longer told it has no headcount', !/\(loyer, salaires, coût matière, marge, trésorerie, effectif\)/.test(sp));
+  const empty = load({ lang: 'fr', role: 'owner', env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Sans équipe', subtype: 'restaurant' }) },
+    sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) }, globals: { KiwiTeam: { roster: () => [] } } });
+  t('with no roster, the headcount stays unknown', empty.KiwiAgentData.staffCount() === null && /effectif/.test(String(empty.KiwiAgent.prompt('fr'))));
+}
+
 /* ── summary ──────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ assistant gate: ${failures} failure(s)`); process.exit(1); }

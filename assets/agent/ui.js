@@ -104,6 +104,9 @@ function buildSystemPrompt(lang) {
       return outR.join('\n');
     }
     if (__state.B.partial) {
+      /* The Équipe roster's headcount (agent-data.js), the only one the model may state. */
+      let crew = null;
+      try { crew = window.KiwiAgentData.staffCount(); } catch (_) {}
       const partialPrompt = [
         dir, '',
         `Tu es l'assistant financier de "${__state.B.name}", un établissement qui vient de démarrer sur Kiwi, au Maroc.`,
@@ -112,7 +115,9 @@ function buildSystemPrompt(lang) {
         __state.B.revenue > 0
           ? `Seules données réelles disponibles : ${__state.fmt(__state.B.revenue)} MAD de ventes sur ${__state.fmt(__state.B.ordersPerMonth)} vente(s), panier moyen ${__state.fmt(__state.B.avgBasket)} MAD.`
           : `Aucune vente n'a encore été enregistrée pour cet établissement.`,
-        `Tu n'as PAS sa structure de coûts (loyer, salaires, coût matière, marge, trésorerie, effectif) ni le détail de sa carte.`,
+        crew
+          ? `Équipe enregistrée dans Kiwi (fiche Équipe) : ${crew} personnes. Tu n'as PAS sa structure de coûts (loyer, salaires, coût matière, marge, trésorerie) ni le détail de sa carte.`
+          : `Tu n'as PAS sa structure de coûts (loyer, salaires, coût matière, marge, trésorerie, effectif) ni le détail de sa carte.`,
       ];
       if (featureContext) partialPrompt.push('', 'Fonctions Kiwi réellement disponibles pour ce métier :', featureContext);
       if (capabilityContext) partialPrompt.push('', 'Contexte de capacité vérifié (source produit) :', capabilityContext);
@@ -143,7 +148,7 @@ function buildSystemPrompt(lang) {
       `- Charges fixes : ${__state.fmt(__state.B.totalOpex)} MAD, dont masse salariale ${__state.fmt(o.salaries)}, loyer ${__state.fmt(o.rent)}, énergie ${__state.fmt(o.utilities)}.`,
       `- Bénéfice net : ${__state.fmt(__state.B.netProfit)} MAD (marge nette ${__state.fmt1(__state.B.netMargin)} %)`,
       `- Trésorerie disponible : ${__state.fmt(__state.B.cashBuffer)} MAD`,
-      `- Panier moyen : ${__state.fmt(__state.B.avgBasket)} MAD · ${__state.fmt(__state.B.ordersPerMonth)} ventes/mois · ${__state.B.staffCount} employés.`,
+      `- Panier moyen : ${__state.fmt(__state.B.avgBasket)} MAD · ${__state.fmt(__state.B.ordersPerMonth)} ventes/mois${__state.B.staffCount ? ` · ${__state.B.staffCount} employés` : ''}.`,
     ];
     if (live) {
       lines.push(
@@ -2284,7 +2289,7 @@ function matchLookupKind(q, raw) {
        * screen, so the module says so rather than let the hiring simulation
        * answer a question about people who already work here. */
       if (sup) return { entity: 'staff', agg: 'top', raw };
-      if (/\bcombien\b|how\s+many|\bcount\b|\beffectif\b|كم|شحال/.test(q)) return { entity: 'staff', agg: 'count', raw };
+      if (/\bcombien\b|how\s+many|\bcount\b|\beffectif\b|\bnombre\b|\bnumber\s+of\b|كم|شحال|عدد/.test(q)) return { entity: 'staff', agg: 'count', raw };
     }
     /* Stock only when the merchant asks WHICH — "combien de références" is a
      * total and the stock scenario already answers it well. */
@@ -2962,7 +2967,7 @@ function knownCounts(kind) {
     const add = (n) => { if (typeof n === 'number' && isFinite(n)) s.add(Math.round(n)); };
     [__state.B.daysOpen, __state.B.mtdDays, __state.B.daysInMonth].forEach(add);   // calendar, always fair
     if (kind === 'sale') [__state.B.ordersPerMonth, __state.B.ordersPerDay].forEach(add);
-    if (kind === 'staff') add(__state.B.staffCount);
+    if (kind === 'staff') { add(__state.B.staffCount); try { add(window.KiwiAgentData.staffCount()); } catch (_) {} }
     if (kind === 'item') {
       try {
         (window.KiwiMenu && window.KiwiMenu.items ? window.KiwiMenu.items() : []).forEach((it) => add(it.units));

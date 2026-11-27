@@ -230,7 +230,7 @@
     RATE_NOTE: { get: () => RATE_NOTE },
   }));
   let partFunctions = null, partLoading = null;
-  const partUrl = 'assets/agent/ui.js?v=4';
+  const partUrl = 'assets/agent/ui.js?v=7';
   function installPart() {
     if (!partFunctions && window.__kiwiAgentParts) partFunctions = window.__kiwiAgentParts(partState);
     return partFunctions;
@@ -1856,7 +1856,7 @@
   const POINTS_RX = /\bpoints\b|\bstamps?\b|\btampons?\b|نقاط|نقطة|نقط/;
   const NOT_POINTS_RX = /points?\s+de\s+vente|\bpoint\s+mort\b|break[- ]?even|seuil\s+de\s+rentab|نقطة\s*التعادل/;
   const DORMANT_RX = /(?:pas|plus)\s+(?:re)?venus?\b|ne\s+revien\w+\s+plus|\bendormis?\b|\bdormant\b|\bperdus?\b|\bchurn\b|lost\s+customers?|haven[' ]?t\s+(?:come\s+)?back|not\s+come\s+back|لم\s*يعود|نائم/;
-  const STAFF_RX = /\bemployes?\b|\bsalaries?\b|\bequipe\b|\bstaff\b|\bteam\b|\bpersonnel\b|\bserveurs?\b|\bcuisiniers?\b|\beffectif\b|موظف|فريق|عمال|مستخدم/;
+  const STAFF_RX = /\bemployes?\b|\bemployees?\b|\bworkers?\b|\b(?:personnes?|gens|people)\s+(?:qui\s+|who\s+)?(?:travaill|work)\w*|\bsalaries?\b|\bequipe\b|\bstaff\b|\bteam\b|\bpersonnel\b|\bserveurs?\b|\bcuisiniers?\b|\beffectif\b|موظف|فريق|عمال|مستخدم|خدام/;
   const WHICH_RX = /\bquels?\b|\bquelles?\b|\bwhich\b|\bwhat\b|\bqui\b|\bliste\b|\blist\b|\bmontre\b|\bnomme\b|اي\b|من\b|لائحة/;
   const OUT_RX = /\bruptures?\b|\ben\s+rupture\b|out\s+of\s+stock|\bstock\s+bas\b|\blow\s+stock\b|\bepuises?\b|نفاد|نافد|مخزون\s*منخفض/;
   const ON_SHIFT_RX = /\btravaille\b|\bde\s+service\b|\bon\s+shift\b|\bworking\b|\bplanning\b|\bpresents?\b|يعمل|الخدمة/;
@@ -2710,7 +2710,7 @@
   function open(...args) { return callPart('open', this, args); }
 
   /* ─────────────── REGISTER ─────────────── */
-  window.KiwiAgent = { open, resetConversation, syncProfile, ask: (q) => { open(q); } };
+  window.KiwiAgent = { open, resetConversation, syncProfile, ask: (q) => { open(q); }, prompt: (lang) => { syncProfile(); return buildSystemPrompt(lang || getLang()); } };
   Object.defineProperty(window.KiwiAgent, '__internal', { value: partState });
   window.__kiwiAgentOpen = open;
   function register() {
