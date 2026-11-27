@@ -2680,8 +2680,6 @@
 
     /* ── Onglet Journal ── (l'ancien tiroir, mot pour mot) */
     function renderJournalList() {
-      /* Le résumé de la barre d'outils est posé par renderJournal() · il change
-         de nature selon l'onglet, donc il ne s'écrit plus ici. */
       const q = journalSearch.trim().toLowerCase();
       /* Les ventes sorties des livres ne se réimpriment pas et ne se remboursent
          pas : les laisser dans la liste, c'est laisser un caissier rendre de
@@ -2696,6 +2694,8 @@
         e.ref.toLowerCase().includes(q) ||
         String(e.amount).includes(q)
       );
+      /* Filtre ou recherche actifs : le résumé (posé par renderJournal) compte ce que la liste montre, pas toute la journée. */
+      if (journalFilter !== 'all' || q) { let n = 0, c = 0; list.forEach(e => { if (e.kind !== 'refund' && (e.amount > 0 || e.kind === 'complimentary')) n++; c += Math.round(((+e.amount || 0) + Number.EPSILON) * 100); }); const sumEl = $('#jr-summary'); if (sumEl) sumEl.textContent = `${n} transaction${n > 1 ? 's' : ''} · ${fmtMAD(c / 100)} encaissés`; }
 
       const body = $('#journal-body');
       if (!body) return;

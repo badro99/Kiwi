@@ -166,7 +166,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=17',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=50',
+  '/assets/caisse-accounting.js?v=51',
   '/assets/caisse-floor.js?v=27',
   '/assets/caisse-kitchen.js?v=46',
   '/assets/caisse/receipts.js?v=8',
