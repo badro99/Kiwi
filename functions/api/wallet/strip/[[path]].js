@@ -3,11 +3,8 @@
 // GET /api/wallet/strip/logo-<shop>.png                         Google's program logo
 // The strip URL carries everything it draws, so it is stateless and immutable:
 // the web card and Google's hero image point at it and every CDN may keep it.
-import { stripPng } from '../_images.js';
-import { stampIcon, encodePng } from '../_png.js';
-import { decodePng, trim, fit, keyOut, inkOn } from '../_png-read.js';
-import { palette } from '../_card.js';
-import { loadMerchant, logoBytes } from '../_merchant.js';
+import { stripPng, programLogo } from '../_images.js';
+import { loadMerchant } from '../_merchant.js';
 
 const RE = /^(p?)(\d{1,7})-(\d{1,7})-([0-9a-f]{6})-([0-9a-f]{6})@([123])\.png$/;
 const png = (bytes, maxAge) => new Response(bytes, { headers: { 'Content-Type': 'image/png', 'Cache-Control': `public, max-age=${maxAge}${maxAge > 86400 ? ', immutable' : ''}` } });
@@ -24,12 +21,8 @@ export async function onRequestGet(context) {
   const logo = /^logo-([a-z0-9][a-z0-9-]{0,63})\.png$/.exec(name);
   if (logo && context.env && context.env.DB) {
     const shop = await loadMerchant(context.env.DB, logo[1]);
-    if (!shop) return new Response(null, { status: 404 });
-    const pal = palette(shop);
-    const d = logoBytes(shop.logoUrl) && await decodePng(logoBytes(shop.logoUrl));
-    if (!d) return png(await stampIcon({ color: shop.color, bg: shop.bg, size: 660 }), 3600);
-    const f = fit(inkOn(keyOut(trim(d)), pal.bg, pal.fg), 660, 660, { fill: pal.bg, pad: 60 });
-    return png(await encodePng(f.w, f.h, f.rgba), 3600);
+    if (!shop || !shop.on) return new Response(null, { status: 404 });
+    return png(await programLogo(shop), 3600);
   }
   return new Response(null, { status: 404 });
 }

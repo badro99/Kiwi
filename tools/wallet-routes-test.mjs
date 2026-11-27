@@ -72,28 +72,35 @@ function addSale(w, id, { ts = Date.now() - 3600_000, voided = false, ref = '430
 
 await ok('a receipt QR credits its visit to a new card, once', async () => {
   const w = world();
-  addSale(w, 'sale-ref-aaa');
-  const r = await post(w, { merchant: 'pasta-corner', name: 'Yassine', phone: '0622222222', consent: true, r: 'sale-ref-aaa' });
+  addSale(w, 'sale-ref-0a1b2c3d-856f-e05a-4a18-ae36-d2d316c27700');
+  const r = await post(w, { merchant: 'pasta-corner', name: 'Yassine', phone: '0622222222', consent: true, r: 'sale-ref-0a1b2c3d-856f-e05a-4a18-ae36-d2d316c27700' });
   assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.credited, true); assert.ok(r.body.offers.web);
   assert.equal(clientRows(w)[0].stamps, 1);
-  const again = await post(w, { merchant: 'pasta-corner', name: 'Other', phone: '0633333333', consent: true, r: 'sale-ref-aaa' });
+  const again = await post(w, { merchant: 'pasta-corner', name: 'Other', phone: '0633333333', consent: true, r: 'sale-ref-0a1b2c3d-856f-e05a-4a18-ae36-d2d316c27700' });
   assert.equal(again.body.already, true);
   assert.equal(clientRows(w).length, 1);
 });
 
 await ok('a receipt whose sale already had a client is not credited again', async () => {
   const w = world();
-  addSale(w, 'sale-ref-bbb', { ref: '43016' });
-  w.sql.prepare("INSERT INTO client_purchase_events (merchant, ref, client_id, created_ts, sale_ref) VALUES ('pasta-corner', 'sale-ref-bbb', 'c-old', 1, '43016')").run();
-  const r = await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0644444444', consent: true, r: 'sale-ref-bbb' });
+  addSale(w, 'sale-ref-1b2c3d4e-856f-e05a-4a18-ae36-d2d316c27701', { ref: '43016' });
+  w.sql.prepare("INSERT INTO client_purchase_events (merchant, ref, client_id, created_ts, sale_ref) VALUES ('pasta-corner', 'sale-ref-1b2c3d4e-856f-e05a-4a18-ae36-d2d316c27701', 'c-old', 1, '43016')").run();
+  const r = await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0644444444', consent: true, r: 'sale-ref-1b2c3d4e-856f-e05a-4a18-ae36-d2d316c27701' });
   assert.equal(r.body.already, true);
+});
+
+await ok('a sale id without its random part (computable from a ticket number) is refused', async () => {
+  const w = world();
+  addSale(w, 'sale-ref-62bbb5f0-43021', { ref: '43021' });
+  const r = await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0657575757', consent: true, r: 'sale-ref-62bbb5f0-43021' });
+  assert.equal(r.status, 410); assert.equal(r.body.error, 'receipt-unusable');
 });
 
 await ok('a voided, foreign or week-old receipt is refused', async () => {
   const w = world();
-  addSale(w, 'sale-ref-void', { voided: true });
-  addSale(w, 'sale-ref-old', { ts: Date.now() - 8 * 86400_000 });
-  for (const id of ['sale-ref-void', 'sale-ref-old', 'sale-ref-none']) {
+  addSale(w, 'sale-ref-2c3d4e5f-856f-e05a-4a18-ae36-d2d316c27702', { voided: true });
+  addSale(w, 'sale-ref-3d4e5f60-856f-e05a-4a18-ae36-d2d316c27703', { ts: Date.now() - 8 * 86400_000 });
+  for (const id of ['sale-ref-2c3d4e5f-856f-e05a-4a18-ae36-d2d316c27702', 'sale-ref-3d4e5f60-856f-e05a-4a18-ae36-d2d316c27703', 'sale-ref-60718293-856f-e05a-4a18-ae36-d2d316c27706']) {
     const r = await post(w, { merchant: 'pasta-corner', name: 'Y', phone: '0655555555', consent: true, r: id });
     assert.equal(r.status, 410, id); assert.equal(r.body.error, 'receipt-unusable');
   }
@@ -102,8 +109,8 @@ await ok('a voided, foreign or week-old receipt is refused', async () => {
 await ok('a receipt scanned by a known phone credits the stamp but hands no card', async () => {
   const w = world();
   await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true });
-  addSale(w, 'sale-ref-ccc', { ref: '43017' });
-  const r = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678', consent: true, r: 'sale-ref-ccc' });
+  addSale(w, 'sale-ref-4e5f6071-856f-e05a-4a18-ae36-d2d316c27704', { ref: '43017' });
+  const r = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678', consent: true, r: 'sale-ref-4e5f6071-856f-e05a-4a18-ae36-d2d316c27704' });
   assert.equal(r.body.credited, true); assert.equal(r.body.exists, true); assert.equal(r.body.offers, undefined);
   assert.equal(clientRows(w)[0].stamps, 1);
 });
@@ -126,10 +133,18 @@ await ok('with the Apple certificate configured, the offer includes the .pkpass 
   assert.match(r.body.offers.apple, /^https:\/\/kiwi-os\.com\/api\/wallet\/v1\/download\/[a-z0-9]+\.pkpass\?t=[a-z0-9]{32}$/);
 });
 
-await ok('twenty enrollments an hour per address, then 429', async () => {
+await ok('forty sign-ups an hour per address (a café shares one Wi-Fi), then 429', async () => {
   const w = world();
-  for (let i = 0; i < 20; i++) await post(w, { merchant: 'pasta-corner', name: 'N', phone: '06' + String(10000000 + i), consent: true }, { ip: '10.9.9.9' });
+  for (let i = 0; i < 40; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '06' + String(10000000 + i), consent: true }, { ip: '10.9.9.9' })).status, 200);
   assert.equal((await post(w, { merchant: 'pasta-corner', name: 'N', phone: '0699999999', consent: true }, { ip: '10.9.9.9' })).status, 429);
+});
+
+await ok('probing known numbers stops after six "already has a card" answers an hour', async () => {
+  const w = world();
+  await post(w, { merchant: 'pasta-corner', name: 'Salma', phone: '0612345678', consent: true }, { ip: '10.1.1.1' });
+  for (let i = 0; i < 6; i++) assert.equal((await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.7.7.7' })).body.exists, true);
+  const r = await post(w, { merchant: 'pasta-corner', name: 'x', phone: '0612345678' }, { ip: '10.7.7.7' });
+  assert.equal(r.status, 429); assert.equal(r.body.exists, undefined);
 });
 
 await ok('no tables yet (migration not applied): 503, not a crash', async () => {
@@ -165,6 +180,23 @@ await ok('Apple web service: registration needs the card token', async () => {
   assert.equal((await svc(w.env, 'POST', 'log', null, { logs: ['x'] })).status, 200);
 });
 
+await ok('the program logo is served only for a shop with the card on, and decoded once', async () => {
+  const w = world();
+  const zlib = await import('node:zlib');
+  const { encodePng } = await import('../functions/api/wallet/_png.js');
+  const px = new Uint8Array(40 * 20 * 4).fill(255); for (let i = 0; i < 40 * 20; i += 3) px.set([0, 0, 0, 255], i * 4);
+  const logo = 'data:image/png;base64,' + Buffer.from(await encodePng(40, 20, px)).toString('base64');
+  w.sql.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES ('pasta-corner','receipt',?,1,1), ('no-wallet','receipt',?,1,1)").run(JSON.stringify({ look: { logo } }), JSON.stringify({ look: { logo } }));
+  const get = (slug) => strip.onRequestGet({ request: new Request(`https://kiwi-os.com/api/wallet/strip/logo-${slug}.png`), params: { path: [`logo-${slug}.png`] }, env: w.env, waitUntil() {} });
+  assert.equal((await get('no-wallet')).status, 404);
+  const { _logoDecodes } = await import('../functions/api/wallet/_images.js');
+  const before = _logoDecodes();
+  const a = await get('pasta-corner'), b = await get('pasta-corner');
+  assert.equal(a.status, 200); assert.equal(b.status, 200);
+  assert.equal(_logoDecodes() - before, 1);
+  void zlib;
+});
+
 await ok('strip images are stateless, bounded and cached forever', async () => {
   const r = await strip.onRequestGet({ request: new Request('https://kiwi-os.com/api/wallet/strip/7-10-b3261e-fff8f0@2.png'), params: { path: ['7-10-b3261e-fff8f0@2.png'] }, env: {}, waitUntil() {} });
   assert.equal(r.status, 200); assert.equal(r.headers.get('Content-Type'), 'image/png');
@@ -189,6 +221,21 @@ await ok('the web card shows the live balance to its token holder only', async (
   assert.equal(b.card.text, '4 / 10'); assert.equal(b.card.firstName, 'Salma'); assert.equal(b.merchant.name, 'Pasta Corner');
   assert.match(b.card.strip, /^\/api\/wallet\/strip\/4-10-b3261e-fff8f0@2\.png$/);
   assert.equal((await get(`s=${serial}&t=${'x'.repeat(32)}`)).status, 401);
+});
+
+await ok('GET enroll paints the shop card before the form: colours, program, receipt still good', async () => {
+  const w = world();
+  addSale(w, 'sale-ref-5f607182-856f-e05a-4a18-ae36-d2d316c27705', { ref: '43020' });
+  const get = async (q) => { const r = await enroll.onRequestGet(ctx(w.env, 'GET', '/api/wallet/enroll?' + q)); return { status: r.status, body: await r.json() }; };
+  const r = await get('merchant=pasta-corner&r=sale-ref-5f607182-856f-e05a-4a18-ae36-d2d316c27705');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.merchant, { slug: 'pasta-corner', name: 'Pasta Corner', color: '#B3261E', bg: '#FFF8F0', logo: '' });
+  assert.equal(r.body.program.target, 10); assert.equal(r.body.program.rewardLabel, '1 offert'); assert.equal(r.body.program.model, 'visit');
+  assert.match(r.body.program.strip, /^\/api\/wallet\/strip\/0-10-b3261e-fff8f0@2\.png$/);
+  assert.equal(r.body.receipt, 'ok');
+  assert.ok(!/12000|120|cash/.test(JSON.stringify(r.body)), 'no amount or method leaks');
+  assert.equal((await get('merchant=pasta-corner&r=nope')).body.receipt, 'unusable');
+  assert.equal((await get('merchant=no-wallet')).status, 404);
 });
 
 console.log(`wallet-routes: ${pass} passed`);

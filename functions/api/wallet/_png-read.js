@@ -3,7 +3,7 @@
 // PNG of every colour type at 8 bits, palettes at 1–8 bits, plain or Adam7.
 // Anything else returns null and the card goes without a logo.
 
-const MAX_PX = 16_000_000;
+const MAX_PX = 8_000_000; /* a 2 800 × 2 800 logo; Santos's is 2 500 × 2 500 */
 
 async function inflate(bytes) {
   const s = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));

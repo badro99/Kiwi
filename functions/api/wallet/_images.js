@@ -8,6 +8,8 @@ import { logoBytes } from './_merchant.js';
 import { palette, contrast } from './_card.js';
 
 const memo = new Map();
+let decodes = 0;
+export const _logoDecodes = () => decodes; /* tools/wallet-routes-test.mjs: one decode per logo version */
 const hex = async (s) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(s)))].slice(0, 10).map((x) => x.toString(16).padStart(2, '0')).join('');
 
 async function cached(key, make) {
@@ -50,7 +52,7 @@ async function logoSet(merchant, colors) {
   let img;
   for (const [i, name] of names.entries()) {
     out[name] = await cached(`logo/${id}/${name}`, async () => {
-      if (img === undefined) { const d = await decodePng(bytes); img = d ? inkOn(keyOut(trim(d)), pal.bg, pal.fg) : null; }
+      if (img === undefined) { decodes++; const d = await decodePng(bytes); img = d ? inkOn(keyOut(trim(d)), pal.bg, pal.fg) : null; }
       if (!img) return new Uint8Array(0);
       const s = (i % 3) + 1;
       const f = i < 3 ? fit(img, 160 * s, 50 * s) : fit(img, 29 * s, 29 * s, { fill: pal.bg, pad: 2 * s });
@@ -69,4 +71,20 @@ export async function passImages({ merchant, view }) {
     images['strip' + suffix + '.png'] = await stripPng({ view, colors, scale: s });
   }
   return images;
+}
+
+/* Google's square program logo (660 px), cached like the pass logos: an
+   anonymous request never pays for a decode twice. */
+export async function programLogo(merchant) {
+  const pal = palette(merchant), colors = stripColors(merchant);
+  const bytes = logoBytes(merchant.logoUrl);
+  const key = bytes ? `program/${await hex(merchant.logoUrl + colors.key)}` : `program/none-${colors.key}`;
+  return cached(key, async () => {
+    if (!bytes) return stampIcon({ color: colors.color, bg: colors.bg, size: 660 });
+    decodes++;
+    const d = await decodePng(bytes);
+    if (!d) return stampIcon({ color: colors.color, bg: colors.bg, size: 660 });
+    const f = fit(inkOn(keyOut(trim(d)), pal.bg, pal.fg), 660, 660, { fill: pal.bg, pad: 60 });
+    return encodePng(f.w, f.h, f.rgba);
+  });
 }
