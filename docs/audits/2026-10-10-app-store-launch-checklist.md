@@ -258,6 +258,16 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
     find what re-sent a past day (the outbox or the `kiwi:z-manifest` copy)
     before closing A4.
 
+- **Build 64 replaces 63 in review, version 1.0.4** (`43d184856`, 27 Nov 2026, main with the
+  Wallet loyalty card). Owner asked to ship the card and Browse's owner approvals in this release.
+  1.0.4 was removed from review (Developer Rejected), build 64 attached, a loyalty card line added
+  to What's New in French, Arabic and English, and resubmitted at about 12:02 UTC (Waiting for
+  Review). Build 64 holds `wallet-*.js` in its bundle. Owner approvals were already in 63 (since
+  593fe31a7), but on 27 Nov prod had no `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_PRIVATE_KEY` and
+  no `WALLET_*` variables on Pages project kiwi-maroc: approval requests reach no phone (they only
+  show on an open dashboard) and the card falls back to the web card (no Apple .pkpass, no Google
+  pass). Browse had no row in `owner_approval_settings` or `owner_approval_devices`: its owner
+  still has to turn the approvals on and add his phone in Réglages › Accords du patron.
 - **Build 63 uploaded and submitted, version 1.0.4** (`0e92f2926`, 27 Nov 2026, main after the
   full gate went green). "Upload succeeded" at 11:37 UTC, processed into Kiwi Team, attached to
   1.0.4 and sent to App Review at 11:42 UTC (Waiting for Review). What's New written in French,
