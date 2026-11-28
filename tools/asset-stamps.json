@@ -1836,16 +1836,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "432",
+    "v": "433",
     "sha": "779406d0c59205cb"
   },
   "assets/pos-boutique.js": {
-    "v": "432",
-    "sha": "c4a389e946b86603"
+    "v": "433",
+    "sha": "f778179e990ded62"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "85",
-    "sha": "0ccf95ae7be63f85"
+    "v": "86",
+    "sha": "509bd24eb7adab97"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "4",
@@ -1864,8 +1864,8 @@
     "sha": "93437a9d9afb508c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "326",
-    "sha": "2912103f69aa9f38"
+    "v": "327",
+    "sha": "775470d291ceb4d1"
   },
   "assets/pos-boutique/cheque-sheet.js": {
     "v": "2",
@@ -1876,12 +1876,12 @@
     "sha": "988b88c659f6ff5e"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "243",
-    "sha": "dca4404e05a81dc2"
+    "v": "244",
+    "sha": "35dfb67c99611ddb"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "88",
-    "sha": "d488b016b704e8ef"
+    "v": "89",
+    "sha": "d923ae1e33a61505"
   },
   "assets/pos-boutique/exch-cut.js": {
     "v": "7",
@@ -1904,8 +1904,8 @@
     "sha": "be8086a1fdff84d5"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "326",
-    "sha": "b13159c123ac36f5"
+    "v": "327",
+    "sha": "8a65d4964de8e387"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "28",
@@ -1916,8 +1916,8 @@
     "sha": "72ee9be580497b30"
   },
   "assets/pos-boutique/line-gestures.js": {
-    "v": "1",
-    "sha": "127467bb68679935"
+    "v": "2",
+    "sha": "701cb2debc70eac3"
   },
   "assets/pos-boutique/livraisons.js": {
     "v": "24",
@@ -1968,8 +1968,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "326",
-    "sha": "190cafa0e1516f41"
+    "v": "327",
+    "sha": "74ec656a18909cf7"
   },
   "assets/pos-boutique/search.js": {
     "v": "24",
@@ -2028,8 +2028,8 @@
     "sha": "2ec5eb9137ca6e3f"
   },
   "assets/pos-dispatch.js": {
-    "v": "574",
-    "sha": "7b1e85e04d37c847"
+    "v": "575",
+    "sha": "8c04071353daf87f"
   },
   "assets/pos-epicerie.css": {
     "v": "47",

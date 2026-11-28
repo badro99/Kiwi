@@ -82,11 +82,25 @@ export function lineGestures(d) {
     if (have < cfg.qty && !d.oversellOk(`${ln.pid}|${cfg.color}|${cfg.size}`, label(p, cfg.color, cfg.size), have, d.toast)) return false;
     const next = JSON.parse(JSON.stringify(ln));
     Object.assign(next, { size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.agreed > 0 ? 0 : (cfg.remise || 0) });
-    delete next.agreedFrom;
-    if (cfg.agreed > 0) next.agreed = cfg.agreed; else delete next.agreed;
+    /* Un prix réparti sur le ticket (« Kolchi b 500 », agreedFrom 'ticket')
+       valait pour CES pièces, accordées une fois : il reste sur au plus autant
+       de pièces, la pièce en plus part à son prix sur sa propre ligne, comme
+       le « + » de la ligne (ticketOwner.changeQuantity). Revue de sécurité,
+       28 nov. 2026 : sans ce partage, monter la quantité dans la fiche
+       étendait le prix accordé sans nouvel accord. */
+    const spread = ln.agreedFrom === 'ticket' && cfg.agreed > 0 && Math.abs(cfg.agreed - (+ln.agreed || 0)) < 0.005;
+    const extra = spread ? Math.max(0, cfg.qty - (+ln.qty || 0)) : 0;
+    if (spread) { next.qty = cfg.qty - extra; next.agreed = ln.agreed; next.agreedFrom = 'ticket'; }
+    else { delete next.agreedFrom; if (cfg.agreed > 0) next.agreed = cfg.agreed; else delete next.agreed; }
     d.stockAdd(ln.pid, ln.size, +ln.qty || 0);
     d.stockAdd(ln.pid, cfg.size, -cfg.qty);
     d.ticketOwner.replaceLine(t, i, next);
+    if (extra) {
+      const more = JSON.parse(JSON.stringify(next));
+      delete more.agreed; delete more.agreedFrom;
+      more.qty = extra; more.remise = 0;
+      d.ticketOwner.insertLine(t, i + 1, more);
+    }
     d.render();
     d.toast(`${p.name} · ${cfg.size}, ${d.tr('ligne mise à jour')}`);
     return true;

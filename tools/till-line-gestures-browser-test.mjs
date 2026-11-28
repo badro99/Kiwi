@@ -23,6 +23,26 @@ import { pinTradingHour } from './demo-clock.mjs';
 const root = process.env.KIWI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const assert = (yes, msg, got) => { if (!yes) throw new Error(msg + (got !== undefined ? ' · reçu : ' + JSON.stringify(got) : '')); console.log('  ✓ ' + msg); };
 
+/* Sans navigateur : un prix réparti sur le ticket ne s'étend pas aux pièces
+   ajoutées dans la fiche (revue de sécurité, 28 nov. 2026). */
+{
+  const { lineGestures } = await import(new URL('../assets/pos-boutique/line-gestures.js', import.meta.url).href);
+  const { ticketOwner } = await import(new URL('../assets/pos-boutique/ticket-owner.js', import.meta.url).href);
+  const state = { ticket: { lines: [{ pid: 'p1', size: 'M', color: 'noir', qty: 2, remise: 0, agreed: 250, agreedFrom: 'ticket' }] } };
+  const lg = lineGestures({ state, product: () => ({ name: 'Jean', colors: ['noir'] }), ticketOwner, stockAdd: () => true,
+    availableStock: () => 10, firstFreeFor: () => 'M', oversellOk: () => true, colorLabel: (c) => c, openSheet() {}, toast() {}, tr: (x) => x, render() {} });
+  const sh = lg.sheetFrom(0);
+  lg.replace(0, { size: 'M', color: 'noir', qty: 3, remise: 0, agreed: sh.agreed });
+  const L = state.ticket.lines;
+  assert(L.length === 2 && L[0].qty === 2 && L[0].agreed === 250 && L[0].agreedFrom === 'ticket', 'spread price stays on the 2 pieces it was agreed for', L);
+  assert(L[1].qty === 1 && !L[1].agreed && !L[1].agreedFrom && L[1].remise === 0, 'the third piece goes at its own price, on its own line', L[1]);
+  const st2 = { ticket: { lines: [{ pid: 'p1', size: 'M', color: 'noir', qty: 2, remise: 0, agreed: 250, agreedFrom: 'ticket' }] } };
+  const lg2 = lineGestures({ state: st2, product: () => ({ name: 'Jean', colors: ['noir'] }), ticketOwner, stockAdd: () => true,
+    availableStock: () => 10, firstFreeFor: () => 'M', oversellOk: () => true, colorLabel: (c) => c, openSheet() {}, toast() {}, tr: (x) => x, render() {} });
+  lg2.replace(0, { size: 'L', color: 'noir', qty: 1, remise: 0, agreed: 250 });
+  assert(st2.ticket.lines.length === 1 && st2.ticket.lines[0].qty === 1 && st2.ticket.lines[0].agreedFrom === 'ticket', 'fewer pieces, or another size, keep the agreed price without a new line', st2.ticket.lines);
+}
+
 let puppeteer;
 try { puppeteer = createRequire(path.join(root, 'app/package.json'))('puppeteer-core'); }
 catch { console.log('○ skip: puppeteer-core unavailable'); process.exit(process.env.CI ? 1 : 0); }
