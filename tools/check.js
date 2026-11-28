@@ -2998,7 +2998,7 @@ section('Kiwi 2027 · une seule app de commande client');
 section('Kiwi 2027 · le cœur de la caisse sur le kit');
 {
   const gates = [
-    ['till-frame-browser-test.mjs', 'till-frame-browser-test'], ['till-card-scan-browser-test.mjs', 'till-card-scan-browser-test'], ['open-tickets-browser-test.mjs', 'open-tickets-browser-test'],
+    ['till-frame-browser-test.mjs', 'till-frame-browser-test'], ['till-card-scan-browser-test.mjs', 'till-card-scan-browser-test'], ['open-tickets-browser-test.mjs', 'open-tickets-browser-test'], ['till-photo-pick-browser-test.mjs', 'till-photo-pick-browser-test'],
     ['pay-height-test.mjs', 'pay-height-test'],
     ['components-sum-test.mjs', 'components-sum-test'],
     ['discount-reasons-test.mjs', 'discount-reasons-test'],

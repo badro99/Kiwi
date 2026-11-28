@@ -235,15 +235,21 @@ export const PICKER_KEYS = GROUPS.flatMap((g) => g[2]);
 const T = {
   fr: { head: 'À la caisse', byName: (n) => `D'après le nom « ${n} »`, picked: 'Choisie à la main. Le nom ne la change plus.',
     form: 'Choisie dans la fiche', none: 'Aucun mot du nom ne la désigne : précisez le nom, ou choisissez une photo.',
-    empty: 'Tapez le nom : la photo de la caisse suit.', own: 'Votre photo s’affiche à la caisse.', change: 'Changer la photo', close: 'Fermer',
+    empty: 'Tapez le nom : la photo de la caisse suit.', own: 'Votre photo s’affiche à la caisse.', change: 'Photos prêtes', close: 'Fermer',
+    mine: 'Votre photo', take: 'Prendre une photo', choose: 'Choisir une photo', drop: 'Retirer ma photo', sending: 'Envoi de la photo…',
+    fail: 'La photo n’est pas partie. Réessayez.', offline: 'Pas de réseau : reprenez la photo une fois en ligne.',
     reset: 'Laisser le nom choisir', search: 'Chercher : abaya, bougie, zarbia…', nothing: 'Aucune photo pour ce mot.' },
   en: { head: 'At the till', byName: (n) => `From the name “${n}”`, picked: 'Picked by hand. The name no longer changes it.',
     form: 'Picked on the product sheet', none: 'No word in the name points to a photo: refine the name, or pick one.',
-    empty: 'Type the name: the till photo follows it.', own: 'Your own photo shows at the till.', change: 'Change the photo', close: 'Close',
+    empty: 'Type the name: the till photo follows it.', own: 'Your own photo shows at the till.', change: 'Ready-made photos', close: 'Close',
+    mine: 'Your photo', take: 'Take a photo', choose: 'Choose a photo', drop: 'Remove my photo', sending: 'Uploading the photo…',
+    fail: 'The photo did not upload. Try again.', offline: 'No connection: add the photo again once you are online.',
     reset: 'Let the name decide', search: 'Search: abaya, candle, rug…', nothing: 'No photo for this word.' },
   ar: { head: 'في الصندوق', byName: (n) => `حسب الاسم «${n}»`, picked: 'اخترتها بنفسك. الاسم لا يغيرها بعد الآن.',
     form: 'مختارة في بطاقة المنتج', none: 'لا كلمة في الاسم تدل على صورة: وضّح الاسم أو اختر صورة.',
-    empty: 'اكتب الاسم: صورة الصندوق تتبعه.', own: 'صورتك أنت هي التي تظهر في الصندوق.', change: 'تغيير الصورة', close: 'إغلاق',
+    empty: 'اكتب الاسم: صورة الصندوق تتبعه.', own: 'صورتك أنت هي التي تظهر في الصندوق.', change: 'صور جاهزة', close: 'إغلاق',
+    mine: 'صورتك', take: 'التقط صورة', choose: 'اختر صورة من الجهاز', drop: 'احذف صورتي', sending: 'جارٍ رفع الصورة…',
+    fail: 'لم تُرفع الصورة. حاول مرة أخرى.', offline: 'لا يوجد اتصال: أضف الصورة من جديد حين يعود الإنترنت.',
     reset: 'دع الاسم يختار', search: 'ابحث: عباية، شمعة، زربية…', nothing: 'لا صورة لهذه الكلمة.' },
 };
 const LANG_I = { fr: 0, en: 1, ar: 2 };
@@ -283,6 +289,9 @@ function css() {
 .ktp-img { width: 64px; height: 64px; border-radius: 12px; background: var(--paper, #F7F5F0); display: grid; place-items: center; overflow: hidden;
   border: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
 .ktp-img img { width: 56px; height: 56px; object-fit: contain; }
+.ktp-img.is-own img { width: 100%; height: 100%; object-fit: cover; }
+.ktp-msg { font-size: 12.5px; opacity: .78; margin: 0; }
+.ktp-msg:empty { display: none; }
 .ktp-t b { display: block; font-weight: 600; }
 .ktp-t span { display: block; font-size: 12.5px; opacity: .72; line-height: 1.35; margin-top: 2px; }
 .ktp-acts { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -305,7 +314,9 @@ function css() {
 }
 
 /* Monte le bloc « À la caisse » dans la fiche produit ouverte `root`.
-   o: { lang, trade ('boutique' | 'maison'), media: () => bool } */
+   o: { lang, trade ('boutique' | 'maison'), media: () => bool,
+        photoInput (le champ fichier de la fiche du tableau de bord, qui envoie déjà),
+        photo, demo: () => bool, merchant: () => slug (la caisse : ce bloc envoie lui-même) } */
 export function mountTillPhoto(root, product, o = {}) {
   if (!root || (o.trade !== 'boutique' && o.trade !== 'maison')) return null;
   const nameIn = root.querySelector('[data-bqx-name]');
@@ -339,6 +350,23 @@ export function mountTillPhoto(root, product, o = {}) {
   const nameEl = el('b'), whyEl = el('span');
   const openBtn = el('button', 'bqx-pf-btn', { type: 'button', 'aria-expanded': 'false' }); openBtn.textContent = tr('change');
   const resetBtn = el('button', 'bqx-pf-btn', { type: 'button', hidden: true }); resetBtn.textContent = tr('reset');
+  /* Sa propre photo, prise à l'appareil ou choisie dans la galerie (owner,
+     28 nov. 2026 : « make a way to add an existing or take a pic »). Au
+     tableau de bord la fiche a déjà son champ et son envoi (o.photoInput) : le
+     fichier lui est remis tel quel. À la caisse ce bloc envoie lui-même
+     (KiwiPlatformOps.uploads ; /api/media accepte la caisse appairée quand
+     l'inventaire s'y gère) et rend l'adresse par root.__kiwiTillPhoto.photo. */
+  const host = o.photoInput || null;
+  const hostMsg = host ? root.querySelector('[data-bqx-photo-msg]') : null;
+  let own = String(o.photo || '');
+  const touch = (typeof matchMedia === 'function' && matchMedia('(any-pointer: coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
+  const camIn = el('input', '', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, 'data-ktp-cam': true });
+  const galIn = el('input', '', { type: 'file', accept: 'image/*', hidden: true, 'data-ktp-file': true });
+  const takeBtn = el('button', 'bqx-pf-btn', { type: 'button', hidden: !touch, 'data-ktp-take': true }); takeBtn.textContent = tr('take');
+  const chooseBtn = el('button', 'bqx-pf-btn', { type: 'button', 'data-ktp-choose': true }); chooseBtn.textContent = tr('choose');
+  const dropBtn = el('button', 'bqx-pf-btn', { type: 'button', hidden: true, 'data-ktp-drop': true }); dropBtn.textContent = tr('drop');
+  const msgEl = el('p', 'ktp-msg', { role: 'status' });
+  openBtn.setAttribute('data-ktp-stock', '');
   const search = el('input', 'bqx-pf-in ktp-q', { type: 'search', autocomplete: 'off' });
   search.placeholder = tr('search'); search.setAttribute('aria-label', tr('search'));
   const nothing = el('p', 'ktp-nothing', { hidden: true }); nothing.textContent = tr('nothing');
@@ -360,7 +388,8 @@ export function mountTillPhoto(root, product, o = {}) {
   const box = el('div', 'ktp', { 'data-ktp': true }, [
     headEl,
     el('div', 'ktp-now', { 'aria-live': 'polite' }, [el('div', 'ktp-img', {}, [img]), el('div', 'ktp-t', {}, [nameEl, whyEl])]),
-    el('div', 'ktp-acts', {}, [openBtn, resetBtn]),
+    el('div', 'ktp-acts', {}, [takeBtn, chooseBtn, dropBtn, openBtn, resetBtn]),
+    msgEl, camIn, galIn,
     panel,
   ]);
   side.appendChild(box);
@@ -369,14 +398,18 @@ export function mountTillPhoto(root, product, o = {}) {
   const render = () => {
     const name = (nameIn.value || '').trim();
     const st = tillPhotoState(name, art, picked);
-    root.__kiwiTillPhoto = st;
-    const own = media();
+    root.__kiwiTillPhoto = host ? st : { ...st, photo: own };
+    const mine = host ? media() : !!own;
+    const hostImg = host && root.querySelector('[data-bqx-photo-box] img');
+    const ownSrc = host ? (hostImg ? hostImg.getAttribute('src') || '' : '') : own;
     const prod = { name, art: st.art, artPicked: st.artPicked };
     const key = photoKey(prod, fallback);
-    const src = photoSrc(photoFile(prod, fallback));
+    const src = ownSrc || photoSrc(photoFile(prod, fallback));
     if (img.getAttribute('src') !== src) img.setAttribute('src', src);
-    nameEl.textContent = L(key);
-    whyEl.textContent = own ? tr('own')
+    img.parentNode.classList.toggle('is-own', !!ownSrc);
+    dropBtn.hidden = !mine;
+    nameEl.textContent = mine ? tr('mine') : L(key);
+    whyEl.textContent = mine ? tr('own')
       : st.artPicked ? tr('picked')
       : keyForName(name) ? tr('byName', name)
       : st.art ? tr('form')
@@ -407,6 +440,40 @@ export function mountTillPhoto(root, product, o = {}) {
     if (!panel.hidden) requestAnimationFrame(reveal);
   });
   resetBtn.addEventListener('click', () => { picked = false; art = ''; render(); });
+  const say = (t) => { msgEl.textContent = t || ''; };
+  const busy = (on) => { [takeBtn, chooseBtn, dropBtn].forEach((x) => { x.disabled = on; }); };
+  const send = async (file) => {
+    if (!file) return;
+    if (host) {
+      /* La fiche envoie, montre l'avancée dans sa carte, et redessine sa
+         vignette : le MutationObserver plus bas suit. */
+      try { const dt = new DataTransfer(); dt.items.add(file); host.files = dt.files; host.dispatchEvent(new Event('change', { bubbles: true })); }
+      catch (_) { say(tr('fail')); }
+      return;
+    }
+    if (o.demo && o.demo()) { own = URL.createObjectURL(file); say(''); render(); return; }   // démo : rien ne part
+    const up = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
+    if (!up || typeof up.upload !== 'function') { say(tr('fail')); return; }
+    say(tr('sending')); busy(true);
+    try {
+      const r = await up.upload(file, { merchant: o.merchant ? o.merchant() : '' });
+      if (r && r.url) { own = r.url; say(''); } else say(tr('fail'));
+    } catch (e) { say(e && e.code === 'offline' ? tr('offline') : tr('fail')); }
+    busy(false);
+    if (root.isConnected) render();
+  };
+  takeBtn.addEventListener('click', () => camIn.click());
+  chooseBtn.addEventListener('click', () => galIn.click());
+  [camIn, galIn].forEach((inp) => inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; inp.value = ''; send(f); }));
+  dropBtn.addEventListener('click', () => {
+    say('');
+    if (host) { const del = root.querySelector('[data-bqx-media-del]'); if (del) del.click(); return; }
+    own = ''; render();
+  });
+  if (hostMsg && typeof MutationObserver === 'function') {
+    const mirror = () => say(hostMsg.textContent.trim());
+    new MutationObserver(mirror).observe(hostMsg, { childList: true, characterData: true, subtree: true });
+  }
   search.addEventListener('input', filter);
   grid.addEventListener('click', (e) => {
     const c = e.target.closest('[data-ktp-k]');

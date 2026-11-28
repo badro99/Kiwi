@@ -1,12 +1,12 @@
-import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=429';
-import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=323';
+import { RAYONS, P, stockOf, root, salesToday, toast, renderBadges, openVeil, closeVeil, _bqKey, BY_EAN, state, bqMoney, switchView, rebuildCatalog, pruneTicket, STAFF, promoFor, variantStock, bqKitSkin, pvReal } from '../pos-boutique.js?v=430';
+import { fmtDay, fmtHM, $, icons, fmtMAD, esc, $$, renderGrid, lens, pad2, shelf, artOf, variantColor, colorDot, variantSource, iconPickerHtml, wireIconPicker, KC, camSupported, openCamScan, colorLabel } from './sales.js?v=324';
 import { openStockMoves } from './stock-move.js?v=2';
 import * as SZ from '../boutique-sizes.js?v=40';
 import { openLabelPicker } from './label-picker.js?v=16';
 import { tillInventoryAllowed, tillInventoryRefusal } from '../till-inventory-access.js?v=1';
 import { invSearch, invUnseenCount, invMarkSeen, invCountAsks, invPaint } from './inv-tools.js?v=28';
 import { sisterStock } from './sister-stock.js?v=1'; import { fieldErr } from '../field-error.js?v=2'; import { invProducts, recountPill, gapLabel } from './oversell.js?v=5';
-import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=323';
+import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normScan, openScannerTest } from './checkout.js?v=324';
 
 
   /* ═══════════════════════ PROMOTIONS ═══════════════════════
@@ -749,7 +749,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const mv = $('#bqi-moves', panel); if (mv) mv.onclick = () => openStockMoves({ setModal: invSetModal, esc, icons, catDB, toast, armScanCapture, disarmScanCapture, normScan });   // consulter (inv-moves.js) ou faire (stock-move.js)
-    import('./avance-restock.js?v=82').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
+    import('./avance-restock.js?v=83').then((m) => m.mountAvanceButton(panel, () => renderInventaire())).catch(() => {});   // avances expirées : scanner, remettre en stock, avoir (avance-restock.js)
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -956,7 +956,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         SZ.putCode(el, cat, lang, preset);
       }
       /* La photo de la caisse, choisie comme au tableau de bord. */
-      import('../retail-icon-picker.js?v=8').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false })).catch(() => {});
+      import('../retail-icon-picker.js?v=9').then((m) => m.mountTillPhoto(el, null, { lang, trade: 'boutique', media: () => false, demo: () => !pvReal(), merchant: () => _bqKey })).catch(() => {});
 
       const save = () => {
         const name = nameIn.value.trim();
@@ -974,7 +974,7 @@ import { catDB, fmtNum, invScanHandle, disarmScanCapture, armScanCapture, normSc
         const kind = (q('input[name="bqx-pf-kind"]:checked') || {}).value || 'taille';
         const ph = el.__kiwiTillPhoto || {};
         const made = SZ.createProduct(cat, {
-          name, categoryId: catIn.value || null, kind, art: ph.art || '', artPicked: !!ph.artPicked,
+          name, categoryId: catIn.value || null, kind, art: ph.art || '', artPicked: !!ph.artPicked, photo: ph.photo || '',
           priceMAD: price, cost,
         }, total, bc.code);
         if (!made.product) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Création impossible')); return; }
