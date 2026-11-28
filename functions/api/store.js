@@ -147,7 +147,7 @@ const FEATURES = {
   services:     { keys: ['list', 'cats', 'items'],                 max: 400000 },
   promotions:   { keys: ['list', 'rules', 'promos'],               max: 200000 },
   retailcredit: { keys: ['entries', 'seq'],                        max: 600000 },
-  returns:      { keys: ['list'],                                  max: 400000 },
+  returns:      { keys: ['list'],                                  max: 400000 }, opentickets: { keys: ['list'], max: 400000 },   // opentickets : tickets en attente des caisses boutique et maison (assets/retail-open-tickets.js)
   rooms:        { keys: ['list', 'rooms'],                         max: 400000 },
   kds:          { keys: ['stations', 'list'],                      max: 200000 }, delivery: { keys: ['platforms', 'house', 'prices', 'choices'], max: 400000 }, // livraison : prix par plateforme hors de la carte publique (assets/delivery.js)
   payroll:      { keys: ['periods', 'list'],                       max: 400000 },

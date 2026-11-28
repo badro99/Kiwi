@@ -387,6 +387,9 @@ function bqKitTicketFoot(ticketEl, $, icons, on, o) {
   sec.id = 'bq-kit-tkacts';
   sec.appendChild(mk('client', o.clientLabel));
   sec.appendChild(mk('remise', tr('Remise'), o.canRemise ? {} : { disabled: '' }));
+  /* Tickets en attente (assets/retail-open-tickets.js) : un seul bouton, son
+     libellé dit ce qu'il fait. Troisième de la rangée, il prend la ligne entière. */
+  if (o.hold) { const h = mk('hold', o.hold.label, o.hold.disabled ? { disabled: '' } : {}); if (sec.children.length === 2) h.style.gridColumn = '1 / -1'; sec.appendChild(h); }
   foot.insertBefore(sec, pay);
 
   /* Le primaire porte le libellé ET l'état du bouton livré : c'est lui qui
@@ -405,6 +408,7 @@ function bqKitTicketFoot(ticketEl, $, icons, on, o) {
     if (w === 'pay') { pay.click(); return; }
     if (w === 'client') { const c = ticketEl.querySelector('#bq-tk-client'); if (c) c.click(); return; }
     if (w === 'remise' && typeof o.onRemise === 'function') o.onRemise();
+    if (w === 'hold' && o.hold) o.hold.run();
   });
   icons();
   return true;

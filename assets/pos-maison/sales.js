@@ -1,9 +1,9 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=285';
-import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=198';
-import { invSetModal, offerRegister } from './inventory.js?v=198';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, isConsignedProduct, findSale, P, toast, ticketTotals, ticketCount, isOfflineRef, STAFF, assignTicketNumber, freshTicket, renderBadges, checkout, lineUnit, linePromo, merchantSlug, stockAdd, sizesOf, pieceUnitPrice, promoForLine, ticketClient, firstFree, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, IS_DEMO, AVOIRS, creditRequest, creditFromServer, SALES, switchView, firstName, ensureStockJournal, rebuildCatalog, renderAll, BY_EAN } from '../pos-maison.js?v=287';
+import { bqReal, openExchSummary, openVoucher, catDB, openScannerTest, normScan } from './checkout.js?v=200';
+import { invSetModal, offerRegister } from './inventory.js?v=200';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
-import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=15';
+import { mzKitTicketFoot, mzSellSearch, mzSkinOn, mzClientLabel } from './kit-2027.js?v=16'; import { openTickets } from '../retail-open-tickets.js?v=2';
 import { mzTicketRemise, mzItemBargain, mzTr as tr, ensureCss as mzRemCss } from './ticket-remise.js?v=9';
 import { mzPageGrid } from './grid-pager.js?v=1'; import { mzOpenFiche } from './client-fiche.js?v=8'; import { oversellOk } from '../pos-boutique/oversell.js?v=5';
 import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsEmpty } from './client-view.js?v=1';
@@ -459,6 +459,25 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
 
   const openTicketRemise = (only) => mzTicketRemise({ only: Number.isInteger(only) ? only : undefined, nameOf: (ln) => (P[ln.pid] || {}).name || '', state, root, $, $$, esc, icons, toast, openVeil, closeVeil, openApprove, renderTicket, renderGrid, renderBadges, policyKey: _bqKey, fmt: fmtMAD, pieceBase: (ln) => lineUnit(Object.assign({}, ln, { remise: 0, agreed: 0 })) });
 
+  /* Tickets en attente, comme la boutique : le ticket courant est vidé sur
+     place (il garde son numéro déjà tiré), sa réserve rendue ; la reprise la
+     reprend, pièces détachées comprises (holdStock / releaseStock). */
+  let otkDesk = null;
+  const holdDesk = () => otkDesk || (otkDesk = openTickets({
+      scope: 'maison', money: fmtMAD, demo: () => IS_DEMO || !pvReal(), slug: merchantSlug,
+      who: () => (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
+      current: () => state.ticket,
+      busy: () => !!(state.exchange || state.ret || state.checkoutBusy),
+      keep: ['num', 'period', 'syncId', 'numbering', 'numError'],
+      blank: () => ({ lines: [], client: null, remiseAuth: false, giftWrap: false, delivery: null }),
+      describe: (tk) => { const c = tk.client && tk.client !== 'passage' ? clById(tk.client) : null; return { name: c ? c.name : '', total: ticketTotals(tk).total, count: ticketCount(tk), items: tk.lines.map((ln) => ((P[ln.pid] && P[ln.pid].name) || '') + (ln.size && !/^(TU|U|UNI|UNIQUE)$/i.test(ln.size) ? ' ' + ln.size : '')) }; },
+      release: (lines) => lines.forEach((ln) => releaseStock(ln.pid, ln.size, +ln.qty || 0, ln.isPiece)),
+      hold: (lines) => lines.forEach((ln) => { if (P[ln.pid]) holdStock(ln.pid, ln.size, +ln.qty || 0, ln.isPiece); }),
+      after: () => { if (state.view !== 'vente') switchView('vente'); renderTicket(); renderGrid(); renderBadges(); icons(); },
+      toast,
+      onChange: () => { if (root && state.view === 'vente') { renderTicket(); icons(); } },
+  }));
+
   function renderTicket() {
     const t = state.ticket;
     const { promo, remise, reward, total } = ticketTotals(t);
@@ -559,6 +578,7 @@ import { mzClientsView, mzClientsBar, mzClientsMoney, mzClientsEvent, mzClientsE
     mzKitTicketFoot(el, $, icons, skin, {
       clientLabel: mzClientLabel(t, clById, firstName),
       canRemise: !!t.lines.length, onRemise: openTicketRemise,
+      hold: holdDesk().button(t),   /* tickets en attente (assets/retail-open-tickets.js) */
     });
     icons();
   }

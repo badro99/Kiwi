@@ -1,17 +1,17 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=426'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=320';
-import { offerRegister } from './inventory.js?v=320';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=428'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=322';
+import { offerRegister } from './inventory.js?v=322';
 import { ticketOwner } from './ticket-owner.js?v=9';
 import { ticketRemise } from './ticket-remise.js?v=11';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=4';
-import { bqKitTicketFoot } from './kit-2027.js?v=27';
-import { sellSearch } from './search.js?v=23';
+import { bqKitTicketFoot } from './kit-2027.js?v=28'; import { openTickets } from '../retail-open-tickets.js?v=2';
+import { sellSearch } from './search.js?v=24';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=5';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=82').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=84').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -381,6 +381,24 @@ import('./exch-combined.js?v=82').then((m) => { CX_NOTE = m; }).catch(() => {});
     return '';
   }
 
+  /* Tickets en attente : le ticket courant est vidé sur place (il garde son
+     numéro), sa réserve d'articles rendue ; la reprise la reprend. */
+  let otkDesk = null;
+  const holdDesk = () => otkDesk || (otkDesk = openTickets({
+      scope: 'boutique', tr, money: fmtMAD, demo: () => !pvReal(), slug: merchantSlug,
+      who: () => (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
+      current: () => state.ticket,
+      busy: () => !!(state.exchange || state.ret || state.checkoutBusy),
+      keep: ['num', 'period', 'syncId', 'numbering', 'numError'],
+      blank: () => ({ lines: [], client: null, remiseAuth: false }),
+      describe: (tk) => { const c = tk.client && tk.client !== 'passage' ? clById(tk.client) : null; return { name: c ? c.name : '', total: ticketTotals(tk).total, count: ticketCount(tk), items: tk.lines.map((ln) => ((P[ln.pid] && P[ln.pid].name) || '') + (ln.size && !/^(TU|U|UNI|UNIQUE)$/i.test(ln.size) ? ' ' + ln.size : '')) }; },
+      release: (lines) => lines.forEach((ln) => stockAdd(ln.pid, ln.size, +ln.qty || 0)),
+      hold: (lines) => lines.forEach((ln) => { if (P[ln.pid]) stockAdd(ln.pid, ln.size, -(+ln.qty || 0)); }),
+      after: () => { if (state.view !== 'vente') switchView('vente'); renderTicket(); renderGrid(); renderBadges(); icons(); },
+      toast,
+      onChange: () => { if (root && state.view === 'vente') { renderTicket(); icons(); } },
+  }));
+
   function renderTicket() {
     const t = state.ticket;
     const { promo, remise, reward, total } = ticketTotals(t);
@@ -489,6 +507,7 @@ import('./exch-combined.js?v=82').then((m) => { CX_NOTE = m; }).catch(() => {});
       clientLabel: ticketClientLabel(t) + /* #105 : l'avoir reste visible au ticket */ (() => { const c = t.client && t.client !== 'passage' ? clById(t.client) : null, av = c && clAvoirTotal(c); return av ? ' · ' + tr('Avoir') + ' ' + fmtMAD(av.balance) : ''; })(),
       canRemise: !!t.lines.length,
       onRemise: openTicketRemise,
+      hold: holdDesk().button(t),   /* tickets en attente (assets/retail-open-tickets.js) */
     });
     icons();
   }
