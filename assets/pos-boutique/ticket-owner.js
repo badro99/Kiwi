@@ -12,6 +12,10 @@ const ticketOwner = {
       if (line.promo && (!same.promo || line.promo.price < same.promo.price)) same.promo = line.promo;
     } else ticket.lines.push(line);
   },
+  /* Les gestes de ligne (line-gestures.js) : une copie posée juste dessous,
+     jamais fusionnée ; une ligne remplacée sur place par la fiche. */
+  insertLine(ticket, index, line) { ticket.lines.splice(Math.max(0, Math.min(index, ticket.lines.length)), 0, line); },
+  replaceLine(ticket, index, line) { if (ticket.lines[index]) ticket.lines[index] = line; },
   changeQuantity(ticket, index, delta) {
     const line = ticket.lines[index];
     /* Un prix convenu pour le ticket entier valait pour CES pièces : une pièce

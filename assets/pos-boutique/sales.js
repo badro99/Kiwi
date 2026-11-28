@@ -1,17 +1,17 @@
-import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=431'; import { tillPriceList as tpl } from './price-list.js?v=3';
-import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=325';
-import { offerRegister } from './inventory.js?v=325';
-import { ticketOwner } from './ticket-owner.js?v=9';
+import { CLIENTES, CL, RAYONS, state, root, stockOf, promoFor, findSale, P, toast, ticketTotals, ticketCount, STAFF, bqKitSkin, assignTicketNumber, prepareTicketNumber, releaseTicketNumber, stockAdd, freshTicket, renderBadges, checkout, availableStock, lineUnit, linePromo, firstFreeFor, ticketClient, sizesOf, openVeil, sizeWord, _bqKey, closeVeil, pvReal, initials, activeAvoirs, queueIfOffline, whenLabel, SALES, switchView, firstName, firstFree, variantStock, BY_EAN , merchantSlug } from '../pos-boutique.js?v=432'; import { tillPriceList as tpl } from './price-list.js?v=3';
+import { bqReal, openExchSummary, openVoucher, openScannerTest, normScan } from './checkout.js?v=326';
+import { offerRegister } from './inventory.js?v=326';
+import { ticketOwner } from './ticket-owner.js?v=10';
 import { ticketRemise } from './ticket-remise.js?v=11';
 import { agreedUnit, maxPct } from './bargain.js?v=3';
 import { mountBargain } from './bargain-ui.js?v=4';
-import { bqKitTicketFoot } from './kit-2027.js?v=28'; import { openTickets } from '../retail-open-tickets.js?v=3';
+import { bqKitTicketFoot } from './kit-2027.js?v=28'; import { openTickets } from '../retail-open-tickets.js?v=3'; import { lineGestures } from './line-gestures.js?v=1';
 import { sellSearch } from './search.js?v=24';
 import '../money-cents.js?v=7';
 import { photoImg } from '../retail-photos.js?v=8'; import { bestItems, bestOpen, bestTouched, BEST_LABEL } from '../retail-bestsellers.js?v=2';
 import { paintClientNotes, isNoExpiry } from '../retail-avance.js?v=6'; import { oversellOk } from './oversell.js?v=5';
 let CX_NOTE = null;   // l'échange groupé, chargé à part (pas d'import statique : cycle)
-import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
+import('./exch-combined.js?v=88').then((m) => { CX_NOTE = m; }).catch(() => {});
 
 
   /* ───────────────────────── helpers ───────────────────────── */
@@ -383,7 +383,8 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
 
   /* Tickets en attente : le ticket courant est vidé sur place (il garde son
      numéro), sa réserve d'articles rendue ; la reprise la reprend. */
-  let otkDesk = null;
+  let otkDesk = null, lgDesk = null;   /* glisser une ligne la duplique, la toucher la rouvre (line-gestures.js) */
+  const lineDesk = () => lgDesk || (lgDesk = lineGestures({ state, product: (pid) => P[pid], ticketOwner, stockAdd, availableStock, firstFreeFor, oversellOk, colorLabel, openSheet, toast, tr, render: () => { renderTicket(); renderGrid(); renderBadges(); icons(); } }));
   const holdDesk = () => otkDesk || (otkDesk = openTickets({
       scope: 'boutique', tr, money: fmtMAD, demo: () => !pvReal(), slug: merchantSlug,
       who: () => (STAFF && STAFF.caissiere && STAFF.caissiere.name) || '',
@@ -486,7 +487,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
       const minus = e.target.closest('[data-bq-minus]');
       const plus = e.target.closest('[data-bq-plus]');
       const idx = minus ? +minus.dataset.bqMinus : plus ? +plus.dataset.bqPlus : -1;
-      if (idx < 0) return;
+      if (idx < 0) { lineDesk().tap(e); return; }
       const ln = t.lines[idx];
       if (plus) {
         if (availableStock(ln.pid, ln.size, ln.color, t) <= 0
@@ -503,7 +504,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
        #bq-ticket, donc les <k-button> partent avec. Le libellé du bouton des
        clientes porte la cliente attachée, puisque la peau éteint la rangée du
        haut : le bouton EST l'état. */
-    bqKitTicketFoot(el, $, icons, bqKitSkin(), {
+    lineDesk().bind(root); bqKitTicketFoot(el, $, icons, bqKitSkin(), {
       clientLabel: ticketClientLabel(t) + /* #105 : l'avoir reste visible au ticket */ (() => { const c = t.client && t.client !== 'passage' ? clById(t.client) : null, av = c && clAvoirTotal(c); return av ? ' · ' + tr('Avoir') + ' ' + fmtMAD(av.balance) : ''; })(),
       canRemise: !!t.lines.length,
       onRemise: openTicketRemise,
@@ -521,7 +522,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
        « −40 % » unique laisserait croire à une promotion là où la gérante a
        ajouté son propre geste par-dessus — et personne, au moment du retour,
        ne saurait plus démêler ce qui venait du magasin de ce qui venait d'elle. */
-    return `<div class="bq-line">
+    return `<div class="bq-line" data-bq-line="${i}">
       <span class="bq-line-art">${artOf(p, ln.color)}</span>
       <span class="bq-line-mid">
         <span class="bq-line-name" title="${esc(p.name)}">${esc(p.name)}</span>
@@ -608,7 +609,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
     Object.assign(sheet, {
       pid,
       size: null, color: p.colors[0], qty: 1, remise: 0, agreed: 0, bmode: 'pct', btext: '', bok: true, under: false,
-      exchange: !!(opts && opts.exchange),
+      exchange: !!(opts && opts.exchange), edit: null, tk: undefined, ...(opts && opts.edit != null ? lineDesk().sheetFrom(opts.edit) : {}),
     });
     /* Ouverte depuis la recherche ou la douchette : la déclinaison trouvée est
        déjà cochée, la vendeuse n'a plus qu'à confirmer (ou poser sa remise). */
@@ -630,7 +631,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
     const shPromo = promoFor(sheet.pid);
     const shBase = shPromo ? shPromo.price : shelf(p.price);
     const unit = sheetUnit(shBase);
-    const available = availableStock(p.id, sheet.size, sheet.color);
+    const available = availableStock(p.id, sheet.size, sheet.color, sheet.tk);
     const canAdd = available >= sheet.qty;
     const el = $('#bq-sheetm', root);
     el.innerHTML = `
@@ -653,7 +654,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
         <div class="bq-f-lbl">${sizeWord(p)} <span class="opt">· stock par taille en direct</span></div>
         <div class="bq-seg" data-lens-demo id="bq-size-seg">
           ${sizesOf(p).map((s) => {
-            const st = availableStock(p.id, s, sheet.color);
+            const st = availableStock(p.id, s, sheet.color, sheet.tk);
             const usual = !sheet.exchange && c && p.kind === 'taille' && s === c.taille;
             return `<button class="bq-seg-it ${s === sheet.size ? 'on' : ''}" data-lens-item data-bq-size="${esc(s)}">
               ${usual ? '<span class="bq-seg-usual">habituelle</span>' : ''}${esc(s)}<small>${st === 0 ? 'épuisé' : `${st} en stock`}</small></button>`;
@@ -688,7 +689,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
         <button class="bq-btn secondary" data-bq-close>Annuler</button>
         ${sheet.exchange
           ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i><span class="bq-sheet-add-l">Choisir cet article · <span class="nb">${fmtMAD(shBase)}</span></span></button>`
-          : `<button class="bq-btn primary" id="bq-sheet-add" ${sheet.bok ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l"><span id="bq-sheet-add-t">${sheet.under ? esc(tr('Vendre quand même')) : 'Ajouter au ticket'}</span> · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
+          : `<button class="bq-btn primary" id="bq-sheet-add" ${sheet.bok ? '' : 'disabled'}><i data-lucide="plus"></i><span class="bq-sheet-add-l"><span id="bq-sheet-add-t">${sheet.under ? esc(tr('Vendre quand même')) : sheet.edit != null ? esc(tr('Mettre à jour')) : 'Ajouter au ticket'}</span> · <span class="nb" id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></span></button>`}
       </div>`;
 
     /* Remise à la marocaine : % , prix convenu ou −MAD (bargain-ui.js). Les
@@ -726,7 +727,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
       const addB = $('#bq-sheet-add', el);
       if (addB && !sheet.exchange) addB.disabled = !sheet.bok;   // hors stock : addToTicket demande un second appui
       const addT = $('#bq-sheet-add-t', el);
-      if (addT) addT.textContent = sheet.under ? tr('Vendre quand même') : tr('Ajouter au ticket');
+      if (addT) addT.textContent = sheet.under ? tr('Vendre quand même') : sheet.edit != null ? tr('Mettre à jour') : tr('Ajouter au ticket');
       const cta = $('#bq-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);
       const qv = $('#bq-qty-val', el);
@@ -737,7 +738,7 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
       const b = e.target.closest('[data-bq-size]');
       if (!b || b.disabled) return;
       sheet.size = b.dataset.bqSize;
-      const available = availableStock(p.id, sheet.size, sheet.color);
+      const available = availableStock(p.id, sheet.size, sheet.color, sheet.tk);
       if (sheet.qty > available) sheet.qty = Math.max(1, available);
       $$('[data-bq-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
@@ -746,10 +747,10 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
     // seulement le choix retenu.
     $('#bq-colors', el).addEventListener('kc:change', (e) => {
       sheet.color = e.detail.value;
-      if (availableStock(p.id, sheet.size, sheet.color) <= 0) {
-        sheet.size = firstFreeFor(p, sheet.color) || sizesOf(p)[0];
+      if (availableStock(p.id, sheet.size, sheet.color, sheet.tk) <= 0) {
+        sheet.size = firstFreeFor(p, sheet.color, sheet.tk) || sizesOf(p)[0];
       }
-      sheet.qty = Math.max(1, Math.min(sheet.qty, availableStock(p.id, sheet.size, sheet.color)));
+      sheet.qty = Math.max(1, Math.min(sheet.qty, availableStock(p.id, sheet.size, sheet.color, sheet.tk)));
       renderSheet(); icons(); lens();
     });
     const qMinus = $('#bq-qty-minus', el);
@@ -776,7 +777,8 @@ import('./exch-combined.js?v=87').then((m) => { CX_NOTE = m; }).catch(() => {});
         return;
       }
       const go = () => {
-        if (addToTicket(sheet.pid, { size: sheet.size, color: sheet.color, qty: sheet.qty, remise: sheet.remise, agreed: sheet.agreed })) {
+        const cfg = { size: sheet.size, color: sheet.color, qty: sheet.qty, remise: sheet.remise, agreed: sheet.agreed };
+        if (sheet.edit != null ? lineDesk().replace(sheet.edit, cfg) : addToTicket(sheet.pid, cfg)) {
           closeVeil('#bq-sheet-veil');
         } else { const t = $('#bq-sheet-add-t', el); if (t) t.textContent = tr('Vendre quand même'); }   // hors stock : le second appui vend
       };

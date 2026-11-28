@@ -11,7 +11,7 @@
  * onglets) reste dans pos-boutique.js ; `io` en passe les accès :
  *   demo, ensure() → Promise de bail, lock(work), lease() → bail relu,
  *   save() → bool, seq() / setSeq(n), sales() → journal, render(ticket). */
-import { ticketOwner } from './ticket-owner.js?v=9';
+import { ticketOwner } from './ticket-owner.js?v=10';
 
 export function prepareNumber(ticket, io) {
   if (io.demo || !ticket || ticket.num) return Promise.resolve(ticket && ticket.num);
