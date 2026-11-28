@@ -6,8 +6,8 @@
   /* menu-part:recipes */
   /* Unités courtes dans la liste (« g », « kg », « Botte ») : le libellé long
      « Gramme (g) » était tronqué en « Gramme (... » dans une cellule étroite. */
-  function recipeUnitOptions(value){
-    const api=window.KiwiRestaurantUnits,selected=api?.normalize?.(value,'')||'';
+  function recipeUnitOptions(value,isYield){
+    const api=window.KiwiRestaurantUnits,selected=api?.normalize?.(value||(isYield?'kg':''),'')||'';
     return `<option value="">${esc(ui('rxUnitPh'))}</option>${(api?.list?.()||[]).map(unit=>`<option value="${esc(unit.id)}" title="${esc(unit.label)}"${unit.id===selected?' selected':''}>${esc(unit.family==='mass'||unit.family==='volume'?unit.id:unit.label)}</option>`).join('')}`;
   }
   /* Coût simple allumé : chaque ligne prend un « prix de la portion » saisi à
@@ -204,7 +204,7 @@
         `<p>${esc(ui('rxCompositionSub'))}</p>` +
         `</div>` +
         `<div class="rmw-rx-meta">` +
-        (prepMode?`<label><span>${esc(ui('prepYield'))}</span><span class="rmw-rx-yield"><input class="rmw-rx-in" type="number" inputmode="decimal" min="0" step="0.001" data-portions value="${r.portions||1}"/><select class="rmw-rx-unit" data-yield-unit data-kiwi-native-select aria-label="${esc(ui('prepYield'))}">${recipeUnitOptions(r.yieldUnit||'kg')}</select></span></label>`:
+        (prepMode?`<label><span>${esc(ui('prepYield'))}</span><span class="rmw-rx-yield"><input class="rmw-rx-in" type="number" inputmode="decimal" min="0" step="0.001" data-portions value="${r.portions||1}"/><select class="rmw-rx-unit" data-yield-unit data-kiwi-native-select aria-label="${esc(ui('prepYield'))}">${recipeUnitOptions(r.yieldUnit,true)}</select></span></label>`:
         `<label>` +
         `<span>${esc(ui('rxPortions'))}</span>` +
         `<input class="rmw-rx-in" type="number" inputmode="numeric" min="1" step="1" data-portions value="${r.portions||1}"/>` +

@@ -224,8 +224,8 @@
     "sha": "468f83916655c7d7"
   },
   "assets/caisse-accounting.js": {
-    "v": "54",
-    "sha": "9ea88f29e549f012"
+    "v": "55",
+    "sha": "95a0597a162f6c1d"
   },
   "assets/caisse-app.js": {
     "v": "63",
@@ -264,8 +264,8 @@
     "sha": "a701cf631774a4b3"
   },
   "assets/caisse-lang.js": {
-    "v": "193",
-    "sha": "4e0ce9e8dde0636a"
+    "v": "194",
+    "sha": "8e17a1e776731060"
   },
   "assets/caisse-link.js": {
     "v": "23",
@@ -1708,8 +1708,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "381",
-    "sha": "8bbf1d3fe900251a"
+    "v": "383",
+    "sha": "7cee7ba91e2b75bc"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2436,16 +2436,16 @@
     "sha": "ebf44006a916edac"
   },
   "assets/restaurant-menu/recipes.js": {
-    "v": "21",
-    "sha": "f965f9fe6e231daa"
+    "v": "22",
+    "sha": "18174a62f28e3cff"
   },
   "assets/restaurant-menu/strings.js": {
     "v": "39",
     "sha": "a4367d4321bd6a95"
   },
   "assets/restaurant-menu/styles.js": {
-    "v": "22",
-    "sha": "e9d5070b17d4026f"
+    "v": "23",
+    "sha": "5a6e4fb09ea1840b"
   },
   "assets/restaurant-recipes.js": {
     "v": "30",

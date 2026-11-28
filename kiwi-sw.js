@@ -166,7 +166,7 @@ var SHELL = [
   '/assets/dashboard-shell.css?v=17',
   '/kiwi-caisse.html',
   '/assets/caisse/table-settlement.js?v=2',
-  '/assets/caisse-accounting.js?v=54',
+  '/assets/caisse-accounting.js?v=55',
   '/assets/caisse-floor.js?v=29',
   '/assets/caisse-kitchen.js?v=49',
   '/assets/caisse/receipts.js?v=10',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/z-reconciliation.js?v=34',
   '/assets/design-2026.js?v=2',
   '/assets/design-vexel-layout.js?v=2104',
-  '/assets/pages/dashboard-startup.js?v=381',
+  '/assets/pages/dashboard-startup.js?v=383',
   '/assets/pages/dashboard-loader.js?v=134',
   '/assets/hotel/model.js?v=11',
   '/assets/hotel/views.js?v=9',
@@ -478,7 +478,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=39',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=193',
+  '/assets/caisse-lang.js?v=194',
   '/assets/venue-store.js?v=7',
   '/assets/discount-policy.js?v=7',
   '/assets/till-policy-settings.js?v=3',
@@ -541,8 +541,8 @@ var SHELL = [
   '/assets/team-hours.js?v=41',
   '/assets/menu-i18n.js?v=10',
   '/assets/restaurant-menu/strings.js?v=39',
-  '/assets/restaurant-menu/recipes.js?v=21',
-  '/assets/restaurant-menu/styles.js?v=22',
+  '/assets/restaurant-menu/recipes.js?v=22',
+  '/assets/restaurant-menu/styles.js?v=23',
   '/assets/restaurant-menu-workspace.js?v=151',
   '/assets/menu-promos-dashboard.js?v=11',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

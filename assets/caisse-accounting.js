@@ -2424,7 +2424,7 @@
     }
     async function closeRegister() {
       if (registerClosed) { finishClose(); return; }
-      if (registerClosing) { toast('Clôture en cours · patientez quelques secondes'); return; }
+      if (registerClosing) { toast((globalThis.window?.KiwiCaisseLang || { tr: s => s }).tr('Clôture en cours · patientez quelques secondes')); return; }
       const countInput = $('#clo-count');
       const countedRaw = countInput ? countInput.value.trim() : '';
       const counted = countedRaw === '' ? NaN : Number(countedRaw);
