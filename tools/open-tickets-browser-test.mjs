@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Tickets en attente, boutique et maison, peau 2027 (assets/retail-open-tickets.js).
+/* Tickets ouverts, boutique et maison, peau 2027 (assets/retail-open-tickets.js).
  * Vraie démo, vrais clics, tablette : mettre un ticket de côté, le voir dans la
  * liste, le reprendre au même total, en supprimer un, et la fusion des listes
  * de deux caisses (la tombe gagne, la plus récente gagne, les vieilles tombes partent).
@@ -103,17 +103,17 @@ const lines = (page) => page.evaluate(() => { const v = document.querySelector('
 
 for (const id of ['boutique', 'maison']) {
   // coverage: surface=caisse-boutique locale=fr viewport=tablet
-  await S.run(id + ' : mettre en attente, voir, reprendre au même total', async (t) => {
+  await S.run(id + ' : garder ouvert, voir, rouvrir au même total', async (t) => {
     const page = await till(t, id);
     /* La démo ouvre sur un ticket déjà commencé : on y ajoute un article. */
     await addItem(page, id, 1);
     const before = await total(page, id);
     assert(before > 0, id + ' : le ticket porte des articles, total ' + before);
-    assert((L = await label(page, id)) === 'Mettre en attente', id + ' : ticket plein, le bouton propose « Mettre en attente »', L);
+    assert((L = await label(page, id)) === 'Garder ouvert', id + ' : ticket plein, le bouton propose « Garder ouvert »', L);
     t.step('hold the sale');
     await click(page, TILLS[id].hold);
     assert((await total(page, id)) === 0, id + ' : le ticket courant est vidé');
-    assert((L = await label(page, id)) === 'Tickets en attente · 1', id + ' : le bouton compte un ticket en attente', L);
+    assert((L = await label(page, id)) === 'Tickets ouverts · 1', id + ' : le bouton compte un ticket ouvert', L);
     t.step('open the held sales sheet');
     await click(page, TILLS[id].hold);
     await page.waitForSelector('.kotk-sheet .kotk-card', { visible: true, timeout: 5000 });
@@ -125,13 +125,13 @@ for (const id of ['boutique', 'maison']) {
     await click(page, '.kotk-sheet .kotk-card k-button[data-otk="open"]');
     await page.waitForFunction(() => !document.querySelector('.kotk-sheet'), { timeout: 5000 });
     await sleep(300);
-    assert((await total(page, id)) === before, id + ' : le ticket repris revient au même total');
-    assert((L = await label(page, id)) === 'Mettre en attente', id + ' : plus rien en attente, le ticket est de retour', L);
+    assert((await total(page, id)) === before, id + ' : le ticket rouvert revient au même total');
+    assert((L = await label(page, id)) === 'Garder ouvert', id + ' : plus aucun ticket ouvert, le ticket est de retour', L);
     if (shots) await page.screenshot({ path: path.join(shots, id + '-resumed.png') });
   });
 
   // coverage: surface=caisse-boutique locale=fr viewport=tablet
-  await S.run(id + ' : supprimer un ticket en attente demande deux touches', async (t) => {
+  await S.run(id + ' : supprimer un ticket ouvert demande deux touches', async (t) => {
     const page = await till(t, id);
     await addItem(page, id, 2);
     await click(page, TILLS[id].hold);
@@ -145,7 +145,7 @@ for (const id of ['boutique', 'maison']) {
     assert(true, id + ' : la seconde touche supprime, la liste est vide');
     await page.keyboard.press('Escape');
     await sleep(500);
-    assert((L = await label(page, id)) === 'Aucun ticket en attente [off]', id + ' : le pied revient à zéro', L);
+    assert((L = await label(page, id)) === 'Aucun ticket ouvert [off]', id + ' : le pied revient à zéro', L);
   });
 }
 

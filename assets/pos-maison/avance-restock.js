@@ -5,9 +5,9 @@
  * (releaseStock sait rendre une pièce vendue au détail au dépareillé,
  * persistStock écrit la ligne du journal), son registre d'avoirs et son bon. */
 import { openAvanceRestock, expiredAvances, retailModes } from '../retail-avance.js?v=6';
-import { merchantSlug, persistStock, AVOIRS, persistAvoirs, renderBadges, creditFromServer, toast, root } from '../pos-maison.js?v=287';
-import { clById, openCamScan, esc, releaseStock } from './sales.js?v=200';
-import { catDB, normScan, armScanCapture, disarmScanCapture, openVoucher } from './checkout.js?v=200';
+import { merchantSlug, persistStock, AVOIRS, persistAvoirs, renderBadges, creditFromServer, toast, root } from '../pos-maison.js?v=288';
+import { clById, openCamScan, esc, releaseStock } from './sales.js?v=201';
+import { catDB, normScan, armScanCapture, disarmScanCapture, openVoucher } from './checkout.js?v=201';
 const tr = (x) => (globalThis.window?.KiwiCaisseLang || { tr: (y) => y }).tr(x);
 
 function deps(refresh) {

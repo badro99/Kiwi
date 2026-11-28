@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · TICKETS EN ATTENTE (boutique et maison, peau 2027)
+ * Kiwi · TICKETS OUVERTS (boutique et maison, peau 2027)
  * ---------------------------------------------------------------------------
  * Une cliente essaie encore, une autre attend à la caisse : la vendeuse met le
  * ticket de la première de côté, encaisse la seconde, puis reprend le premier.
@@ -10,7 +10,7 @@
  *    aucun numéro n'est brûlé ; la reprise recopie les champs gardés de côté
  *    dans le ticket courant, vide, et garde à nouveau son numéro à lui ;
  *  · la réserve d'articles de la caisse est une projection en mémoire (« base
- *    moins le ticket ouvert », pos-boutique.js › stockAdd). Un ticket en attente
+ *    moins le ticket ouvert », pos-boutique.js › stockAdd). Un ticket ouvert
  *    ne retient donc rien : on rend sa réserve à la mise de côté (`release`),
  *    on la reprend à la reprise (`hold`). Un ticket supprimé ne touche à rien ;
  *  · la liste est un document du magasin (store_docs « opentickets ») : chaque
@@ -120,7 +120,7 @@ function openTickets(cfg) {
     load();
     const cur = cfg.current();
     if (!cur || !Array.isArray(cur.lines) || !cur.lines.length) return false;
-    if (cfg.busy && cfg.busy()) { cfg.toast(tr('Terminez l’opération en cours avant de mettre en attente')); return false; }
+    if (cfg.busy && cfg.busy()) { cfg.toast(tr('Terminez l’opération en cours avant de garder le ticket ouvert')); return false; }
     const d = cfg.describe(cur) || {};
     const keep = new Set(cfg.keep || []);
     const snap = {};
@@ -133,17 +133,17 @@ function openTickets(cfg) {
     save();
     try { cfg.release(snap.lines || []); } catch (_) {}
     cfg.after();
-    if (!(opts && opts.quiet)) cfg.toast(tr('Ticket mis en attente'), d.name || '');
+    if (!(opts && opts.quiet)) cfg.toast(tr('Ticket gardé ouvert'), d.name || '');
     changed();
     return true;
   }
 
   function resume(id) {
     load();
-    if (cfg.busy && cfg.busy()) { cfg.toast(tr('Terminez l’opération en cours avant de mettre en attente')); return Promise.resolve(false); }
+    if (cfg.busy && cfg.busy()) { cfg.toast(tr('Terminez l’opération en cours avant de garder le ticket ouvert')); return Promise.resolve(false); }
     return fresh().then(() => {
       const e = LIST.find((x) => x.id === id);
-      if (!e || e.gone || !e.ticket) { cfg.toast(tr('Ce ticket a déjà été repris sur une autre caisse')); paint(); return false; }
+      if (!e || e.gone || !e.ticket) { cfg.toast(tr('Ce ticket a déjà été rouvert sur une autre caisse')); paint(); return false; }
       const before = cfg.current();
       const parkedNow = before && before.lines && before.lines.length ? park({ quiet: true }) : false;
       const now = cfg.current();
@@ -157,7 +157,7 @@ function openTickets(cfg) {
       try { cfg.hold(now.lines || []); } catch (_) {}
       cfg.after();
       close();
-      cfg.toast(tr('Ticket repris'), parkedNow ? tr('Le ticket en cours a été mis en attente') : (e.name || ''));
+      cfg.toast(tr('Ticket rouvert'), parkedNow ? tr('Le ticket en cours reste ouvert') : (e.name || ''));
       changed();
       return true;
     });
@@ -168,7 +168,7 @@ function openTickets(cfg) {
     if (!e || e.gone) return;
     tomb(e);
     save();
-    cfg.toast(tr('Ticket en attente supprimé'));
+    cfg.toast(tr('Ticket ouvert supprimé'));
     changed();
   }
 
@@ -184,17 +184,17 @@ function openTickets(cfg) {
       + '<div class="kotk-top"><span class="kotk-total">' + escHtml(cfg.money(e.total)) + '</span><span class="kotk-when k-foot">' + escHtml(when(e.at)) + '</span></div>'
       + '<div class="kotk-name k-body-s">' + escHtml(e.name || tr('Sans cliente')) + '</div>'
       + '<div class="kotk-items k-foot">' + escHtml(items) + '</div>'
-      + (e.by ? '<div class="kotk-by k-foot">' + escHtml(tr('Mis en attente par {n}').replace('{n}', e.by)) + '</div>' : '')
-      + '</div><div class="kotk-acts"><k-button variant="primary" data-otk="open" label="' + escHtml(tr('Reprendre')) + '"></k-button>'
+      + (e.by ? '<div class="kotk-by k-foot">' + escHtml(tr('Ouvert par {n}').replace('{n}', e.by)) + '</div>' : '')
+      + '</div><div class="kotk-acts"><k-button variant="primary" data-otk="open" label="' + escHtml(tr('Ouvrir')) + '"></k-button>'
       + '<k-button variant="tonal-danger" data-otk="del" label="' + escHtml(del ? tr('Confirmer') : tr('Supprimer')) + '"></k-button></div>'
       + '</article>';
   }
   function paint() {
     if (!sheet) return;
     const list = live();
-    sheet.setAttribute('heading', tr('Tickets en attente') + (list.length ? ' · ' + list.length : ''));
+    sheet.setAttribute('heading', tr('Tickets ouverts') + (list.length ? ' · ' + list.length : ''));
     const body = sheet.querySelector('.kotk');
-    if (body) body.innerHTML = list.length ? '<div class="kotk-list">' + list.map(cardHtml).join('') + '</div>' : '<p class="kotk-empty k-body">' + escHtml(tr('Aucun ticket en attente')) + '</p>';
+    if (body) body.innerHTML = list.length ? '<div class="kotk-list">' + list.map(cardHtml).join('') + '</div>' : '<p class="kotk-empty k-body">' + escHtml(tr('Aucun ticket ouvert')) + '</p>';
   }
   function close() {
     if (!sheet) return;
@@ -232,14 +232,14 @@ function openTickets(cfg) {
     return true;
   }
 
-  /* Le bouton du pied : « Mettre en attente » sur un ticket plein, la liste sur
+  /* Le bouton du pied : « Garder ouvert » sur un ticket plein, la liste sur
      un ticket vide (comme les caisses de mode : un seul bouton, son état dit
      ce qu'il fait). */
   function button(cur) {
     const full = !!(cur && cur.lines && cur.lines.length);
     const n = live().length;
-    if (full) return { label: tr('Mettre en attente'), disabled: false, run: () => park() };
-    return { label: n ? tr('Tickets en attente') + ' · ' + n : tr('Aucun ticket en attente'), disabled: !n, run: openSheet };
+    if (full) return { label: tr('Garder ouvert'), disabled: false, run: () => park() };
+    return { label: n ? tr('Tickets ouverts') + ' · ' + n : tr('Aucun ticket ouvert'), disabled: !n, run: openSheet };
   }
 
   return { park, resume, remove, list: live, open: openSheet, close, button };
