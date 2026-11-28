@@ -141,7 +141,7 @@ window.__kiwiBoutiqueCatalogParts.ledger = function (core) {
      * keep the later value, and the other value is filed on the record under
      * `conflicts` for the merchant to review. A later edit of that field resolves
      * it, on every device. */
-    const CATEGORY_FIELDS = ['name', 'color', 'order'];
+    const CATEGORY_FIELDS = ['name', 'color', 'order', 'parentId'];   // parentId : la sous-catégorie (un seul niveau, inventaire intelligent)
     const PRODUCT_FIELDS = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'artPicked', 'kind', 'flag', 'grad',
       'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
       'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived', 'online'];

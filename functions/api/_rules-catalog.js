@@ -74,7 +74,7 @@ export function compactForWrite(data) {
  * keep the later value, and the other value is filed on the record under
  * `conflicts` for the merchant to review. A later edit of that field resolves
  * it, on every device. */
-export const CATEGORY_FIELDS = ['name', 'color', 'order'];
+export const CATEGORY_FIELDS = ['name', 'color', 'order', 'parentId'];   // parentId : la sous-catégorie (un seul niveau, inventaire intelligent)
 export const PRODUCT_FIELDS = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'artPicked', 'kind', 'flag', 'grad',
   'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
   'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived', 'online'];

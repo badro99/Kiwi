@@ -770,7 +770,7 @@
     opts = opts || {};
     const reassignTo = opts.reassignTo || null; // null → uncategorised
     db.products.forEach((p) => { if (p.categoryId === id) { const b = snap(p); p.categoryId = reassignTo; touch('products', p, b); } });
-    db.categories = db.categories.filter((c) => c.id !== id);
+    db.categories = db.categories.filter((c) => c.id !== id); db.categories.forEach((c) => { if (c.parentId === id) { const b = snap(c); c.parentId = ''; touch('categories', c, b); } });   // ses sous-catégories remontent au premier niveau
     tomb(id);
     commit();
   }
@@ -1350,7 +1350,7 @@
     sizePresets,
     // categories
     listCategories: () => (load(), listCategories()), addCategory: (...a) => (load(), addCategory(...a)),
-    renameCategory: (...a) => (load(), renameCategory(...a)), setCategoryColor: (...a) => (load(), setCategoryColor(...a)),
+    renameCategory: (...a) => (load(), renameCategory(...a)), setCategoryColor: (...a) => (load(), setCategoryColor(...a)), /* Sous-catégorie (inventaire intelligent) : un seul niveau. Une mère n'a pas de mère ; une catégorie qui a des filles n'en devient pas une. '' la remet au premier niveau. */ setCategoryParent: (id, parentId) => { load(); const c = catById(id), m = parentId ? catById(parentId) : null; if (!c || (parentId && (!m || m.id === c.id || m.parentId || db.categories.some((x) => x.parentId === c.id)))) return null; const b = snap(c); c.parentId = m ? m.id : ''; touch('categories', c, b); commit(); return c; },
     deleteCategory: (...a) => (load(), deleteCategory(...a)), categoryCount: (id) => (load(), categoryCount(id)),
     // products
     listProducts: (o) => (load(), listProducts(o)), getProduct: (id) => (load(), getProduct(id)),

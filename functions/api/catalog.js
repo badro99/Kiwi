@@ -142,6 +142,7 @@ function sanitize(raw) {
       name: str(c && c.name, 80),
       color: str(c && c.color, 24),
       order: num(c && c.order, 1e4) | 0,
+      parentId: str(c && c.parentId, 40),   // sous-catégorie : la catégorie mère (un niveau)
       metaAt: ts(c && c.metaAt),
     }))
     .filter((c) => c.id);

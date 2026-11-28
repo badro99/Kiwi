@@ -1798,7 +1798,7 @@ section('Whole-project regressions');
     'till-inventory-access-test.mjs',
     /* Un carton réparti sur ses tailles en un geste : comme les ventes de la boutique, égal, saisie rapide « M3 L5 XL2 », le reste sur la dernière taille (propriétaire, 29 oct.). */
     'boutique-size-split-test.mjs', 'boutique-total-optional-test.mjs', 'boutique-exact-colors-test.mjs',
-    'boutique-size-split-browser-test.mjs', 'boutique-drafts-browser-test.mjs', 'boutique-name-taken-browser-test.mjs', 'boutique-size-minus-browser-test.mjs', 'boutique-own-codes-browser-test.mjs', 'maison-size-codes-browser-test.mjs', 'scanned-line-remise-browser-test.mjs', 'odd-box-browser-test.mjs',
+    'boutique-size-split-browser-test.mjs', 'boutique-drafts-browser-test.mjs', 'smart-inventory-browser-test.mjs', 'boutique-name-taken-browser-test.mjs', 'boutique-size-minus-browser-test.mjs', 'boutique-own-codes-browser-test.mjs', 'maison-size-codes-browser-test.mjs', 'scanned-line-remise-browser-test.mjs', 'odd-box-browser-test.mjs',
     /* Après une réception, les étiquettes ne sortent que pour les nouvelles pièces, même fiche rouverte (Santos, 31 oct.). */
     'boutique-label-receipt-test.mjs',
     'maison-till-stock-journal-test.mjs',

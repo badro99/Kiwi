@@ -1821,7 +1821,7 @@ function _bqxSheetSub(data) {
   return `${data.category ? data.category.name : t.noCat} · ${_bqxPrice(data.product.priceMAD)} ${t.cur} · ${_bqxPfFill(t.inStock, { n: data.stock })}`;
 }
 
-let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=40', document.baseURI).href).then((m) => (_bqxSzMod = m)));
+let _bqxSzMod = null, _bqxSzView = null; const _bqxSz = () => (_bqxSzMod ? Promise.resolve(_bqxSzMod) : import(new URL('assets/boutique-sizes.js?v=41', document.baseURI).href).then((m) => (_bqxSzMod = m)));
 function _bqxOpenProduct(pid, target, drawerOnly) {
   const t = _bqxShT();
   const data = CAT().getProduct(pid);
@@ -3464,7 +3464,7 @@ function _bqxPfOpen(p) {
   if (!b) return;
   b.classList.add('bqx-pf-modal');
   _bqxSz().then((m) => { if (b.isConnected && m.wireNameCheck) b.__kbsNameTaken = m.wireNameCheck(b.querySelector('[data-bqx-name]'), CAT(), _bqxPfLang(), p ? p.id : undefined); }).catch(() => {});   // un nom déjà dans l'inventaire
-  _bqxPfWire(b, p); _bqxPfDraft = null; const _dTok = (_bqxPfOpen.n = (_bqxPfOpen.n || 0) + 1); if (!p) import(new URL('assets/boutique-drafts.js?v=2', document.baseURI).href).then((m) => { if (_dTok === _bqxPfOpen.n && b.isConnected) _bqxPfDraft = m.rememberForm(b, 'new-product:dash:' + (_bqxVenue() || 'local'), _bqxPfLang()); }).catch(() => {});   // fermée par erreur, la saisie revient (chaque boutique la sienne)
+  _bqxPfWire(b, p); _bqxPfDraft = null; const _dTok = (_bqxPfOpen.n = (_bqxPfOpen.n || 0) + 1); if (!p) import(new URL('assets/boutique-drafts.js?v=3', document.baseURI).href).then((m) => { if (_dTok === _bqxPfOpen.n && b.isConnected) _bqxPfDraft = m.rememberForm(b, 'new-product:dash:' + (_bqxVenue() || 'local'), _bqxPfLang()); }).catch(() => {});   // fermée par erreur, la saisie revient (chaque boutique la sienne)
   if (!p) setTimeout(() => { const i = b.querySelector('[data-bqx-name]'); if (i) i.focus(); }, 60);
 }
 /* The open product form, not just the first backdrop on the page. */

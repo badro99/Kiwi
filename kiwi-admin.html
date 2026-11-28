@@ -1264,6 +1264,8 @@ html[dir="rtl"] .md-x { left:12px; right:auto; }
         hint:'Fait choisir une catégorie à chaque article : A pour la marchandise du magasin, B pour le dépôt-vente. Le client ne voit que les lettres.' },
       { key:'caisseInventoryAdmin', label:'Gestion complète de l’inventaire sur la caisse', off:true,
         hint:'Autorise l’équipe à créer, modifier et supprimer produits, catégories, variantes, codes-barres, coûts et quantités directement sur la caisse Maison ou Boutique.' },
+      { key:'smartInventory', label:'Inventaire intelligent', off:true,
+        hint:'Éteint par défaut. Sur la caisse boutique, la fiche « Nouveau produit » commence par la catégorie, propose une sous-catégorie facultative (créée sur place), puis pose dans le nom la référence suivante de la catégorie : Jeans donne JEN0153 si JEN0152 est la plus haute. Jamais un numéro déjà pris, archives comprises. La référence reste modifiable. Éteint, la fiche redevient celle d’avant ; les sous-catégories créées restent.' },
       { key:'boutiqueSizeColors', label:'Tailles et couleurs rapides', off:true,
         hint:'Éteint par défaut. À la réception d’un article, répartit le carton sur les tailles en un geste (« S-XL 5 M3 »), et ouvre une colonne par couleur (« noir S-XL 4 bleu M3 ») : chaque taille de chaque couleur reçoit son code-barres. Éteint, l’écran des tailles reste celui d’avant.' },
       { key:'expenses', label:'Dépenses (registre du propriétaire)', off:true,

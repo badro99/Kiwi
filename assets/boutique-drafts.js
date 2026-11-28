@@ -85,8 +85,8 @@ export function noteHtml(lang) {
    place et sa nature, jamais par son texte. La grille des tailles, si elle est
    dedans, a son propre brouillon. Rend { clear(), restored }. */
 const FIELDS = 'input, select, textarea';
-/* La grille des tailles a son propre brouillon ; la photo (colonne de côté) se monte après coup. */
-const skip = (el) => el.closest('[data-kbs], .bqx-pf-side, [data-ktp]') || /^(file|hidden|button|submit|reset|image)$/i.test(el.type || '');
+/* La grille des tailles a son propre brouillon ; la photo (colonne de côté) et la sous-catégorie (inventaire intelligent) se montent après coup. */
+const skip = (el) => el.closest('[data-kbs], .bqx-pf-side, [data-ktp], [data-draft-skip]') || /^(file|hidden|button|submit|reset|image)$/i.test(el.type || '');
 const sig = (el) => [el.tagName, el.type || '', el.name || '', el.type === 'radio' || el.type === 'checkbox' ? el.value : ''].join(':');
 const snap = (root) => Array.from(root.querySelectorAll(FIELDS)).filter((el) => !skip(el))
   .map((el) => ({ s: sig(el), v: el.type === 'radio' || el.type === 'checkbox' ? '' : String(el.value || ''), c: !!el.checked }));
