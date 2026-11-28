@@ -131,6 +131,28 @@ ok((await boxes()).every((x) => x === ''), 'Annuler empties the boxes again');
 await click('[data-kbsp-go="even"]');
 v = (await boxes()).map((x) => +x || 0);
 ok(JSON.stringify(v) === JSON.stringify([3, 3, 4, 4, 4, 3, 3]), 'Égal · 3 each, the 3 extra on S M L', JSON.stringify(v));
+/* E2 · sizes not in the carton (owner, 28 Nov 2026: « check the box of which
+   sizes are available, so that Égal only divides between available sizes »). */
+ok(await page.$$eval('[data-kbsp-on]', (all) => all.length === 7 && all.every((c) => c.checked)), 'E2 · a ticked box under each of the 7 sizes');
+await click('[data-kbsp-on="0"]');
+await click('[data-kbsp-on="6"]');
+ok(await page.$$eval('[data-kbsp-bar]', (all) => all[0].classList.contains('is-off') && all[6].classList.contains('is-off') && !all[3].classList.contains('is-off')), 'E2 · XXS and XXL unticked: their bars fade');
+ok(await page.$eval('[data-kbsp-why]', (p) => /décochées ne reçoivent rien/.test(p.textContent)), 'E2 · and a line says they get nothing');
+await click('[data-kbsp-go="even"]');
+v = (await boxes()).map((x) => +x || 0);
+ok(JSON.stringify(v) === JSON.stringify([0, 5, 5, 5, 5, 4, 0]), 'E2 · Égal splits the 24 over XS to XL only', JSON.stringify(v));
+await click('[data-kbsp-go="curve"]');
+v = (await boxes()).map((x) => +x || 0);
+ok(v[0] === 0 && v[6] === 0 && v.reduce((s, x) => s + x, 0) === 24, 'E2 · « Comme vos ventes » too leaves them at zero', JSON.stringify(v));
+await click('[data-kbsp-on="0"]');
+await click('[data-kbsp-on="6"]');
+await click('[data-kbsp-on="0"]'); await click('[data-kbsp-on="1"]'); await click('[data-kbsp-on="2"]'); await click('[data-kbsp-on="3"]');
+await click('[data-kbsp-on="4"]'); await click('[data-kbsp-on="5"]'); await click('[data-kbsp-on="6"]');
+ok(await page.$$eval('[data-kbsp-go]', (all) => all.every((b) => b.disabled)), 'E2 · nothing ticked: the split chips are off');
+for (let k = 0; k < 7; k++) await click(`[data-kbsp-on="${k}"]`);
+await click('[data-kbsp-go="even"]');
+v = (await boxes()).map((x) => +x || 0);
+ok(JSON.stringify(v) === JSON.stringify([3, 3, 4, 4, 4, 3, 3]), 'E2 · all ticked again: Égal is back to every size', JSON.stringify(v));
 const mBox = (await page.$$('[data-kbs-in]'))[3];
 await mBox.click();
 await page.keyboard.press('ArrowUp');

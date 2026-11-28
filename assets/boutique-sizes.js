@@ -23,7 +23,7 @@
  * tableau de bord (pages-pro-boutique.js) : même balisage, même CSS.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-import * as SPLIT from './boutique-size-split.js?v=4';
+import * as SPLIT from './boutique-size-split.js?v=5';
 import * as CODES from './boutique-size-codes.js?v=4';
 const plainWord = (x) => String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 import * as COLORS from './boutique-size-colors.js?v=8';

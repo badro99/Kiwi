@@ -9,6 +9,9 @@
  *    d'abord, toute la boutique ensuite), ou selon son stock quand elle n'a
  *    pas encore assez vendu, ou selon la courbe la plus courante en boutique ;
  *  · « Égal » : la même chose sur chaque taille, le surplus au milieu ;
+ *  · une case à cocher sous chaque taille : décochée, la taille n'est pas
+ *    disponible pour ce carton, et ni « Égal » ni « Comme vos ventes » ne lui
+ *    donnent de pièce (owner, 28 nov. 2026) ;
  *  · la saisie rapide : « M3 L5 XL2 », « S-XL 4 », « 38:2 39:4 », ou sept
  *    nombres dans l'ordre des tailles. Les cases se remplissent en tapant ;
  *  · le reste en un clic sur la dernière taille touchée, Annuler, et les
@@ -41,6 +44,7 @@ const T = {
     over: (n) => (n === 1 ? '1 pièce de trop' : `${n} pièces de trop`),
     keys: 'Dans une case, les flèches haut et bas ajoutent ou retirent une pièce.',
     total: 'Nombre de pièces à répartir',
+    avail: (z) => `${z} disponible`, offHint: 'Les tailles décochées ne reçoivent rien.',
   },
   en: {
     lead: (n) => `Split the ${n} pieces`, leadRestock: 'Split', pieces: 'pieces',
@@ -56,6 +60,7 @@ const T = {
     over: (n) => (n === 1 ? '1 piece too many' : `${n} pieces too many`),
     keys: 'In a box, the up and down arrows add or remove one piece.',
     total: 'Pieces to split',
+    avail: (z) => `${z} available`, offHint: 'Unticked sizes get nothing.',
   },
   ar: {
     lead: (n) => `توزيع ${n} قطعة`, leadRestock: 'توزيع', pieces: 'قطعة',
@@ -71,6 +76,7 @@ const T = {
     over: (n) => `${n} قطعة زائدة`,
     keys: 'في الخانة، يضيف السهم للأعلى قطعة وينقصها السهم للأسفل.',
     total: 'عدد القطع للتوزيع',
+    avail: (z) => `المقاس ${z} متوفر`, offHint: 'المقاسات غير المؤشَّر عليها لا تأخذ شيئاً.',
   },
 };
 const words = (lang) => T[lang] || T.fr;
@@ -238,6 +244,11 @@ export function mountSplit(slot, o) {
   let undo = null;
   let lastKey = '';
   let filling = false;
+  const on = sizes.map(() => true);   // les tailles cochées : seules à recevoir des pièces
+  const mask = (w) => {
+    const m = cells.map((c, k) => (on[sizeIx(c.size)] === false ? 0 : w[k]));
+    return m.some((x) => x > 0) ? m : cells.map((c) => (on[sizeIx(c.size)] === false ? 0 : 1));   // aucune vente sur les tailles cochées : à parts égales entre elles
+  };
   const inputs = () => cells.map((c) => o.root.querySelector(`[data-kbs-in="${CSS.escape(c.key)}"]`));
   const values = () => inputs().map((i) => (i && /^\d+$/.test(i.value.trim()) ? +i.value.trim() : 0));
   const sizeIx = (s) => sizes.findIndex((x) => x.size === s);
@@ -260,22 +271,24 @@ export function mountSplit(slot, o) {
     const f = slot.querySelector('[data-kbsp-total]');
     return f && /^\d{1,5}$/.test(f.value.trim()) ? +f.value.trim() : 0;
   };
-  const cellWeights = () => cells.map((c) => {
+  const cellWeights = () => mask(cells.map((c) => {
     const sw = shape ? shape.weights[sizeIx(c.size)] || 0 : 1;
     const cw = shares ? shares.weights[colIx(c.col)] || 0 : 1;
     return sw * cw;
-  });
+  }));
   const chipLabel = () => (!shape ? t.classic : shape.source === 'sales' ? t.sales : shape.source === 'stock' ? t.stock : t.classic);
   const why = () => {
     if (!shape) return '';
     const a = shape.source === 'sales' ? (shape.scope === 'category' ? t.whySalesCat(shape.basis, shape.category) : t.whySalesShop(shape.basis))
       : shape.source === 'stock' ? t.whyStock(shape.basis) : t.whyClassic;
-    if (!multi || !shares) return a;
-    return a + ' ' + (shares.source === 'sales' ? t.whyColorsSales : t.whyColorsEven);
+    const off = on.some((x) => !x) ? ' ' + t.offHint : '';
+    if (!multi || !shares) return a + off;
+    return a + ' ' + (shares.source === 'sales' ? t.whyColorsSales : t.whyColorsEven) + off;
   };
 
   const strip = () => `<div class="kbsp" data-kbsp>
     <div class="kbsp-curve" data-kbsp-curve>${sizes.map((s, k) => `<button type="button" class="kbsp-bar" data-kbsp-bar="${k}" tabindex="-1" aria-hidden="true"><span class="kbsp-col"><span class="kbsp-stack">${cols.map((c) => `<i style="--c:${esc(c.unique || !c.hex ? 'var(--atlas, #0B6E4F)' : c.hex)}"${c.light ? ' class="is-light"' : ''}></i>`).join('')}</span><em></em></span><b></b><small>${esc(s.label)}</small></button>`).join('')}</div>
+    <div class="kbsp-avail" data-kbsp-avail>${sizes.map((s, k) => `<label class="kbsp-on"><input type="checkbox" checked data-kbsp-on="${k}" aria-label="${esc(t.avail(s.label))}" /></label>`).join('')}</div>
     <div class="kbsp-acts">
       ${target ? `<span class="kbsp-lead">${esc(t.lead(target))}</span>`
         : `<label class="kbsp-lead">${esc(t.leadRestock)} <input class="kbsp-total" data-kbsp-total type="text" inputmode="numeric" maxlength="5" placeholder="0" autocomplete="off" aria-label="${esc(t.total)}" /> ${esc(t.pieces)}</label>`}
@@ -310,7 +323,7 @@ export function mountSplit(slot, o) {
     let ghost = sizes.map(() => 0);
     if (!sum && shape) {
       if (total) { const g = apportion(total, cellWeights()); cells.forEach((c, k) => { const i = sizeIx(c.size); if (i >= 0) ghost[i] += g[k]; }); }
-      else ghost = shape.weights.slice();
+      else ghost = shape.weights.map((x, i) => (on[i] ? x : 0));
     }
     const top = Math.max(1, ...(sum ? bySize : ghost));
     slot.querySelectorAll('[data-kbsp-bar]').forEach((b, i) => {
@@ -320,10 +333,11 @@ export function mountSplit(slot, o) {
       b.querySelector('b').textContent = bySize[i] ? String(bySize[i]) : '';
       const lc = cells.find((c) => c.key === lastKey);
       b.classList.toggle('is-last', !!lc && lc.size === sizes[i].size);
+      b.classList.toggle('is-off', !on[i]);
     });
     slot.querySelector('[data-kbsp-curve]').classList.toggle('is-ghost', !sum);
     slot.querySelector('[data-kbsp-why]').textContent = why();
-    slot.querySelectorAll('[data-kbsp-go]').forEach((b) => { b.disabled = !total; });
+    slot.querySelectorAll('[data-kbsp-go]').forEach((b) => { b.disabled = !total || !on.some(Boolean); });
     slot.querySelector('[data-kbsp-undo]').hidden = !undo;
     const msg = slot.querySelector('[data-kbsp-msg]');
     if (msg.dataset.err) return;
@@ -359,7 +373,8 @@ export function mountSplit(slot, o) {
     if (go) {
       const total = totalNow();
       if (!total) return;
-      const w = go.getAttribute('data-kbsp-go') === 'even' ? cells.map(() => 1) : cellWeights();
+      if (!on.some(Boolean)) return;
+      const w = go.getAttribute('data-kbsp-go') === 'even' ? mask(cells.map(() => 1)) : cellWeights();
       say('');
       fill(apportion(total, w));
       return;
@@ -386,6 +401,11 @@ export function mountSplit(slot, o) {
       const k = cells.findIndex((c) => s && c.size === s.size);
       const inp = inputs()[k]; if (inp) { inp.focus(); inp.select(); }
     }
+  });
+  slot.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-kbsp-on]')) return;
+    on[+e.target.getAttribute('data-kbsp-on')] = e.target.checked;
+    paint();
   });
   slot.addEventListener('input', (e) => {
     if (e.target.matches('[data-kbsp-total]')) { e.target.value = e.target.value.replace(/[^\d]/g, '').slice(0, 5); paint(); return; }
@@ -451,6 +471,10 @@ function css() {
 .kbsp-bar b { min-height: 15px; font: 600 12px/1.25 var(--sans, inherit); font-variant-numeric: tabular-nums; color: var(--ink, #0A0F0D); }
 .kbsp-bar small { font: 500 11.5px/1.2 var(--sans, inherit); color: var(--n-600, #5D6661); }
 .kbsp-bar.is-last small { color: var(--atlas, #0B6E4F); font-weight: 700; }
+.kbsp-bar.is-off { opacity: .35; }
+.kbsp-avail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; margin-top: -6px; }
+.kbsp-on { display: flex; align-items: center; justify-content: center; min-height: 38px; cursor: pointer; }
+.kbsp-on input { width: 22px; height: 22px; margin: 0; accent-color: var(--atlas, #0B6E4F); cursor: pointer; }
 .kbsp-bar:hover .kbsp-stack { filter: brightness(.88); }
 .kbsp-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .kbsp-lead { display: inline-flex; align-items: center; gap: 6px; margin-inline-end: auto; font: 600 13.5px var(--sans, inherit); color: var(--ink, #0A0F0D); }

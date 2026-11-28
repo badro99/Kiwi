@@ -14,7 +14,7 @@
  * Couleur par couleur (propriétaire, 25 nov.) : les lignes et le tirage
  * suivent boutique-sizes.js › colourOrder, et chaque couleur a son bouton
  * « Imprimer cette couleur » qui laisse la fenêtre ouverte pour la suivante. */
-import * as SZ from '../boutique-sizes.js?v=41';
+import * as SZ from '../boutique-sizes.js?v=42';
 
 const MAX = 999;
 const PHRASES = {
