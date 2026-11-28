@@ -48,7 +48,7 @@ for (const [k, name] of Object.entries(table)) {
 const modifiers = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog/modifiers.js'), 'utf8');
 const parts = {}, noop = () => {};
 const state = [{ id: 'g1', name: 'Sauces', kind: 'one', required: false, choices: [{ id: 'c1', name: 'Harissa', price: 2.5, emoji: '' }] }];
-const body = { innerHTML: '', handlers: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener(n, fn) { this.handlers[n] = fn; } };
+const body = { innerHTML: '', handlers: {}, querySelector: () => null, querySelectorAll: () => [], addEventListener(n, fn) { this.handlers[n] = fn; }, dispatchEvent() { return true; } };
 const modal = { el: { querySelector: (s) => (s === '[data-og-body]' ? body : { addEventListener() {} }), addEventListener() {} }, close() {} };
 new Function('window', modifiers)({ KiwiMenuCatalogParts: parts, Kiwi: { modal: () => modal } });
 parts.modifiers({ store: { get: () => state }, optsOf: (d) => d, optById: (d, id) => d.find((g) => g.id === id), tr: (o) => (o && (o.fr || o)) || '', T: new Proxy({}, { get: (_, k) => ({ fr: String(k) }) }), esc: (v) => String(v == null ? '' : v),

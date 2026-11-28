@@ -57,7 +57,7 @@ await test('till#1 tables#0 both table renderers localize accessible names', () 
 });
 await test('kitchen#0 skins#2 print#2 history icons match vendored Material paths', () => {
   const nodes = {};
-  const ctx = { $: s => nodes[s] ||= {}, kdsOrders: [], kdsStationBar: () => '', kdsGroup: () => [], kdsKitOn: () => false, kdsEmpty: () => '', updateKdsCount() {}, kdsEsc: String, window: { KiwiCaisseLang: { tr: s => s } } };
+  const ctx = { $: s => nodes[s] ||= { style: {} }, kdsOrders: [], kdsStationBar: () => '', kdsGroup: () => [], kdsKitOn: () => false, kdsEmpty: () => '', updateKdsCount() {}, kdsEsc: String, window: { KiwiCaisseLang: { tr: s => s } } };
   vm.runInNewContext(grab('assets/caisse-kitchen/kds-board.js','kdsPaint') + ';kdsPaint()',ctx);
   for (const [sel, icon] of [['#kit-history-toggle','history'],['#kit-history-inner','close']]) {
     const d = fs.readFileSync('assets/icons/material/' + icon + '.svg','utf8').match(/d="([^"]+)"/)[1];

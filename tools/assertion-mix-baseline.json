@@ -10,12 +10,8 @@
       "total": 9
     },
     "ai-routes-test.mjs": {
-      "text": 26,
+      "text": 22,
       "total": 70
-    },
-    "amira-integration-test.mjs": {
-      "text": 16,
-      "total": 19
     },
     "android-native-test.mjs": {
       "text": 66,
@@ -26,44 +22,36 @@
       "total": 23
     },
     "app-audit-sweep-test.mjs": {
-      "text": 39,
-      "total": 51
+      "text": 32,
+      "total": 32
     },
     "app-bundle-test.mjs": {
       "text": 30,
       "total": 70
     },
     "audit-remediation-inventory-loyalty-test.mjs": {
-      "text": 31,
+      "text": 28,
       "total": 66
     },
     "audit-remediation-pressing-test.mjs": {
-      "text": 21,
+      "text": 10,
       "total": 33
-    },
-    "auth-hardening-2-test.mjs": {
-      "text": 12,
-      "total": 21
     },
     "booking-manage-test.mjs": {
       "text": 41,
       "total": 52
     },
     "booking-properties-test.mjs": {
-      "text": 35,
+      "text": 13,
       "total": 126
     },
     "booking-truth-test.mjs": {
       "text": 42,
-      "total": 86
-    },
-    "boutique-product-form-test.mjs": {
-      "text": 11,
-      "total": 77
+      "total": 67
     },
     "boutique-product-sheet-test.mjs": {
-      "text": 35,
-      "total": 83
+      "text": 19,
+      "total": 70
     },
     "briefing-cancellations-test.mjs": {
       "text": 12,
@@ -87,7 +75,7 @@
     },
     "browser-trace-test.mjs": {
       "text": 10,
-      "total": 35
+      "total": 33
     },
     "bump-stamp-test.mjs": {
       "text": 39,
@@ -97,21 +85,17 @@
       "text": 13,
       "total": 29
     },
-    "business-day-surfaces-test.mjs": {
-      "text": 18,
-      "total": 30
-    },
     "caisse-app-split-test.mjs": {
-      "text": 12,
-      "total": 60
+      "text": 10,
+      "total": 59
     },
     "caisse-chip-gate-test.mjs": {
       "text": 13,
-      "total": 31
+      "total": 21
     },
     "caisse-client-sale-test.mjs": {
-      "text": 17,
-      "total": 33
+      "text": 10,
+      "total": 22
     },
     "caisse-discount-and-phantom-table-test.js": {
       "text": 20,
@@ -134,16 +118,12 @@
       "total": 41
     },
     "caisse-product-art-test.mjs": {
-      "text": 16,
-      "total": 58
+      "text": 15,
+      "total": 61
     },
     "caisse-refresh-test.js": {
       "text": 14,
       "total": 27
-    },
-    "caisse-restaurant-lang-browser-test.mjs": {
-      "text": 17,
-      "total": 26
     },
     "caisse-table-actions-test.mjs": {
       "text": 26,
@@ -152,10 +132,6 @@
     "cash-move-custom-reason-test.mjs": {
       "text": 17,
       "total": 34
-    },
-    "cashier-cancel-test.mjs": {
-      "text": 11,
-      "total": 22
     },
     "catalog-merge-properties-test.mjs": {
       "text": 19,
@@ -170,24 +146,20 @@
       "total": 56
     },
     "charges-test.js": {
-      "text": 17,
+      "text": 12,
       "total": 67
     },
     "check-guard-test.mjs": {
-      "text": 40,
-      "total": 177
-    },
-    "client-mix-test.mjs": {
-      "text": 12,
-      "total": 33
+      "text": 39,
+      "total": 137
     },
     "clients-properties-test.mjs": {
-      "text": 65,
+      "text": 44,
       "total": 283
     },
     "clockin-float-test.mjs": {
-      "text": 15,
-      "total": 47
+      "text": 11,
+      "total": 33
     },
     "cloud-doc-quota-test.mjs": {
       "text": 23,
@@ -198,40 +170,28 @@
       "total": 9
     },
     "cost-margin-test.js": {
-      "text": 40,
+      "text": 20,
       "total": 91
     },
     "counter-sale-flow-test.mjs": {
-      "text": 50,
-      "total": 66
+      "text": 41,
+      "total": 48
     },
     "coverage-probe-test.mjs": {
-      "text": 13,
-      "total": 32
-    },
-    "credit-book-dashboard-browser-test.mjs": {
-      "text": 15,
+      "text": 11,
       "total": 24
     },
     "credit-book-test.mjs": {
-      "text": 65,
-      "total": 187
+      "text": 57,
+      "total": 148
     },
     "critical-flow-test.mjs": {
       "text": 17,
       "total": 18
     },
     "customer-retention-test.mjs": {
-      "text": 25,
-      "total": 128
-    },
-    "d1-schema-test.mjs": {
-      "text": 11,
-      "total": 36
-    },
-    "dashboard-breadcrumb-language-test.mjs": {
-      "text": 17,
-      "total": 26
+      "text": 21,
+      "total": 96
     },
     "dashboard-currency-ar-test.mjs": {
       "text": 6,
@@ -239,15 +199,15 @@
     },
     "dashboard-first-use-test.mjs": {
       "text": 16,
-      "total": 53
+      "total": 52
     },
     "dashboard-pin-vault-test.mjs": {
-      "text": 37,
+      "text": 36,
       "total": 91
     },
     "dashboard-truth-test.mjs": {
       "text": 29,
-      "total": 44
+      "total": 32
     },
     "dayreport-properties-test.mjs": {
       "text": 18,
@@ -259,10 +219,10 @@
     },
     "economat-procurement-location-test.mjs": {
       "text": 7,
-      "total": 13
+      "total": 8
     },
     "employee-live-test.mjs": {
-      "text": 59,
+      "text": 58,
       "total": 161
     },
     "employee-timezone-test.mjs": {
@@ -270,7 +230,7 @@
       "total": 28
     },
     "employee-truth-test.mjs": {
-      "text": 18,
+      "text": 10,
       "total": 57
     },
     "entitlements-test.mjs": {
@@ -283,18 +243,14 @@
     },
     "field-orderpro-acceptance-test.mjs": {
       "text": 13,
-      "total": 139
+      "total": 116
     },
     "financial-ledger-invariant-test.mjs": {
       "text": 8,
       "total": 14
     },
-    "floorplan-lww-test.mjs": {
-      "text": 27,
-      "total": 69
-    },
     "floorplan-sync-test.js": {
-      "text": 34,
+      "text": 15,
       "total": 94
     },
     "font-coverage-test.mjs": {
@@ -306,91 +262,59 @@
       "total": 22
     },
     "food-trades-truth-test.mjs": {
-      "text": 80,
-      "total": 235
-    },
-    "forgot-password-test.mjs": {
-      "text": 10,
-      "total": 42
-    },
-    "formula-kitchen-paper-test.mjs": {
-      "text": 17,
-      "total": 19
-    },
-    "formula-protocol-test.mjs": {
-      "text": 52,
-      "total": 149
-    },
-    "formula-receipt-pricing-test.mjs": {
-      "text": 8,
-      "total": 12
+      "text": 75,
+      "total": 183
     },
     "guest-options-test.mjs": {
-      "text": 31,
-      "total": 52
+      "text": 28,
+      "total": 40
     },
     "hospitality-plus-test.mjs": {
       "text": 7,
       "total": 10
     },
     "hotel-commercial-test.mjs": {
-      "text": 107,
-      "total": 176
-    },
-    "hotel-direct-booking-browser-test.mjs": {
-      "text": 132,
-      "total": 191
+      "text": 36,
+      "total": 161
     },
     "hotel-dossier-safety-test.mjs": {
       "text": 38,
       "total": 67
     },
     "hotel-economat-ui-test.mjs": {
-      "text": 37,
-      "total": 73
+      "text": 27,
+      "total": 52
     },
     "hotel-exceptions-test.mjs": {
-      "text": 23,
+      "text": 17,
       "total": 32
     },
     "hotel-group-draft-escape-test.mjs": {
       "text": 14,
       "total": 21
     },
-    "hotel-i18n-test.mjs": {
-      "text": 18,
-      "total": 35
-    },
     "hotel-properties-test.mjs": {
-      "text": 28,
+      "text": 25,
       "total": 145
     },
     "hotel-split-test.mjs": {
-      "text": 15,
+      "text": 14,
       "total": 46
-    },
-    "hotel-stay-editing-test.mjs": {
-      "text": 76,
-      "total": 111
-    },
-    "hotel-stays-group-browser-test.mjs": {
-      "text": 124,
-      "total": 200
     },
     "hotel-stays-group-test.mjs": {
       "text": 25,
       "total": 100
     },
     "hotel-truth-test.mjs": {
-      "text": 49,
-      "total": 103
+      "text": 24,
+      "total": 95
     },
     "intake-slice1-test.mjs": {
-      "text": 89,
-      "total": 174
+      "text": 57,
+      "total": 148
     },
     "inventory-count-test.mjs": {
-      "text": 14,
+      "text": 13,
       "total": 51
     },
     "inventory-waste-test.mjs": {
@@ -398,43 +322,23 @@
       "total": 24
     },
     "invoice-receipt-test.mjs": {
-      "text": 18,
+      "text": 14,
       "total": 64
     },
     "invoices-split-test.mjs": {
-      "text": 7,
+      "text": 6,
       "total": 10
     },
-    "invoices-v2-test.mjs": {
-      "text": 98,
-      "total": 175
-    },
-    "invoicing-v2-browser-test.mjs": {
-      "text": 29,
-      "total": 114
-    },
-    "kds-course-following-browser-test.mjs": {
-      "text": 13,
-      "total": 26
-    },
     "kds-data-states-test.mjs": {
-      "text": 43,
+      "text": 13,
       "total": 96
     },
     "kds-recall-test.mjs": {
-      "text": 13,
+      "text": 12,
       "total": 34
     },
-    "kit-budget-browser-test.mjs": {
-      "text": 6,
-      "total": 11
-    },
-    "kit-in-host-browser-test.mjs": {
-      "text": 13,
-      "total": 14
-    },
     "kitchen-modifiers-and-seating-test.mjs": {
-      "text": 20,
+      "text": 14,
       "total": 20
     },
     "kitchen-print-queue-test.mjs": {
@@ -442,11 +346,11 @@
       "total": 39
     },
     "kitchen-relay-test.js": {
-      "text": 61,
+      "text": 60,
       "total": 75
     },
     "kitchen-void-protocol-test.mjs": {
-      "text": 58,
+      "text": 30,
       "total": 95
     },
     "kpi-ledger-test.js": {
@@ -458,24 +362,24 @@
       "total": 46
     },
     "landing-demo-funnel-test.mjs": {
-      "text": 63,
-      "total": 93
+      "text": 40,
+      "total": 69
     },
     "landing-es-test.mjs": {
-      "text": 33,
+      "text": 32,
       "total": 41
     },
     "legacy-scan-test.mjs": {
       "text": 10,
-      "total": 50
+      "total": 41
     },
     "legacy-venue-modals-test.mjs": {
       "text": 14,
       "total": 27
     },
     "lock-greeting-truth-test.mjs": {
-      "text": 77,
-      "total": 132
+      "text": 63,
+      "total": 96
     },
     "maison-client-history-test.mjs": {
       "text": 7,
@@ -495,14 +399,14 @@
     },
     "menu-catalog-boundary-test.mjs": {
       "text": 14,
-      "total": 21
+      "total": 17
     },
     "menu-catalog-split-test.mjs": {
       "text": 6,
       "total": 8
     },
     "menu-i18n-test.mjs": {
-      "text": 54,
+      "text": 41,
       "total": 86
     },
     "menu-nutrition-test.mjs": {
@@ -510,32 +414,20 @@
       "total": 99
     },
     "menu-option-group-editor-test.mjs": {
-      "text": 13,
-      "total": 15
+      "text": 11,
+      "total": 11
     },
     "menu-ordering-surfaces-test.js": {
       "text": 10,
       "total": 10
     },
-    "menu-sales-test.mjs": {
-      "text": 18,
-      "total": 33
-    },
     "menu-translate-test.mjs": {
-      "text": 15,
+      "text": 9,
       "total": 17
     },
     "menu-truth-test.mjs": {
-      "text": 19,
-      "total": 42
-    },
-    "merchant-config-stale-test.mjs": {
-      "text": 10,
-      "total": 30
-    },
-    "merchant-health-test.mjs": {
-      "text": 24,
-      "total": 44
+      "text": 18,
+      "total": 34
     },
     "merchant-hour-test.mjs": {
       "text": 6,
@@ -552,10 +444,6 @@
     "morning-push-test.mjs": {
       "text": 11,
       "total": 69
-    },
-    "multi-device-collision-test.mjs": {
-      "text": 8,
-      "total": 8
     },
     "native-audit-fixes-test.mjs": {
       "text": 61,
@@ -589,33 +477,25 @@
       "text": 12,
       "total": 38
     },
-    "nonlatin-slug-test.mjs": {
-      "text": 10,
-      "total": 24
-    },
     "onboarding-gate-test.mjs": {
       "text": 14,
       "total": 31
     },
     "onboarding-truth-test.mjs": {
-      "text": 14,
-      "total": 54
+      "text": 13,
+      "total": 38
     },
     "operating-day-handover-test.mjs": {
-      "text": 23,
-      "total": 71
+      "text": 18,
+      "total": 60
     },
     "operating-day-inventory-cycle-test.mjs": {
       "text": 14,
       "total": 56
     },
-    "operating-day-operator-test.mjs": {
-      "text": 10,
-      "total": 14
-    },
     "operations-system-test.mjs": {
       "text": 54,
-      "total": 290
+      "total": 288
     },
     "operator-snapshot-test.mjs": {
       "text": 41,
@@ -626,7 +506,7 @@
       "total": 30
     },
     "order-delivery-test.mjs": {
-      "text": 13,
+      "text": 10,
       "total": 36
     },
     "order-langs-test.mjs": {
@@ -642,24 +522,20 @@
       "total": 14
     },
     "order-truth-test.mjs": {
-      "text": 48,
-      "total": 97
+      "text": 46,
+      "total": 78
     },
     "orderpro-formula-choice-images-test.mjs": {
       "text": 6,
       "total": 11
     },
-    "orderpro-guest-api-test.mjs": {
-      "text": 11,
-      "total": 42
-    },
     "orderpro-guest-bill-test.mjs": {
       "text": 16,
-      "total": 48
+      "total": 35
     },
     "orderpro-guest-hub-test.mjs": {
       "text": 23,
-      "total": 55
+      "total": 45
     },
     "orderpro-inbox-display-test.js": {
       "text": 13,
@@ -677,10 +553,6 @@
       "text": 27,
       "total": 30
     },
-    "pairing-resolver-test.mjs": {
-      "text": 15,
-      "total": 79
-    },
     "pairs-api-test.mjs": {
       "text": 16,
       "total": 62
@@ -690,12 +562,12 @@
       "total": 41
     },
     "pin-dashboard-test.mjs": {
-      "text": 30,
+      "text": 22,
       "total": 39
     },
     "pin-lockout-truth-test.mjs": {
-      "text": 22,
-      "total": 29
+      "text": 18,
+      "total": 22
     },
     "plan-catalog-test.mjs": {
       "text": 10,
@@ -710,11 +582,11 @@
       "total": 26
     },
     "pos-inventory-count-test.mjs": {
-      "text": 15,
+      "text": 14,
       "total": 30
     },
     "pos-maison-test.mjs": {
-      "text": 99,
+      "text": 98,
       "total": 131
     },
     "pos-reprint-test.js": {
@@ -723,22 +595,18 @@
     },
     "pos-truth-a-test.mjs": {
       "text": 26,
-      "total": 205
+      "total": 175
     },
     "pos-truth-b-test.mjs": {
-      "text": 18,
-      "total": 57
+      "text": 15,
+      "total": 38
     },
     "pressing-auto-ready-test.mjs": {
       "text": 11,
       "total": 40
     },
-    "pressing-money-properties-test.mjs": {
-      "text": 52,
-      "total": 96
-    },
     "pressing-truth-test.mjs": {
-      "text": 25,
+      "text": 24,
       "total": 70
     },
     "pressing-workspace-test.js": {
@@ -758,7 +626,7 @@
       "total": 43
     },
     "print-relay-test.mjs": {
-      "text": 34,
+      "text": 27,
       "total": 89
     },
     "print-socket-test.mjs": {
@@ -782,11 +650,11 @@
       "total": 36
     },
     "promotions-dashboard-test.mjs": {
-      "text": 12,
+      "text": 7,
       "total": 12
     },
     "promotions-store-contract-test.mjs": {
-      "text": 15,
+      "text": 11,
       "total": 54
     },
     "ramadan-test.js": {
@@ -794,11 +662,11 @@
       "total": 26
     },
     "register-phone-tickets-test.mjs": {
-      "text": 49,
-      "total": 58
+      "text": 40,
+      "total": 40
     },
     "reservations-test.mjs": {
-      "text": 19,
+      "text": 16,
       "total": 68
     },
     "restaurant-item-editor-test.mjs": {
@@ -814,56 +682,40 @@
       "total": 15
     },
     "resto-carte-test.js": {
-      "text": 106,
+      "text": 97,
       "total": 195
-    },
-    "retail-acompte-browser-test.mjs": {
-      "text": 9,
-      "total": 14
     },
     "retail-scan-test.mjs": {
       "text": 29,
       "total": 49
     },
     "retail-truth-test.mjs": {
-      "text": 34,
-      "total": 82
+      "text": 30,
+      "total": 67
     },
     "return-client-guards-test.mjs": {
       "text": 30,
       "total": 48
     },
     "sale-invoice-test.mjs": {
-      "text": 32,
+      "text": 11,
       "total": 93
     },
     "sale-line-v2-test.mjs": {
       "text": 15,
       "total": 38
     },
-    "sales-reconcile-test.mjs": {
-      "text": 18,
-      "total": 59
-    },
-    "sales-summary-test.mjs": {
-      "text": 50,
-      "total": 65
-    },
     "salle-scan-test.mjs": {
-      "text": 26,
+      "text": 18,
       "total": 42
     },
     "scan-view-test.mjs": {
       "text": 6,
-      "total": 9
-    },
-    "security-and-channel-hardening-test.mjs": {
-      "text": 9,
-      "total": 10
+      "total": 6
     },
     "segment-test.mjs": {
       "text": 17,
-      "total": 59
+      "total": 56
     },
     "serveur-data-states-test.mjs": {
       "text": 14,
@@ -893,65 +745,49 @@
       "text": 10,
       "total": 10
     },
-    "shared-pricing-parity-test.mjs": {
-      "text": 10,
-      "total": 29
-    },
     "shopify-connector-test.mjs": {
       "text": 65,
-      "total": 155
-    },
-    "simple-food-cost-browser-test.mjs": {
-      "text": 10,
-      "total": 35
+      "total": 159
     },
     "sold-insights-test.js": {
       "text": 10,
       "total": 20
     },
     "specialty-retail-truth-test.mjs": {
-      "text": 57,
-      "total": 157
+      "text": 52,
+      "total": 124
     },
     "split-bill-tender-test.mjs": {
       "text": 32,
-      "total": 63
+      "total": 62
     },
     "stock-category-management-test.mjs": {
       "text": 5,
       "total": 5
     },
     "stock-controller-split-test.mjs": {
-      "text": 12,
+      "text": 11,
       "total": 31
     },
     "stock-costing-migration-test.mjs": {
-      "text": 74,
+      "text": 66,
       "total": 81
     },
     "stock-count-history-language-test.mjs": {
-      "text": 46,
-      "total": 96
-    },
-    "stock-item-form-test.mjs": {
-      "text": 25,
-      "total": 59
+      "text": 27,
+      "total": 81
     },
     "stock-movement-modal-test.mjs": {
-      "text": 20,
-      "total": 29
+      "text": 16,
+      "total": 21
     },
     "stock-split-test.mjs": {
       "text": 11,
       "total": 26
     },
     "stock-truth-test.mjs": {
-      "text": 21,
-      "total": 44
-    },
-    "store-cas-test.mjs": {
-      "text": 10,
-      "total": 17
+      "text": 19,
+      "total": 33
     },
     "store-credit-sale-test.mjs": {
       "text": 33,
@@ -962,7 +798,7 @@
       "total": 50
     },
     "strings-completeness-test.mjs": {
-      "text": 12,
+      "text": 10,
       "total": 28
     },
     "subscription-privacy-test.mjs": {
@@ -970,7 +806,7 @@
       "total": 28
     },
     "support-triage-test.mjs": {
-      "text": 50,
+      "text": 16,
       "total": 103
     },
     "table-refresh-test.js": {
@@ -980,14 +816,6 @@
     "table-takeaway-routing-test.js": {
       "text": 16,
       "total": 16
-    },
-    "table-time-test.mjs": {
-      "text": 17,
-      "total": 31
-    },
-    "table-transfer-merge-test.mjs": {
-      "text": 19,
-      "total": 21
     },
     "takeout-confirmation-test.js": {
       "text": 13,
@@ -1002,12 +830,12 @@
       "total": 8
     },
     "team-job-names-test.mjs": {
-      "text": 14,
+      "text": 10,
       "total": 21
     },
     "team-member-editor-test.mjs": {
-      "text": 30,
-      "total": 80
+      "text": 24,
+      "total": 57
     },
     "team-owners-split-test.mjs": {
       "text": 10,
@@ -1015,23 +843,11 @@
     },
     "team-truth-test.mjs": {
       "text": 20,
-      "total": 97
-    },
-    "tickets-i18n-test.mjs": {
-      "text": 15,
-      "total": 24
-    },
-    "tickets-retest-test.mjs": {
-      "text": 9,
-      "total": 9
+      "total": 78
     },
     "till-approval-server-writes-test.mjs": {
       "text": 27,
       "total": 70
-    },
-    "tokens-2027-browser-test.mjs": {
-      "text": 11,
-      "total": 40
     },
     "trade-cash-presets-test.mjs": {
       "text": 8,
@@ -1041,12 +857,8 @@
       "text": 12,
       "total": 35
     },
-    "trades-money-properties-test.mjs": {
-      "text": 25,
-      "total": 84
-    },
     "wave-o-truth-test.mjs": {
-      "text": 14,
+      "text": 12,
       "total": 37
     },
     "wave-p-a11y-test.mjs": {
@@ -1061,29 +873,13 @@
       "text": 14,
       "total": 21
     },
-    "wave-q-scope-test.mjs": {
-      "text": 11,
-      "total": 24
-    },
     "wave-r-errdash-test.mjs": {
-      "text": 15,
+      "text": 14,
       "total": 41
     },
     "wave-r-i18n-test.mjs": {
       "text": 11,
       "total": 14
-    },
-    "wave11-security-test.mjs": {
-      "text": 13,
-      "total": 61
-    },
-    "z-alert-copy-test.mjs": {
-      "text": 9,
-      "total": 13
-    },
-    "z-alert-truth-test.mjs": {
-      "text": 13,
-      "total": 17
     }
   }
 }

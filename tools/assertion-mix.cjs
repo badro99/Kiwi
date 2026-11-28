@@ -48,10 +48,21 @@ function mix(text) {
     if (asserts && !readers.has(name)) helpers.add(name);
   }
 
+  /* tools/agent-harness.cjs loads the real assistant into a VM: its load() runs code, it reads no file text. */
+  /* `r.text` and `{ text: … }` name a property, not the variable `text`. */
+  const isVar = (x) => ts.isIdentifier(x) && !(ts.isPropertyAccessExpression(x.parent) && x.parent.name === x) && !(ts.isPropertyAssignment(x.parent) && x.parent.name === x);
+  /* A helper defined here is judged by its body (does it read a file?), not by its name: `src(name, rows)` building a fixture reads nothing. */
+  const local = new Set(fnBodies.map(([name]) => name));
+  const harness = new Set();
+  walk(ast, (n) => {
+    if (!ts.isVariableDeclaration(n) || !n.initializer || !ts.isCallExpression(n.initializer) || calleeName(n.initializer.expression) !== 'require' || !/agent-harness/.test(n.initializer.getText(ast))) return;
+    if (ts.isIdentifier(n.name)) harness.add(n.name.text);
+    else if (ts.isObjectBindingPattern(n.name)) for (const b of n.name.elements) if (ts.isIdentifier(b.name)) harness.add(b.name.text);
+  });
   // Taint: identifiers bound to file text, propagated through initialisers.
   const tainted = new Set();
   const isReaderCall = (x) => ts.isCallExpression(x) && (calleeName(x.expression) === 'readFileSync' || readers.has(calleeName(x.expression)) ||
-    (ts.isIdentifier(x.expression) && READER_NAME.test(x.expression.text) && !ASSERT_NAMES.has(x.expression.text)));
+    (ts.isIdentifier(x.expression) && READER_NAME.test(x.expression.text) && !ASSERT_NAMES.has(x.expression.text) && !harness.has(x.expression.text) && !(local.has(x.expression.text) && !readers.has(x.expression.text))));
   const bindNames = (nm, out) => {
     if (ts.isIdentifier(nm)) out.push(nm.text);
     else if (ts.isObjectBindingPattern(nm) || ts.isArrayBindingPattern(nm)) for (const e of nm.elements) if (ts.isBindingElement(e)) bindNames(e.name, out);
@@ -60,6 +71,13 @@ function mix(text) {
   walk(ast, (n) => { if (ts.isVariableDeclaration(n) && n.initializer) decls.push(n); });
   for (let changed = true, guard = 0; changed && guard < 8; guard++) {
     changed = false;
+    /* A reader-named helper that slices text already read (extract(SRC, name)) still hands back file text. */
+    for (const [name, body] of fnBodies) {
+      if (readers.has(name) || !READER_NAME.test(name)) continue;
+      let touches = false;
+      walk(body, (x) => { if (isVar(x) && tainted.has(x.text)) touches = true; });
+      if (touches) { readers.add(name); changed = true; }
+    }
     for (const d of decls) {
       const names = []; bindNames(d.name, names);
       if (names.every((x) => tainted.has(x))) continue;
@@ -69,11 +87,11 @@ function mix(text) {
       // Only plain data flow: reading a file, or string/array ops over tainted text.
       walk(init, (x) => {
         if (isReaderCall(x)) t = true;
-        if (ts.isIdentifier(x) && tainted.has(x.text)) t = true;
+        if (isVar(x) && tainted.has(x.text)) t = true;
       });
       // A value computed by running code over the text is behaviour, not text.
       let runs = false;
-      walk(init, (x) => { if (ts.isCallExpression(x) && /^(runInContext|runInNewContext|runInThisContext|Function|eval|evaluate|spawnSync|execFileSync|run|import|require)$/.test(calleeName(x.expression))) runs = true; if (x.kind === ts.SyntaxKind.ImportKeyword) runs = true; });
+      walk(init, (x) => { if (ts.isCallExpression(x) && /^(runInContext|runInNewContext|runInThisContext|Function|eval|evaluate|spawnSync|execFileSync|run|import|require)$/.test(calleeName(x.expression))) runs = true; if (x.kind === ts.SyntaxKind.ImportKeyword) runs = true; if (ts.isNewExpression(x) && calleeName(x.expression) === 'Function') runs = true; if (x.kind === ts.SyntaxKind.AwaitExpression) runs = true; });
       if (t && !runs) for (const x of names) if (!tainted.has(x)) { tainted.add(x); changed = true; }
     }
   }
@@ -92,7 +110,7 @@ function mix(text) {
     let ref = false, other = false;
     for (const a of call.arguments) {
       walk(a, (x) => {
-        if (ts.isIdentifier(x) && tainted.has(x.text)) ref = true;
+        if (isVar(x) && tainted.has(x.text)) ref = true;
         if (isReaderCall(x)) ref = true;
         if (ts.isCallExpression(x) && !isReaderCall(x)) {
           const nm = calleeName(x.expression);
@@ -108,6 +126,8 @@ function mix(text) {
   const seen = new Set();
   walk(ast, (n) => {
     if (!isAssertCall(n)) return;
+    /* ok('name', () => { assert… }) runs a test: the asserts inside it count, the runner does not. */
+    if (n.arguments.some((a) => ts.isArrowFunction(a) || ts.isFunctionExpression(a))) return;
     // A helper's own definition body is not an assertion site; nested asserts inside an outer call count once.
     if (seen.has(n)) return;
     seen.add(n);

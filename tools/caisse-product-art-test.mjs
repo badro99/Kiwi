@@ -64,10 +64,27 @@ eq(own(undefined), '', 'a dish without a photo has none');
 const ownTile = html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '/api/media/media/pasta-corner/new-upload-1.jpg');
 ok(/class="menu-photo is-own" src="\/api\/media\/media\/pasta-corner\/new-upload-1-t\.webp"/.test(ownTile), 'a photo without its icon yet shows cropped, from its small ~400 px copy: ' + ownTile);
 ok(/data-full="\/api\/media\/media\/pasta-corner\/new-upload-1\.jpg"/.test(ownTile), 'and keeps the full photo for when the small copy is missing');
-ok(/addEventListener\('error'[\s\S]{0,120}img\.dataset\.full\) \{ img\.src = img\.dataset\.full/.test(catalogue), 'a missing small copy falls back to the full photo first');
 ok(/data-lib="assets\/dishes\/ravioli\.webp\?v=\d+"/.test(ownTile), 'and keeps the library ravioli to fall back on');
 ok(!/is-own/.test(html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '')), 'without a photo the library picture shows, as before');
-ok(/addEventListener\('error'[\s\S]{0,400}img\.src = img\.dataset\.lib/.test(catalogue), 'a merchant photo that fails to load falls back to the library picture');
+{
+  /* The caisse's image error handler, run on a fake <img>: small copy → full photo → library picture. */
+  const handlerSrc = catalogue.match(/document\.addEventListener\('error', (\(e\) => \{[\s\S]*?\}), true\);/)[1];
+  const onError = new Function('return ' + handlerSrc)();
+  const fakeImg = (data) => {
+    const cls = new Set(['is-own']);
+    return { src: 'small', removed: false, cls, dataset: { ...data },
+      classList: { contains: (c) => cls.has(c), remove: (c) => cls.delete(c) },
+      removeAttribute(a) { if (a === 'data-full') delete this.dataset.full; }, remove() { this.removed = true; } };
+  };
+  const img = fakeImg({ full: '/api/media/p.jpg', lib: 'assets/dishes/ravioli.webp?v=1' });
+  onError({ target: img });
+  ok(img.src === '/api/media/p.jpg' && !('full' in img.dataset) && img.cls.has('is-own'), 'a missing small copy falls back to the full photo first');
+  onError({ target: img });
+  ok(img.src === 'assets/dishes/ravioli.webp?v=1' && !img.cls.has('is-own') && !img.removed, 'a merchant photo that fails to load falls back to the library picture');
+  const bare = fakeImg({});
+  onError({ target: bare });
+  ok(bare.removed, 'a broken merchant photo with no library picture is removed, not left as a broken image');
+}
 // Those photos redrawn as cut-out icons in the library's style (GPT, from the
 // merchant's own photos, tools/dish-photos/gen-own.sh): the icon wins.
 const iconTile = html('it_x', 'signatures', 'Ravioli 4 Fromage', '', '/api/media/media/pasta-corner/mvu9ly2b-32718ef1.jpg');

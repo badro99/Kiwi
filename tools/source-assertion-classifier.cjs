@@ -17,6 +17,11 @@ function sourceOnly(text) {
       if(c?.namedBindings && ts.isNamedImports(c.namedBindings)) for(const e of c.namedBindings.elements) imported.add(e.name.text);
     }
     if(ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer && ts.isCallExpression(n.initializer) && n.initializer.expression.getText(ast)==='require' && /assets\//.test(n.initializer.getText(ast))) imported.add(n.name.text);
+    /* tools/agent-harness.cjs loads the real assistant files into a VM: what it hands back runs them. */
+    if(ts.isVariableDeclaration(n) && n.initializer && ts.isCallExpression(n.initializer) && n.initializer.expression.getText(ast)==='require' && /agent-harness/.test(n.initializer.getText(ast))) {
+      if(ts.isIdentifier(n.name)) imported.add(n.name.text);
+      else if(ts.isObjectBindingPattern(n.name)) for(const b of n.name.elements) if(ts.isIdentifier(b.name)) imported.add(b.name.text);
+    }
     ts.forEachChild(n,imports);
   }
   imports(ast);

@@ -124,7 +124,7 @@ ok('day report top products: "1 plat", never "1 plats" / "1 dishes"', () => {
 ok('day report payment header is the sum of the (net) method rows, not the gross', () => {
   const D = read('assets/day-report-dash.js');
   assert.ok(!/esc\(T\(L\.payments\)\) \+ '<\/span><em>' \+ esc\(money\(r\.gross\)\)/.test(D), 'no gross over net rows');
-  assert.ok(/var mSum = Object\.keys\(r\.methods \|\| \{\}\)\.reduce/.test(D), 'the header sums the rows');
+  assert.ok(/var mSum = Object\.keys\((?:r\.methods \|\| \{\}|RM)\)\.reduce/.test(D), 'the header sums the rows');
 });
 
 console.log(`\ndashboard-truth: ${passed} passed, ${failed} failed`);

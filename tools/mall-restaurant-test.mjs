@@ -17,6 +17,17 @@ import vm from 'node:vm';
 let n = 0;
 const ok = async (name, fn) => { await fn(); n++; console.log('  ✓ ' + name); };
 const read = (f) => fs.readFileSync(f, 'utf8');
+/* One function's text out of a source, to run it in isolation. A function
+   that is gone returns '' and fails where it is called (ReferenceError). */
+const grab = (text, name) => {
+  const i = text.indexOf('function ' + name + '(');
+  if (i < 0) return '';
+  for (let k = text.indexOf('{', i), depth = 0; k < text.length; k++) {
+    if (text[k] === '{') depth++;
+    if (text[k] === '}' && --depth === 0) return text.slice(i, k + 1);
+  }
+  return '';
+};
 
 /* ── counter-flow.js with a stub till ── */
 function till({ mall, saved = {}, pagers } = {}) {
@@ -172,21 +183,46 @@ await ok('the receipt prints « BIPEUR 7 » in large type, and nothing without o
 });
 
 /* ── the wiring, read from the sources ── */
-await ok('the switch hides Salle and « Annuler une vente », nothing else', () => {
-  const mc = read('assets/merchant-config.js');
-  assert.match(mc, /if \(cfg\.features && cfg\.features\.mallRestaurant === true && \(key === 'salle' \|\| key === 'cancelSale'\)\) return true;/);
+await ok('the switch hides Salle and « Annuler une vente », nothing else', async () => {
+  /* The real merchant-config.js, fed an /api/config answer. */
+  const offWith = async (features) => {
+    const requests = [], data = new Map([['kiwiLiveMerchant', 'mall-test']]);
+    const venue = { id: 'v-mall', slug: 'mall-test', name: 'Mall test', custom: true };
+    const window = { KiwiEnv: { isReal: () => true }, KiwiVenue: { isCustom: () => true, getCurrentVenueData: () => venue, slugOf: () => venue.slug }, addEventListener() {}, dispatchEvent() {} };
+    const document = { readyState: 'loading', addEventListener() {}, dispatchEvent() {}, querySelectorAll: () => [], querySelector: () => null };
+    const ctx = vm.createContext({ window, document, console, URLSearchParams, CustomEvent: function () {}, setTimeout: () => 1, clearTimeout() {},
+      localStorage: { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => data.set(k, String(v)), removeItem: (k) => data.delete(k) },
+      location: { search: '', pathname: '/kiwi-caisse.html' }, fetch: (url) => new Promise((resolve) => requests.push({ url, resolve })) });
+    vm.runInContext(read('assets/merchant-config.js'), ctx);
+    const loading = window.KiwiConfig.reload();
+    requests[0].resolve({ ok: true, json: async () => ({ features, pins: [], plan: 'pro' }) });
+    await loading;
+    return (key) => window.KiwiConfig.off(key);
+  };
+  const on = await offWith({ mallRestaurant: true }), off = await offWith({});
+  assert.deepEqual(['salle', 'cancelSale', 'vrap', 'remboursement'].map(on), [true, true, false, false], 'on: Salle and « Annuler une vente » are hidden, the rest stays');
+  assert.deepEqual(['salle', 'cancelSale'].map(off), [false, false], 'off: nothing is hidden');
   assert.match(read('kiwi-caisse.html'), /data-action="cancel-sale" data-feature="cancelSale"/);
   assert.match(read('kiwi-admin.html'), /key:'mallRestaurant', label:'Mall restaurants', off:true/);
 });
 await ok('the board keeps a paid mall order until it is handed over', () => {
   const board = read('assets/caisse-kitchen/takeaway-board.js');
-  assert.match(board, /function vrapIsCounterSale\(o\) \{\n\s+if \(!o\) return false; if \(o\.delivery\) return false; if \(typeof mallOn === 'function' && mallOn\(\)\) return false;/);
+  const isCounterSale = (mall) => new Function('mallOn', grab(board, 'vrapIsCounterSale') + '; return vrapIsCounterSale;')(() => mall);
+  assert.equal(isCounterSale(false)({ num: 7, opNum: null }), true, 'off: a paid counter sale ends at payment');
+  assert.equal(isCounterSale(true)({ num: 7, opNum: null }), false, 'on: the paid order stays on the board until it is handed over');
   assert.match(board, /typeof mallCardTag === 'function' \? mallCardTag\(o\) : ''/);
   assert.match(read('assets/caisse-kitchen/kitchen-paper.js'), /const paper = \(\) => \(typeof mallKitchenHolds === 'function' && mallKitchenHolds\(order, items\)\) \|\| printKitchenTickets\(order, items\);/);
 });
 await ok('the kitchen queue and the kitchen screens carry the bipeur', () => {
-  assert.match(read('functions/api/order/_queue-create.js'), /if \(Number\.isInteger\(l\.pager\) && l\.pager >= 1 && l\.pager <= 20\) line\.pager = l\.pager;/);
-  assert.match(read('assets/caisse-kitchen/kds-board.js'), /if \(o\.pager && typeof mallPagerLabel === 'function'\) chips\.unshift\(mallPagerLabel\(o\.pager\)\);/);
+  const cleanLines = new Function('MAX_LINES', 'MAX_QTY', grab(read('functions/api/order/_queue-create.js'), 'cleanLines') + '; return cleanLines;')(80, 99);
+  assert.deepEqual(cleanLines([{ name: 'Tacos', pager: 4 }, { name: 'Soda', pager: 21 }, { name: 'Frites', pager: '3' }, { name: 'Eau' }]).map((l) => l.pager),
+    [4, undefined, undefined, undefined], 'the queue keeps a bipeur of 1..20 on the line, nothing else');
+  const kitTicket = new Function('mallPagerLabel', 'kdsEnsureFormulaParents', 'kdsActiveStation', 'kdsHasRecipe', 'kkt', 'ticketNo', 'kdsElapsed', 'dlvSource',
+    grab(read('assets/caisse-kitchen/kds-board.js'), 'kdsKitTicket') + '; return kdsKitTicket;')(
+    (n) => 'Bipeur ' + n, () => [], 'all', () => false, (k) => ({ 'kds.source.takeaway': 'À emporter', 'kds.source.table': 'Table' })[k] || k, (o) => String(o.num), () => 0, undefined);
+  const tk = kitTicket({ num: 11, type: 'takeaway', pager: 1, service: 'surplace' }, 'cook');
+  assert.deepEqual(tk.chips, ['Bipeur 1'], 'the kitchen card carries the bipeur');
+  assert.equal(tk.source.label, 'Sur place', 'sur place / à emporter replaces the source, never shown twice');
   const cuisine = read('kiwi-cuisine.html');
   assert.equal((cuisine.match(/'chip\.pager':/g) || []).length, 3, 'fr, en, ar');
   assert.equal((cuisine.match(/T\('chip\.pager'\)/g) || []).length, 2, 'classic card and 2027 ticket');
@@ -204,17 +240,21 @@ await ok('kitchen tablet: on, a paid order skips « Nouvelles » and cooks from 
   assert.match(src, /var mall = cfg\.features\.mallRestaurant === true;\n\s+if \(mall !== S\.mall\) \{ S\.mall = mall; paint\(\); \}/, 'the tablet reads the switch from /api/config');
 });
 await ok('the owner sets the bipeur count (1..20), the server refuses anything else', () => {
-  assert.match(read('functions/api/store.js'), /counterflow: \{ keys: \['direct', 'payToKitchen', 'typeAtPay', 'pagers'\]/);
-  assert.match(read('functions/api/store.js'), /k === 'pagers' \? !\(Number\.isInteger\(v\) && v >= 1 && v <= 20\) : typeof v !== 'boolean'/);
+  /* The route itself (store.js keeps 12, refuses 0, 21, 2.5, '5') runs in tools/counter-policy-store-test.mjs. */
   assert.match(read('assets/till-policy-settings.js'), /data-tps-pagers/);
 });
 
 await ok('kitchen screen: the empty « Nouvelles » column is gone, « En préparation » takes its width', () => {
   for (const f of ['assets/caisse-kitchen/kds-board.js', 'assets/caisse-kitchen.js']) {
-    assert.match(read(f), /nb\.style\.display = \(typeof mallOn === 'function' && mallOn\(\) && !newList\.length\) \? 'none' : ''/, f);
+    const newColumn = (mall) => {
+      const nodes = {};
+      vm.runInNewContext(grab(read(f), 'kdsPaint') + ';kdsPaint()', { $: (sel) => nodes[sel] ||= { style: {} }, kdsOrders: [], kdsStationBar: () => '', kdsGroup: () => [],
+        kdsKitOn: () => false, kdsEmpty: () => '', updateKdsCount() {}, kdsEsc: String, mallOn: () => mall, window: { KiwiCaisseLang: { tr: (x) => x } } });
+      return nodes['#kit-new'].style.display;
+    };
+    assert.deepEqual([newColumn(true), newColumn(false)], ['none', ''], f + ': on and empty, « Nouvelles » hides; off, it stays');
   }
   assert.match(read('assets/caisse-shell.css'), /\.kit-col-cooking \{ flex: 1;/);
-  assert.match(read('assets/caisse-kitchen/kds-board.js'), /if \(source\.kind === 'takeaway'\) source\.label = svc; else chips\.unshift\(svc\);/, 'sur place / à emporter replaces the source, never shown twice');
 });
 
 console.log(`\n✓ mall restaurants: ${n} checks · off changes nothing, on pays first, hands out bipeurs, prints the kitchen after the receipt`);

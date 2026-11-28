@@ -52,6 +52,43 @@ check('numbers', 1 + 1 === 2);
 `;
 assert.deepEqual(mix(helperProbe), { total: 3, text: 1, behavioural: 2 });
 assert.deepEqual(mix('const x = 1;'), { total: 0, text: 0, behavioural: 0 });
+/* The assistant harness runs code (its load() is no file reader), and `r.text`
+   is a property, not the file text held in a variable named text. */
+const harnessProbe = `
+const { load, flatten } = require('./agent-harness.cjs');
+const text = fs.readFileSync('a.js', 'utf8');
+const w = load({ lang: 'fr' });
+const r = { text: flatten(w.KiwiAgentAsk('q', 'fr')) };
+ok(/800 MAD/.test(r.text), 'answer');
+ok(text.includes('KiwiAgentAsk'), 'grep');
+`;
+assert.deepEqual(mix(harnessProbe), { total: 2, text: 1, behavioural: 1 });
+/* new Function(text)(…) compiles the text and runs it: what it returns is behaviour. */
+assert.deepEqual(mix(`
+const src = fs.readFileSync('a.js', 'utf8');
+const world = new Function('load', src + '; return world;')(load);
+assert.equal(world('fr').total, 3);
+assert.ok(src.includes('world'));
+`), { total: 2, text: 1, behavioural: 1 });
+/* A local helper is a reader by what it does, not by its name; a runner taking a function is not an assertion. */
+assert.deepEqual(mix(`
+const src = (name, rows) => ({ name, rows, kind: E.detect(rows).kind });
+const read = (f) => fs.readFileSync(f, 'utf8');
+const ok = async (name, fn) => { await fn(); };
+ok('kinds', () => { assert.equal(src('a', []).kind, 'tickets'); assert.match(read('x.js'), /y/); });
+`), { total: 2, text: 1, behavioural: 1 });
+assert.deepEqual(mix(`
+const SRC = fs.readFileSync('a.js', 'utf8');
+const readFn = (name) => SRC.slice(SRC.indexOf(name));
+assert.match(readFn('paint'), /x/);
+`), { total: 1, text: 1, behavioural: 0 });
+/* An awaited call ran something, even when a fixture read from disk went into it. */
+assert.deepEqual(mix(`
+const pem = fs.readFileSync('leaf.pem', 'utf8');
+const res = await service.onRequest({ env: { KEY: pem } });
+assert.equal(res.status, 200);
+assert.match(pem, /BEGIN/);
+`), { total: 2, text: 1, behavioural: 1 });
 
 const check = fs.readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
 const named = [...new Set([...check.matchAll(/['"`](?:tools\/)?([\w.-]+-test\.(?:mjs|js|cjs))['"`]/g)].map((m) => m[1]))]

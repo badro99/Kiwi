@@ -32,6 +32,8 @@ assert.equal(sourceOnly("import { onRequestPost } from '../functions/api/sale.js
 assert.equal(sourceOnly("import { onRequestPost } from '../functions/api/sale.js'; fs.readFileSync('schema.sql'); await onRequestPost(context)"), false);
 assert.equal(sourceOnly("vm.runInNewContext(source); fs.readFileSync('x')"), false);
 assert.equal(sourceOnly("console.log('no reads')"), false);
+assert.equal(sourceOnly("const { load } = require('./agent-harness.cjs'); fs.readFileSync('b.json'); const w = load({});"), false);
+assert.equal(sourceOnly("const { load } = require('./agent-harness.cjs'); fs.readFileSync('b.json');"), true);
 
 const check = fs.readFileSync(path.join(ROOT, 'tools/check.js'), 'utf8');
 const named = [...new Set([...check.matchAll(/['"`](?:tools\/)?([\w.-]+-test\.(?:mjs|js|cjs))['"`]/g)].map((m) => m[1]))]

@@ -246,7 +246,7 @@ markup.replace(/>([^<]+)</g, (_, t) => { markupText.push(t); return ''; });
 markup.replace(/(?:aria-label|placeholder|title)="([^"]*)"/g, (_, v) => { markupText.push(v); return ''; });
 const cloJs = caisseTestSource.declarations('updateEcart','updateCardEcart','openCloture','openTableBills','renderOpenTableBills','renderCloture')
   + caisseTestSource.declarations('tillKitZNumber','showPostClose','finishClose','closeStepWithin','setCloseBusy')
-  + between(html, "if (registerClosing) { toast('", "const countInput = $('#clo-count');", 'kiwi-caisse.html · clôture en cours')
+  + between(html, "if (registerClosing) { toast(", "const countInput = $('#clo-count');", 'kiwi-caisse.html · clôture en cours')
   + between(html, "$('#clo-close').addEventListener", "/* ---- L'écran d'après-clôture", 'kiwi-caisse.html · bouton fermer');
 const fmtDur = between(html, 'function fmtDur(min) {', '\n    }', 'kiwi-caisse.html · fmtDur');
 audit('Clôture', markupText.concat(jsStrings(cloJs), jsStrings(fmtDur)));

@@ -37,7 +37,7 @@ ok((fn.match(/<section class="rmw-rx-sec/g) || []).length === 3, 'three titled s
 ok(/role="switch" \$\{attr\}/.test(fn) && /toggle\('data-avail'/.test(fn) && /avail:!!\$\('\[data-avail\]',m\.el\)\.checked/.test(fn), 'availability is a switch, saved from its checked state');
 ok(!/<select[^>]*data-avail/.test(fn), 'no availability select left');
 ok(/data-is-formula aria-label=/.test(fn) && /role="switch" data-is-formula/.test(fn), 'the set menu is turned on by a labelled switch');
-ok(/class="rmw-it-chip"><input type="checkbox" data-opt=/.test(fn), 'option groups are chips with a real (hidden, focusable) checkbox');
+ok(/data-opt-row="\$\{esc\(id\)\}"><input type="checkbox" data-opt=/.test(fn) && /data-opt-grip aria-label=/.test(fn) && /data-opt-mv="-1" aria-label=/.test(fn) && /data-opt-pick=/.test(fn), 'option groups are « Réordonner » rows (labelled grip, keyboard chevrons) keeping a data-opt checkbox for the save; the other groups wait as « + » chips (786785af1)');
 ok(/ui\('itRule'\)\.split\(/.test(fn) && /data-slot-min=/.test(fn) && /data-slot-max=/.test(fn), 'a step rule reads as a sentence around its two numbers');
 ok(/if\(!name\)\{nameErr\.hidden=false;nameInput\.setAttribute\('aria-invalid','true'\);nameInput\.focus\(\);return;\}/.test(fn), 'an empty name says so instead of a silent Save');
 ok(/data-media-tile/.test(fn) && /const showMedia=\(\)=>\{tile\.innerHTML=mediaTile\(\)/.test(fn), 'the photo or video is previewed, and the preview follows an upload or removal');

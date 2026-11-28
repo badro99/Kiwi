@@ -15,7 +15,7 @@ const checks = [
   ['${fmt(lineAmount)} MAD', 'each product line renders its amount'],
   // c436fc7c: cash, card and delivery always, plus every method seen that day
   // (virement, chèque…); dashboard-activity-test runs it on real sales.
-  ["['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods]", 'Tout, the three standing filters and every method seen that day are rendered'],
+  ["['all', ...new Set(['cash', 'card', 'transfer', 'cheque', 'delivery', ...seenMethods, ...selectedMethods", 'Tout, the three standing filters and every method seen that day are rendered'],
   ['current.length >= 2', 'choosing a third payment type resets the filter'],
   // 716a3f15: a ticket paid two ways is listed under each method it was paid by.
   ['daySales.filter((s) => salesMethodHit(s, selectedMethods))', 'sale rows are filtered by payment type'],
