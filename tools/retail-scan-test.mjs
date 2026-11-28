@@ -101,7 +101,7 @@ const stamps = JSON.parse(fs.readFileSync(new URL('./asset-stamps.json', import.
 const cssVer = stamps['assets/retail-scan.css']?.v || '7';
 const jsVer = stamps['assets/retail-scan.js']?.v || '6';
 ok(html.includes(`assets/retail-scan.css?v=${cssVer}`) && html.includes(`assets/retail-scan.js?v=${jsVer}`), 'caisse loads the retail scan assets');
-ok(!html.includes('zxing-browser.min.js'), 'the 431 KB decoder is not parsed at every till boot');
+ok(!/<script\b[^>]*zxing-browser\.min\.js/.test(html), 'the 431 KB decoder is not parsed at every till boot (a data-caisse-lazy <link> fetches nothing)');
 ok(sw.includes(`'/${api._test.decoderSrc}'`), 'the on-demand decoder URL is the one the service worker precaches (offline)');
 ok(dispatch.includes('KiwiRetailScan.mount(root, id)'), 'dispatcher mounts the additive lane');
 ok(/var CACHE = 'kiwi-app-v\d+'/.test(sw) && sw.includes("'/assets/vendor/zxing-browser.min.js?v=1'") && sw.includes(`'/assets/retail-scan.js?v=${jsVer}'`) && sw.includes(`'/assets/retail-scan.css?v=${cssVer}'`), 'offline shell caches the iPhone scanner');

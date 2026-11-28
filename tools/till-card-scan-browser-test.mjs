@@ -114,7 +114,7 @@ async function noteWithCafe(page, viewport) {
 }
 
 try {
-  const byCamera = (viewport) => async (t) => {
+  const openByCamera = (viewport) => async (t) => {
     const { page } = await openTill(t, viewport, true);
     await noteWithCafe(page, viewport);
     t.step('no customer yet: the note offers to scan a card');
@@ -132,11 +132,11 @@ try {
   };
   await h.S.run('card scan by camera · fr · tablet', async (t) => {
     // coverage: surface=caisse-restaurant locale=fr viewport=tablet
-    await byCamera('tablet')(t);
+    await openByCamera('tablet')(t);
   });
   await h.S.run('card scan by camera · fr · phone', async (t) => {
     // coverage: surface=caisse-restaurant locale=fr viewport=phone
-    await byCamera('phone')(t);
+    await openByCamera('phone')(t);
   });
   await h.S.run('card scan sign-up side · fr · tablet', async (t) => {
     // coverage: surface=caisse-restaurant locale=fr viewport=tablet
