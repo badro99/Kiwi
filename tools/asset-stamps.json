@@ -1592,8 +1592,8 @@
     "sha": "7dc486a08291a1a5"
   },
   "assets/pages-pro-boutique.js": {
-    "v": "76",
-    "sha": "dea8c44654a9c869"
+    "v": "77",
+    "sha": "631449695132d17f"
   },
   "assets/pages-pro-office.js": {
     "v": "30",
@@ -1708,8 +1708,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "384",
-    "sha": "221bb56448b11abc"
+    "v": "385",
+    "sha": "c3b3dca5e02c383c"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -1836,16 +1836,16 @@
     "sha": "bee5b88b8cabff28"
   },
   "assets/pos-boutique.css": {
-    "v": "430",
+    "v": "431",
     "sha": "779406d0c59205cb"
   },
   "assets/pos-boutique.js": {
-    "v": "430",
-    "sha": "15937d3e7b143223"
+    "v": "431",
+    "sha": "cfc1139f0a1ecee3"
   },
   "assets/pos-boutique/avance-restock.js": {
-    "v": "83",
-    "sha": "736843e7fa2e77f6"
+    "v": "84",
+    "sha": "641168b6eb4d0abf"
   },
   "assets/pos-boutique/bargain-ui.js": {
     "v": "4",
@@ -1864,8 +1864,8 @@
     "sha": "93437a9d9afb508c"
   },
   "assets/pos-boutique/checkout.js": {
-    "v": "324",
-    "sha": "3a41980f882ac86f"
+    "v": "325",
+    "sha": "a9008f35db088914"
   },
   "assets/pos-boutique/cheque-sheet.js": {
     "v": "2",
@@ -1876,12 +1876,12 @@
     "sha": "988b88c659f6ff5e"
   },
   "assets/pos-boutique/drawer.js": {
-    "v": "241",
-    "sha": "330b1364761b6ffe"
+    "v": "242",
+    "sha": "d58468e33453341a"
   },
   "assets/pos-boutique/exch-combined.js": {
-    "v": "86",
-    "sha": "777957b5dc06dbf0"
+    "v": "87",
+    "sha": "eb382763e82eea37"
   },
   "assets/pos-boutique/exch-cut.js": {
     "v": "7",
@@ -1904,8 +1904,8 @@
     "sha": "be8086a1fdff84d5"
   },
   "assets/pos-boutique/inventory.js": {
-    "v": "324",
-    "sha": "e2b1eb92235d9c2c"
+    "v": "325",
+    "sha": "fb66b84caacfd148"
   },
   "assets/pos-boutique/kit-2027.js": {
     "v": "28",
@@ -1964,8 +1964,8 @@
     "sha": "549f7ca06673d552"
   },
   "assets/pos-boutique/sales.js": {
-    "v": "324",
-    "sha": "670978da91edfaae"
+    "v": "325",
+    "sha": "11312c564cddc150"
   },
   "assets/pos-boutique/search.js": {
     "v": "24",
@@ -2024,8 +2024,8 @@
     "sha": "2ec5eb9137ca6e3f"
   },
   "assets/pos-dispatch.js": {
-    "v": "572",
-    "sha": "a612c317df14594b"
+    "v": "573",
+    "sha": "b159fadd25629591"
   },
   "assets/pos-epicerie.css": {
     "v": "47",
@@ -2472,8 +2472,8 @@
     "sha": "d0c74e49e537aea8"
   },
   "assets/retail-icon-picker.js": {
-    "v": "9",
-    "sha": "1a420794c51ff044"
+    "v": "10",
+    "sha": "3dafaf9966a22b10"
   },
   "assets/retail-open-tickets.js": {
     "v": "3",

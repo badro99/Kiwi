@@ -316,11 +316,12 @@ function css() {
 /* Monte le bloc « À la caisse » dans la fiche produit ouverte `root`.
    o: { lang, trade ('boutique' | 'maison'), media: () => bool,
         photoInput (le champ fichier de la fiche du tableau de bord, qui envoie déjà),
-        photo, demo: () => bool, merchant: () => slug (la caisse : ce bloc envoie lui-même) } */
+        photo, demo: () => bool, merchant: () => slug (la caisse : ce bloc envoie lui-même),
+        nameInput, side (une fiche sans [data-bqx-name] ni .bqx-pf-side : « Modifier le produit » de la caisse) } */
 export function mountTillPhoto(root, product, o = {}) {
   if (!root || (o.trade !== 'boutique' && o.trade !== 'maison')) return null;
-  const nameIn = root.querySelector('[data-bqx-name]');
-  const side = root.querySelector('.bqx-pf-side');
+  const nameIn = o.nameInput || root.querySelector('[data-bqx-name]');
+  const side = o.side || root.querySelector('.bqx-pf-side');
   if (!nameIn || !side || side.querySelector('[data-ktp]')) return null;
   css();
   const lang = LANG_I[o.lang] != null ? o.lang : 'fr';

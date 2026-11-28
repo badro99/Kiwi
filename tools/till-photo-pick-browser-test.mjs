@@ -11,6 +11,9 @@
  *   B · the till's upload path outside the demo: the file goes through
  *       KiwiPlatformOps.uploads with the till's merchant, the returned URL is
  *       what the form saves; a refused upload says so and keeps nothing;
+ *   D · a photo the dashboard set shows on the till's sale tile; the till's
+ *       « Modifier le produit » carries the same block (the old icon strip is
+ *       gone): remove the photo, or choose another, and the tile follows;
  *   C · dashboard « Nouveau produit » (Maison Mansour demo): the block hands
  *       the file to the sheet's own upload, the card and the block show it,
  *       « Retirer ma photo » takes it out of both.
@@ -98,6 +101,46 @@ const made = await page.evaluate((name) => { const p = window.KiwiBoutiqueCatalo
 ok(made && /^blob:/.test(made.photo), 'A · the created product carries the photo', JSON.stringify(made));
 await page.evaluate((name) => { const cat = window.KiwiBoutiqueCatalog; cat.listProducts().filter((p) => p.name === name).forEach((p) => cat.deleteProduct(p.id)); }, NAME);
 await page.evaluate(() => { const b = [...document.querySelectorAll('[data-inv-x]')].find((x) => x.offsetParent); if (b) b.click(); }); await sleep(400);
+
+/* ── D · a photo set elsewhere shows on the till, and the till's
+ *       « Modifier le produit » changes or removes it ─────────────────────── */
+const PHOTO = '/assets/retail-photos/abaya-beige.webp';
+const pid = await page.evaluate((url) => {
+  const cat = window.KiwiBoutiqueCatalog;
+  const p = cat.listProducts().find((x) => !x.archived);
+  cat.updateProduct(p.id, { photo: url, video: '' });   // ce que la synchro apporte du tableau de bord
+  return p.id;
+}, PHOTO);
+const sell = (view) => page.evaluate(async (u, view) => { const m = await import(u); m.switchView(view); }, coreUrl, view);
+const tile = () => page.evaluate((pid) => { const c = document.querySelector(`[data-bq-item="${pid}"] .bq-card-art img`); return c ? { cls: c.className, src: c.getAttribute('src') } : null; }, pid);
+await sell('vente'); await sleep(800);
+let t = await tile();
+ok(t && t.cls === 'bq-product-photo' && t.src === PHOTO, 'D · the sale grid tile shows the product\'s own photo', JSON.stringify(t));
+await sell('inventaire'); await sleep(600);
+const editOpen = async () => {
+  await page.evaluate((pid) => document.querySelector(`[data-inv-open="${pid}"]`).click(), pid); await sleep(500);
+  await page.waitForSelector('[data-inv-edit]', { visible: true, timeout: 8000 });
+  await page.click('[data-inv-edit]'); await sleep(300);
+  await page.waitForSelector('[data-bqi-photo-slot] [data-ktp]', { visible: true, timeout: 8000 });
+};
+await editOpen();
+s = await block(page);
+ok(s.own && s.src === PHOTO && s.drop && s.choose, 'D · « Modifier le produit » shows that photo with the photo buttons', JSON.stringify(s));
+ok(!(await page.$('.bqi-iconpick')), 'D · the old icon strip is gone from the till edit form');
+if (process.env.KIWI_KTP_SHOTS) { const f = await page.$('.bqi-form'); await f.screenshot({ path: path.join(process.env.KIWI_KTP_SHOTS, 'till-edit.png') }); }
+await page.click('[data-ktp-drop]'); await sleep(200);
+await page.click('#bqi-e-save'); await sleep(600);
+ok(await page.evaluate((pid) => window.KiwiBoutiqueCatalog.getProduct(pid).product.photo, pid) === '', 'D · « Retirer ma photo » then « Enregistrer » removes it from the product');
+await editOpen();
+await (await page.$('[data-bqi-photo-slot] [data-ktp-file]')).uploadFile(IMG); await sleep(500);
+await page.click('#bqi-e-save'); await sleep(600);
+const after = await page.evaluate((pid) => window.KiwiBoutiqueCatalog.getProduct(pid).product.photo, pid);
+ok(/^blob:/.test(after), 'D · a photo chosen in « Modifier le produit » is saved on the product', after);
+await sell('vente'); await sleep(800);
+t = await tile();
+ok(t && t.src === after, 'D · and the sale grid shows it at once', JSON.stringify(t));
+await page.evaluate((pid) => window.KiwiBoutiqueCatalog.updateProduct(pid, { photo: '' }), pid);
+await page.evaluate(() => { const b = [...document.querySelectorAll('[data-inv-x]')].find((x) => x.offsetParent); if (b) b.click(); }); await sleep(300);
 
 /* ── B · the till's upload path outside the demo ──────────────────────────── */
 const pickerUrl = await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).find((u) => /\/assets\/retail-icon-picker\.js/.test(u)));
