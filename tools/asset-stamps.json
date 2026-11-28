@@ -2324,16 +2324,16 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "108",
-    "sha": "e848ec72f48be532"
+    "v": "109",
+    "sha": "563cc80dae317969"
   },
   "assets/printer-health.js": {
     "v": "3",
     "sha": "331149bdbb3a9d11"
   },
   "assets/printer/pairing-lang.js": {
-    "v": "29",
-    "sha": "1d1655a5eba279ec"
+    "v": "30",
+    "sha": "0d39e2d910883198"
   },
   "assets/printer/pairing-ui.js": {
     "v": "19",

@@ -81,6 +81,7 @@ async function till(t) {
     try { localStorage.setItem('kiwiSkin2027:till', '1'); } catch (_) {}
   });
   t.step('open the demo boutique till');
+  // coverage: surface=caisse-boutique locale=fr viewport=tablet
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.KiwiPosDispatch && window.KiwiBoutiqueCatalog, { timeout: 20000 });
   await page.evaluate(() => window.KiwiPosDispatch.unlockById('boutique'));
@@ -118,7 +119,6 @@ async function ensureLine(page) {
   await sleep(400);
 }
 
-// coverage: surface=caisse-boutique locale=fr viewport=tablet
 await S.run('glisser duplique, toucher modifie', async (t) => {
   const page = await till(t);
   await ensureLine(page);

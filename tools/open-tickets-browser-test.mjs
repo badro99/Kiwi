@@ -73,6 +73,7 @@ async function till(t, id) {
   /* KIWI_OTK_LANG=ar : les mêmes écrans en arabe, pour les captures (les libellés vérifiés sont français). */
   if (process.env.KIWI_OTK_LANG) await page.evaluateOnNewDocument((l) => { try { localStorage.setItem('kiwiCaisseLang', l); } catch (_) {} }, process.env.KIWI_OTK_LANG);
   t.step('open the demo ' + id + ' till');
+  // coverage: surface=caisse-boutique locale=fr viewport=tablet
   await page.goto(base + '/kiwi-caisse.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.KiwiPosDispatch && window.KiwiBoutiqueCatalog, { timeout: 20000 });
   await page.evaluate((v) => window.KiwiPosDispatch.unlockById(v), id);
@@ -102,7 +103,6 @@ let L = '';
 const lines = (page) => page.evaluate(() => { const v = document.querySelector('#pos-boutique.is-on, #pos-maison.is-on'); return v ? v.querySelectorAll('.bq-tk-line, .mz-tk-line, [data-line]').length : -1; });
 
 for (const id of ['boutique', 'maison']) {
-  // coverage: surface=caisse-boutique locale=fr viewport=tablet
   await S.run(id + ' : garder ouvert, voir, rouvrir au même total', async (t) => {
     const page = await till(t, id);
     /* La démo ouvre sur un ticket déjà commencé : on y ajoute un article. */
@@ -130,7 +130,6 @@ for (const id of ['boutique', 'maison']) {
     if (shots) await page.screenshot({ path: path.join(shots, id + '-resumed.png') });
   });
 
-  // coverage: surface=caisse-boutique locale=fr viewport=tablet
   await S.run(id + ' : supprimer un ticket ouvert demande deux touches', async (t) => {
     const page = await till(t, id);
     await addItem(page, id, 2);
