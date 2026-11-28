@@ -46,7 +46,7 @@ export async function passImages({ merchant, view }) {
   const lockups = [];
   for (const s of [1, 2, 3]) lockups.push(await lockupLogo(merchant, s));
   const lockup = lockups.every(Boolean);
-  for (const [s, suffix] of [[1, ''], [2, '@2x'], [3, '@3x']]) {
+  for (const [s, suffix] of /** @type {Array<[number, string]>} */ ([[1, ''], [2, '@2x'], [3, '@3x']])) {
     images['icon' + suffix + '.png'] = kiwiArt('icon' + suffix + '.png');
     images['logo' + suffix + '.png'] = lockup ? lockups[s - 1] : kiwiArt('logo' + suffix + '.png');
     images['strip' + suffix + '.png'] = await stripPng({ view, colors, scale: s });

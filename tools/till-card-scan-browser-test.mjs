@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The loyalty card read by the till's camera (assets/caisse/card-scan.js), on
+// The loyalty card read by the till's camera (assets/card-scan.js), on
 // the 2027 note: a paired restaurant, a synthetic server, and Chromium's fake
 // camera FILMING a real card QR (KIWI-C:<client>), so the decoder, the attach
 // and the note's card buttons run end to end. Owner, 2026-11-27: Amira Cafe's

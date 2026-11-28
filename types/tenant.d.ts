@@ -18,7 +18,7 @@ export interface EmployeeCredential extends StaffIdentity {
 }
 export interface AmbiguousCredential { ambiguous: true; id?: never; merchant?: never; name?: never; role?: never; status?: never; type?: never; authVersion?: never }
 export interface ActiveEmployee { session: EmployeeSession; member: Record<string, any>; merchant: MerchantSlug }
-export type PinResult = { ok: boolean; error?: string; status?: number; response?: Response; configured?: boolean; staff?: StaffIdentity; merchant?: MerchantSlug };
+export type PinResult = { ok: boolean; error?: string; status?: number; response?: Response; configured?: boolean; staff?: StaffIdentity; merchant?: MerchantSlug; viaShift?: boolean };
 export interface TillVerification { ok: boolean; unavailable?: boolean; revoked?: boolean; legacy?: boolean; deviceId?: DeviceId }
 /** Known secrets; the till projection also excludes every unknown field. */
 export type TeamSecrets = 'password' | 'pinCode' | 'baseSalary' | 'hourlyRate' | 'cin' | 'iban' | 'address' | 'emergencyName' | 'emergencyPhone';

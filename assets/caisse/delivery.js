@@ -241,7 +241,7 @@ async function dlvSend(pay) {
   const c = dlvCur();
   if (!c || dlvIsHouse(c) || tenderInFlight || dlvSending) return;
   if (!(cart || []).some((l) => l && l.qty > 0 && l.kind !== 'fee')) return;
-  const P = window.KiwiDeliveryPay;
+  const P = window.KiwiDelivery && window.KiwiDelivery.pay;   /* KiwiDeliveryPay, through the global the till already reads */
   if (!pay && P && P.cashOn && P.cashOn(c.id)) { dlvAskPay(c); return; }
   const name = dlvName(c.id), cash = pay === 'cash';
   dlvSending = true;
@@ -532,7 +532,7 @@ function dlvBoot() {
 document.addEventListener('DOMContentLoaded', () => {
   if (dlvApi()) { dlvBoot(); return; }
   const s = document.createElement('script');
-  s.src = 'assets/delivery.js?v=16';
+  s.src = 'assets/delivery.js?v=17';
   s.onload = dlvBoot;
   document.head.appendChild(s);
 });

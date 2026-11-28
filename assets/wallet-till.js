@@ -258,7 +258,7 @@
     return state.merchant === m && state.on === true;
   }
   /* The 2027 note's card buttons (till-frame.js) ask through one event:
-     'scan' opens the camera scanner (assets/caisse/card-scan.js, loaded the
+     'scan' opens the camera scanner (assets/card-scan.js, loaded the
      first time from the till's lazy registry), 'card' hands the customer on
      the note their card, like the chip of the shipped note. */
   var scanLoad = null;

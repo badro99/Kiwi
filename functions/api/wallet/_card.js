@@ -45,7 +45,7 @@ export function palette() {
 }
 
 export function passJson({ view, card, merchant, env, baseUrl }) {
-  const pal = palette(merchant);
+  const pal = palette();
   const shop = String(merchant.name || 'Kiwi').slice(0, 60);
   const unit = view.model === 'amount' ? 'points' : 'tampons';
   const balance = {

@@ -72,8 +72,8 @@
     "sha": "554f28420b28fb40"
   },
   "assets/admin-workspace.js": {
-    "v": "46",
-    "sha": "936acee298238012"
+    "v": "48",
+    "sha": "212b0cdf2dcb05ff"
   },
   "assets/agent-action-center.js": {
     "v": "4",
@@ -331,10 +331,6 @@
     "v": "5",
     "sha": "efbec3f29e4f9841"
   },
-  "assets/caisse/card-scan.js": {
-    "v": "1",
-    "sha": "0fb86f87eec55e63"
-  },
   "assets/caisse/catalogue.js": {
     "v": "40",
     "sha": "f6171a8c6bdb62f7"
@@ -344,12 +340,12 @@
     "sha": "d359ea22da75b2f0"
   },
   "assets/caisse/counter-flow.js": {
-    "v": "6",
-    "sha": "89440734e1a12ee8"
+    "v": "7",
+    "sha": "dead629b7f43ab3b"
   },
   "assets/caisse/delivery.js": {
-    "v": "18",
-    "sha": "4093cc5c60107330"
+    "v": "20",
+    "sha": "e378e83b1b2b7c46"
   },
   "assets/caisse/discounts.js": {
     "v": "11",
@@ -422,6 +418,10 @@
   "assets/cancellation-history.js": {
     "v": "3",
     "sha": "58d02bfb3a59c462"
+  },
+  "assets/card-scan.js": {
+    "v": "2",
+    "sha": "0fb86f87eec55e63"
   },
   "assets/cash-sessions.js": {
     "v": "19",
@@ -620,8 +620,8 @@
     "sha": "db5d8d9c547adb73"
   },
   "assets/delivery.js": {
-    "v": "16",
-    "sha": "b4c1400c159cc4c3"
+    "v": "17",
+    "sha": "4919a4f9a9a8956b"
   },
   "assets/demoClock.js": {
     "v": "5",
@@ -1708,8 +1708,8 @@
     "sha": "0cb57a54ed318615"
   },
   "assets/pages/dashboard-startup.js": {
-    "v": "386",
-    "sha": "5118e43dcc11feb7"
+    "v": "387",
+    "sha": "436cb70e8410751f"
   },
   "assets/pages/tables-data.js": {
     "v": "6",
@@ -2836,8 +2836,8 @@
     "sha": "e1852673a2c8ac31"
   },
   "assets/wallet-till.js": {
-    "v": "3",
-    "sha": "e08bc55b51fc18e9"
+    "v": "4",
+    "sha": "88c59d92f98b435d"
   },
   "assets/weather.js": {
     "v": "1",

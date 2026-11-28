@@ -37,8 +37,7 @@ function till({ mall, saved = {}, pagers } = {}) {
   const toasts = [];
   const window = {
     KiwiConfig: { features: mall ? { mallRestaurant: true } : {} },
-    KiwiDiscountPolicy: { counterFlow: () => ({ direct: false, payToKitchen: false, typeAtPay: false, ...saved }) },
-    KiwiCounterFlow: { get: () => (pagers == null ? {} : { pagers }) },
+    KiwiDiscountPolicy: { counterFlow: () => ({ direct: false, payToKitchen: false, typeAtPay: false, ...saved, ...(pagers == null ? {} : { pagers }) }) },
     addEventListener: (name, fn) => { (listeners[name] = listeners[name] || []).push(fn); },
   };
   const ctx = vm.createContext({

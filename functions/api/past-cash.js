@@ -121,7 +121,9 @@ export async function onRequestPost({ request, env }) {
   const [cutoff, zone] = await Promise.all([merchantCutoff(env, merchant), merchantZone(env, merchant)]);
   const today = businessDate(Date.now(), cutoff, zone);
   const first = await firstLiveDay(env, merchant, cutoff, zone);
-  const events = [], seen = new Set(), summary = [];
+  /** @type {Array<{ id: string, session: string, type: string, opened: number, at: number, expected?: number, counted?: number, gap?: number, kind?: string, amount?: number, reason?: string }>} */
+  const events = [];
+  const seen = new Set(), summary = [];
   for (const entry of asked) {
     const day = String(entry && entry.day || '');
     if (!validDay(day)) return json({ error: 'day', day }, 400);

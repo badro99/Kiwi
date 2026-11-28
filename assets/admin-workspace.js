@@ -283,6 +283,8 @@
   window.KiwiOperatorWorkspace={refresh:load,untranslated:function(){return Object.keys(missed);}};
   Object.assign(state,bridge.snapshot());navigate();owners();
   document.getElementById('refresh').addEventListener('click',load);
+  /* Téléphone : la barre du bas et les boutons du haut défilent de côté (admin-workspace.css). Ce que le clavier atteint s'y ramène dans l'écran, sinon le focus part hors champ (« Équipe », « Support »). */
+  document.addEventListener('focusin',function(e){var a=e.target&&e.target.closest&&e.target.closest('.op-navigation a, .operator-workspace .top-actions > *');if(!a)return;var n=a.parentElement,r=a.getBoundingClientRect(),nr=n.getBoundingClientRect();if(r.left<nr.left||r.right>nr.right)a.scrollIntoView({block:'nearest',inline:'nearest'});});
   function refreshSources(){if(state.operatorsError)owners();if(state.route==='merchant'){if(bridge.refreshMetrics)bridge.refreshMetrics();}else bridge.refresh();load();}
   setInterval(function(){freshness();if(!document.hidden&&!document.querySelector('dialog[open]')){refreshSources();}},30000);
   document.addEventListener('visibilitychange',function(){freshness();if(!document.hidden&&!document.querySelector('dialog[open]')){refreshSources();}});

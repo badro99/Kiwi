@@ -133,7 +133,7 @@ async function staffOnShift(env, merchant, id) {
     for (const x of (r && r.results) || []) acc[x.merchant] = x.account_id;
     if (!acc[merchant] || acc[merchant] !== acc[row.merchant]) return null;
   }
-  return { id: String(row.id || ''), name: String(row.name || ''), role: String(row.role || '') };
+  return { id: /** @type {import('../../types/tenant').EmployeeId} */ (String(row.id || '')), name: String(row.name || ''), role: String(row.role || '') };
 }
 
 /* Fin de poste : la caisse se verrouille ou change de personne. La preuve a déjà
@@ -147,6 +147,7 @@ export async function endShift(request, env, merchant, now = Date.now()) {
 
 /* verifyStaffPin, qui accepte aussi la preuve de poste à la place du code.
    Même forme de réponse : { ok, staff } ou { ok: false, error, status | response }. */
+/** @returns {Promise<import('../../types/tenant').PinResult>} */
 export async function verifyStaffCredential(request, env, merchant, credential, opts) {
   if (!isShiftProof(credential)) return verifyStaffPin(request, env, merchant, credential, opts);
   if (!env || !env.DB || !env.AUTH_SECRET) return { ok: false, error: 'not-configured', status: 503 };

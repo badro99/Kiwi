@@ -45,7 +45,7 @@ function counterFlow() {
 const MALL = { tenderAt: 0, held: [] };
 function mallPagerCount() {
   let n = 10;
-  try { const F = window.KiwiCounterFlow, v = F && F.get && F.get().pagers; if (Number.isInteger(v)) n = v; } catch (_) {}
+  try { const P = window.KiwiDiscountPolicy, v = P && P.counterFlow && (P.counterFlow() || {}).pagers; if (Number.isInteger(v)) n = v; } catch (_) {}   /* the same flow() as KiwiCounterFlow.get, through the global the till already reads */
   return Math.max(1, Math.min(20, n));
 }
 function mallPagersBusy() {

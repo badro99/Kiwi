@@ -1043,6 +1043,7 @@
     priceOf, choicePriceOf, slotKey, formulaExtraOf, setItemPrices, setChoicePrices, bulkFill,
     logoHTML, badgeHTML, ensureCSS,
     commissionOf, setCommissions, openSettings,
+    pay: window.KiwiDeliveryPay,   /* versements et espèces par plateforme (plus haut), lus par la caisse à travers KiwiDelivery */
     subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
   };
 })();

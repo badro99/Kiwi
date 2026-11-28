@@ -6,7 +6,6 @@
       "reads": [
         "Kiwi",
         "KiwiConfig",
-        "KiwiDashPin",
         "KiwiDashPinVault",
         "KiwiDesign2026",
         "KiwiDesignIOS27",
@@ -23,7 +22,7 @@
         "__kiwiRole",
         "fetch"
       ],
-      "coupling": 18
+      "coupling": 17
     },
     "kiwi-caisse.html": {
       "owner": "caisse",
@@ -125,7 +124,6 @@
         "fetch",
         "finishClose",
         "floatMemKey",
-        "fmtDur",
         "genRef",
         "handoverGapCents",
         "heldSaleRows",
@@ -475,90 +473,10 @@
         "KiwiTeamPin",
         "KiwiZoneLaw",
         "__kiwiApplyTheme",
-        "addToTableOrder",
-        "assignUnit",
-        "changeMenuQty",
-        "changeOrderQty",
-        "clearEmployeeOperationalState",
-        "clockOut",
-        "closeCardModal",
-        "closeCashModal",
-        "closeFormulaSheet",
-        "closeOptionsSheet",
-        "closePayChoice",
-        "closeSplitModal",
-        "confirmFormula",
-        "confirmMergeTable",
-        "confirmNewTable",
-        "confirmOptions",
-        "confirmTransferTable",
-        "confirmVoidLine",
-        "currentPayAmount",
-        "enterBrowseMode",
-        "enterServiceAfterClockIn",
-        "exitBrowseMode",
         "fetch",
-        "finishClockOut",
-        "fireNfcTap",
-        "fmlChildSel",
-        "isFmlSlotSatisfied",
-        "itemHasFormula",
-        "launchSplitFlow",
-        "loadServiceHistory",
-        "logoutEmployeeSession",
-        "lucide",
-        "markTablePaid",
-        "mountTeamSignIn",
-        "moveBtPill",
-        "openCardModal",
-        "openCashModal",
-        "openFormulaSheet",
-        "openMergeTableModal",
-        "openOptionsSheet",
-        "openPayChoice",
-        "openServiceClients",
-        "openSplitModal",
-        "openTableDetail",
-        "openTransferTableModal",
-        "paySplitPart",
-        "pollServiceSync",
-        "postServiceCancellation",
-        "prepareAttendanceGate",
-        "publishServiceTableState",
-        "renderArticleMode",
-        "renderCartBar",
-        "renderCatPills",
-        "renderFormulaSheet",
-        "renderMenu",
-        "renderMenuContext",
-        "renderMergeTableGrid",
-        "renderNewTableChips",
-        "renderOptionsSheet",
-        "renderPartsChips",
-        "renderPayClient",
-        "renderServiceClients",
-        "renderSplitSetup",
-        "renderTableDetail",
-        "renderTables",
-        "renderTipChips",
-        "renderTransferTableGrid",
-        "resetNfc",
-        "resetToEmployeePortal",
-        "returnToFloor",
-        "serviceNotify",
-        "serviceTableId",
-        "setTab",
-        "startServiceSync",
-        "stopServiceSync",
-        "svDrainPendingBatches",
-        "svRenderSyncStatus",
-        "triggerCardSuccess",
-        "unassignUnit",
-        "updateRendu",
-        "updateSplitSummary",
-        "updateWelcomeCopy"
+        "lucide"
       ],
-      "coupling": 91
+      "coupling": 15
     },
     "assets/stock.js": {
       "owner": "stock",
@@ -591,10 +509,10 @@
     "assets/caisse/table-settlement.js": {
       "owner": "table-settlement",
       "reads": [
+        "currentOrder",
         "discountAmountFor",
         "generateOrder",
         "liveTableSplit",
-        "currentOrder",
         "tables"
       ],
       "coupling": 5
@@ -615,120 +533,23 @@
       "assets/kiwi-env.js",
       "assets/till-tenant.js"
     ],
-    "reconcileVoids": [
-      "assets/caisse-accounting.js",
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "openClientModal": [
-      "assets/caisse-accounting.js",
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "applyStoreIdentity": [
-      "assets/caisse-accounting.js",
-      "assets/orderpro-page.js"
-    ],
-    "__kiwiCashSessionPending": [
-      "assets/caisse-accounting.js",
-      "assets/cash-sessions.js"
-    ],
     "$": [
       "assets/caisse-app.js",
-      "assets/orderpro-page.js",
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js",
       "assets/serveur-app.js"
     ],
     "$$": [
       "assets/caisse-app.js",
-      "assets/orderpro-page.js",
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js",
       "assets/serveur-app.js"
-    ],
-    "money": [
-      "assets/caisse-app.js",
-      "assets/orderpro-page.js"
     ],
     "fmtMAD": [
       "assets/caisse-app.js",
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js",
       "assets/serveur-app.js"
     ],
     "fmtMADcents": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "dafrDays": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "monthsEn": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
     "tickClock": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "servers": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "tables": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "_": [
-      "assets/caisse-app.js",
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js",
-      "assets/serveur-app.js"
-    ],
-    "IS_DEMO": [
-      "assets/caisse-app.js",
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "tableOrders": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "newTableId": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "newTableCovers": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "catLabels": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "catOrder": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "menuItems": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "activeCat": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "activeSub": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cart": [
-      "assets/caisse-app.js",
-      "assets/orderpro-page.js"
-    ],
-    "lineSeq": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
@@ -742,30 +563,17 @@
     ],
     "renderMenu": [
       "assets/caisse-app.js",
-      "assets/orderpro-page.js",
       "assets/serveur-app.js"
-    ],
-    "standaloneMenuItem": [
-      "assets/caisse-app.js",
-      "assets/orderpro-page.js"
     ],
     "applyGroupedLineQtyDelta": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "pairSellable": [
-      "assets/caisse-app.js",
-      "assets/pos-boutique/sales.js"
-    ],
-    "cardModal": [
+    "saveSplitFlow": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "reader": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cardSuccessTimer": [
+    "loadSplitFlow": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
@@ -781,34 +589,6 @@
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "cashModal": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cashInput": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cashRendu": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cashRenduVal": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cashConfirm": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cashStepInput": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "cashAmountOverride": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
     "updateRendu": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
@@ -821,17 +601,12 @@
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "splitPayCallback": [
+    "renderPinDots": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
     "splitItemTotals": [
       "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "splitState": [
-      "assets/caisse-app.js",
-      "assets/orderpro-page.js",
       "assets/serveur-app.js"
     ],
     "effectiveTipPct": [
@@ -918,24 +693,115 @@
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "renderPinDots": [
+    "__kiwiCashSessionPending": [
+      "assets/caisse-accounting.js",
+      "assets/cash-sessions.js"
+    ],
+    "dafrDays": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
-    "saleClient": [
+    "monthsEn": [
       "assets/caisse-app.js",
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
+      "assets/serveur-app.js"
+    ],
+    "servers": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "tables": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "_": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "tableOrders": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "newTableId": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "newTableCovers": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "catLabels": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "catOrder": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "menuItems": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "activeCat": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "activeSub": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "lineSeq": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cardModal": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "reader": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cardSuccessTimer": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashModal": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashInput": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashRendu": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashRenduVal": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashConfirm": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashStepInput": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "cashAmountOverride": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "splitPayCallback": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
+    ],
+    "splitState": [
+      "assets/caisse-app.js",
+      "assets/serveur-app.js"
     ],
     "tableSplits": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "saveSplitFlow": [
-      "assets/caisse-app.js",
-      "assets/serveur-app.js"
-    ],
-    "loadSplitFlow": [
       "assets/caisse-app.js",
       "assets/serveur-app.js"
     ],
@@ -953,8 +819,6 @@
     ],
     "toast": [
       "assets/caisse-floor.js",
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js",
       "assets/serveur-app.js"
     ],
     "openNewTableModal": [
@@ -1027,1401 +891,6 @@
       "dashboard.html#inline-5",
       "dashboard.html#inline-7"
     ],
-    "stockOf": [
-      "assets/orderpro-boutique.js",
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "openSheet": [
-      "assets/orderpro-boutique.js",
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "runGreetingFlash": [
-      "assets/orderpro-page.js",
-      "assets/serveur-app.js"
-    ],
-    "saleMatches": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "renderEchanges": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "MOTIFS": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "lineReturnedQty": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "lineAvailableQty": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "pickedQty": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "markLineReturned": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "returnRatio": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "paidUnit": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "saleCard": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "togglePick": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "doExchange": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "doAvoir": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "restoreLines": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "bqPaired": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "bqReal": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "bqName": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "bqCity": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "voucherHTML": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "openVoucher": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "openExchSummary": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "printReceiptNow": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "renderAcomptes": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "openPay": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "syncNetworkState": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "toggleOffline": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "renderNet": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "catDB": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "fmtNum": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "injectInvCss": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "AZ_ROW": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "normScan": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "wedgeChar": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "scanDiagOff": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "installWedgeScanner": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "scanCapture": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "armScanCapture": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "disarmScanCapture": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "unleak": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "handleWedge": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "openScannerTest": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "invScanHandle": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "intakeStartWith": [
-      "assets/pos-boutique/checkout.js",
-      "assets/pos-maison/checkout.js"
-    ],
-    "PRM": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoState": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "PROMO_DAY": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "startOfDay": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "endOfDay": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoScopeText": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "PROMO_DAY_SHORT": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "PROMO_DAY_LONG": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoSlotText": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoWhenText": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoWhenBase": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoItems": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoCount": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "renderPromos": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoArticleCount": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoCardHtml": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "PROMO_STARTERS": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoStarter": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoEmptyHtml": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoLabelPlan": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openPromoLabels": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "confirmPromoDelete": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "composer": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "allowedPercents": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "fitPolicy": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openPromoComposer": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "PROMO_SCOPES": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoDraftValid": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "toInput": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "renderPromoComposer": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoScopeControl": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "wirePromoComposer": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "promoAutoName": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "catalogDashboardOnly": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "inventoryValueVisible": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "renderInventaire": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "invRow": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "invSetModal": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openInvProduct": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "invVarRow": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "catSelectOptions": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "kindSelectOptions": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openNewProduct": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openEditProduct": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "confirmDeleteProduct": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "confirmDeleteVariant": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "colorPicker": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openVariantColor": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openAddVariant": [
-      "assets/pos-maison/inventory.js"
-    ],
-    "openRegisterOnVariant": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "offerRegister": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intake": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "INTAKE_LOG_MAX": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeReset": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeNote": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeJudge": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "INVALID_MSG": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "symBadge": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "openIntake": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeClose": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeHeader": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeLogHtml": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "paintIntake": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeFocus": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeHint": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeTake": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeNew": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeVariant": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeLink": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeKnown": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeAddVariantHere": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeFix": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "intakeConfirmPrice": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "labelForVariant": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "printVariantLabel": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "printProductLabels": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "labelToast": [
-      "assets/pos-boutique/inventory.js",
-      "assets/pos-maison/inventory.js"
-    ],
-    "esc": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js",
-      "assets/serveur-app.js"
-    ],
-    "shelf": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "icons": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "lens": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "DAYS": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "MONTHS": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "pad2": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "fmtDT": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "fmtDay": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "fmtDayY": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "creditLastDay": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "fmtValidUntil": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "fmtHM": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "MIN": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "barcode": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "art": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "ART": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "DEFAULT_ICON": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "artOf": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "ICON_LABELS": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "ICON_KEYS": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "iconPickerHtml": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "wireIconPicker": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "KC": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "KC_MISS": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "colorOf": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "colorLabel": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "colorHex": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "colorDot": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "variantColor": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "isDemoStore": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "useKiwiCl": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "fromKiwi": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "clientList": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "clById": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "clReward": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderCats": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "cardFlag": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "promoedIds": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderGrid": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderExchNote": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "clientRow": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "rewardRow": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderTicket": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "lineRow": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "addToTicket": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "sheet": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "defaultSize": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderSheet": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "markRemiseAuth": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "openApprove": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "foldClientText": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "clienteHits": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "clAvoirOf": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "moveCaretEnd": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderClientes": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "openFiche": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "scanCycle": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "rayonOf": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "lookupCardHtml": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "crossCardHtml": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "askCross": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "CAM_WANT": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "camSupported": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "camBlip": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "camBusy": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "openCamScan": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "renderScan": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "commitEan": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "lookupScan": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "mockScan": [
-      "assets/pos-boutique/sales.js",
-      "assets/pos-maison/sales.js"
-    ],
-    "pvPaired": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqMoney": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "pvReal": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "_bqKey": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "RAYONS": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "P": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "BY_EAN": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "rebuildCatalog": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "sizesOf": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "stockAdd": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "persistStock": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "sizeWord": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "firstFree": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "STAFF": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "syncTillStaff": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "CLIENTES": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "CL": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "initials": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "firstName": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "NOW": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "mkLine": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "SALES": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "findSale": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "AVOIRS": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "avSeq": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "avoirExpired": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "activeAvoirs": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "AVOIR_KEY": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "avoirKey": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "persistAvoirs": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "creditFromServer": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "creditRequest": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "refreshRemoteAvoirs": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "avoirApproval": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "creditIntent": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "stableCreditIssueId": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "creditErrorDetail": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqHoldKit": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqHold": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqReplayHeld": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqPost": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "originalSalePayload": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ensureOriginalSale": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketPrefix": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "TK": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "saleSeq": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "saleSeqPeriod": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "DAY_KEY": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "businessDayKey": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "isToday": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "RETAIN_DAYS": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "withinRetention": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "salesToday": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "whenLabel": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "merchantSlug": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "persistDay": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "srvMethod": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "remoteLine": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "syncReturnSales": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "state": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "RETURN_LOG_KEY": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "RETURN_LOG": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "returnCloudHandle": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "persistReturnLog": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ensureReturnCloud": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "recordReturn": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "TICKET_LEASE_KEY": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "TICKET_LEASE_SIZE": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketLease": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketLeaseRequest": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketPeriod": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "syncTicketPeriod": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "newSaleId": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "readTicketLease": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "saveTicketLease": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "takeTicketNumber": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ensureTicketLease": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "withTicketLock": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "claimTicketNumber": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "assignTicketNumber": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "nextStandaloneTicketNumber": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "freshTicket": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketClient": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "promoFor": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "lineDeal": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "linePromo": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "lineBase": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "lineUnit": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "lineTotal": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "rewardDiscount": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketTotals": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "promoLabelForTicket": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "ticketCount": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "notCashedOf": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "caToday": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "queueIfOffline": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "root": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "fsIsOn": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "fsToggle": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "paintFs": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "setupFullscreenBtn": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "mount": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "seedDemoTicket": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "pruneTicket": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "refreshAfterCatalog": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "onShow": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "openVeil": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "closeVeil": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "switchView": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "renderView": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "renderBadges": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "headSubVente": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "renderAll": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js",
-      "assets/serveur-app.js"
-    ],
-    "refreshOps": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "issueAvoir": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "checkout": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "payExistingBalance": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "BQ_SHIFT_KEY": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqShift": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqSessionId": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqAnnounceOpen": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqActorId": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqCashEvent": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqCents": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqShiftPersist": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqMoneyParts": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "BQ_SRV_METHOD": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqPaymentParts": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqPaymentMethod": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqDayTotals": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqReportSales": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqReportSession": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqBuildReport": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqLastProv": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqFoldBasket": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqLineTotals": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqZJournal": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqZQueue": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqSaveProvisional": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqPrintReport": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqFloatMemKey": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqFloat": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqMaybeOpenScreen": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqShowOpenScreen": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqCloVeil": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqCloExpected": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqClosedReport": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqFmtDur": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqUpdateEcart": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqOutstandingCents": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqOpenCloture": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqCloseRegister": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqFinishClose": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
-    "bqShowPostClose": [
-      "assets/pos-boutique.js",
-      "assets/pos-maison.js"
-    ],
     "__kiwiCatalogSaveWarn": [
       "assets/pos-boutique.js",
       "assets/pos-maison.js"
@@ -2429,30 +898,11 @@
   },
   "order": [
     "dashboard.html:assets/dashboard-extra.js:KiwiDateRange:assets/dateRange.js",
-    "dashboard.html:assets/dateRange.js:KiwiBoutiqueCatalog:assets/boutique-catalog.js",
-    "dashboard.html:assets/dateRange.js:KiwiBoutiqueVenueKey:assets/pages-pro-boutique.js",
-    "dashboard.html:assets/dateRange.js:KiwiClients:assets/clients-store.js",
-    "dashboard.html:assets/dateRange.js:KiwiConfig:assets/merchant-config.js",
-    "dashboard.html:assets/dateRange.js:KiwiCost:assets/cost.js",
-    "dashboard.html:assets/dateRange.js:KiwiDayReport:assets/day-report.js",
-    "dashboard.html:assets/dateRange.js:KiwiHotelRooms:assets/hotel.js",
-    "dashboard.html:assets/dateRange.js:KiwiLive:assets/live-link.js",
-    "dashboard.html:assets/dateRange.js:KiwiMe:assets/identity.js",
-    "dashboard.html:assets/dateRange.js:KiwiReservations:assets/reservations.js",
-    "dashboard.html:assets/dateRange.js:KiwiRestaurantStock:assets/stock.js",
-    "dashboard.html:assets/dateRange.js:KiwiStore:assets/venue-store.js",
-    "dashboard.html:assets/dateRange.js:KiwiTeam:assets/team.js",
-    "dashboard.html:assets/dateRange.js:KiwiTradeSchema:assets/trade-workspace-schema.js",
-    "dashboard.html:assets/dateRange.js:KiwiTradeWorkspaces:assets/trade-workspaces.js",
-    "dashboard.html:assets/dateRange.js:KiwiZReconciliation:assets/z-reconciliation.js",
     "dashboard.html:assets/depenses.js:KiwiVenue:assets/venues.js",
-    "dashboard.html:assets/interactive.js:KiwiMe:assets/identity.js",
     "dashboard.html:assets/merchant-config.js:KiwiHours:assets/hours.js",
     "dashboard.html:assets/merchant-health.js:KiwiCloudDoc:assets/cloud-doc.js",
     "dashboard.html:assets/merchant-health.js:KiwiVenue:assets/venues.js",
     "dashboard.html:assets/oppo-cards.js:KiwiMerchantHealth:assets/merchant-health.js",
-    "dashboard.html:assets/restaurant-menu-workspace.js:KiwiCatalogUI:assets/catalog-workspace.js",
-    "dashboard.html:assets/sold-insights.js:KiwiDayReport:assets/day-report.js",
     "dashboard.html:assets/venues.js:KiwiConfig:assets/merchant-config.js",
     "dashboard.html:assets/venues.js:KiwiDateRange:assets/dateRange.js",
     "dashboard.html:assets/venues.js:KiwiDemoClock:assets/demoClock.js",
@@ -2460,26 +910,13 @@
     "dashboard.html:assets/venues.js:KiwiPlatform:assets/platform-kernel.js",
     "dashboard.html:assets/view-link.js:KiwiDateRange:assets/dateRange.js",
     "dashboard.html:dashboard.html#inline-6:Kiwi:assets/interactive.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiConfig:assets/merchant-config.js",
-    "dashboard.html:dashboard.html#inline-7:KiwiDashPinVault:assets/dashboard-pin-vault.js",
     "dashboard.html:dashboard.html#inline-7:KiwiEnv:assets/kiwi-env.js",
     "dashboard.html:dashboard.html#inline-7:KiwiHours:assets/hours.js",
     "dashboard.html:dashboard.html#inline-7:KiwiMe:assets/identity.js",
     "dashboard.html:dashboard.html#inline-7:KiwiVenue:assets/venues.js",
-    "kiwi-caisse.html:assets/caisse-app.js:CaisseFx:assets/caisse-motion.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiCaisseLang:assets/caisse-lang.js",
     "kiwi-caisse.html:assets/caisse-app.js:KiwiCaissePairing:assets/caisse-pairing.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiCaisseStock:assets/caisse-stock-sync.js",
     "kiwi-caisse.html:assets/caisse-app.js:KiwiCloudDoc:assets/cloud-doc.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiDayReport:assets/day-report.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiInventory:assets/inventory-ledger.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiInventoryConsumption:assets/inventory-consumption.js",
     "kiwi-caisse.html:assets/caisse-app.js:KiwiLive:assets/live-link.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiLiveSocket:assets/live-socket.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiMenuI18n:assets/menu-i18n.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiMenuPromos:assets/menu-promos.js",
-    "kiwi-caisse.html:assets/caisse-app.js:KiwiPairs:assets/caisse-pairs.js",
-    "kiwi-caisse.html:assets/caisse-app.js:lucide:assets/material-icons.js",
     "kiwi-caisse.html:assets/caisse-lang.js:KiwiPosDispatch:assets/pos-dispatch.js",
     "kiwi-caisse.html:assets/caisse-pwa.js:KiwiCaissePairing:assets/caisse-pairing.js",
     "kiwi-caisse.html:assets/caisse-pwa.js:KiwiCashSessions:assets/cash-sessions.js",
@@ -2492,9 +929,7 @@
     "kiwi-caisse.html:assets/till-tenant.js:KiwiCaisseLang:assets/caisse-lang.js",
     "kiwi-caisse.html:assets/till-tenant.js:KiwiIcon:assets/material-icons.js",
     "kiwi-caisse.html:kiwi-caisse.html#inline-5:KiwiCaisseRefresh:assets/caisse-refresh.js",
-    "kiwi-serveur.html:assets/serveur-app.js:KiwiMenuI18n:assets/menu-i18n.js",
-    "kiwi-serveur.html:assets/serveur-app.js:KiwiMenuPromos:assets/menu-promos.js",
-    "kiwi-serveur.html:assets/serveur-app.js:KiwiPlatform:assets/platform-kernel.js"
+    "kiwi-serveur.html:assets/serveur-app.js:KiwiMenuI18n:assets/menu-i18n.js"
   ],
   "units": {
     "venues": {
