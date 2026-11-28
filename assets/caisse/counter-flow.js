@@ -62,12 +62,13 @@ function mallTakePager() {
   return 0;
 }
 function mallPagerLabel(n) { return counterTr('Bipeur') + ' ' + n; }
-/* The board card: the bipeur, large, and where the order is eaten. */
-function mallCardTag(o) {
+/* The board card, in the card's own type (owner, 28 Nov 2026: the dark mint
+   pill read as a foreign sticker). The bipeur follows the order number in the
+   same size, in --atlas; « Sur place / À emporter » joins the status chips. */
+function mallCardTag(o, part) {
   if (!mallOn() || !o || o.delivery) return '';
-  const pill = 'display:inline-flex;align-items:center;margin-inline-start:8px;padding:2px 10px;border-radius:999px;font-weight:700;';
-  return (o.pager ? '<span class="vrap-pager" style="' + pill + 'font-size:1.15em;background:#053B2C;color:#7DF2B0">' + mallPagerLabel(+o.pager) + '</span>' : '')
-    + (o.service ? '<span class="vrap-service" style="' + pill + 'font-size:.85em;background:rgba(11,110,79,.12);color:#053B2C">' + counterTr(o.service === 'surplace' ? 'Sur place' : 'À emporter') + '</span>' : '');
+  if (part === 'badge') return o.service ? '<span class="vrap-badge p-unpaid vrap-service">' + counterTr(o.service === 'surplace' ? 'Sur place' : 'À emporter') + '</span>' : '';
+  return o.pager ? '<span class="vrap-pager" style="color:var(--atlas)"> · ' + mallPagerLabel(+o.pager) + '</span>' : '';
 }
 /* The kitchen ticket waits for the customer's receipt: it is released just
    after the sale is paid (the receipt prints in the same breath), or after a

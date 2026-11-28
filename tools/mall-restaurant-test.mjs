@@ -110,7 +110,8 @@ await ok('the bipeur reaches the kitchen ticket, the sale and the board card', a
   assert.equal(entry.pager, 1);
   assert.equal(entry.label, 'Sur place #26', 'the label keeps its shape (« · part N » stays last)');
   const card = T.run('mallCardTag(kdsOrders[0])');
-  assert.match(card, /Bipeur 1/); assert.match(card, /Sur place/);
+  assert.match(card, /Bipeur 1/); assert.doesNotMatch(card, /Sur place|#053B2C|#7DF2B0|font-weight/, 'the bipeur is plain card type, no dark mint pill');
+  assert.match(T.run("mallCardTag(kdsOrders[0], 'badge')"), /^<span class="vrap-badge p-unpaid vrap-service">Sur place<\/span>$/, '« Sur place » is a status chip like « Payé »');
 });
 await ok('another screen learns the bipeur from the queue', () => {
   const T = till({ mall: true });

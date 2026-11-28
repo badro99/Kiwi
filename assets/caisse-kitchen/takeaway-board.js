@@ -93,7 +93,7 @@
                laissé croire au comptoir que le travail était lancé. */
             : o.status === 'held' ? 'En attente de paiement'
             : 'En préparation'}</span>
-          <span class="vrap-badge ${o.paid ? 'p-paid' : 'p-unpaid'}">${o.paid ? 'Payé' : savedSplit ? `Partiel · reste ${fmtMAD(splitRemaining)}` : 'Non payé'}</span>
+          <span class="vrap-badge ${o.paid ? 'p-paid' : 'p-unpaid'}">${o.paid ? 'Payé' : savedSplit ? `Partiel · reste ${fmtMAD(splitRemaining)}` : 'Non payé'}</span>${typeof mallCardTag === 'function' ? mallCardTag(o, 'badge') : ''}
         </div>
         <div class="vrap-order-items">${vrapItemsLine(o)}</div>
         ${notes}
